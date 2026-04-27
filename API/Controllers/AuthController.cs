@@ -1,9 +1,9 @@
 ﻿using Application.DTOs;
 using Application.Interfaces;
+using Application.Services.JWT_Token;
 using Domain.Entities;
 using Domain.Helper;
 using Infrastructure;
-using Infrastructure.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity.Data;

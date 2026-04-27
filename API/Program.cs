@@ -1,9 +1,10 @@
 using API.Middleware;
 using Application.Interfaces;
+using Application.Interfaces.JWT_TOKEN;
 using Application.Services;
+using Application.Services.JWT_Token;
 using Infrastructure;
 using Infrastructure.Data;
-using Infrastructure.Identity;
 using Infrastructure.Interfaces;
 using Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -58,7 +59,7 @@ builder.Services.AddAuthorization();
 
 // ================= SERVICES =================
 builder.Services.AddScoped<ISequenceService, SequenceService>();
-builder.Services.AddScoped<JwtService>();
+builder.Services.AddScoped<IJwtService,JwtService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<IFinancialYearService, FinancialYearService>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
