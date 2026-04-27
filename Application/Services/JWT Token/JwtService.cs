@@ -1,14 +1,17 @@
-﻿using Domain.Entities;
+﻿using Application.Interfaces.JWT_TOKEN;
+using Domain.Entities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using System;
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Infrastructure.Identity
+namespace Application.Services.JWT_Token
 {
-    public class JwtService
+    public class JwtService : IJwtService
     {
         private readonly IConfiguration _config;
 
@@ -20,11 +23,11 @@ namespace Infrastructure.Identity
         public string GenerateAccessToken(User user, IList<string> roles)
         {
             var claims = new List<Claim>
-        {
-            new Claim(ClaimTypes.NameIdentifier, user.Id),
-            new Claim(ClaimTypes.Name, user.Username),
-            new Claim("TenantId", user.TenantId)
-        };
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id),
+                new Claim(ClaimTypes.Name, user.Username),
+                new Claim("TenantId", user.TenantId)
+            };
 
             foreach (var role in roles)
             {
