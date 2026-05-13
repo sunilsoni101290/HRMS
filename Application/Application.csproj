@@ -12,8 +12,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Mappings\" />
     <Folder Include="Validators\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Routing" Version="2.3.9" />
   </ItemGroup>
 
 </Project>

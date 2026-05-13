@@ -1,0 +1,398 @@
+﻿/* ================= FORM CARD ================= */
+
+.employee-form-card {
+    background: #ffffff;
+    border-radius: 24px;
+    padding: 35px;
+    border: 1px solid #e2e8f0;
+    font-family: 'Inter', sans-serif;
+}
+
+/* ================= HEADER ================= */
+
+.form-header {
+    margin-bottom: 30px;
+}
+
+    .form-header h3 {
+        font-size: 28px;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 8px;
+    }
+
+    .form-header p {
+        margin: 0;
+        color: #64748b;
+        font-size: 16px;
+    }
+
+/* ================= SECTION ================= */
+
+.section-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e293b;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: 10px;
+}
+
+/* ================= LABEL ================= */
+
+.form-label {
+    font-size: 15px;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 10px;
+}
+
+    .form-label span {
+        color: #ef4444;
+    }
+
+/* ================= INPUT ================= */
+
+.custom-input {
+    height: 52px;
+    border-radius: 14px;
+    border: 1px solid #dbe1ea;
+    padding: 12px 16px;
+    font-size: 15px;
+    color: #0f172a;
+    background: #fff;
+    transition: 0.3s;
+}
+
+textarea.custom-input {
+    height: auto;
+}
+
+.custom-input:focus {
+    border-color: #3157d5;
+    box-shadow: 0 0 0 4px rgba(49,87,213,0.10);
+}
+
+/* ================= BUTTONS ================= */
+
+.form-buttons {
+    display: flex;
+    justify-content: end;
+    gap: 15px;
+}
+
+.btn-cancel {
+    height: 50px;
+    padding: 0 24px;
+    border-radius: 14px;
+    border: 1px solid #dbe1ea;
+    background: #fff;
+    color: #334155;
+    font-weight: 600;
+}
+
+.btn-save {
+    height: 50px;
+    padding: 0 28px;
+    border-radius: 14px;
+    border: none;
+    background: #3157d5;
+    color: #fff;
+    font-weight: 600;
+}
+
+    .btn-save:hover {
+        background: #1d4ed8;
+        color: #fff;
+    }
+
+/* ================= RESPONSIVE ================= */
+
+@media(max-width:991px) {
+
+    .employee-form-card {
+        padding: 20px;
+    }
+
+    .form-buttons {
+        flex-direction: column;
+    }
+
+    .btn-cancel,
+    .btn-save {
+        width: 100%;
+    }
+}
+
+/* ================= PAGE ================= */
+
+.employee-page {
+    font-family: 'Inter', sans-serif;
+}
+
+/* ================= HEADER ================= */
+
+.employee-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 28px;
+}
+
+    .employee-header h2 {
+        font-size: 25px;
+        font-weight: 600;
+        color: #0f172a;
+        margin-bottom: 6px;
+    }
+
+    .employee-header p {
+        font-size: 13px;
+        color: #64748b;
+        margin: 0;
+    }
+
+/* ================= ADD BUTTON ================= */
+
+.btn-add-employee {
+    height: 45px;
+    padding: 0 20px;
+    border-radius: 14px;
+    background: #3157d5;
+    color: #fff;
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+    .btn-add-employee:hover {
+        background: #1d4ed8;
+        color: #fff;
+    }
+
+/* ================= TOOLBAR ================= */
+
+.employee-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+/* ================= SEARCH ================= */
+
+.search-box-custom {
+    width: 400px;
+    height: 45px;
+    border: 1px solid #dbe1ea;
+    border-radius: 14px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    padding: 0 18px;
+    gap: 12px;
+}
+
+    .search-box-custom i {
+        font-size: 13px;
+        color: #94a3b8;
+    }
+
+    .search-box-custom input {
+        border: none;
+        width: 100%;
+        outline: none;
+        font-size: 13px;
+        color: #334155;
+    }
+
+/* ================= TOOLBAR BUTTON ================= */
+
+.toolbar-btn {
+    height: 45px;
+    padding: 0 22px;
+    border-radius: 14px;
+    border: 1px solid #dbe1ea;
+    background: #fff;
+    color: #334155;
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+    .toolbar-btn:hover {
+        background: #f8fafc;
+    }
+
+/* ================= TABLE CARD ================= */
+
+.employee-table-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 24px;
+    overflow: hidden;
+}
+
+/* ================= TABLE ================= */
+
+.employee-table {
+    margin: 0;
+}
+
+    .employee-table thead th {
+        background: #ffffff;
+        padding: 22px 22px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #64748b;
+        letter-spacing: 1px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .employee-table tbody td {
+        padding: 18px 22px;
+        font-size: 12px;
+        color: #334155;
+        vertical-align: middle;
+        border-bottom: 1px solid #edf2f7;
+    }
+
+/* ================= EMPLOYEE INFO ================= */
+
+.employee-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.employee-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.employee-info h6 {
+    margin: 0 0 4px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.employee-info span {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+/* ================= STATUS ================= */
+
+.status-badge {
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.active-status {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.leave-status {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+/* ================= ACTIONS ================= */
+
+.action-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+}
+
+    .action-buttons a {
+        color: #94a3b8;
+        font-size: 18px;
+        transition: 0.3s;
+    }
+
+        .action-buttons a:hover {
+            color: #3157d5;
+        }
+
+/* ================= COLORS ================= */
+
+.blue-avatar {
+    background: #3157d5;
+}
+
+.green-avatar {
+    background: #059669;
+}
+
+.orange-avatar {
+    background: #d97706;
+}
+
+.purple-avatar {
+    background: #7c3aed;
+}
+
+.red-avatar {
+    background: #dc2626;
+}
+
+.cyan-avatar {
+    background: #0891b2;
+}
+
+.teal-avatar {
+    background: #16a34a;
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media(max-width:991px) {
+
+    .employee-header {
+        flex-direction: column;
+        gap: 18px;
+    }
+
+        .employee-header h2 {
+            font-size: 32px;
+        }
+
+        .employee-header p {
+            font-size: 16px;
+        }
+
+    .search-box-custom {
+        width: 100%;
+    }
+
+    .toolbar-btn,
+    .btn-add-employee {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .employee-table thead th,
+    .employee-table tbody td {
+        font-size: 12px;
+        padding: 14px;
+    }
+}

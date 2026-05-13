@@ -66,6 +66,9 @@ namespace Domain.Entities
         [MaxLength(12)]
         public string? AadharNumber { get; set; }
 
+        public string? ShiftId { get; set; }
+        public virtual Shift DefaultShift { get; set; }
+
         // Employment Details
         public DateTime JoiningDate { get; set; }
         public DateTime? ConfirmationDate { get; set; }

@@ -20,13 +20,15 @@ namespace Application.Services.JWT_Token
             _config = config;
         }
 
-        public string GenerateAccessToken(User user, IList<string> roles)
+        public string GenerateAccessToken(User user, List<string> roles, List<string> permissions)
         {
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(ClaimTypes.Name, user.Username),
-                new Claim("TenantId", user.TenantId)
+                new Claim("UserId", user.Id),
+                new Claim("TenantId", user.TenantId ?? ""),
+                new Claim("CompanyId", user.CompanyId ?? ""),
+                new Claim("BranchId", user.BranchId ?? ""),
+                new Claim(ClaimTypes.Name, user.Username)
             };
 
             foreach (var role in roles)
@@ -34,17 +36,22 @@ namespace Application.Services.JWT_Token
                 claims.Add(new Claim(ClaimTypes.Role, role));
             }
 
-            var key = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
+            foreach (var perm in permissions)
+            {
+                claims.Add(new Claim("Permission", perm));
+            }
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
 
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            var expiry = DateTime.UtcNow.AddMinutes(Convert.ToDouble(_config["Jwt:ExpiryMinutes"]));
 
             var token = new JwtSecurityToken(
                 issuer: _config["Jwt:Issuer"],
                 audience: _config["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(
-                    Convert.ToDouble(_config["Jwt:DurationInMinutes"])),
+                expires: expiry,
                 signingCredentials: creds
             );
 

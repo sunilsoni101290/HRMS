@@ -111,6 +111,7 @@ namespace Infrastructure
         public DbSet<AppFeature> AppFeatures { get; set; }
         public DbSet<FinancialYear> FinancialYears { get; set; }
         public DbSet<Holiday> Holidays { get; set; }
+        public DbSet<WeekOff> WeekOffs { get; set; }
         public DbSet<SequenceMaster> SequenceMasters { get; set; }
         #endregion
 
@@ -267,9 +268,6 @@ namespace Infrastructure
 
                 // 🔹 Multi-Tenant
                 entity.Property(e => e.CompanyId)
-                    .HasMaxLength(50);
-
-                entity.Property(e => e.BranchId)
                     .HasMaxLength(50);
 
                 // 🔹 Client

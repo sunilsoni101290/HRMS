@@ -14,11 +14,19 @@ namespace API.Middleware
 
         public async Task Invoke(HttpContext context, ITenantService tenantService)
         {
+            var path = context.Request.Path.Value.ToLower();
+
+            // 🔥 Skip for Auth APIs
+            if (path.Contains("/api/auth"))
+            {
+                await _next(context);
+                return;
+            }
+
             var tenantId = context.Request.Headers["X-Tenant-ID"].FirstOrDefault();
 
             if (string.IsNullOrEmpty(tenantId))
             {
-                // fallback from JWT
                 var claimTenant = context.User?.Claims
                     .FirstOrDefault(c => c.Type == "TenantId")?.Value;
 

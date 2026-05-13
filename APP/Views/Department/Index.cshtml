@@ -1,0 +1,172 @@
+﻿@model IEnumerable<DepartmentListDto>
+
+@{
+    ViewData["Title"] = "Department";
+}
+<link href="~/css/form-style.css" rel="stylesheet" />
+
+<!-- ================= DEPARTMENT PAGE ================= -->
+
+<div class="employee-page">
+
+    <!-- ================= PAGE HEADER ================= -->
+
+    <div class="employee-header">
+
+        <div>
+
+            <h2>@ViewData["Title"]</h2>
+
+            <p>
+                Manage your workforce and department records
+            </p>
+
+        </div>
+
+        <a asp-action="Create" asp-controller="Department" class="btn btn-add-employee">
+
+            <i class="bi bi-person-plus"></i>
+
+            Add Department
+
+        </a>
+
+    </div>
+
+    <!-- ================= FILTER SECTION ================= -->
+
+    <div class="employee-toolbar">
+
+        <!-- SEARCH -->
+        <div class="search-box-custom">
+
+            <i class="bi bi-search"></i>
+
+            <input type="text"
+                   placeholder="Search employees..." />
+
+        </div>
+
+        <!-- FILTER -->
+        <button class="btn toolbar-btn">
+
+            <i class="bi bi-funnel"></i>
+
+            Filter
+
+        </button>
+
+        <!-- EXPORT -->
+        <button class="btn toolbar-btn">
+
+            <i class="bi bi-download"></i>
+
+            Export
+
+        </button>
+
+    </div>
+
+    <!-- ================= TABLE CARD ================= -->
+
+    <div class="employee-table-card">
+
+        <div class="table-responsive">
+
+            <table class="table employee-table align-middle">
+
+                <!-- TABLE HEAD -->
+                <thead>
+
+                    <tr>
+
+                        <th>NAME</th>
+                        <th>CODE</th>
+                        <th>PARENT DEPARTMENT</th>
+                        <th class="text-center">ACTIONS</th>
+                    </tr>
+
+                </thead>
+
+                <!-- TABLE BODY -->
+                <tbody>
+
+                    <!-- ROW -->
+                    @{
+                        if (Model != null && Model.Count() > 0)
+                        {
+                            foreach (var item in Model)
+                            {
+                                <tr>
+
+                                    <td>
+
+                                        <div class="employee-info">
+
+                                            <div class="employee-avatar blue-avatar">
+                                                @NameHelper.GetNamePrefix(item.Name, "")
+                                            </div>
+
+                                            <div>
+
+                                                <h6>@item.Name</h6>
+
+                                                <span>@item.Code</span>
+
+                                            </div>
+
+                                        </div>
+
+                                    </td>
+
+                                    <td>@item.Code</td>
+
+                                    <td>@item.ParentDepartmentName</td>
+
+                                    <td>
+                                        <span class="status-badge active-status">
+                                            Active
+                                        </span>
+                                    </td>
+                                    <td>
+
+                                        <div class="action-buttons">
+                                            <a asp-action="Detail"
+                                               asp-controller="Department"
+                                               asp-route-id="@item.Id"
+                                               title="View">
+
+                                                <i class="bi bi-eye"></i>
+
+                                            </a>
+                                            <a asp-action="Edit"
+                                               asp-controller="Department"
+                                               asp-route-id="@item.Id"
+                                               title="Edit">
+
+                                                <i class="bi bi-pencil-square"></i>
+
+                                            </a>
+
+                                            <a href="#">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+
+                                        </div>
+
+                                    </td>
+
+                                </tr>
+                            }
+                        }
+                    }
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>

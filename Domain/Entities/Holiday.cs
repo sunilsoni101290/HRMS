@@ -12,4 +12,9 @@ namespace Domain.Entities
         public string Description { get; set; }
         public override string GetSequencePrefix() => "HL";
     }
+
+    public class WeekOff : BaseEntity
+    {
+        public DayOfWeek Day { get; set; }
+    }
 }

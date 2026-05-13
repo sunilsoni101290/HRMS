@@ -1,0 +1,758 @@
+﻿/* ================= DASHBOARD HEADER ================= */
+
+.dashboard-header {
+    margin-bottom: 30px;
+}
+
+.welcome-title {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -.01em;
+}
+
+.welcome-subtitle {
+    font-size: 15px;
+    color: #64748b;
+    margin-bottom: 0;
+}
+
+/* ================= HEADER ACTIONS ================= */
+
+.header-actions {
+    display: flex;
+    justify-content: end;
+    gap: 15px;
+}
+
+.btn-export {
+    height: 48px;
+    padding: 0 24px;
+    border-radius: 12px;
+    border: 1px solid #dbe1ea;
+    background: #fff;
+    color: #0f172a;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+    .btn-export:hover {
+        background: #f8fafc;
+    }
+
+.btn-action {
+    height: 48px;
+    padding: 0 15px;
+    border-radius: 12px;
+    border: none;
+    background: #2947c7;
+    color: #fff;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+}
+
+    .btn-action:hover {
+        background: #1f3bb3;
+        color: #fff;
+    }
+
+/* ================= STATS CARD ================= */
+
+.stats-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+    .stats-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+    }
+
+/* ================= CARD TOP ================= */
+
+.stats-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+}
+
+    .stats-top h6 {
+        font-size: 15px;
+        letter-spacing: 1px;
+        color: #475569;
+        margin-bottom: 18px;
+        font-weight: 600;
+    }
+
+    .stats-top h2 {
+        font-size: 28px;
+        font-weight: 700;
+        margin-top: 8px;
+        letter-spacing: -.02em;
+    }
+
+/* ================= ICON ================= */
+
+.stats-icon {
+    width: 54px;
+    height: 54px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+}
+
+.blue {
+    background: #eef3ff;
+    color: #3157d5;
+}
+
+.green {
+    background: #e9f8ef;
+    color: #16a34a;
+}
+
+.orange {
+    background: #fff5e7;
+    color: #d97706;
+}
+
+.sky {
+    background: #eef7ff;
+    color: #0284c7;
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media(max-width:991px) {
+
+    .welcome-title {
+        font-size: 34px;
+    }
+
+    .welcome-subtitle {
+        font-size: 16px;
+    }
+
+    .header-actions {
+        justify-content: start;
+        margin-top: 20px;
+        flex-wrap: wrap;
+    }
+
+    .stats-top h2 {
+        font-size: 38px;
+    }
+}
+
+/* ================= CUSTOM CARD ================= */
+
+.custom-card {
+    background: #fff;
+    border-radius: 22px;
+    border: 1px solid #e5e7eb;
+    overflow: hidden;
+    height: auto;
+}
+
+/* ================= CARD HEADER ================= */
+
+.card-header-custom {
+    padding: 22px 26px;
+    border-bottom: 1px solid #edf1f5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+    .card-header-custom h4 {
+        font-size: 20px;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0;
+    }
+
+.view-all-btn {
+    color: #3157d5;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+    .view-all-btn:hover {
+        color: #1d4ed8;
+    }
+
+/* ================= TABLE ================= */
+
+.leave-table {
+    margin: 0;
+}
+
+    .leave-table thead th {
+        padding: 12px 18px;
+        font-size: 11px;
+        letter-spacing: 1px;
+        color: #64748b;
+        font-weight: 600;
+        border-bottom: 1px solid #edf1f5;
+    }
+
+
+    .leave-table tbody td {
+        padding: 12px 18px;
+        border-bottom: 1px solid #edf1f5;
+        font-size: 13px;
+        color: #334155;
+    }
+
+    .leave-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+.active-row {
+    background: #f8fafc;
+}
+
+/* ================= STATUS BADGE ================= */
+
+.status-badge {
+    padding: 8px 14px;
+    border-radius: 30px;
+    font-size: 14px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.pending {
+    background: #fff4d6;
+    color: #d97706;
+}
+
+.approved {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+/* ================= DEPARTMENT ================= */
+
+.dept-item {
+    padding: 12px 18px;
+}
+
+.dept-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+    .dept-header span {
+        font-size: 12px;
+        font-weight: 500;
+        color: #334155;
+    }
+
+/* ================= PROGRESS ================= */
+
+.custom-progress {
+    height: 7px;
+    border-radius: 20px;
+    background: #edf1f5;
+    overflow: hidden;
+}
+
+.progress-bar {
+    border-radius: 20px;
+}
+
+/* ================= COLORS ================= */
+
+.blue-bar {
+    background: #3157d5;
+}
+
+.green-bar {
+    background: #059669;
+}
+
+.orange-bar {
+    background: #d97706;
+}
+
+.purple-bar {
+    background: #9333ea;
+}
+
+.cyan-bar {
+    background: #0891b2;
+}
+
+.red-bar {
+    background: #dc2626;
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media(max-width:991px) {
+
+    .leave-table tbody td,
+    .leave-table thead th {
+        padding: 14px;
+        font-size: 14px;
+    }
+
+    .dept-item {
+        padding: 15px 18px;
+    }
+}
+
+/* ================= COMMON CARD ================= */
+
+.activity-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 22px;
+    overflow: hidden;
+    height: 100%;
+    font-family: 'Inter', sans-serif;
+}
+
+/* ================= HEADER ================= */
+
+.card-header-custom {
+    padding: 22px 26px;
+    border-bottom: 1px solid #edf2f7;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+    .card-header-custom h4 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+.action-link {
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 500;
+    color: #3157d5;
+}
+
+    .action-link:hover {
+        color: #1d4ed8;
+    }
+
+/* ================= BODY ================= */
+
+.card-body-custom {
+    padding: 0 26px;
+}
+
+/* ================= ACTIVITY ================= */
+
+.activity-item {
+    padding: 18px 0;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.activity-left {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.activity-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.green-dot {
+    background: #22c55e;
+}
+
+.blue-dot {
+    background: #3b82f6;
+}
+
+.orange-dot {
+    background: #f59e0b;
+}
+
+.red-dot {
+    background: #ef4444;
+}
+
+.teal-dot {
+    background: #10b981;
+}
+
+.activity-content p {
+    margin: 0;
+    font-size: 17px;
+    color: #334155;
+    line-height: 1.5;
+}
+
+.activity-content strong {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.activity-time {
+    font-size: 15px;
+    color: #94a3b8;
+    white-space: nowrap;
+}
+
+/* ================= EVENTS ================= */
+
+.event-item {
+    padding: 18px 0;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+}
+
+.event-left {
+    display: flex;
+    gap: 18px;
+}
+
+    .event-left h5 {
+        margin: 0 0 5px;
+        font-size: 17px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .event-left p {
+        margin: 0;
+        font-size: 15px;
+        color: #64748b;
+    }
+
+.event-badge {
+    background: #f1f5f9;
+    color: #334155;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    min-width: 38px;
+    text-align: center;
+}
+
+/* ================= BIRTHDAY ================= */
+
+.birthday-wrapper {
+    padding: 10px 26px 0;
+}
+
+.birthday-item {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 18px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+    .birthday-item img {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+.birthday-content {
+    flex: 1;
+}
+
+    .birthday-content h5 {
+        margin: 0 0 4px;
+        font-size: 17px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .birthday-content p {
+        margin: 0;
+        font-size: 15px;
+        color: #64748b;
+    }
+
+.birthday-date {
+    background: #eff6ff;
+    color: #2563eb;
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media(max-width:991px) {
+
+    .activity-item,
+    .event-item,
+    .birthday-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 14px;
+    }
+
+    .activity-time,
+    .event-badge,
+    .birthday-date {
+        margin-left: 28px;
+    }
+}
+
+/* ================= ANNOUNCEMENT CARD ================= */
+
+.announcement-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 22px;
+    overflow: hidden;
+    font-family: 'Inter', sans-serif;
+}
+
+/* ================= WRAPPER ================= */
+
+.announcement-wrapper {
+    padding: 6px 26px;
+}
+
+/* ================= ITEM ================= */
+
+.announcement-item {
+    display: flex;
+    gap: 18px;
+    padding: 22px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+/* ================= ICON ================= */
+
+.announcement-icon {
+    width: 54px;
+    height: 54px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+}
+
+.blue-bg {
+    background: #eef4ff;
+    color: #3157d5;
+}
+
+.green-bg {
+    background: #ecfdf3;
+    color: #16a34a;
+}
+
+.orange-bg {
+    background: #fff7ed;
+    color: #ea580c;
+}
+
+.red-bg {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+/* ================= CONTENT ================= */
+
+.announcement-content {
+    flex: 1;
+}
+
+.announcement-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 8px;
+}
+
+    .announcement-top h5 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+.announcement-content p {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.7;
+    color: #64748b;
+}
+
+/* ================= DATE ================= */
+
+.announcement-date {
+    background: #f8fafc;
+    color: #475569;
+    padding: 6px 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media(max-width:991px) {
+
+    .announcement-item {
+        flex-direction: column;
+    }
+
+    .announcement-top {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+/* ================= HOLIDAY CARD ================= */
+
+.holiday-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 22px;
+    overflow: hidden;
+    font-family: 'Inter', sans-serif;
+}
+
+/* ================= WRAPPER ================= */
+
+.holiday-wrapper {
+    padding: 6px 26px;
+}
+
+/* ================= ITEM ================= */
+
+.holiday-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 22px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+/* ================= LEFT ================= */
+
+.holiday-left {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+/* ================= ICON ================= */
+
+.holiday-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+/* ================= CONTENT ================= */
+
+.holiday-content h5 {
+    margin: 0 0 5px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.holiday-content p {
+    margin: 0;
+    font-size: 15px;
+    color: #64748b;
+}
+
+/* ================= RIGHT ================= */
+
+.holiday-right {
+    text-align: right;
+    min-width: 90px;
+}
+
+    .holiday-right h6 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .holiday-right span {
+        font-size: 14px;
+        color: #94a3b8;
+    }
+
+/* ================= COLORS ================= */
+
+.blue-bg {
+    background: #eef4ff;
+    color: #3157d5;
+}
+
+.orange-bg {
+    background: #fff7ed;
+    color: #ea580c;
+}
+
+.green-bg {
+    background: #ecfdf3;
+    color: #16a34a;
+}
+
+.red-bg {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media(max-width:991px) {
+
+    .holiday-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .holiday-right {
+        text-align: left;
+        margin-left: 74px;
+    }
+}

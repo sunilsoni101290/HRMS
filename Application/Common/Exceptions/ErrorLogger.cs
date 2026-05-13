@@ -65,7 +65,7 @@ namespace Application.Common.Exceptions
 
                     // 🔹 Multi-Tenant
                     CompanyId = companyId,
-                    BranchId = branchId,
+                    //BranchId = branchId,
 
                     // 🔹 Client Info
                     IPAddress = ipAddress,
