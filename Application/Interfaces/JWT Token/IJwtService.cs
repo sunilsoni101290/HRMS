@@ -7,6 +7,7 @@ namespace Application.Interfaces.JWT_TOKEN
 {
     public interface IJwtService
     {
-        string GenerateAccessToken(User user, IList<string> roles);
+        string GenerateAccessToken(User user, List<string> roles, List<string> permissions);
+        string GenerateRefreshToken();
     }
 }

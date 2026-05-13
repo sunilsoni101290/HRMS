@@ -1,143 +1,133 @@
 ﻿using Application.Common.Responses;
-using Application.DTOs;
-using Application.Interfaces;
+using Application.DTOs.Employee;
+using Application.Interfaces.Employee;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
-    [Authorize] // 🔐 Secure all endpoints
+    [Route("api/[controller]")]
+    [Authorize]
     public class EmployeeController : ControllerBase
     {
-        private readonly IEmployeeService _employeeService; 
-        public EmployeeController(IEmployeeService employeeService) 
+        private readonly IEmployeeService _service;
+
+        public EmployeeController(IEmployeeService service)
         {
-            _employeeService = employeeService;
+            _service = service;
         }
 
-        // ✅ CREATE EMPLOYEE
-        [HttpPost]
+        // ==============================
+        // SEARCH EMPLOYEE
+        // ==============================
+        [HttpPost("search")]
+        public async Task<IActionResult> Search([FromBody] EmployeeSearchRequest request)
+        {
+            var result = await _service.SearchAsync(request);
+
+            return Ok(result);
+        }
+
+        // ==============================
+        // CREATE EMPLOYEE
+        // ==============================
+        [HttpPost("add-employee")]
         public async Task<IActionResult> Create([FromBody] EmployeeDto dto)
         {
-            try
-            {
-                if (!ModelState.IsValid)
-                    return BadRequest(ModelState);
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
-                if (!string.IsNullOrEmpty(dto.Id))
-                    return BadRequest("Id should not be provided for create");
+            var id = await _service.CreateAsync(dto);
 
-                var result = await _employeeService.CreateAsync(dto);
-
-                return Ok(new ApiResponse<object>
-                {
-                    Success = true,
-                    Message = "Employee created successfully",
-                    Data = result
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new ApiResponse<string>
-                {
-                    Success = false,
-                    Message = ex.Message
-                });
-            }
-        }
-
-        // ✅ GET ALL
-        [HttpGet]
-        public async Task<IActionResult> GetAll()
-        {
-            var data = await _employeeService.GetAllAsync();
-
-            return Ok(new ApiResponse<object>
+            return Ok(new
             {
                 Success = true,
-                Data = data,
-                Message = "Employees fetched successfully"
+                Message = "Employee created successfully",
+                Id = id
             });
         }
 
-        // ✅ GET BY ID
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(string id)
+        // ==============================
+        // UPDATE EMPLOYEE
+        // ==============================
+        [HttpPut("update-employee")]
+        public async Task<IActionResult> Update([FromBody] EmployeeDto dto)
         {
-            var data = await _employeeService.GetByIdAsync(id);
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
-            if (data == null)
-                return NotFound(new ApiResponse<string>
+            var result = await _service.UpdateAsync(dto);
+
+            return Ok(new
+            {
+                Success = result,
+                Message = result
+                    ? "Employee updated successfully"
+                    : "Employee update failed"
+            });
+        }
+
+        // ==============================
+        // GET ALL EMPLOYEES
+        // ==============================
+        [HttpGet("employee-list")]
+        public async Task<IActionResult> GetAll()
+        {
+            var result = await _service.GetAllAsync();
+
+            return Ok(result);
+        }
+
+        // ==============================
+        // GET EMPLOYEE BY ID
+        // ==============================
+        [HttpGet("get-employee-detail/{id}")]
+        public async Task<IActionResult> Get([FromRoute] string id)
+        {
+            var result = await _service.GetByIdAsync(id);
+
+            if (result == null)
+            {
+                return NotFound(new
                 {
                     Success = false,
                     Message = "Employee not found"
                 });
+            }
 
-            return Ok(new ApiResponse<object>
+            return Ok(result);
+        }
+
+        // ==============================
+        // DELETE MULTIPLE EMPLOYEES
+        // ==============================
+        [HttpPost("delete")]
+        public async Task<IActionResult> DeleteMultiple([FromBody] List<string> ids)
+        {
+            var result = await _service.DeleteMultipleAsync(ids);
+
+            return Ok(new
             {
-                Success = true,
-                Data = data
+                Success = result,
+                Message = result
+                    ? "Employees deleted successfully"
+                    : "Delete operation failed"
             });
         }
 
-
-        // ✅ UPDATE
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(string id, [FromBody] EmployeeDto dto)
+        // ==============================
+        // GET EMPLOYEE HIERARCHY
+        // ==============================
+        [HttpGet("hierarchy")]
+        public async Task<IActionResult> GetHierarchy()
         {
-            try
-            {
-                if (!ModelState.IsValid)
-                    return BadRequest(ModelState);
+            var tenantId = User.FindFirst("TenantId")?.Value;
 
-                if (string.IsNullOrEmpty(dto.Id) || dto.Id != id)
-                    return BadRequest("Invalid employee Id");
+            var data = await _service.GetHierarchyAsync(tenantId);
 
-                var result = await _employeeService.UpdateAsync(dto);
-
-                return Ok(new ApiResponse<object>
-                {
-                    Success = true,
-                    Message = "Employee updated successfully",
-                    Data = result
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new ApiResponse<string>
-                {
-                    Success = false,
-                    Message = ex.Message
-                });
-            }
-        }
-
-        // ✅ DELETE (SOFT DELETE)
-        [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Delete(string id)
-        {
-            try
-            {
-                await _employeeService.DeleteAsync(id);
-
-                return Ok(new ApiResponse<string>
-                {
-                    Success = true,
-                    Message = "Employee deleted successfully"
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new ApiResponse<string>
-                {
-                    Success = false,
-                    Message = ex.Message
-                });
-            }
+            return Ok(data);
         }
     }
 }

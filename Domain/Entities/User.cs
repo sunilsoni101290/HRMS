@@ -42,7 +42,7 @@ namespace Domain.Entities
         public virtual Branch Branch { get; set; }
 
         // Employee Link (Optional)
-        public string EmployeeId { get; set; }
+        public string? EmployeeId { get; set; }
         public virtual Employee Employee { get; set; }
 
         // Last Login Info

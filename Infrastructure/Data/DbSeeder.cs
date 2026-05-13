@@ -18,8 +18,9 @@ namespace Infrastructure.Data
         {
             if (context == null) return;
 
-            await context.Database.EnsureCreatedAsync();
-          
+            // Apply Pending Migrations
+            await context.Database.MigrateAsync();
+
             // =========================
             // 1. COUNTRY
             // =========================
@@ -546,7 +547,7 @@ namespace Infrastructure.Data
                     {
                         Id = IDManager.GetNewId(new Role()),
                         Name = "Super Admin",
-                        Code = "SUPER_ADMIN",
+                        Code = ConstantHelper.SUPER_ADMIN,
                         TenantId = tenantId,
                         Description = "Full system access",
                         CreatedBy="System"
@@ -555,7 +556,7 @@ namespace Infrastructure.Data
                     {
                         Id = IDManager.GetNewId(new Role()),
                         Name = "HR Manager",
-                        Code = "HR_MANAGER",
+                        Code = ConstantHelper.HR_MANAGER,
                         TenantId = tenantId,
                         CreatedBy="System"
                     },
@@ -563,7 +564,7 @@ namespace Infrastructure.Data
                     {
                         Id = IDManager.GetNewId(new Role()),
                         Name = "Employee",
-                        Code = "EMPLOYEE",
+                        Code = ConstantHelper.EMPLOYEE,
                         TenantId = tenantId,
                         CreatedBy="System"
                     }

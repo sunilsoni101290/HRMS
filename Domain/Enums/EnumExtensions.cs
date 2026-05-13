@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
+using System.Web.Mvc;
+using static Domain.Enums.EnumExtensions;
 
 namespace Domain.Enums
 {
@@ -31,12 +33,12 @@ namespace Domain.Enums
         }
         public enum PunchType
         {
-            [Display(Name ="Punch In")]
-            InTime = 1,
-
-            [Display(Name = "Punch Out")]
-            OutTime = 2
+            In = 1,
+            Out = 2,
+            BreakIn = 3,
+            BreakOut = 4
         }
+
         public enum LeaveStatus
         {
             Pending = 1,
@@ -254,6 +256,78 @@ namespace Domain.Enums
 
             Agriculture = 17,      // Farming / Agro business
             Hospitality = 18       // Hotel / Restaurant
+        }
+    }
+
+    public static class EnumHelper
+    {
+        /// <summary>
+        /// Get dropdown list for any enum
+        /// </summary>
+        public static List<SelectListItem> GetEnumList<TEnum>() where TEnum : Enum
+        {
+            return Enum.GetValues(typeof(TEnum))
+                       .Cast<TEnum>()
+                       .Select(x => new SelectListItem
+                       {
+                           Text = x.ToString(),
+                           Value = Convert.ToInt32(x).ToString()
+                       })
+                       .ToList();
+        }
+
+        /// <summary>
+        /// Get enum name by value
+        /// </summary>
+        public static string GetEnumName<TEnum>(int value) where TEnum : Enum
+        {
+            return Enum.IsDefined(typeof(TEnum), value)
+                ? Enum.GetName(typeof(TEnum), value)
+                : "Unknown";
+        }
+
+        /// <summary>
+        /// Convert int/string to enum
+        /// </summary>
+        public static TEnum GetEnumValue<TEnum>(object value) where TEnum : struct, Enum
+        {
+            if (Enum.TryParse(value.ToString(), true, out TEnum result))
+            {
+                return result;
+            }
+
+            return default;
+        }
+
+        /// <summary>
+        /// Check enum value exists
+        /// </summary>
+        public static bool IsValidEnum<TEnum>(object value) where TEnum : Enum
+        {
+            return Enum.TryParse(typeof(TEnum), value.ToString(), true, out _);
+        }
+
+        /// <summary>
+        /// Get all enum values
+        /// </summary>
+        public static List<TEnum> GetEnumValues<TEnum>() where TEnum : Enum
+        {
+            return Enum.GetValues(typeof(TEnum))
+                       .Cast<TEnum>()
+                       .ToList();
+        }
+
+        /// <summary>
+        /// Get dictionary of enum
+        /// </summary>
+        public static Dictionary<int, string> GetEnumDictionary<TEnum>() where TEnum : Enum
+        {
+            return Enum.GetValues(typeof(TEnum))
+                       .Cast<TEnum>()
+                       .ToDictionary(
+                           x => Convert.ToInt32(x),
+                           x => x.ToString()
+                       );
         }
     }
 }

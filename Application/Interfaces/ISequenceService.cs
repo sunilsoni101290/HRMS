@@ -7,7 +7,6 @@ namespace Application.Interfaces
 {
     public interface ISequenceService
     {
-        Task<string> GetNextERPId(string module, string financialYear);
-        Task<string> GetNextCodeSequenceAsync(ApplicationDbContext _context, string module);
+        Task<string> GetNextERPIdAsync(string module, string tenantId);
     }
 }

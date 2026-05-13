@@ -22,11 +22,15 @@ namespace Domain.Entities
         public int HalfDayMinutes { get; set; }
         public int FullDayMinutes { get; set; }
 
-        public bool IsNightShift { get; set; } =false;
+        public bool IsNightShift { get; set; } = false;
 
-        // Multi-Tenant
+        // ✅ NEW (important for payroll rules)
+        public int MinimumWorkingMinutes { get; set; }
+        public int MaximumWorkingMinutes { get; set; }
+
         public string TenantId { get; set; }
         public virtual Tenant Tenant { get; set; }
+
         public override string GetSequencePrefix() => "SH";
     }
 }

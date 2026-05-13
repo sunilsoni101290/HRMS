@@ -623,6 +623,9 @@ namespace Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<decimal>("BreakHours")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("CompanyId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
@@ -641,8 +644,8 @@ namespace Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<TimeSpan?>("InTime")
-                        .HasColumnType("time");
+                    b.Property<DateTime?>("FirstIn")
+                        .HasColumnType("datetime2");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -659,20 +662,19 @@ namespace Infrastructure.Migrations
                     b.Property<bool>("IsManualEntry")
                         .HasColumnType("bit");
 
+                    b.Property<DateTime?>("LastOut")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("ModifiedBy")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("ModifiedOn")
                         .HasColumnType("datetime2");
 
-                    b.Property<TimeSpan?>("OutTime")
-                        .HasColumnType("time");
-
-                    b.Property<decimal?>("OvertimeHours")
+                    b.Property<decimal>("OvertimeHours")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Remarks")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ShiftId")
@@ -686,7 +688,7 @@ namespace Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<decimal?>("WorkingHours")
+                    b.Property<decimal>("TotalWorkingHours")
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
@@ -709,6 +711,10 @@ namespace Infrastructure.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("AttendanceId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -717,18 +723,23 @@ namespace Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("DeviceId")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("EmployeeId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
+
+                    b.Property<bool>("IsManual")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Location")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ModifiedBy")
                         .HasColumnType("nvarchar(max)");
@@ -747,7 +758,7 @@ namespace Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("EmployeeId");
+                    b.HasIndex("AttendanceId");
 
                     b.ToTable("AttendanceLogs");
                 });
@@ -1481,6 +1492,9 @@ namespace Infrastructure.Migrations
                     b.Property<string>("ReportingManagerId")
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("ShiftId")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("TenantId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
@@ -1499,6 +1513,8 @@ namespace Infrastructure.Migrations
                         .IsUnique();
 
                     b.HasIndex("ReportingManagerId");
+
+                    b.HasIndex("ShiftId");
 
                     b.HasIndex("TenantId");
 
@@ -1722,13 +1738,7 @@ namespace Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("BranchId")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
                     b.Property<string>("CompanyId")
-                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
@@ -3295,6 +3305,10 @@ namespace Infrastructure.Migrations
                     b.Property<int>("CurrentNumber")
                         .HasColumnType("int");
 
+                    b.Property<string>("FinancialYearId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -3354,6 +3368,12 @@ namespace Infrastructure.Migrations
 
                     b.Property<bool>("IsNightShift")
                         .HasColumnType("bit");
+
+                    b.Property<int>("MaximumWorkingMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MinimumWorkingMinutes")
+                        .HasColumnType("int");
 
                     b.Property<string>("ModifiedBy")
                         .HasColumnType("nvarchar(max)");
@@ -3669,7 +3689,6 @@ namespace Infrastructure.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("EmployeeId")
-                        .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<bool>("IsActive")
@@ -3778,6 +3797,41 @@ namespace Infrastructure.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("UserRoles");
+                });
+
+            modelBuilder.Entity("Domain.Entities.WeekOff", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Day")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TenantId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("WeekOffs");
                 });
 
             modelBuilder.Entity("Domain.Entities.Announcement", b =>
@@ -3895,13 +3949,13 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Entities.AttendanceLog", b =>
                 {
-                    b.HasOne("Domain.Entities.Employee", "Employee")
-                        .WithMany()
-                        .HasForeignKey("EmployeeId")
+                    b.HasOne("Domain.Entities.Attendance", "Attendance")
+                        .WithMany("Logs")
+                        .HasForeignKey("AttendanceId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Employee");
+                    b.Navigation("Attendance");
                 });
 
             modelBuilder.Entity("Domain.Entities.BankDetail", b =>
@@ -4125,6 +4179,11 @@ namespace Infrastructure.Migrations
                         .HasForeignKey("ReportingManagerId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("Domain.Entities.Shift", "DefaultShift")
+                        .WithMany()
+                        .HasForeignKey("ShiftId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Domain.Entities.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantId")
@@ -4134,6 +4193,8 @@ namespace Infrastructure.Migrations
                     b.Navigation("Branch");
 
                     b.Navigation("Company");
+
+                    b.Navigation("DefaultShift");
 
                     b.Navigation("Department");
 
@@ -4582,8 +4643,7 @@ namespace Infrastructure.Migrations
                     b.HasOne("Domain.Entities.Employee", "Employee")
                         .WithMany()
                         .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Domain.Entities.Tenant", "Tenant")
                         .WithMany()
@@ -4622,6 +4682,11 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("Domain.Entities.AppFeature", b =>
                 {
                     b.Navigation("ChildFeatures");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Attendance", b =>
+                {
+                    b.Navigation("Logs");
                 });
 
             modelBuilder.Entity("Domain.Entities.Candidate", b =>
