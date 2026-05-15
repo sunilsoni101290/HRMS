@@ -1,5 +1,6 @@
 ﻿using Application.DTOs;
 using Application.Interfaces;
+using Domain.Entities;
 using Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -197,6 +198,81 @@ namespace Application.Services
                 })
 
                 .ToListAsync();
+        }
+
+        public async Task<List<DropdownDto>> GetParentDepartmentDropdownAsync(string tenantId,string? departmentId = null)
+        {
+            var query = _context.Departments
+                .AsNoTracking()
+                .Where(x => x.TenantId == tenantId);
+
+            // Exclude current department in Edit mode
+            if (!string.IsNullOrWhiteSpace(departmentId))
+            {
+                query = query.Where(x => x.Id != departmentId);
+            }
+
+            return await query
+                .OrderBy(x => x.Name)
+                .Select(x => new DropdownDto
+                {
+                    Value = x.Id,
+                    Text = x.Name
+                })
+                .ToListAsync();
+        }
+
+        public async Task<List<DropdownDto>> GetParentDesignationDropdownAsync(string tenantId, string? designationId = null)
+        {
+            var query = _context.Designations
+                .AsNoTracking()
+                .Where(x => x.TenantId == tenantId);
+
+            // Exclude current department in Edit mode
+            if (!string.IsNullOrWhiteSpace(designationId))
+            {
+                query = query.Where(x => x.Id != designationId);
+            }
+
+            return await query
+                .OrderBy(x => x.Name)
+                .Select(x => new DropdownDto
+                {
+                    Value = x.Id,
+                    Text = x.Name
+                })
+                .ToListAsync();
+        }
+
+        public async Task<List<DropdownDto>> GetRoleNameDropdownAsync()
+        {
+            return await _context.Roles
+                .AsNoTracking()
+
+                .OrderBy(x => x.Name)
+
+                .Select(x => new DropdownDto
+                {
+                    Value = x.Id,
+
+                    Text = x.Name
+                })
+
+                .ToListAsync();
+        }
+
+        public async Task<List<DropdownDto>> GetShiftDropdownAsync()
+        {
+            return await _context.Shifts
+            .AsNoTracking()
+            .Where(x => x.IsActive)
+            .OrderBy(x => x.Name)
+            .Select(x => new DropdownDto
+            {
+                Value = x.Id,
+                Text = x.Name
+            })
+            .ToListAsync();
         }
 
         #endregion

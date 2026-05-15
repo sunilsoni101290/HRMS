@@ -11,5 +11,7 @@ namespace Application.Interfaces.Auth
         Task<AuthResponse> LoginAsync(LoginDto dto);
         Task<AuthResponse> RefreshTokenAsync(string refreshToken);
         Task<bool> LogoutAsync(string refreshToken);
+        Task<List<UserListDto>> GetAllAsync();
+        Task<UserListDto?> GetByIdAsync(string id);
     }
 }

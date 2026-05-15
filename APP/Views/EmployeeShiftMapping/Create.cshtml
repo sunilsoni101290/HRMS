@@ -1,0 +1,212 @@
+﻿@model EmployeeShiftMappingDto
+
+@{
+    ViewData["Title"] = "Employee Shift Mapping";
+}
+
+<div class="container-fluid py-4">
+
+    <div class="row justify-content-center">
+
+        <div class="col-lg-8">
+
+            <div class="card shadow border-0 rounded-4 overflow-hidden">
+
+                <!-- Header -->
+                <div class="card-header bg-primary text-white py-4">
+
+                    <div class="d-flex align-items-center">
+
+                        <div class="me-3">
+
+                            <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center"
+                                 style="width:70px;height:70px;">
+
+                                <i class="bi bi-person-workspace fs-2"></i>
+
+                            </div>
+
+                        </div>
+
+                        <div>
+
+                            <h3 class="mb-1">
+
+                                @(string.IsNullOrEmpty(Model?.Id)
+                                    ? "Assign Employee Shift"
+                                    : "Edit Employee Shift")
+
+                            </h3>
+
+                            <p class="mb-0 opacity-75">
+                                Manage employee shift assignments
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Body -->
+                <div class="card-body p-4">
+
+                    <form asp-action="@(Model.Id == null ? "Create" : "Edit")" method="post">
+
+                        <!-- Hidden -->
+                        <input asp-for="Id" type="hidden" />
+
+                        <div class="row g-4">
+
+                            <!-- Employee -->
+                            <div class="col-md-6">
+
+                                <label asp-for="EmployeeId"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <select asp-for="EmployeeId"
+                                        asp-items="ViewBag.EmployeeList"
+                                        class="form-select">
+
+                                    <option value="">
+                                        -- Select Employee --
+                                    </option>
+
+                                </select>
+
+                                <span asp-validation-for="EmployeeId"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                            <!-- Shift -->
+                            <div class="col-md-6">
+
+                                <label asp-for="ShiftId"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <select asp-for="ShiftId"
+                                        asp-items="ViewBag.ShiftList"
+                                        class="form-select">
+
+                                    <option value="">
+                                        -- Select Shift --
+                                    </option>
+
+                                </select>
+
+                                <span asp-validation-for="ShiftId"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                            <!-- Effective From -->
+                            <div class="col-md-6">
+
+                                <label asp-for="EffectiveFrom"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <input asp-for="EffectiveFrom"
+                                       type="date"
+                                       class="form-control" />
+
+                                <span asp-validation-for="EffectiveFrom"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                            <!-- Effective To -->
+                            <div class="col-md-6">
+
+                                <label asp-for="EffectiveTo"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <input asp-for="EffectiveTo"
+                                       type="date"
+                                       class="form-control" />
+
+                            </div>
+
+                            <!-- Status -->
+                            <div class="col-md-12">
+
+                                <div class="form-check form-switch mt-2">
+
+                                    <input asp-for="IsActive"
+                                           class="form-check-input"
+                                           type="checkbox" />
+
+                                    <label asp-for="IsActive"
+                                           class="form-check-label fw-semibold">
+                                        Active Mapping
+                                    </label>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="mt-5 d-flex justify-content-end gap-2">
+
+                            <a asp-action="Index"
+                               class="btn btn-light border rounded-3 px-4">
+
+                                <i class="bi bi-arrow-left"></i>
+                                Back
+
+                            </a>
+
+                            <button type="submit"
+                                    class="btn btn-primary rounded-3 px-4">
+
+                                <i class="bi bi-check-circle"></i>
+
+                                @(string.IsNullOrEmpty(Model?.Id)
+                                    ? "Save"
+                                    : "Update")
+
+                            </button>
+
+                        </div>
+                        <div class="col-md-6 mt-2">
+                            @if (TempData["Success"] != null)
+                            {
+                                <div class="alert alert-success alert-dismissible fade show"
+                                     role="alert">
+
+                                    <i class="bi bi-check-circle-fill"></i>
+
+                                    @TempData["Success"]
+
+                                    <button type="button"
+                                            class="btn-close"
+                                            data-bs-dismiss="alert">
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts {
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+}

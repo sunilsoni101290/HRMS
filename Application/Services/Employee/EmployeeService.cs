@@ -184,6 +184,11 @@ namespace Application.Services.Employee
         public async Task<EmployeeListDto> GetByIdAsync(string id)
         {
             var entity = await _db.Employees.AsNoTracking()
+                .Include(x=>x.Company)
+                .Include(x=>x.Branch)
+                .Include(x=>x.Department)
+                .Include(x=>x.Designation)
+                .Include(x=>x.ReportingManager)
                 .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
 
             if (entity == null)

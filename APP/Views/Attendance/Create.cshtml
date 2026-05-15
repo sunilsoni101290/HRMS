@@ -1,0 +1,226 @@
+﻿@model PunchRequestDto
+
+@{
+    ViewData["Title"] = "Employee Punch";
+}
+
+<div class="container-fluid py-4">
+
+    <div class="row justify-content-center">
+
+        <div class="col-lg-7">
+
+            <div class="card shadow border-0 rounded-4 overflow-hidden">
+
+                <!-- Header -->
+                <div class="card-header bg-success text-white py-4">
+
+                    <div class="d-flex align-items-center">
+
+                        <div class="me-3">
+
+                            <div class="bg-white text-success rounded-circle d-flex align-items-center justify-content-center"
+                                 style="width:65px;height:65px;">
+
+                                <i class="bi bi-fingerprint fs-2"></i>
+
+                            </div>
+
+                        </div>
+
+                        <div>
+
+                            <h3 class="mb-1">
+                                Employee Attendance Punch
+                            </h3>
+
+                            <p class="mb-0 opacity-75">
+                                Mark employee in/out attendance
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Body -->
+                <div class="card-body p-4">
+
+                    <form asp-action="SavePunch" method="post">
+
+                        <div class="row g-4">
+
+                            <!-- Employee -->
+                            <div class="col-md-12">
+
+                                <label asp-for="EmployeeId"
+                                       class="form-label fw-semibold">
+
+                                    Employee
+
+                                </label>
+
+                                <select asp-for="EmployeeId"
+                                        asp-items="ViewBag.EmployeeList"
+                                        class="form-select">
+
+                                    <option value="">
+                                        -- Select Employee --
+                                    </option>
+
+                                </select>
+
+                                <span asp-validation-for="EmployeeId"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                            <!-- Punch Time -->
+                            <div class="col-md-6">
+
+                                <label asp-for="PunchTime"
+                                       class="form-label fw-semibold">
+
+                                    Punch Time
+
+                                </label>
+
+                                <div class="input-group">
+
+                                    <span class="input-group-text">
+                                        <i class="bi bi-clock-history"></i>
+                                    </span>
+
+                                    <input asp-for="PunchTime"
+                                           type="datetime-local"
+                                           class="form-control" />
+
+                                </div>
+
+                                <span asp-validation-for="PunchTime"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                            <!-- Device -->
+                            <div class="col-md-6">
+
+                                <label asp-for="DeviceId"
+                                       class="form-label fw-semibold">
+
+                                    Device ID
+
+                                </label>
+
+                                <div class="input-group">
+
+                                    <span class="input-group-text">
+                                        <i class="bi bi-phone"></i>
+                                    </span>
+
+                                    <input asp-for="DeviceId"
+                                           class="form-control"
+                                           placeholder="Enter Device ID" />
+
+                                </div>
+
+                            </div>
+
+                            <!-- Location -->
+                            <div class="col-md-12">
+
+                                <label asp-for="Location"
+                                       class="form-label fw-semibold">
+
+                                    Location
+
+                                </label>
+
+                                <div class="input-group">
+
+                                    <span class="input-group-text">
+                                        <i class="bi bi-geo-alt"></i>
+                                    </span>
+
+                                    <textarea asp-for="Location"
+                                              class="form-control"
+                                              rows="3"
+                                              placeholder="Enter Punch Location"></textarea>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Punch Buttons -->
+                        <div class="mt-5 d-flex justify-content-end gap-2">
+
+                            <a asp-action="Index"
+                               class="btn btn-light border rounded-3 px-4">
+
+                                <i class="bi bi-arrow-left"></i>
+                                Back
+
+                            </a>
+
+                            <!-- Punch In -->
+                            <button type="submit"
+                                    name="PunchType"
+                                    value="In"
+                                    class="btn btn-success rounded-3 px-4">
+
+                                <i class="bi bi-box-arrow-in-right"></i>
+                                Punch In
+
+                            </button>
+
+                            <!-- Punch Out -->
+                            <button type="submit"
+                                    name="PunchType"
+                                    value="Out"
+                                    class="btn btn-danger rounded-3 px-4">
+
+                                <i class="bi bi-box-arrow-right"></i>
+                                Punch Out
+
+                            </button>
+
+                        </div>
+                        <div class="col-md-6">
+                            @if (TempData["Success"] != null)
+                            {
+                                <div class="alert alert-success alert-dismissible fade show"
+                                     role="alert">
+
+                                    <i class="bi bi-check-circle-fill"></i>
+
+                                    @TempData["SuccessMessage"]
+
+                                    <button type="button"
+                                            class="btn-close"
+                                            data-bs-dismiss="alert">
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts {
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+}

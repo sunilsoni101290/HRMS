@@ -60,6 +60,29 @@ namespace API.Controllers
             return Ok(result);
         }
 
+        [Authorize]
+        [HttpGet("user-list")]
+        public async Task<IActionResult> GetAll()
+        {
+            var result = await _auth.GetAllAsync();
+
+            return Ok(result);
+        }
+
+        // ==============================
+        // GET USER BY ID
+        // ==============================
+        [Authorize]
+        [HttpGet("get-user-details/{id}")]
+        public async Task<IActionResult> GetById([FromRoute] string id)
+        {
+            var result = await _auth.GetByIdAsync(id);
+
+            if (result == null)
+                return NotFound();
+
+            return Ok(result);
+        }
 
         [Authorize]
         [HttpGet("secure-data")]

@@ -1,6 +1,9 @@
 ﻿using Application.DTOs.Attendance;
+using Application.DTOs.Attendances;
 using Application.Interfaces.Attendances;
 using Domain.Entities;
+using Domain.Enums;
+using Domain.Interfaces;
 using Infrastructure;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -169,17 +172,19 @@ namespace Application.Services.Attendances
         }
 
         #region Private function
-        private DateTime GetAttendanceDate(DateTime punchTime, Shift shift)
+        private DateTime GetAttendanceDate(DateTime punchTime, Shift? shift)
         {
+            if (shift is null)
+                return punchTime.Date;
+
             if (!shift.IsNightShift)
                 return punchTime.Date;
 
-            var shiftStartToday = punchTime.Date.Add(shift.StartTime);
+            DateTime shiftStartToday = punchTime.Date.Add(shift.StartTime);
 
-            if (punchTime < shiftStartToday)
-                return punchTime.Date.AddDays(-1);
-
-            return punchTime.Date;
+            return punchTime < shiftStartToday
+                ? punchTime.Date.AddDays(-1)
+                : punchTime.Date;
         }
         private AttendanceStatus GetAttendanceStatus(Attendance attendance)
         {
@@ -251,6 +256,69 @@ namespace Application.Services.Attendances
                     (decimal)(total.TotalMinutes - shiftMinutes) / 60;
             }
         }
+        #endregion
+
+        #region Get All
+
+        public async Task<List<AttendanceLogDto>> GetAllAsync()
+        {
+            return await _db.AttendanceLogs
+                .Include(x => x.Attendance)
+                .OrderByDescending(x => x.PunchTime)
+                .Select(x => new AttendanceLogDto
+                {
+                    Id = x.Id,
+
+                    AttendanceId = x.AttendanceId,
+
+                    EmployeeId = x.EmployeeId,
+
+                    PunchTime = x.PunchTime,
+
+                    PunchType = EnumHelper.GetEnumName<PunchType>((int)x.PunchType),
+
+                    DeviceId = x.DeviceId,
+
+                    Location = x.Location,
+
+                    IsManual = x.IsManual,
+
+                    CreatedDate = x.CreatedOn
+                })
+                .ToListAsync();
+        }
+
+        #endregion
+
+        #region Get By Id
+
+        public async Task<AttendanceLogDto?> GetByIdAsync(string id)
+        {
+            return await _db.AttendanceLogs
+                .Where(x => x.Id == id)
+                .Select(x => new AttendanceLogDto
+                {
+                    Id = x.Id,
+
+                    AttendanceId = x.AttendanceId,
+
+                    EmployeeId = x.EmployeeId,
+
+                    PunchTime = x.PunchTime,
+
+                    PunchType = EnumHelper.GetEnumName<PunchType>((int)x.PunchType),
+
+                    DeviceId = x.DeviceId,
+
+                    Location = x.Location,
+
+                    IsManual = x.IsManual,
+
+                    CreatedDate = x.CreatedOn
+                })
+                .FirstOrDefaultAsync();
+        }
+
         #endregion
     }
 }

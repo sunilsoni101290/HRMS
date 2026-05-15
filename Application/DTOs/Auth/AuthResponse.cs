@@ -11,6 +11,8 @@ namespace Application.DTOs.Auth
         public string RefreshToken { get; set; }
         public int ExpiresIn { get; set; }
         public string FullName { get; set; }
+        public string RoleName { get; set; }
+        public string Designation { get; set; }
         public string Email { get; set; }
         public string UserId { get; set; }
         public string TenantId { get; set; }

@@ -3,9 +3,23 @@
     var pageTitle = ViewBag.Title ?? "HRMS Dashboard";
 }
 
+@using Microsoft.AspNetCore.Http
+
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    var fullName = HttpContextAccessor.HttpContext.Session.GetString("FullName");
+    var designation = HttpContextAccessor.HttpContext.Session.GetString("Designation");
+    var rolename = HttpContextAccessor.HttpContext.Session.GetString("RoleName");
+    var userId = HttpContextAccessor.HttpContext.Session.GetString("UserId");
+
+    //var profileImage = HttpContextAccessor.HttpContext.Session.GetString("ProfileImage");
+}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <input asp-for="@userId" type="hidden" />
 
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -54,6 +68,11 @@
                 <span>Employees</span>
             </a>
 
+            <a href="/Auth/Index">
+                <i class="bi bi-people-fill"></i>
+                <span>User Mangement</span>
+            </a>
+
             <a href="/Department/Index">
                 <i class="bi bi-diagram-3-fill"></i>
                 <span>Departments</span>
@@ -63,6 +82,14 @@
                 <span>Designation</span>
             </a>
 
+            <a href="/Shift/Index">
+                <i class="bi bi-calendar-check-fill"></i>
+                <span>Shift Management</span>
+            </a>
+            <a href="/EmployeeShiftMapping/Index">
+                <i class="bi bi-calendar-check-fill"></i>
+                <span>Empoyee Shift Mapping</span>
+            </a>
             <a href="/Attendance/Index">
                 <i class="bi bi-calendar-check-fill"></i>
                 <span>Attendance</span>
@@ -153,8 +180,8 @@
                         <img src="https://i.pravatar.cc/150?img=12" />
 
                         <div class="ms-2 d-none d-md-block">
-                            <h6>Admin User</h6>
-                            <small>HR Manager</small>
+                            <h6>@fullName</h6>
+                            <small>@designation</small>
                         </div>
 
                     </a>
@@ -162,14 +189,15 @@
                     <ul class="dropdown-menu dropdown-menu-end shadow border-0">
 
                         <li>
-                            <a class="dropdown-item" href="#">
+                            <a class="dropdown-item" asp-action="Details" asp-controller="Auth"
+                               asp-route-id="@userId">
                                 <i class="bi bi-person me-2"></i>
                                 My Profile
                             </a>
                         </li>
 
                         <li>
-                            <a class="dropdown-item" href="#">
+                            <a class="dropdown-item">
                                 <i class="bi bi-gear me-2"></i>
                                 Settings
                             </a>
@@ -180,7 +208,8 @@
                         </li>
 
                         <li>
-                            <a class="dropdown-item text-danger" href="#">
+                            <a asp-controller="Auth"
+                               asp-action="Logout" class="dropdown-item text-danger">
                                 <i class="bi bi-box-arrow-right me-2"></i>
                                 Logout
                             </a>

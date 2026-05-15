@@ -38,17 +38,17 @@ namespace Application.Services.Auth
                 Email = dto.Email,
                 TenantId = dto.TenantId,
                 CompanyId = dto.CompanyId,
-                PhoneNumber= dto.PhoneNumber,
+                PhoneNumber = dto.PhoneNumber,
                 BranchId = dto.BranchId,
                 EmployeeId = dto.EmployeeId,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-                CreatedBy="system"
+                CreatedBy = string.IsNullOrEmpty(dto.CreatedBy) ? "System" : dto.CreatedBy
             };
 
             _db.Users.Add(user);
 
             // Default Role Assign
-            var role = _db.Roles.FirstOrDefault(x => x.Code == ConstantHelper.EMPLOYEE);
+            var role =  _db.Roles.FirstOrDefault(x => x.Code == ConstantHelper.EMPLOYEE);
 
             if (role != null)
             {
@@ -56,8 +56,8 @@ namespace Application.Services.Auth
                 {
                     Id = IDManager.GetNewId(new UserRole()),
                     UserId = user.Id,
-                    RoleId = role.Id,
-                    CreatedBy = "system"
+                    RoleId = string.IsNullOrEmpty(dto.RoleId) ? role.Id :dto.RoleId,
+                    CreatedBy = string.IsNullOrEmpty(dto.CreatedBy) ? "System" : dto.CreatedBy
                 });
             }
 
@@ -72,7 +72,12 @@ namespace Application.Services.Auth
         // ==============================
         public async Task<AuthResponse> LoginAsync(LoginDto dto)
         {
-            var user = await _db.Users
+            var user = await _db.Users.Include(x => x.Employee)
+                .ThenInclude(x => x.Designation)
+                .Include(x => x.UserRoles)
+                .ThenInclude(x => x.Role)
+                .Include(x => x.Company)
+                .Include(x => x.Branch)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x =>
                     x.Username == dto.Username);
@@ -134,6 +139,11 @@ namespace Application.Services.Auth
                 .Select(x => x.Role.Name)
                 .ToList();
 
+            var roleName = _db.UserRoles
+            .Where(x => x.UserId == user.Id)
+            .Select(x => x.Role.Name)
+            .FirstOrDefault();
+
             // Permissions
             var permissions = _db.RolePermissions
                 .Where(rp => roles.Contains(rp.Role.Name))
@@ -172,14 +182,16 @@ namespace Application.Services.Auth
                 UserId = user.Id,
                 TenantId = user.TenantId,
                 Username = user.Username,
-                FullName = !string.IsNullOrEmpty(user.EmployeeId) ? await GetEmployeeFullName(user.EmployeeId):"" ,
+                Designation = !string.IsNullOrEmpty(user.EmployeeId) ? await GetDesignationName(user.EmployeeId) : "UNKNOWN",
+                RoleName = roleName,
+                FullName = !string.IsNullOrEmpty(user.EmployeeId) ? await GetEmployeeFullName(user.EmployeeId) : "UNKNOWN",
                 Email = user.Email,
             };
         }
 
         private async Task<string> GetEmployeeFullName(string employeeId)
         {
-            var emp = await _db.Employees.FirstOrDefaultAsync(x=>x.Id==employeeId);
+            var emp = await _db.Employees.AsNoTracking().FirstOrDefaultAsync(x=>x.Id==employeeId);
 
             if (emp == null) 
             {
@@ -187,6 +199,154 @@ namespace Application.Services.Auth
             }
 
             return emp.FirstName + " " + emp.LastName;
+        }
+        private async Task<string> GetDesignationName(string employeeId)
+        {
+            var emp = await _db.Employees.Include(x=>x.Designation).FirstOrDefaultAsync(x=>x.Id==employeeId);
+
+            if (emp == null) 
+            {
+                return "";
+            }
+
+            return emp.Designation.Name;
+        }
+
+        public async Task<List<UserListDto>> GetAllAsync()
+        {
+            return await _db.Users
+                .Include(x=>x.Employee)
+                .ThenInclude(x => x.Designation)
+                .Include(x => x.UserRoles)
+                .ThenInclude(x => x.Role)
+                .Include(x=>x.Company)
+                .Include(x=>x.Branch)
+                .AsNoTracking()
+                .Select(x => new UserListDto
+                {
+                    Id = x.Id,
+
+                    // Identity
+                    Username = x.Username,
+                    Email = x.Email,
+                    PhoneNumber = x.PhoneNumber,
+
+                    // Tenant
+                    TenantId = x.TenantId,
+                    TenantName = x.Tenant.Name,
+
+                    // Company
+                    CompanyId = x.CompanyId,
+                    CompanyName = x.Company.Name,
+
+                    // Branch
+                    BranchId = x.BranchId,
+                    BranchName = x.Branch != null
+                        ? x.Branch.Name
+                        : null,
+
+                    // Employee
+                    EmployeeId = x.EmployeeId,
+                    EmployeeName = x.Employee != null
+                        ? x.Employee.FirstName + " " + x.Employee.LastName
+                        : null,
+
+                    // Security
+                    EmailConfirmed = x.EmailConfirmed,
+                    PhoneConfirmed = x.PhoneConfirmed,
+                    IsLocked = x.IsLocked,
+                    AccessFailedCount = x.AccessFailedCount,
+
+                    // Login
+                    LastLoginDate = x.LastLoginDate,
+                    LastLoginIP = x.LastLoginIP,
+
+                    // Common
+                    IsActive = x.IsActive,
+                    CreatedDate = x.CreatedOn,
+                    CreatedBy=x.CreatedBy,
+                })
+                .OrderByDescending(x => x.CreatedDate)
+                .ToListAsync();
+        }
+
+        public async Task<UserListDto?> GetByIdAsync(string id)
+        {
+            return await _db.Users
+                .AsNoTracking()
+
+                // Includes
+                .Include(x => x.Employee)
+                .Include(x => x.Company)
+                .Include(x => x.Branch)
+                .Include(x => x.Tenant)
+                .Include(x => x.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+
+                // Filter
+                .Where(x => x.Id == id)
+
+                // Select DTO
+                .Select(x => new UserListDto
+                {
+                    Id = x.Id,
+
+                    // Identity
+                    Username = x.Username,
+                    Email = x.Email,
+                    PhoneNumber = x.PhoneNumber,
+
+                    // Tenant
+                    TenantId = x.TenantId,
+                    TenantName = x.Tenant != null
+                        ? x.Tenant.Name
+                        : null,
+
+                    // Company
+                    CompanyId = x.CompanyId,
+                    CompanyName = x.Company != null
+                        ? x.Company.Name
+                        : null,
+
+                    // Role (First Role)
+                    RoleId = x.UserRoles
+                        .Select(r => r.RoleId)
+                        .FirstOrDefault(),
+
+                    RoleName = x.UserRoles
+                        .Select(r => r.Role.Name)
+                        .FirstOrDefault(),
+
+                    // Branch
+                    BranchId = x.BranchId,
+                    BranchName = x.Branch != null
+                        ? x.Branch.Name
+                        : null,
+
+                    // Employee
+                    EmployeeId = x.EmployeeId,
+
+                    EmployeeName = x.Employee != null
+                        ? (x.Employee.FirstName + " " + x.Employee.LastName)
+                        : null,
+
+                    // Security
+                    EmailConfirmed = x.EmailConfirmed,
+                    PhoneConfirmed = x.PhoneConfirmed,
+                    IsLocked = x.IsLocked,
+                    AccessFailedCount = x.AccessFailedCount,
+
+                    // Login
+                    LastLoginDate = x.LastLoginDate,
+                    LastLoginIP = x.LastLoginIP,
+
+                    // Common
+                    IsActive = x.IsActive,
+                    CreatedDate = x.CreatedOn,
+                    CreatedBy = x.CreatedBy
+                })
+
+                .FirstOrDefaultAsync();
         }
     }
 }

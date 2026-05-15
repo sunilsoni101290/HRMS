@@ -1,4 +1,5 @@
 using API.Middleware;
+using Application.DTOs.Attendances;
 using Application.Interfaces;
 using Application.Interfaces.Attendances;
 using Application.Interfaces.Auth;
@@ -126,6 +127,8 @@ builder.Services.AddScoped<ICountryService, CountryService>();
 builder.Services.AddScoped<IStateService, StateService>();
 builder.Services.AddScoped<ICityService, CityService>();
 builder.Services.AddScoped<IDropdownService,DropdownService>();
+builder.Services.AddScoped<IShiftService, ShiftService>();
+builder.Services.AddScoped<IEmployeeShiftMappingService, EmployeeShiftMappingService>();
 
 // ======================================================
 // SWAGGER
