@@ -1,181 +1,204 @@
-﻿@model IEnumerable<APP.Models.DTOs.EmployeeListDto>
-@using APP.Helpers
+﻿@model IEnumerable<EmployeeListDto>
 
-@{
-    ViewData["Title"] = "Employee";
-}
-<link href="~/css/form-style.css" rel="stylesheet" />
+<style>
+    table th {
+        font-family: 'Inter', sans-serif;
+        font-size: 14px;
+        font-weight:600;
+    }
 
-<!-- ================= EMPLOYEE PAGE ================= -->
+    table td {
+        font-family: 'Inter', sans-serif;
+        font-size: 13px;
+        font-weight: normal;
+    }
+</style>
 
-<div class="employee-page">
+<div class="container-fluid py-4">
 
-    <!-- ================= PAGE HEADER ================= -->
-
-    <div class="employee-header">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
 
         <div>
 
-            <h2>@ViewData["Title"]</h2>
-
-            <p>
-                Manage your workforce and employee records
-            </p>
+            <h3 class="fw-bold">
+                <i class="bi bi-people-fill text-primary"></i>
+                Employee Management
+            </h3>
 
         </div>
 
-        <a asp-action="Create" asp-controller="Employee"  class="btn btn-add-employee">
+        <div>
 
-            <i class="bi bi-person-plus"></i>
+            <a asp-action="Create"
+               class="btn btn-primary rounded-3 px-4">
 
-            Add Employee
+                <i class="bi bi-plus-circle"></i>
+                Add Employee
 
-        </a>
+            </a>
+
+        </div>
 
     </div>
 
-    <!-- ================= FILTER SECTION ================= -->
+    <!-- Search -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
 
-    <div class="employee-toolbar">
-
-        <!-- SEARCH -->
-        <div class="search-box-custom">
-
-            <i class="bi bi-search"></i>
+        <div class="card-body">
 
             <input type="text"
-                   placeholder="Search employees..." />
+                   id="searchInput"
+                   class="form-control"
+                   placeholder="Search Employee..." />
 
         </div>
 
-        <!-- FILTER -->
-        <button class="btn toolbar-btn">
-
-            <i class="bi bi-funnel"></i>
-
-            Filter
-
-        </button>
-
-        <!-- EXPORT -->
-        <button class="btn toolbar-btn">
-
-            <i class="bi bi-download"></i>
-
-            Export
-
-        </button>
-
     </div>
 
-    <!-- ================= TABLE CARD ================= -->
+    <!-- Grid -->
+    <div class="card border-0 shadow rounded-4">
 
-    <div class="employee-table-card">
+        <div class="card-body p-0">
 
-        <div class="table-responsive">
+            <div class="table-responsive">
 
-            <table class="table employee-table align-middle">
+                <table class="table table-hover align-middle mb-0">
 
-                <!-- TABLE HEAD -->
-                <thead>
+                    <thead class="table-light">
 
-                    <tr>
+                        <tr>
 
-                        <th>EMPLOYEE</th>
-                        <th>DEPARTMENT</th>
-                        <th>DESIGNATION</th>
-                        <th>STATUS</th>
-                        <th>REPORTING MANAGER</th>
-                        <th>JOINED</th>
-                        <th class="text-center">ACTIONS</th>
-                    </tr>
+                            <th>#</th>
+                            <th>Emp Code</th>
+                            <th>Name</th>
+                            <th>Company</th>
+                            <th>Department</th>
+                            <th>Designation</th>
+                            <th>Phone</th>
+                            <th>Email</th>
+                            <th>DOJ</th>
+                            <th width="160">Action</th>
 
-                </thead>
+                        </tr>
 
-                <!-- TABLE BODY -->
-                <tbody>
+                    </thead>
 
-                    <!-- ROW -->
-                    @{
-                        if(Model!=null && Model.Count() > 0)
-                        {
-                            foreach (var emp in Model)
-                            {
-                                <tr>
+                    <tbody id="employeeTable">
 
-                                    <td>
-
-                                        <div class="employee-info">
-
-                                            <div class="employee-avatar blue-avatar">
-                                                @NameHelper.GetNamePrefix(emp.FirstName,emp.LastName)
-                                            </div>
-
-                                            <div>
-
-                                                <h6>@emp.FirstName @Html.Raw(" ") @emp.LastName</h6>
-
-                                                <span>@emp.EmployeeCode</span>
-
-                                            </div>
-
-                                        </div>
-
-                                    </td>
-
-                                    <td>@emp.DepartmentName</td>
-
-                                    <td>@emp.DesignationName</td>
-
-                                    <td>
-                                        <span class="status-badge active-status">
-                                            Active
-                                        </span>
-                                    </td>
-
-                                    <td>@emp.ReportingManagerName+</td>
-
-                                    <td>@emp.JoiningDate?.ToString("MMM dd,yyyy")</td>
-
-                                    <td>
-
-                                        <div class="action-buttons">
-                                            <a asp-action="Detail"
-                                                   asp-controller="Employee"
-                                                   asp-route-id="@emp.Id"
-                                                   title="View">
-
-                                                <i class="bi bi-eye"></i>
-
-                                            </a>
-                                            <a asp-action="Edit"
-                                                   asp-controller="Employee"
-                                                   asp-route-id="@emp.Id"
-                                                   title="Edit">
-
-                                                <i class="bi bi-pencil-square"></i>
-
-                                            </a>
-
-                                            <a href="#">
-                                                <i class="bi bi-trash"></i>
-                                            </a>
-
-                                        </div>
-
-                                    </td>
-
-                                </tr>
-                            }
+                        @{
+                            int sr = 1;
                         }
-                    }
 
-                </tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
 
-            </table>
+                                <td>@sr</td>
+
+                                <td>
+                                    <span class="badge bg-dark">
+                                        @item.EmployeeCode
+                                    </span>
+                                </td>
+
+                                <td>
+
+                                    <div class="fw-semibold">
+                                        @item.FirstName @item.LastName
+                                    </div>
+
+                                </td>
+
+                                <td>@item.CompanyName</td>
+
+                                <td>@item.DepartmentName</td>
+
+                                <td>@item.DesignationName</td>
+
+                                <td>@item.Phone</td>
+
+                                <td>@item.Email</td>
+
+                                <td>
+                                    @(item.JoiningDate?.ToString("dd MMM yyyy"))
+                                </td>
+
+                                <td>
+
+                                    <div class="d-flex gap-2">
+
+                                        <!-- Details -->
+                                        <a asp-action="Details"
+                                           asp-route-id="@item.Id"
+                                           class="btn btn-sm btn-outline-info rounded-3">
+
+                                            <i class="bi bi-eye"></i>
+
+                                        </a>
+
+                                        <!-- Edit -->
+                                        <a asp-action="Edit"
+                                           asp-route-id="@item.Id"
+                                           class="btn btn-sm btn-outline-primary rounded-3">
+
+                                            <i class="bi bi-pencil-square"></i>
+
+                                        </a>
+
+                                        <!-- Delete -->
+                                        <a asp-action="Delete"
+                                           asp-route-id="@item.Id"
+                                           onclick="return confirm('Delete Employee?')"
+                                           class="btn btn-sm btn-outline-danger rounded-3">
+
+                                            <i class="bi bi-trash"></i>
+
+                                        </a>
+
+                                    </div>
+
+                                </td>
+
+                            </tr>
+
+                            sr++;
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
 
         </div>
 
     </div>
 
 </div>
+
+@section Scripts {
+
+    <script>
+
+        document.getElementById("searchInput")
+            .addEventListener("keyup", function () {
+
+                let value = this.value.toLowerCase();
+
+                let rows = document.querySelectorAll("#employeeTable tr");
+
+                rows.forEach(function (row) {
+
+                    let text = row.innerText.toLowerCase();
+
+                    row.style.display =
+                        text.includes(value) ? "" : "none";
+
+                });
+
+            });
+
+    </script>
+
+}

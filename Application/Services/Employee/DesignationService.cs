@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Infrastructure.Data;
 
 namespace Application.Services.Employee
 {
@@ -29,14 +30,21 @@ namespace Application.Services.Employee
                     Name = x.Name,
                     Code = x.Code,
 
+                    DepartmentId = x.DepartmentId,
                     DepartmentName = x.Department != null
                         ? x.Department.Name
                         : "",
 
+                    ParentDesignationId = x.ParentDesignationId,
+                    ParentDesignationName = x.ParentDesignation != null
+                        ? x.ParentDesignation.Name
+                        : "",
+
+                    CompanyId = x.CompanyId,
                     CompanyName = x.Company != null
                         ? x.Company.Name
                         : "",
-
+                    BranchId = x.BranchId,
                     BranchName = x.Branch != null
                         ? x.Branch.Name
                         : "",
@@ -98,7 +106,7 @@ namespace Application.Services.Employee
         {
             var entity = new Designation
             {
-                Id = Guid.NewGuid().ToString(),
+                Id = IDManager.GetNewId(new Designation()),
 
                 Name = dto.Name,
                 Code = dto.Code,
@@ -121,7 +129,9 @@ namespace Application.Services.Employee
 
                 // Salary
                 MinSalary = dto.MinSalary,
-                MaxSalary = dto.MaxSalary
+                MaxSalary = dto.MaxSalary,
+
+                CreatedBy= dto.CreatedBy
             };
 
             await _context.Designations.AddAsync(entity);
@@ -164,6 +174,10 @@ namespace Application.Services.Employee
             // Salary
             entity.MinSalary = dto.MinSalary;
             entity.MaxSalary = dto.MaxSalary;
+
+            entity.CreatedBy = dto.CreatedBy;
+            entity.ModifiedBy = dto.ModifiedBy;
+            entity.ModifiedOn = dto.ModifiedOn;
 
             _context.Designations.Update(entity);
             await _context.SaveChangesAsync();

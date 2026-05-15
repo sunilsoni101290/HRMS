@@ -1,7 +1,10 @@
 ﻿using APP.Attributes;
+using APP.Helpers;
 using APP.Models.DTOs;
 using APP.Services.Interfaces;
+using Humanizer;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace APP.Controllers
 {
@@ -11,10 +14,14 @@ namespace APP.Controllers
     public class DesignationController : Controller
     {
         private readonly IApiService _apiService;
+        private string _tenantId;
+        private string _userId;
 
         public DesignationController(IApiService apiService)
         {
             _apiService = apiService;
+            _tenantId = SessionHelper.GetActiveTenantId;
+            _userId = SessionHelper.GetActiveUserId;
         }
 
         public async Task<IActionResult> Index()
@@ -22,23 +29,36 @@ namespace APP.Controllers
             var data = await _apiService
                 .GetAsync<List<DesignationListDto>>("designation");
 
+            // Department
+            var departments = await _apiService
+                .GetAsync<List<DropdownDto>>($"dropdown/department");
+
+            ViewBag.DepartmentNames = departments.ToDictionary(x => x.Value, x => x.Text);
+
             return View(data);
         }
 
         [HttpGet]
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
-            return View();
+            await LoadDropdowns();
+            return View(new DesignationDto());
         }
 
         [HttpPost]
         public async Task<IActionResult> Create(DesignationDto dto)
         {
             if (!ModelState.IsValid)
+            {
+                dto.TenantId = _tenantId;
+                dto.CreatedBy = _userId;
+
+                await LoadDropdowns();
+                await _apiService.PostAsync<dynamic>("designation", dto);
+
+                TempData["Success"] = "Record saved successfully.";
                 return View(dto);
-
-            await _apiService.PostAsync<dynamic>("designation", dto);
-
+            }
             return RedirectToAction(nameof(Index));
         }
 
@@ -47,19 +67,28 @@ namespace APP.Controllers
         {
             var data = await _apiService
                 .GetAsync<DesignationDto>($"designation/{id}");
-
-            return View(data);
+            await LoadDropdowns();
+            return View("Create",data);
         }
 
         [HttpPost]
         public async Task<IActionResult> Edit(string id, DesignationDto dto)
         {
             if (!ModelState.IsValid)
-                return View(dto);
-
-            await _apiService
+            {
+                dto.TenantId = _tenantId;
+                dto.CreatedBy = _userId;
+                dto.ModifiedBy = _userId;
+                dto.ModifiedOn = DateTime.UtcNow;
+                
+                await LoadDropdowns();
+                await _apiService
                 .PutAsync<dynamic>($"designation/{id}", dto);
 
+                TempData["Success"] = "Record updated successfully.";
+
+                return View("Create",dto);
+            }
             return RedirectToAction(nameof(Index));
         }
 
@@ -69,6 +98,39 @@ namespace APP.Controllers
 
             return RedirectToAction(nameof(Index));
         }
+
+        #region Load Dropdowns
+
+        private async Task LoadDropdowns(string? designationId = null)
+        {
+            // Company
+            var companies = await _apiService
+                .GetAsync<List<DropdownDto>>($"dropdown/company");
+
+            ViewBag.CompanyList = new SelectList(
+                companies,
+                "Value",
+                "Text");
+
+
+            // Department
+            var parentDesignations = await _apiService
+                .GetAsync<List<DropdownDto>>($"dropdown/parent-designation?tenantId={_tenantId}&designationId={designationId}");
+
+            ViewBag.ParentDesignationList = new SelectList(
+                parentDesignations,
+                "Value",
+                "Text");
+
+
+            // Department
+            var departments = await _apiService
+                .GetAsync<List<DropdownDto>>($"dropdown/department");
+
+            ViewBag.DepartmentList = new SelectList(departments,"Value","Text");
+        }
+
+        #endregion
     }
 
     #endregion

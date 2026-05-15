@@ -30,14 +30,16 @@ namespace Application.Services.Employee
                     Name = x.Name,
                     Code = x.Code,
 
+                    CompanyId = x.CompanyId,
                     CompanyName = x.Company != null
                         ? x.Company.Name
                         : "",
-
+                    BranchId = x.BranchId,
                     BranchName = x.Branch != null
                         ? x.Branch.Name
                         : "",
 
+                    ParentDepartmentId = x.ParentDepartmentId,
                     ParentDepartmentName = x.ParentDepartment != null
                         ? x.ParentDepartment.Name
                         : ""

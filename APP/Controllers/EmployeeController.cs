@@ -43,7 +43,10 @@ namespace APP.Controllers
         {
             await LoadDropdowns();
 
-            return View(new EmployeeDto());
+            return View(new EmployeeDto
+            {
+                JoiningDate = DateTime.UtcNow
+            });
         }
 
         #endregion
@@ -62,7 +65,7 @@ namespace APP.Controllers
                 await _apiService
                     .PostAsync<dynamic>($"Employee/add-employee", dto);
 
-                TempData["Success"] = "Employee created successfully.";
+                TempData["Success"] = "Record created successfully.";
 
                 /*
                     TempData["Warning"] = "Please verify details.";
@@ -124,7 +127,7 @@ namespace APP.Controllers
         public async Task<IActionResult> Details(string id)
         {
             var data = await _apiService
-                .GetAsync<EmployeeDto>($"Employee/get-employee-detail/{id}");
+                .GetAsync<EmployeeListDto>($"Employee/get-employee-detail/{id}");
 
             if (data == null)
                 return NotFound();

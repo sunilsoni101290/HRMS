@@ -1,0 +1,325 @@
+﻿@model ShiftDto
+
+@{
+    ViewData["Title"] = "Shift Management";
+}
+
+<div class="container-fluid py-4">
+
+    <div class="row justify-content-center">
+
+        <div class="col-lg-10">
+
+            <div class="card shadow border-0 rounded-4 overflow-hidden">
+
+                <!-- Header -->
+                <div class="card-header bg-primary text-white py-4">
+
+                    <div class="d-flex align-items-center">
+
+                        <div class="me-3">
+
+                            <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center"
+                                 style="width:65px;height:65px;">
+
+                                <i class="bi bi-clock-history fs-2"></i>
+
+                            </div>
+
+                        </div>
+
+                        <div>
+
+                            <h3 class="mb-1">
+                                @(string.IsNullOrEmpty(Model?.Id)
+                                    ? "Create Shift"
+                                    : "Edit Shift")
+                            </h3>
+
+                            <p class="mb-0 opacity-75">
+                                Manage company working shift timings
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Body -->
+                <div class="card-body p-4">
+
+                    <form asp-action="@(Model.Id == null ? "Create" : "Edit")" method="post">
+                        <!-- Hidden Fields -->
+                        <input asp-for="Id" type="hidden" />
+                        <input asp-for="TenantId" type="hidden" />
+
+                        <div class="row g-4">
+
+                            <!-- Shift Name -->
+                            <div class="col-md-6">
+
+                                <label asp-for="Name"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <div class="input-group">
+
+                                    <span class="input-group-text">
+                                        <i class="bi bi-calendar-week"></i>
+                                    </span>
+
+                                    <input asp-for="Name"
+                                           class="form-control"
+                                           placeholder="Enter Shift Name" />
+
+                                </div>
+
+                                <span asp-validation-for="Name"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                            <!-- Night Shift -->
+                            <div class="col-md-6">
+
+                                <label class="form-label fw-semibold d-block">
+                                    Shift Type
+                                </label>
+
+                                <div class="form-check form-switch mt-2">
+
+                                    <input asp-for="IsNightShift"
+                                           class="form-check-input"
+                                           type="checkbox" />
+
+                                    <label asp-for="IsNightShift"
+                                           class="form-check-label">
+                                    </label>
+
+                                </div>
+
+                            </div>
+
+                            <!-- Start Time -->
+                            <div class="col-md-6">
+
+                                <label asp-for="StartTime"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <div class="input-group">
+
+                                    <span class="input-group-text">
+                                        <i class="bi bi-clock"></i>
+                                    </span>
+
+                                    <input asp-for="StartTime"
+                                           type="time"
+                                           class="form-control" />
+
+                                </div>
+
+                                <span asp-validation-for="StartTime"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                            <!-- End Time -->
+                            <div class="col-md-6">
+
+                                <label asp-for="EndTime"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <div class="input-group">
+
+                                    <span class="input-group-text">
+                                        <i class="bi bi-clock-fill"></i>
+                                    </span>
+
+                                    <input asp-for="EndTime"
+                                           type="time"
+                                           class="form-control" />
+
+                                </div>
+
+                                <span asp-validation-for="EndTime"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                            <!-- Grace In -->
+                            <div class="col-md-3">
+
+                                <label asp-for="GraceInMinutes"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <input asp-for="GraceInMinutes"
+                                       type="number"
+                                       class="form-control"
+                                       placeholder="0" />
+
+                            </div>
+
+                            <!-- Grace Out -->
+                            <div class="col-md-3">
+
+                                <label asp-for="GraceOutMinutes"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <input asp-for="GraceOutMinutes"
+                                       type="number"
+                                       class="form-control"
+                                       placeholder="0" />
+
+                            </div>
+
+                            <!-- Half Day -->
+                            <div class="col-md-3">
+
+                                <label asp-for="HalfDayMinutes"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <input asp-for="HalfDayMinutes"
+                                       type="number"
+                                       class="form-control"
+                                       placeholder="Enter Half Day Minutes" />
+
+                                <span asp-validation-for="HalfDayMinutes"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                            <!-- Full Day -->
+                            <div class="col-md-3">
+
+                                <label asp-for="FullDayMinutes"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <input asp-for="FullDayMinutes"
+                                       type="number"
+                                       class="form-control"
+                                       placeholder="Enter Full Day Minutes" />
+
+                                <span asp-validation-for="FullDayMinutes"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                            <!-- Minimum Working -->
+                            <div class="col-md-6">
+
+                                <label asp-for="MinimumWorkingMinutes"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <input asp-for="MinimumWorkingMinutes"
+                                       type="number"
+                                       class="form-control"
+                                       placeholder="Enter Minimum Working Minutes" />
+
+                                <span asp-validation-for="MinimumWorkingMinutes"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                            <!-- Maximum Working -->
+                            <div class="col-md-6">
+
+                                <label asp-for="MaximumWorkingMinutes"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <input asp-for="MaximumWorkingMinutes"
+                                       type="number"
+                                       class="form-control"
+                                       placeholder="Enter Maximum Working Minutes" />
+
+                                <span asp-validation-for="MaximumWorkingMinutes"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                            <!-- Active -->
+                            <div class="col-md-12">
+
+                                <div class="form-check form-switch">
+
+                                    <input asp-for="IsActive"
+                                           class="form-check-input"
+                                           type="checkbox" />
+
+                                    <label asp-for="IsActive"
+                                           class="form-check-label fw-semibold">
+                                    </label>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="mt-5 d-flex justify-content-end gap-2">
+
+                            <a asp-action="Index"
+                               class="btn btn-light border rounded-3 px-4">
+
+                                <i class="bi bi-arrow-left"></i>
+                                Back
+
+                            </a>
+
+                            <button type="submit"
+                                    class="btn btn-primary rounded-3 px-4">
+
+                                <i class="bi bi-check-circle"></i>
+
+                                @(string.IsNullOrEmpty(Model?.Id)
+                                    ? "Save"
+                                    : "Update")
+
+                            </button>
+
+                        </div>
+                        <div class="col-md-6 mt-2">
+                            @if (TempData["Success"] != null)
+                            {
+                                <div class="alert alert-success alert-dismissible fade show"
+                                     role="alert">
+
+                                    <i class="bi bi-check-circle-fill"></i>
+
+                                    @TempData["Success"]
+
+                                    <button type="button"
+                                            class="btn-close"
+                                            data-bs-dismiss="alert">
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts {
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+}

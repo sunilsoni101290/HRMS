@@ -1,0 +1,363 @@
+﻿@model RegisterDto
+
+@{
+    ViewData["Title"] = "Register User";
+}
+
+<div class="container-fluid py-5">
+
+    <div class="row justify-content-center">
+
+        <div class="col-lg-12">
+
+            <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+
+                <!-- Header -->
+                <div class="card-header bg-primary text-white py-4">
+
+                    <div class="d-flex align-items-center">
+
+                        <div class="me-3">
+
+                            <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center"
+                                 style="width:60px;height:60px;">
+
+                                <i class="bi bi-person-plus-fill fs-3"></i>
+
+                            </div>
+
+                        </div>
+
+                        <div>
+
+                            <h3 class="mb-1">
+                                User Registration
+                            </h3>
+
+                            <p class="mb-0 opacity-75">
+                                @(string.IsNullOrEmpty(Model?.Id)
+                                    ? "Create new HRMS user account"
+                                    : "Edit user account")
+                            </p>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Body -->
+                <div class="card-body p-5">
+
+                        <form asp-action="@(Model.Id == null ? "Register" : "Edit")" method="post">
+
+                            <!-- Hidden Fields -->
+                            <input asp-for="Id" type="hidden" />
+                            <input asp-for="TenantId" type="hidden" />
+                        <!-- Hidden -->
+                        <input asp-for="TenantId" type="hidden" />
+
+                        <!-- Basic Information -->
+                        <div class="card border-0 shadow-sm rounded-4 mb-4">
+
+                            <div class="card-header bg-light">
+
+                                <h5 class="mb-0">
+                                    <i class="bi bi-person-circle text-primary"></i>
+                                    Basic Information
+                                </h5>
+
+                            </div>
+
+                            <div class="card-body">
+
+                                <div class="row g-4">
+
+                                    <!-- Username -->
+                                    <div class="col-md-4">
+
+                                        <label asp-for="Username"
+                                               class="form-label fw-semibold">
+                                        </label>
+
+                                        <div class="input-group">
+
+                                            <span class="input-group-text">
+                                                <i class="bi bi-person"></i>
+                                            </span>
+
+                                            <input asp-for="Username"
+                                                   class="form-control"
+                                                   placeholder="Enter Username" />
+
+                                        </div>
+
+                                        <span asp-validation-for="Username"
+                                              class="text-danger"></span>
+
+                                    </div>
+
+                                    <!-- Email -->
+                                    <div class="col-md-4">
+
+                                        <label asp-for="Email"
+                                               class="form-label fw-semibold">
+                                        </label>
+
+                                        <div class="input-group">
+
+                                            <span class="input-group-text">
+                                                <i class="bi bi-envelope"></i>
+                                            </span>
+
+                                            <input asp-for="Email"
+                                                   class="form-control"
+                                                   placeholder="Enter Email Address" />
+
+                                        </div>
+
+                                        <span asp-validation-for="Email"
+                                              class="text-danger"></span>
+
+                                    </div>
+
+                                    <!-- Phone -->
+                                    <div class="col-md-4">
+
+                                        <label asp-for="PhoneNumber"
+                                               class="form-label fw-semibold">
+                                        </label>
+
+                                        <div class="input-group">
+
+                                            <span class="input-group-text">
+                                                <i class="bi bi-telephone"></i>
+                                            </span>
+
+                                            <input asp-for="PhoneNumber"
+                                                   class="form-control"
+                                                   placeholder="Enter Phone Number" />
+
+                                        </div>
+
+                                        <span asp-validation-for="PhoneNumber"
+                                              class="text-danger"></span>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Password Section -->
+                        <div class="card border-0 shadow-sm rounded-4 mb-4">
+
+                            <div class="card-header bg-light">
+
+                                <h5 class="mb-0">
+                                    <i class="bi bi-shield-lock text-primary"></i>
+                                    Security Information
+                                </h5>
+
+                            </div>
+
+                            <div class="card-body">
+
+                                <div class="row g-4">
+                                    <!--Assign Role -->
+                                    <div class="col-md-4">
+
+                                        <label asp-for="RoleId"
+                                               class="form-label fw-semibold">
+                                            Assign Role
+                                        </label>
+
+                                        <select asp-for="RoleId"
+                                                asp-items="ViewBag.RoleList"
+                                                class="form-select">
+                                            <option value="">
+                                                -- Select Role --
+                                            </option>
+
+                                        </select>
+
+                                    </div>
+                                    <!-- Password -->
+                                    <div class="col-md-4">
+
+                                        <label asp-for="Password"
+                                               class="form-label fw-semibold">
+                                        </label>
+
+                                        <div class="input-group">
+
+                                            <span class="input-group-text">
+                                                <i class="bi bi-lock"></i>
+                                            </span>
+
+                                            <input asp-for="Password"
+                                                   type="password"
+                                                   class="form-control"
+                                                   placeholder="Enter Password" />
+
+                                        </div>
+
+                                        <span asp-validation-for="Password"
+                                              class="text-danger"></span>
+
+                                    </div>
+
+                                    <!-- Confirm Password -->
+                                    <div class="col-md-4">
+
+                                        <label asp-for="ConfirmPassword"
+                                               class="form-label fw-semibold">
+                                        </label>
+
+                                        <div class="input-group">
+
+                                            <span class="input-group-text">
+                                                <i class="bi bi-lock-fill"></i>
+                                            </span>
+
+                                            <input asp-for="ConfirmPassword"
+                                                   type="password"
+                                                   class="form-control"
+                                                   placeholder="Confirm Password" />
+
+                                        </div>
+
+                                        <span asp-validation-for="ConfirmPassword"
+                                              class="text-danger"></span>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Organization Details -->
+                        <div class="card border-0 shadow-sm rounded-4 mb-4">
+
+                            <div class="card-header bg-light">
+
+                                <h5 class="mb-0">
+                                    <i class="bi bi-building text-primary"></i>
+                                    Organization Details
+                                </h5>
+
+                            </div>
+
+                            <div class="card-body">
+
+                                <div class="row g-4">
+
+                                    <!-- Company -->
+                                    <div class="col-md-4">
+
+                                        <label asp-for="CompanyId"
+                                               class="form-label fw-semibold">
+                                            Company
+                                        </label>
+
+                                        <select asp-for="CompanyId"
+                                                asp-items="ViewBag.CompanyList"
+                                                class="form-select">
+
+                                            <option value="">
+                                                -- Select Company --
+                                            </option>
+
+                                        </select>
+
+                                    </div>
+
+                                    <!-- Branch -->
+                                    <div class="col-md-4">
+
+                                        <label asp-for="BranchId"
+                                               class="form-label fw-semibold">
+                                            Branch
+                                        </label>
+
+                                        <select asp-for="BranchId"
+                                                asp-items="ViewBag.BranchList"
+                                                class="form-select">
+
+                                            <option value="">
+                                                -- Select Branch --
+                                            </option>
+
+                                        </select>
+
+                                    </div>
+
+                                    <!-- Employee -->
+                                    <div class="col-md-4">
+
+                                        <label asp-for="EmployeeId"
+                                               class="form-label fw-semibold">
+                                            Employee
+                                        </label>
+
+                                        <select asp-for="EmployeeId"
+                                                asp-items="ViewBag.EmployeeList"
+                                                class="form-select">
+
+                                            <option value="">
+                                                -- Select Employee --
+                                            </option>
+
+                                        </select>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="d-flex justify-content-end gap-2">
+
+                            <a asp-action="Index"
+                               class="btn btn-light border rounded-3 px-4">
+
+                                <i class="bi bi-arrow-left"></i>
+                                Back
+                            </a>
+                            <button type="submit"
+                                    class="btn btn-primary rounded-3 px-4">
+
+                                <i class="bi bi-check-circle"></i>
+
+                                @(string.IsNullOrEmpty(Model?.Id)
+                                    ? "Register"
+                                    : "Update")
+
+                            </button>
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts {
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+}

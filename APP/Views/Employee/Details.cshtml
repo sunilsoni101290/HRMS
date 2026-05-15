@@ -1,0 +1,271 @@
+﻿@model EmployeeListDto
+
+<div class="container-fluid py-4">
+
+    <div class="card shadow border-0 rounded-4">
+
+        <!-- Header -->
+        <div class="card-header bg-primary text-white py-4">
+
+            <div class="d-flex align-items-center">
+
+                <div class="me-3">
+
+                    <div class="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center"
+                         style="width:70px;height:70px;font-size:28px;font-weight:bold;">
+
+                        @NameHelper.GetNamePrefix(Model.FirstName,Model.LastName)
+
+                    </div>
+
+                </div>
+
+                <div>
+
+                    <h3 class="mb-1">
+                        @Model.FirstName @Model.LastName
+                    </h3>
+
+                    <div>
+                        @Model.DesignationName
+                    </div>
+
+                    <small>
+                        Employee Code : @Model.EmployeeCode
+                    </small>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Body -->
+        <div class="card-body p-4">
+
+            <div class="row g-4">
+
+                <!-- Personal -->
+                <div class="col-md-6">
+
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">
+                                Personal Details
+                            </h5>
+                        </div>
+
+                        <div class="card-body">
+
+                            <table class="table table-borderless">
+
+                                <tr>
+                                    <th>Gender</th>
+                                    <td>@Model.Gender</td>
+                                </tr>
+
+                                <tr>
+                                    <th>DOB</th>
+                                    <td>@Model.DateOfBirth?.ToString("dd MMM yyyy")</td>
+                                </tr>
+
+                                <tr>
+                                    <th>Marital Status</th>
+                                    <td>@Model.MaritalStatus</td>
+                                </tr>
+
+                                <tr>
+                                    <th>Phone</th>
+                                    <td>@Model.Phone</td>
+                                </tr>
+
+                                <tr>
+                                    <th>Email</th>
+                                    <td>@Model.Email</td>
+                                </tr>
+
+                            </table>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Organization -->
+                <div class="col-md-6">
+
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">
+                                Organization Details
+                            </h5>
+                        </div>
+
+                        <div class="card-body">
+
+                            <table class="table table-borderless">
+
+                                <tr>
+                                    <th>Company</th>
+                                    <td>@Model.CompanyName</td>
+                                </tr>
+
+                                <tr>
+                                    <th>Branch</th>
+                                    <td>@Model.BrnachName</td>
+                                </tr>
+
+                                <tr>
+                                    <th>Department</th>
+                                    <td>@Model.DepartmentName</td>
+                                </tr>
+
+                                <tr>
+                                    <th>Designation</th>
+                                    <td>@Model.DesignationName</td>
+                                </tr>
+
+                                <tr>
+                                    <th>Reporting Manager</th>
+                                    <td>@Model.ReportingManagerName</td>
+                                </tr>
+
+                            </table>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Employment -->
+                <div class="col-md-6">
+
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">
+                                Employment Details
+                            </h5>
+                        </div>
+
+                        <div class="card-body">
+
+                            <table class="table table-borderless">
+
+                                <tr>
+                                    <th>Joining Date</th>
+                                    <td>@Model.JoiningDate?.ToString("dd MMM yyyy")</td>
+                                </tr>
+
+                                <tr>
+                                    <th>Confirmation Date</th>
+                                    <td>@Model.ConfirmationDate?.ToString("dd MMM yyyy")</td>
+                                </tr>
+
+                                <tr>
+                                    <th>Relieving Date</th>
+                                    <td>@Model.RelievingDate?.ToString("dd MMM yyyy")</td>
+                                </tr>
+
+                                <tr>
+                                    <th>Employment Type</th>
+                                    <td>@Model.EmploymentType</td>
+                                </tr>
+
+                            </table>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- KYC -->
+                <div class="col-md-6">
+
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">
+                                KYC Details
+                            </h5>
+                        </div>
+
+                        <div class="card-body">
+
+                            <table class="table table-borderless">
+
+                                <tr>
+                                    <th>PAN #</th>
+                                    <td>@Model.PANNumber</td>
+                                </tr>
+
+                                <tr>
+                                    <th>Aadhar #</th>
+                                    <td>@Model.AadharNumber</td>
+                                </tr>
+
+                                <tr>
+                                    <th>Address</th>
+                                    <td>@Model.Address</td>
+                                </tr>
+
+                                <tr>
+                                    <th>Pincode</th>
+                                    <td>@Model.Pincode</td>
+                                </tr>
+
+                            </table>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Buttons -->
+            <div class="mt-4 text-end">
+
+                <a asp-action="Index"
+                   class="btn btn-light border rounded-3 px-4">
+
+                    <i class="bi bi-arrow-left"></i>
+                    Back
+
+                </a>
+
+                <a asp-action="Edit"
+                   asp-route-id="@Model.Id"
+                   class="btn btn-primary rounded-3 px-4">
+
+                    <i class="bi bi-pencil-square"></i>
+                    Edit
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+<style>
+    table th {
+        font-family: 'Inter', sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    table td {
+        font-family: 'Inter', sans-serif;
+        font-size: 13px;
+        font-weight: normal;
+    }
+</style>

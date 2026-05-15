@@ -35,9 +35,11 @@ namespace Application.DTOs.Auth
 
         // Organization Mapping
         public string CompanyId { get; set; }
+        public string RoleId { get; set; }
         public string? BranchId { get; set; }
 
         // Optional Employee Link
         public string? EmployeeId { get; set; }
+        public string CreatedBy { get; set; }
     }
 }

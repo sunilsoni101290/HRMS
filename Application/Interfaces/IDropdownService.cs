@@ -15,6 +15,10 @@ namespace Application.Interfaces
         Task<List<DropdownDto>> GetDepartmentDropdownAsync();
         Task<List<DropdownDto>> GetDesignationDropdownAsync();
         Task<List<DropdownDto>>GetEmployeeDropdownAsync();
+        Task<List<DropdownDto>>GetRoleNameDropdownAsync();
         Task<List<DropdownDto>>GetReportingManagerDropdownAsync();
+        Task<List<DropdownDto>> GetParentDepartmentDropdownAsync(string tenantId, string? departmentId = null);
+        Task<List<DropdownDto>> GetParentDesignationDropdownAsync(string tenantId, string? designationId = null);
+        Task<List<DropdownDto>> GetShiftDropdownAsync();
     }
 }

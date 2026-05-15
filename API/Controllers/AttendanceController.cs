@@ -18,6 +18,16 @@ namespace API.Controllers
             _service = service;
         }
 
+        [HttpGet("get-all-attendance-logs")]
+        public async Task<IActionResult> GetAll()
+        {
+            var result = await _service.GetAllAsync();
+
+            return Ok(result);
+        }
+
+
+
         [HttpPost("punch-in")]
         public async Task<IActionResult> PunchIn(PunchRequestDto dto)
         {

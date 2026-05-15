@@ -241,9 +241,17 @@ namespace Application.DTOs.Employee
         public string Code { get; set; }
 
         public string? CompanyName { get; set; }
+        public string? CompanyId { get; set; }
         public string? BranchName { get; set; }
+        public string? BranchId { get; set; }
+
+        public string CreatedBy { get; set; }
+
+        public DateTime? ModifiedOn { get; set; }
+        public string? ModifiedBy { get; set; }
 
         public string? ParentDepartmentName { get; set; }
+        public string? ParentDepartmentId { get; set; }
     }
 
 
@@ -276,6 +284,12 @@ namespace Application.DTOs.Employee
         // Salary
         public decimal? MinSalary { get; set; }
         public decimal? MaxSalary { get; set; }
+
+        public string CreatedBy { get; set; }
+
+        public DateTime? ModifiedOn { get; set; }
+        public string? ModifiedBy { get; set; }
+
     }
 
     public class DesignationListDto
@@ -286,10 +300,15 @@ namespace Application.DTOs.Employee
         public string Code { get; set; }
 
         public string? DepartmentName { get; set; }
+        public string? DepartmentId { get; set; }
 
         public string? CompanyName { get; set; }
+        public string? CompanyId { get; set; }
         public string? BranchName { get; set; }
+        public string? BranchId { get; set; }
 
+        public string? ParentDesignationName { get; set; }
+        public string? ParentDesignationId { get; set; }
         public int Level { get; set; }
 
         public decimal? MinSalary { get; set; }

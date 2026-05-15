@@ -18,6 +18,18 @@ namespace API.Controllers
             _dropdownService = dropdownService;
         }
 
+        #region Role Dropdown
+        [HttpGet("role")]
+        public async Task<IActionResult>GetRoleNameDropdown()
+        {
+            var data =
+                await _dropdownService
+                .GetRoleNameDropdownAsync();
+
+            return Ok(data);
+        }
+        #endregion
+
         #region Country Dropdown
         [HttpGet("country")]
         public async Task<IActionResult>GetCountryDropdown()
@@ -65,6 +77,7 @@ namespace API.Controllers
             return Ok(data);
         }
         #endregion
+
         #region Company Dropdown
         [HttpGet("branch")]
         public async Task<IActionResult>GetBranchDropdown()
@@ -86,6 +99,17 @@ namespace API.Controllers
 
             return Ok(data);
         }
+        #endregion
+
+        #region Parent Department Dropdown
+        [HttpGet("parent-department")]
+        public async Task<IActionResult>GetParentDepartmentDropdown(string tenantId, string? departmentId = null)
+        {
+            var data = await _dropdownService
+                .GetParentDepartmentDropdownAsync(tenantId,departmentId);
+
+            return Ok(data);
+        }
 
         #endregion
 
@@ -100,6 +124,18 @@ namespace API.Controllers
 
             return Ok(data);
         }
+        #endregion
+
+        #region Parent Designation Dropdown
+        [HttpGet("parent-designation")]
+        public async Task<IActionResult> GetParentDesignationDropdown(string tenantId, string? designationId = null)
+        {
+            var data = await _dropdownService
+                .GetParentDesignationDropdownAsync(tenantId, designationId);
+
+            return Ok(data);
+        }
+
         #endregion
 
         #region Employee Dropdown
@@ -121,6 +157,18 @@ namespace API.Controllers
             var data =
                 await _dropdownService
                 .GetReportingManagerDropdownAsync();
+
+            return Ok(data);
+        }
+        #endregion
+
+        #region Shift Dropdown
+        [HttpGet("shift")]
+        public async Task<IActionResult> GetShiftDropdown()
+        {
+            var data =
+                await _dropdownService
+                .GetShiftDropdownAsync();
 
             return Ok(data);
         }
