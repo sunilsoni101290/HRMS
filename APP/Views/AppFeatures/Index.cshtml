@@ -1,0 +1,217 @@
+﻿@model IEnumerable<AppFeatureDto>
+
+@{
+    ViewData["Title"] = "App Features";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-grid6 position-left"></i>
+            App Feature Management
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Create"
+               class="btn bg-primary btn-sm">
+
+                <i class="icon-plus22 position-left"></i>
+                Add Feature
+
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <div class="row">
+
+            <div class="col-md-4">
+                <input type="text"
+                       id="searchInput"
+                       class="form-control"
+                       placeholder="Search Feature..." />
+            </div>
+
+            <div class="col-md-3">
+                <select class="form-control">
+                    <option>All Modules</option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <select class="form-control">
+                    <option>All Types</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <button class="btn bg-primary btn-block">
+                    <i class="icon-filter4 position-left"></i>
+                    Filter
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <table id="featureTable" class="table datatable-scroll-y table-hover">
+
+        <thead>
+
+            <tr>
+
+                <th>#</th>
+                <th>Feature</th>
+                <th>Module</th>
+                <th>Controller</th>
+                <th>Action</th>
+                <th>Parent</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th class="text-center">Actions</th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            @{
+                int sr = 1;
+            }
+
+            @foreach (var item in Model)
+            {
+                <tr>
+
+                    <td>@sr</td>
+
+                    <td>
+                        <div class="text-semibold">
+                            <i class="@item.Icon"></i>
+                            @item.Name
+                        </div>
+
+                        <span class="text-muted">
+                            @item.Code
+                        </span>
+                    </td>
+
+                    <td>
+                        <span class="label bg-primary">
+                            @item.Module
+                        </span>
+                    </td>
+
+                    <td>@item.ControllerName</td>
+
+                    <td>@item.ActionName</td>
+
+                    <td>
+                        @(item.ParentFeatureId != null &&
+                          ViewBag.ParentFeatures != null &&
+                          ViewBag.ParentFeatures.ContainsKey(item.ParentFeatureId)
+                            ? ViewBag.ParentFeatures[item.ParentFeatureId]
+                            : "-")
+                    </td>
+
+                    <td>
+                        <span class="label bg-info">
+                            @item.AppFeatureType
+                        </span>
+                    </td>
+
+                    <td>
+
+                        @if (item.IsActive)
+                        {
+                            <span class="label label-success">
+                                Active
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="label label-danger">
+                                Inactive
+                            </span>
+                        }
+
+                    </td>
+
+                    <td class="text-center">
+
+                        <ul class="icons-list">
+
+                            <li>
+                                <a asp-action="Details"
+                                   asp-route-id="@item.Id"
+                                   title="View">
+                                    <i class="icon-eye"></i>
+                                </a>
+                            </li>
+
+                            <li>
+                                <a asp-action="Edit"
+                                   asp-route-id="@item.Id"
+                                   title="Edit">
+                                    <i class="icon-pencil7"></i>
+                                </a>
+                            </li>
+
+                            <li>
+                                <a asp-action="Delete"
+                                   asp-route-id="@item.Id"
+                                   onclick="return confirm('Delete this feature?')"
+                                   title="Delete">
+                                    <i class="icon-trash"></i>
+                                </a>
+                            </li>
+
+                        </ul>
+
+                    </td>
+
+                </tr>
+
+                sr++;
+            }
+
+        </tbody>
+
+    </table>
+</div>
+
+@section Scripts {
+
+    <script>
+               
+        // Search Table
+
+        document.getElementById("searchInput")
+            .addEventListener("keyup", function () {
+
+                let value = this.value.toLowerCase();
+
+                let rows = document.querySelectorAll("#featureTable tr");
+
+                rows.forEach(function (row) {
+
+                    let text = row.innerText.toLowerCase();
+
+                    row.style.display =
+                        text.includes(value) ? "" : "none";
+
+                });
+
+            });
+
+    </script>
+
+}

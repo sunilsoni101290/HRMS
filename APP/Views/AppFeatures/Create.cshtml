@@ -1,0 +1,284 @@
+﻿@model AppFeatureDto
+
+@{
+    ViewData["Title"] = "App Feature";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-grid6 position-left"></i>
+            App Feature Master
+        </h5>
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="@(Model.Id == null ? "Create" : "Edit")"
+              method="post">
+
+            <!-- Basic Information -->
+            <fieldset>
+                <legend class="text-semibold">
+                    <i class="icon-info22 position-left"></i>
+                    Basic Information
+                </legend>
+
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label asp-for="Name"></label>
+                            <input asp-for="Name"
+                                   class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label asp-for="Code"></label>
+                            <input asp-for="Code"
+                                   class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label asp-for="Module"></label>
+                            <input asp-for="Module"
+                                   readonly
+                                   class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>Parent Feature</label>
+                            <select asp-for="ParentFeatureId"
+                                    asp-items="ViewBag.ParentFeaturesList"
+                                    class="form-control">
+                                <option value="">
+                                    -- Select Parent --
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label asp-for="DisplayOrder"></label>
+                            <input asp-for="DisplayOrder"
+                                   class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="col-md-9">
+                        <div class="form-group">
+                            <label asp-for="Description"></label>
+                            <textarea asp-for="Description"
+                                      rows="3"
+                                      class="form-control"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <!-- Routing -->
+            <fieldset>
+                <legend class="text-semibold">
+                    <i class="icon-tree7 position-left"></i>
+                    Routing Configuration
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label asp-for="ControllerName"></label>
+                            <input asp-for="ControllerName"
+                                   class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label asp-for="ActionName"></label>
+                            <input asp-for="ActionName"
+                                   class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label asp-for="AreaName"></label>
+                            <input asp-for="AreaName"
+                                   class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label asp-for="Url"></label>
+                            <input asp-for="Url"
+                                   class="form-control" />
+                        </div>
+                    </div>
+
+                </div>
+            </fieldset>
+
+            <div class="row">
+
+                <!-- UI Settings -->
+                <div class="col-md-6">
+
+                    <fieldset>
+                        <legend class="text-semibold">
+                            <i class="icon-palette position-left"></i>
+                            UI Settings
+                        </legend>
+
+                        <div class="form-group">
+                            <label asp-for="Icon"></label>
+                            <input asp-for="Icon"
+                                   class="form-control" />
+                        </div>
+
+                        <div class="form-group">
+                            <label asp-for="BadgeText"></label>
+                            <input asp-for="BadgeText"
+                                   class="form-control" />
+                        </div>
+
+                        <div class="checkbox checkbox-switchery">
+                            <label>
+                                <input asp-for="IsVisible"
+                                       type="checkbox"
+                                       class="switchery">
+                                Is Visible
+                            </label>
+                        </div>
+
+                        <div class="checkbox checkbox-switchery">
+                            <label>
+                                <input asp-for="IsMenu"
+                                       type="checkbox"
+                                       class="switchery">
+                                Is Menu
+                            </label>
+                        </div>
+
+                        <div class="checkbox checkbox-switchery">
+                            <label>
+                                <input asp-for="IsActive"
+                                       type="checkbox"
+                                       class="switchery">
+                                Is Active
+                            </label>
+                        </div>
+
+                    </fieldset>
+
+                </div>
+
+                <!-- Access Control -->
+                <div class="col-md-6">
+
+                    <fieldset>
+
+                        <legend class="text-semibold">
+                            <i class="icon-shield2 position-left"></i>
+                            Access Control
+                        </legend>
+
+                        <div class="row">
+
+                            <div class="col-md-6">
+                                <div class="checkbox checkbox-switchery">
+                                    <label><input asp-for="CanView" type="checkbox" class="switchery"> View</label>
+                                </div>
+
+                                <div class="checkbox checkbox-switchery">
+                                    <label><input asp-for="CanAdd" type="checkbox" class="switchery"> Add</label>
+                                </div>
+
+                                <div class="checkbox checkbox-switchery">
+                                    <label><input asp-for="CanEdit" type="checkbox" class="switchery"> Edit</label>
+                                </div>
+
+                                <div class="checkbox checkbox-switchery">
+                                    <label><input asp-for="CanDelete" type="checkbox" class="switchery"> Delete</label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="checkbox checkbox-switchery">
+                                    <label><input asp-for="CanApprove" type="checkbox" class="switchery"> Approve</label>
+                                </div>
+
+                                <div class="checkbox checkbox-switchery">
+                                    <label><input asp-for="CanExport" type="checkbox" class="switchery"> Export</label>
+                                </div>
+
+                                <div class="checkbox checkbox-switchery">
+                                    <label><input asp-for="CanPrint" type="checkbox" class="switchery"> Print</label>
+                                </div>
+
+                                <div class="checkbox checkbox-switchery">
+                                    <label><input asp-for="IsHRMSFeature" type="checkbox" class="switchery"> HRMS Feature</label>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </fieldset>
+
+                </div>
+
+            </div>
+
+            <!-- Feature Type -->
+            <fieldset>
+                <legend class="text-semibold">
+                    <i class="icon-grid52 position-left"></i>
+                    Feature Type
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="AppFeatureType"></label>
+
+                            <select asp-for="AppFeatureType"
+                                    asp-items="@EnumHelper.GetEnumList<EnumExtensions.AppFeatureType>()"
+                                    class="form-control">
+                                <option value="">
+                                    -- Select Feature Type --
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                </div>
+            </fieldset>
+
+            <div class="text-right">
+                <a asp-action="Index"
+                   class="btn btn-default">
+                    <i class="icon-arrow-left13"></i>
+                    Back
+                </a>
+
+                <button type="submit"
+                        class="btn bg-primary">
+                    <i class="icon-checkmark3"></i>
+                    Save
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+
+</div>

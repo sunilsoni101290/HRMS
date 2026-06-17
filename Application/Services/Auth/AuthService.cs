@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Text;
 
 namespace Application.Services.Auth
@@ -26,73 +27,142 @@ namespace Application.Services.Auth
             _config= config;
         }
 
-        public async Task<AuthResponse> RegisterAsync(RegisterDto dto)
-        {
-            if (_db.Users.Any(x => x.Username == dto.Username))
-                throw new Exception("User already exists");
+        //public async Task<AuthResponse> RegisterAsync(RegisterDto dto)
+        //{
+        //    if (_db.Users.Any(x => x.Username == dto.Username))
+        //        throw new Exception("User already exists");
 
-            var user = new User
-            {
-                Id = IDManager.GetNewId(new User()),
-                Username = dto.Username,
-                Email = dto.Email,
-                TenantId = dto.TenantId,
-                CompanyId = dto.CompanyId,
-                PhoneNumber = dto.PhoneNumber,
-                BranchId = dto.BranchId,
-                EmployeeId = dto.EmployeeId,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-                CreatedBy = string.IsNullOrEmpty(dto.CreatedBy) ? "System" : dto.CreatedBy
-            };
+        //    var user = new User
+        //    {
+        //        Id = IDManager.GetNewId(new User()),
+        //        Username = dto.Username,
+        //        Email = dto.Email,
+        //        TenantId = dto.TenantId,
+        //        CompanyId = dto.CompanyId,
+        //        PhoneNumber = dto.PhoneNumber,
+        //        BranchId = dto.BranchId,
+        //        EmployeeId = dto.EmployeeId,
+        //        PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+        //        CreatedBy = string.IsNullOrEmpty(dto.CreatedBy) ? "System" : dto.CreatedBy
+        //    };
 
-            _db.Users.Add(user);
+        //    _db.Users.Add(user);
 
-            // Default Role Assign
-            var role =  _db.Roles.FirstOrDefault(x => x.Code == ConstantHelper.EMPLOYEE);
+        //    // Default Role Assign
+        //    var role =  _db.Roles.FirstOrDefault(x => x.Code == ConstantHelper.EMPLOYEE);
 
-            if (role != null)
-            {
-                _db.UserRoles.Add(new UserRole
-                {
-                    Id = IDManager.GetNewId(new UserRole()),
-                    UserId = user.Id,
-                    RoleId = string.IsNullOrEmpty(dto.RoleId) ? role.Id :dto.RoleId,
-                    CreatedBy = string.IsNullOrEmpty(dto.CreatedBy) ? "System" : dto.CreatedBy
-                });
-            }
+        //    if (role != null)
+        //    {
+        //        _db.UserRoles.Add(new UserRole
+        //        {
+        //            Id = IDManager.GetNewId(new UserRole()),
+        //            UserId = user.Id,
+        //            RoleId = string.IsNullOrEmpty(dto.RoleId) ? role.Id :dto.RoleId,
+        //            CreatedBy = string.IsNullOrEmpty(dto.CreatedBy) ? "System" : dto.CreatedBy
+        //        });
+        //    }
 
-            await _db.SaveChangesAsync();
+        //    await _db.SaveChangesAsync();
 
-            return await GenerateAuthResponse(user);
-        }
+        //    return await GenerateAuthResponse(user);
+        //}
 
 
         // ==============================
         // 🔐 LOGIN
         // ==============================
+
         public async Task<AuthResponse> LoginAsync(LoginDto dto)
         {
-            var user = await _db.Users.Include(x => x.Employee)
-                .ThenInclude(x => x.Designation)
+            // Get User
+            var user = await _db.Users
+                .Include(x => x.Employee)
+                    .ThenInclude(x => x.Designation)
                 .Include(x => x.UserRoles)
-                .ThenInclude(x => x.Role)
+                    .ThenInclude(x => x.Role)
                 .Include(x => x.Company)
                 .Include(x => x.Branch)
-                .AsNoTracking()
-                .FirstOrDefaultAsync(x =>
-                    x.Username == dto.Username);
+                .FirstOrDefaultAsync(x => x.Username == dto.Username);
 
+            // User Not Found
             if (user == null)
-                throw new Exception("Invalid username");
+                throw new Exception("Invalid Username");
 
-            bool isValidPassword =
-                BCrypt.Net.BCrypt.Verify(
-                    dto.Password,
-                    user.PasswordHash);
+            // ================================
+            // CHECK USER LOCKED
+            // ================================
+
+            if (user.IsLocked)
+            {
+                // Still Locked
+                if (user.LockoutEnd.HasValue &&
+                    user.LockoutEnd > DateTime.UtcNow)
+                {
+                    var remainingMinutes =
+                        (user.LockoutEnd.Value - DateTime.UtcNow).Minutes;
+
+                    throw new Exception(
+                        $"Account Temporarily Locked\n. Try again after {remainingMinutes} minutes.");
+                }
+
+                // Unlock Automatically
+                user.IsLocked = false;
+                user.AccessFailedCount = 0;
+                user.LockoutEnd = null;
+
+                _db.Users.Update(user);
+                await _db.SaveChangesAsync();
+            }
+
+            // ================================
+            // VERIFY PASSWORD
+            // ================================
+
+            bool isValidPassword = BCrypt.Net.BCrypt.Verify(
+                dto.Password,
+                user.PasswordHash);
+
+            // ================================
+            // INVALID PASSWORD
+            // ================================
 
             if (!isValidPassword)
-                throw new Exception("Invalid password");
+            {
+                user.AccessFailedCount += 1;
 
+                // Max Attempt = 5
+                if (user.AccessFailedCount >= 5)
+                {
+                    user.IsLocked = true;
+
+                    // Lock For 30 Minutes
+                    user.LockoutEnd = DateTime.UtcNow.AddMinutes(30);
+                }
+
+                _db.Users.Update(user);
+
+                await _db.SaveChangesAsync();
+
+                throw new Exception(
+                    $"Invalid Password. Attempt {user.AccessFailedCount}/5");
+            }
+
+            // ================================
+            // LOGIN SUCCESS
+            // ================================
+
+            user.AccessFailedCount = 0;
+            user.IsLocked = false;
+            user.LockoutEnd = null;
+
+            user.LastLoginDate = DateTime.UtcNow;
+            user.LastLoginIP = dto.IpAddress;
+
+            _db.Users.Update(user);
+
+            await _db.SaveChangesAsync();
+
+            // Generate Token Response
             return await GenerateAuthResponse(user);
         }
 
@@ -131,61 +201,91 @@ namespace Application.Services.Auth
         // ==============================
         // 🔥 COMMON METHOD
         // ==============================
-        private async Task<AuthResponse> GenerateAuthResponse(User user, string existingRefreshToken = null)
+        private async Task<AuthResponse> GenerateAuthResponse(
+    User user,
+    string existingRefreshToken = null)
         {
-            // Roles
-            var roles = _db.UserRoles
+            // ================================
+            // ROLES
+            // ================================
+
+            var roles = await _db.UserRoles
                 .Where(x => x.UserId == user.Id)
                 .Select(x => x.Role.Name)
-                .ToList();
+                .ToListAsync();
 
-            var roleName = _db.UserRoles
-            .Where(x => x.UserId == user.Id)
-            .Select(x => x.Role.Name)
-            .FirstOrDefault();
+            var roleName = roles.FirstOrDefault();
 
-            // Permissions
-            var permissions = _db.RolePermissions
+            // ================================
+            // PERMISSIONS
+            // ================================
+
+            var permissions = await _db.RolePermissions
                 .Where(rp => roles.Contains(rp.Role.Name))
                 .Select(rp => rp.Permission.Code)
-                .ToList();
+                .Distinct()
+                .ToListAsync();
 
-            // Access Token
-            var accessToken = _jwt.GenerateAccessToken(user, roles, permissions);
+            // ================================
+            // ACCESS TOKEN
+            // ================================
 
-            // Refresh Token
+            var accessToken = _jwt.GenerateAccessToken(
+                user,
+                roles,
+                permissions);
+
+            // ================================
+            // REFRESH TOKEN
+            // ================================
+
             string refreshToken = existingRefreshToken;
 
             if (string.IsNullOrEmpty(refreshToken))
             {
                 refreshToken = _jwt.GenerateRefreshToken();
 
-                _db.RefreshTokens.Add(new RefreshToken
+                var refreshTokenEntity = new RefreshToken
                 {
                     Id = IDManager.GetNewId(new RefreshToken()),
                     UserId = user.Id,
                     Token = refreshToken,
                     ExpiryDate = DateTime.UtcNow.AddDays(7),
-                    CreatedBy="System",
-                    TenantId=user.TenantId,
-                    IsRevoked = false
-                });
+                    IsRevoked = false,
+                    TenantId = user.TenantId,
+                    CreatedBy = user.Username
+                };
+
+                await _db.RefreshTokens.AddAsync(refreshTokenEntity);
 
                 await _db.SaveChangesAsync();
             }
+
+            // ================================
+            // RETURN RESPONSE
+            // ================================
 
             return new AuthResponse
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
                 ExpiresIn = Convert.ToInt32(_config["Jwt:ExpiryMinutes"]),
+
                 UserId = user.Id,
                 TenantId = user.TenantId,
                 Username = user.Username,
-                Designation = !string.IsNullOrEmpty(user.EmployeeId) ? await GetDesignationName(user.EmployeeId) : "UNKNOWN",
+
+                FullName = !string.IsNullOrEmpty(user.EmployeeId)
+                    ? await GetEmployeeFullName(user.EmployeeId)
+                    : user.Username,
+
+                Designation = !string.IsNullOrEmpty(user.EmployeeId)
+                    ? await GetDesignationName(user.EmployeeId)
+                    : "UNKNOWN",
+
                 RoleName = roleName,
-                FullName = !string.IsNullOrEmpty(user.EmployeeId) ? await GetEmployeeFullName(user.EmployeeId) : "UNKNOWN",
-                Email = user.Email,
+
+                Email = user.Email
             };
         }
 
@@ -347,6 +447,106 @@ namespace Application.Services.Auth
                 })
 
                 .FirstOrDefaultAsync();
+        }
+
+        public async Task<UserListDto?> GetUserDetailsByEmpIdAsync(string empId)
+        {
+            return await _db.Users
+                .AsNoTracking()
+                .Include(x => x.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+
+                // Filter
+                .Where(x => x.EmployeeId == empId)
+
+                // Select DTO
+                .Select(x => new UserListDto
+                {
+                    Id = x.Id,
+
+                    // Role (First Role)
+                    RoleId = x.UserRoles
+                        .Select(r => r.RoleId)
+                        .FirstOrDefault(),
+
+                    // Security
+                    EmailConfirmed = x.EmailConfirmed,
+                    PhoneConfirmed = x.PhoneConfirmed,
+                })
+
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<User> GetUserDetailByIdAsync(string id)
+        {
+            return await _db.Users.AsNoTracking()
+            .Include(x => x.UserRoles)
+            .FirstOrDefaultAsync(x => x.Id == id);
+        }
+
+        public async Task<User> GettUserDetailByUsernameAsync(string username)
+        {
+            return await _db.Users
+                .Include(x => x.UserRoles)
+                .FirstOrDefaultAsync(x => x.Username == username);
+        }
+
+        public async Task<bool> UpdateUserAsync(User user)
+        {
+            var existingUser = await _db.Users
+            .FirstOrDefaultAsync(x => x.Id == user.Id);
+
+            if (existingUser == null)
+                return false;
+
+            existingUser.Username = user.Username;
+            existingUser.Email = user.Email;
+            existingUser.PhoneNumber = user.PhoneNumber;
+            existingUser.CompanyId = user.CompanyId;
+            existingUser.BranchId = user.BranchId;
+            existingUser.EmployeeId = user.EmployeeId;
+            existingUser.EmailConfirmed = user.EmailConfirmed;
+            existingUser.PhoneConfirmed = user.PhoneConfirmed;
+
+            existingUser.ModifiedOn = DateTime.Now;
+            existingUser.ModifiedBy = user.ModifiedBy;
+
+            _db.Users.Update(existingUser);
+
+            await _db.SaveChangesAsync();
+
+            return true;
+        }
+
+        public async Task<bool> ChangePasswordAsync(string userId, string oldPassword, string newPassword)
+        {
+            var user = await _db.Users
+            .FirstOrDefaultAsync(x => x.Id == userId);
+
+            if (user == null)
+                return false;
+
+            // ================================
+            // VERIFY PASSWORD
+            // ================================
+
+            var oldHash = BCrypt.Net.BCrypt.Verify(
+                oldPassword,
+                user.PasswordHash);
+
+            if (oldHash)
+                return false;
+
+            string passwordHash =
+                    BCrypt.Net.BCrypt.HashPassword(
+                        newPassword,
+                        workFactor: 12);
+
+            user.PasswordHash = passwordHash;
+
+            await _db.SaveChangesAsync();
+
+            return true;
         }
     }
 }

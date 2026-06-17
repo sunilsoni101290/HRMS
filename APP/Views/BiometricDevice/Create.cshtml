@@ -1,0 +1,400 @@
+﻿@model BiometricDeviceDto
+
+@{
+    ViewData["Title"] = "Biometric Device";
+}
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+
+            <i class="icon-fingerprint position-left"></i>
+
+            @(string.IsNullOrEmpty(Model?.Id)
+                ? "Create Biometric Device"
+                : "Edit Biometric Device")
+
+        </h5>
+
+        <div class="heading-elements">
+
+            <span class="text-muted">
+                Configure biometric attendance device
+            </span>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="@(Model.Id == null ? "Create" : "Edit")"
+              method="post">
+
+            <input asp-for="Id" type="hidden" />
+            <input asp-for="TenantId" type="hidden" />
+
+            <!-- Organization Information -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-office position-left"></i>
+
+                    Organization Information
+
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="CompanyId"></label>
+
+                            <select asp-for="CompanyId"
+                                    asp-items="ViewBag.CompanyList"
+                                    class="form-control">
+
+                                <option value="">
+                                    -- Select Company --
+                                </option>
+
+                            </select>
+
+                            <span asp-validation-for="CompanyId"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="BranchId"></label>
+
+                            <select asp-for="BranchId"
+                                    asp-items="ViewBag.BranchList"
+                                    class="form-control">
+
+                                <option value="">
+                                    -- Select Branch --
+                                </option>
+
+                            </select>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- Device Information -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-fingerprint position-left"></i>
+
+                    Device Information
+
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="DeviceName"></label>
+
+                            <input asp-for="DeviceName"
+                                   class="form-control"
+                                   placeholder="Device Name" />
+
+                            <span asp-validation-for="DeviceName"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="DeviceCode"></label>
+
+                            <input asp-for="DeviceCode"
+                                   class="form-control"
+                                   placeholder="Device Code" />
+
+                            <span asp-validation-for="DeviceCode"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- Connection Settings -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-connection position-left"></i>
+
+                    Connection Settings
+
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-4">
+
+                        <div class="form-group">
+
+                            <label asp-for="IPAddress"></label>
+
+                            <input asp-for="IPAddress"
+                                   class="form-control"
+                                   placeholder="192.168.1.100" />
+
+                            <span asp-validation-for="IPAddress"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-2">
+
+                        <div class="form-group">
+
+                            <label asp-for="Port"></label>
+
+                            <input asp-for="Port"
+                                   class="form-control" />
+
+                            <span asp-validation-for="Port"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="ApiUrl"></label>
+
+                            <input asp-for="ApiUrl"
+                                   class="form-control"
+                                   placeholder="https://api.device.com" />
+
+                            <span asp-validation-for="ApiUrl"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- Authentication -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-lock2 position-left"></i>
+
+                    Authentication
+
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="Username"></label>
+
+                            <input asp-for="Username"
+                                   class="form-control"
+                                   placeholder="Username" />
+
+                            <span asp-validation-for="Username"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="Password"></label>
+
+                            <input asp-for="Password"
+                                   type="password"
+                                   class="form-control"
+                                   placeholder="Password" />
+
+                            <span asp-validation-for="Password"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- Status -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-checkmark-circle position-left"></i>
+
+                    Status
+
+                </legend>
+
+                <div class="checkbox checkbox-switchery">
+
+                    <label>
+
+                        <input asp-for="IsActive"
+                               type="checkbox"
+                               class="switchery" />
+
+                        Active Device
+
+                    </label>
+
+                </div>
+
+            </fieldset>
+
+            <!-- Action Buttons -->
+
+            <div class="text-right">
+
+                <a asp-action="Index"
+                   class="btn btn-default">
+
+                    <i class="icon-arrow-left13"></i>
+                    Back
+
+                </a>
+
+                <button type="submit"
+                        class="btn bg-primary">
+
+                    <i class="icon-checkmark3"></i>
+
+                    @(string.IsNullOrEmpty(Model?.Id)
+                        ? "Save"
+                        : "Update")
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+@section Scripts {
+
+    <script>
+
+        $(document).ready(function () {
+
+        // =========================================
+        // COMPANY CHANGE -> LOAD BRANCH
+        // =========================================
+
+        $(document).on("change", "#CompanyId", function () {
+
+        debugger;
+
+        let companyId = $(this).val();
+
+        console.log(companyId);
+
+        // Reset Branch Dropdown
+        if (companyId == null || companyId === "") {
+
+        $("#BranchId").html(
+        '<option value="">-- Select Branch --</option>'
+        );
+
+        return;
+        }
+
+        $.ajax({
+
+        url: '@Url.Action("GetBranchByCompanyId")',
+
+        type: 'GET',
+
+        data: { companyId: companyId },
+
+        success: function (response) {
+
+        let html =
+        '<option value="">-- Select Branch --</option>';
+
+        $.each(response, function (i, item) {
+
+        html += `
+        <option value="${item.value}">
+        ${item.text}
+        </option>`;
+        });
+
+        $("#BranchId").html(html);
+        },
+
+        error: function (xhr) {
+
+        console.log(xhr);
+
+        alert("Error loading branches");
+        }
+        });
+
+        });
+        });
+
+    </script>
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+}

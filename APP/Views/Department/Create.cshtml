@@ -4,187 +4,276 @@
     ViewData["Title"] = "Department";
 }
 
-<div class="container-fluid py-4">
+<div class="panel panel-flat">
 
-    <div class="row justify-content-center">
+    <div class="panel-heading">
 
-        <div class="col-lg-8">
+        <h5 class="panel-title">
 
-            <div class="card shadow border-0 rounded-4">
+            <i class="icon-tree6 position-left"></i>
 
-                <!-- Header -->
-                <div class="card-header bg-primary text-white py-3 rounded-top-4">
+            @(string.IsNullOrEmpty(Model?.Id)
+                ? "Create Department"
+                : "Edit Department")
 
-                    <div class="d-flex align-items-center">
+        </h5>
 
-                        <i class="bi bi-diagram-3 fs-4 me-2"></i>
+        <div class="heading-elements">
 
-                        <h4 class="mb-0">
-                            @(string.IsNullOrEmpty(Model?.Id)
-                                ? "Create Department"
-                                : "Edit Department")
-                        </h4>
+            <span class="text-muted">
+                Manage department master information
+            </span>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="@(Model.Id == null ? "Create" : "Edit")"
+              method="post">
+
+            <!-- Hidden Fields -->
+
+            <input asp-for="Id" type="hidden" />
+            <input asp-for="TenantId" type="hidden" />
+            <input asp-for="CreatedBy" type="hidden" />
+            <input asp-for="ModifiedBy" type="hidden" />
+            <input asp-for="ModifiedOn" type="hidden" />
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-office position-left"></i>
+                    Department Information
+
+                </legend>
+
+                <div class="row">
+
+                    <!-- Department Name -->
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="Name"></label>
+
+                            <input asp-for="Name"
+                                   class="form-control"
+                                   placeholder="Enter Department Name" />
+
+                            <span asp-validation-for="Name"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Department Code -->
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="Code"></label>
+
+                            <input asp-for="Code"
+                                   class="form-control"
+                                   placeholder="Enter Department Code" />
+
+                            <span asp-validation-for="Code"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Company -->
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="CompanyId"></label>
+
+                            <select asp-for="CompanyId"
+                                    asp-items="ViewBag.CompanyList"
+                                    class="form-control select-search">
+
+                                <option value="">
+                                    -- Select Company --
+                                </option>
+
+                            </select>
+
+                            <span asp-validation-for="CompanyId"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Branch -->
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="BranchId"></label>
+
+                            <select asp-for="BranchId"
+                                    asp-items="ViewBag.BranchList"
+                                    class="form-control select-search">
+
+                                <option value="">
+                                    -- Select Branch --
+                                </option>
+
+                            </select>
+
+                            <span asp-validation-for="BranchId"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Parent Department -->
+
+                    <div class="col-md-12">
+
+                        <div class="form-group">
+
+                            <label asp-for="ParentDepartmentId"></label>
+
+                            <select asp-for="ParentDepartmentId"
+                                    asp-items="ViewBag.ParentDepartmentList"
+                                    class="form-control select-search">
+
+                                <option value="">
+                                    -- Select Parent Department --
+                                </option>
+
+                            </select>
+
+                            <span asp-validation-for="ParentDepartmentId"
+                                  class="text-danger"></span>
+
+                        </div>
 
                     </div>
 
                 </div>
 
-                <!-- Body -->
-                <div class="card-body p-4">
+            </fieldset>
 
-                    <form asp-action="@(Model.Id == null ? "Create" : "Edit")">
+            <!-- Department Preview -->
 
-                        <!-- Hidden Fields -->
-                        <input asp-for="Id" type="hidden" />
-                        <input asp-for="TenantId" type="hidden" />
-                        <input asp-for="CreatedBy" type="hidden" />
-                        <input asp-for="ModifiedBy" type="hidden" />
-                        <input asp-for="ModifiedOn" type="hidden" />
+            <fieldset>
 
-                        <div class="row g-4">
+                <legend class="text-semibold">
 
-                            <!-- Department Name -->
-                            <div class="col-md-6">
+                    <i class="icon-eye position-left"></i>
+                    Preview
 
-                                <label asp-for="Name" class="form-label fw-semibold">
-                                    Department Name
-                                </label>
+                </legend>
 
-                                <div class="input-group">
+                <div class="row">
 
-                                    <span class="input-group-text">
-                                        <i class="bi bi-building"></i>
-                                    </span>
+                    <div class="col-md-4">
 
-                                    <input asp-for="Name"
-                                           class="form-control"
-                                           placeholder="Enter Department Name" />
+                        <div class="panel bg-primary-400">
 
-                                </div>
+                            <div class="panel-body text-center">
 
-                                <span asp-validation-for="Name" class="text-danger"></span>
+                                <i class="icon-tree6 icon-2x"></i>
 
-                            </div>
+                                <h5 id="departmentNamePreview">
+                                    @(Model?.Name ?? "Department")
+                                </h5>
 
-                            <!-- Department Code -->
-                            <div class="col-md-6">
-
-                                <label asp-for="Code" class="form-label fw-semibold">
-                                    Department Code
-                                </label>
-
-                                <div class="input-group">
-
-                                    <span class="input-group-text">
-                                        <i class="bi bi-upc-scan"></i>
-                                    </span>
-
-                                    <input asp-for="Code"
-                                           class="form-control"
-                                           placeholder="Enter Department Code" />
-
-                                </div>
-
-                                <span asp-validation-for="Code" class="text-danger"></span>
-
-                            </div>
-
-                            <!-- Company -->
-                            <div class="col-md-6">
-
-                                <label asp-for="CompanyId" class="form-label fw-semibold">
-                                    Company
-                                </label>
-
-                                <select asp-for="CompanyId"
-                                        class="form-select"
-                                        asp-items="ViewBag.CompanyList">
-
-                                    <option value="">
-                                        -- Select Company --
-                                    </option>
-
-                                </select>
-
-                                <span asp-validation-for="CompanyId" class="text-danger"></span>
-
-                            </div>
-
-                            <!-- Branch -->
-                            <div class="col-md-6">
-
-                                <label asp-for="BranchId" class="form-label fw-semibold">
-                                    Branch
-                                </label>
-
-                                <select asp-for="BranchId"
-                                        class="form-select"
-                                        asp-items="ViewBag.BranchList">
-
-                                    <option value="">
-                                        -- Select Branch --
-                                    </option>
-
-                                </select>
-
-                                <span asp-validation-for="BranchId" class="text-danger"></span>
-
-                            </div>
-
-                            <!-- Parent Department -->
-                            <div class="col-md-12">
-
-                                <label asp-for="ParentDepartmentId" class="form-label fw-semibold">
-                                    Parent Department
-                                </label>
-
-                                <select asp-for="ParentDepartmentId"
-                                        class="form-select"
-                                        asp-items="ViewBag.ParentDepartmentList">
-
-                                    <option value="">
-                                        -- Select Parent Department --
-                                    </option>
-
-                                </select>
-
-                                <span asp-validation-for="ParentDepartmentId" class="text-danger"></span>
+                                <span>Department</span>
 
                             </div>
 
                         </div>
 
-                        <!-- Footer -->
-                        <div class="mt-5 d-flex justify-content-end gap-2">
+                    </div>
 
-                            <a asp-action="Index"
-                               class="btn btn-light border rounded-3 px-4">
+                    <div class="col-md-4">
 
-                                <i class="bi bi-arrow-left"></i>
-                                Back
+                        <div class="panel bg-success-400">
 
-                            </a>
+                            <div class="panel-body text-center">
 
-                            <button type="submit"
-                                    class="btn btn-primary rounded-3 px-4">
+                                <i class="icon-barcode2 icon-2x"></i>
 
-                                <i class="bi bi-check-circle"></i>
+                                <h5 id="departmentCodePreview">
+                                    @(Model?.Code ?? "--")
+                                </h5>
 
-                                @(string.IsNullOrEmpty(Model?.Id)
-                                    ? "Save"
-                                    : "Update")
+                                <span>Code</span>
 
-                            </button>
+                            </div>
 
                         </div>
 
-                    </form>
+                    </div>
+
+                    <div class="col-md-4">
+
+                        <div class="panel bg-info-400">
+
+                            <div class="panel-body text-center">
+
+                                <i class="icon-git-branch icon-2x"></i>
+
+                                <h5>
+                                    @(Model?.ParentDepartmentId != null
+                                        ? "Sub Department"
+                                        : "Main Department")
+                                </h5>
+
+                                <span>Hierarchy</span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
 
                 </div>
 
+            </fieldset>
+
+            <!-- Footer -->
+
+            <div class="text-right">
+
+                <a asp-action="Index"
+                   class="btn btn-default">
+
+                    <i class="icon-arrow-left13"></i>
+                    Back
+
+                </a>
+
+                <button type="submit"
+                        class="btn bg-primary">
+
+                    <i class="icon-checkmark3"></i>
+
+                    @(string.IsNullOrEmpty(Model?.Id)
+                        ? "Save Department"
+                        : "Update Department")
+
+                </button>
+
             </div>
 
-        </div>
+        </form>
 
     </div>
 

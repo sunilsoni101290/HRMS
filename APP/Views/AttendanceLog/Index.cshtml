@@ -1,0 +1,262 @@
+﻿
+@model IEnumerable<AttendanceLogDto>
+
+@{
+    ViewData["Title"] = "Attendance Logs";
+}
+
+<div class="panel panel-flat">
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-fingerprint position-left"></i>
+            Attendance Management
+        </h5>
+
+        <div class="heading-elements">
+
+            <span class="label bg-success">
+                Live Punch Logs
+            </span>
+
+        </div>
+
+    </div>
+
+    <!-- Summary -->
+
+    <div class="panel-body">
+
+        <div class="row">
+
+            <div class="col-md-3">
+                <div class="panel bg-success-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">248</h3>
+                        <span>Total Punch In</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="panel bg-danger-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">230</h3>
+                        <span>Total Punch Out</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="panel bg-warning-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">12</h3>
+                        <span>Manual Entries</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="panel bg-info-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">5</h3>
+                        <span>Devices</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Filters -->
+
+        <div class="row">
+
+            <div class="col-md-4">
+                <input type="text"
+                       id="searchInput"
+                       class="form-control"
+                       placeholder="Search Employee..." />
+            </div>
+
+            <div class="col-md-3">
+                <input type="date"
+                       class="form-control" />
+            </div>
+
+            <div class="col-md-3">
+                <select class="form-control">
+                    <option>All Devices</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <button class="btn bg-primary btn-block">
+                    <i class="icon-filter4 position-left"></i>
+                    Filter
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <table id="punchTable" class="table datatable-scroll-y table-hover">
+
+        <thead>
+
+            <tr>
+
+                <th>#</th>
+                <th>Employee</th>
+                <th>Punch Time</th>
+                <th>Punch Type</th>
+                <th>Device</th>
+                <th>OS</th>
+                <th>Browser</th>
+                <th>Manual</th>
+                <th class="text-center">Actions</th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            @{
+                int sr = 1;
+            }
+
+            @foreach (var item in Model)
+            {
+                <tr>
+
+                    <td>@sr</td>
+
+                    <td>
+
+                        <div class="text-semibold">
+
+                            @(item.EmployeeId != null &&
+                              ViewBag.EmployeeNames != null &&
+                              ViewBag.EmployeeNames.ContainsKey(item.EmployeeId)
+                                ? ViewBag.EmployeeNames[item.EmployeeId]
+                                : "-")
+
+                        </div>
+
+                    </td>
+
+                    <td>
+                        @item.PunchTime.ToString("dd MMM yyyy hh:mm tt")
+                    </td>
+
+                    <td>
+
+                        @if (item.PunchType == "In")
+                        {
+                            <span class="label label-success">
+                                Punch In
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="label label-danger">
+                                Punch Out
+                            </span>
+                        }
+
+                    </td>
+
+                    <td>@item.DeviceType</td>
+
+                    <td>@item.OS</td>
+
+                    <td>
+
+                        @item.Browser
+
+                        @if (!string.IsNullOrEmpty(item.Version))
+                        {
+                            <span class="text-muted">
+                                (@item.Version)
+                            </span>
+                        }
+
+                    </td>
+
+                    <td>
+
+                        @if (item.IsManual)
+                        {
+                            <span class="label label-warning">
+                                Manual
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="label label-success">
+                                Auto
+                            </span>
+                        }
+
+                    </td>
+
+                    <td class="text-center">
+
+                        <ul class="icons-list">
+
+                            <li>
+                                <a asp-action="Details"
+                                   asp-route-id="@item.Id">
+                                    <i class="icon-eye"></i>
+                                </a>
+                            </li>
+
+                            <li>
+                                <a asp-action="Delete"
+                                   onclick="return confirm('Delete this punch record?')">
+                                    <i class="icon-trash"></i>
+                                </a>
+                            </li>
+
+                        </ul>
+
+                    </td>
+
+                </tr>
+
+                sr++;
+            }
+
+        </tbody>
+
+    </table>
+</div>
+
+@section Scripts {
+
+    <script>
+
+        // Search Table
+
+        document.getElementById("searchInput")
+            .addEventListener("keyup", function () {
+
+                let value = this.value.toLowerCase();
+
+                let rows = document.querySelectorAll("#punchTable tr");
+
+                rows.forEach(function (row) {
+
+                    let text = row.innerText.toLowerCase();
+
+                    row.style.display =
+                        text.includes(value) ? "" : "none";
+
+                });
+
+            });
+
+    </script>
+
+}

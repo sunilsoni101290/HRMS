@@ -46,6 +46,7 @@ namespace Infrastructure
         #region 🏢 ORGANIZATION
         public DbSet<Company> Companies { get; set; }
         public DbSet<Branch> Branches { get; set; }
+        public DbSet<Location> Locations { get; set; }
         public DbSet<Department> Departments { get; set; }
         public DbSet<Designation> Designations { get; set; }
         #endregion
@@ -69,6 +70,10 @@ namespace Infrastructure
         public DbSet<Attendance> Attendances { get; set; }
         public DbSet<AttendanceLog> AttendanceLogs { get; set; }
         public DbSet<Shift> Shifts { get; set; }
+        public DbSet<BiometricDevice> BiometricDevices { get; set; }
+        public DbSet<BiometricAttendanceLog> BiometricAttendanceLogs { get; set; }
+        public DbSet<EmployeeBiometricMapping> EmployeeBiometricMappings { get; set; }
+
         #endregion
 
         #region  📅 LEAVE
@@ -110,7 +115,8 @@ namespace Infrastructure
         #region ⚙️ MASTER TABLES
         public DbSet<AppFeature> AppFeatures { get; set; }
         public DbSet<FinancialYear> FinancialYears { get; set; }
-        public DbSet<Holiday> Holidays { get; set; }
+        public DbSet<HolidayGroup> HolidayGroups { get; set; }
+        public DbSet<HolidayGroupDetail> HolidayGroupDetails { get; set; }
         public DbSet<WeekOff> WeekOffs { get; set; }
         public DbSet<SequenceMaster> SequenceMasters { get; set; }
         #endregion

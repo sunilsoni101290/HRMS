@@ -9,37 +9,60 @@ namespace APP.Models.DTOs
         // 🔹 Id (for update / detail)
         public string? Id { get; set; }
 
+        [Display(Name ="First Name")]
         [Required, MaxLength(100)]
         public string FirstName { get; set; }
 
         [MaxLength(100)]
+        [Display(Name = "Last Name")]
         public string? LastName { get; set; }
+
+        [Required]
+        [Display(Name = "Employee Code")]
+        public string EmployeeCode { get; set; }
 
         // 🔹 Multi-Tenant
         [Required]
+        [Display(Name = "Tenant")]
         public string TenantId { get; set; }
+
+        [Required]
+        [Display(Name = "Role")]
+        public string RoleId { get; set; }
+
+        public string? UserId { get; set; }
 
         // 🔹 Organization Mapping
         [Required]
+        [Display(Name = "Company")]
         public string CompanyId { get; set; }
 
+        [Display(Name = "Branch")]
         public string? BranchId { get; set; }
 
+        [Display(Name = "Shift")]
+        public string? ShiftId { get; set; }
+
         [Required]
+        [Display(Name = "Department")]
         public string DepartmentId { get; set; }
 
         [Required]
+        [Display(Name = "Designation")]
         public string DesignationId { get; set; }
 
+        [Display(Name = "Reporting Manager")]
         public string? ReportingManagerId { get; set; }
 
         // 🔹 Personal Info
+        [Display(Name = "DOB")]
         public DateTime? DateOfBirth { get; set; }
 
         [Required]
         public Gender Gender { get; set; }
 
         [Required]
+        [Display(Name = "Marital Status")]
         public MaritalStatus MaritalStatus { get; set; }
 
         // 🔹 Contact Info
@@ -51,6 +74,7 @@ namespace APP.Models.DTOs
         public string Phone { get; set; }
 
         [MaxLength(15)]
+        [Display(Name = "Emergency Contact")]
         public string? EmergencyContact { get; set; }
 
         // 🔹 Address
@@ -59,24 +83,45 @@ namespace APP.Models.DTOs
 
         [Required]
         [RegularExpression(@"^\d{6}$", ErrorMessage = "Invalid Pincode")]
+        [Display(Name = "Pin Code")] 
         public string Pincode { get; set; }
 
         // 🔹 KYC
         [RegularExpression(@"[A-Z]{5}[0-9]{4}[A-Z]{1}", ErrorMessage = "Invalid PAN")]
+        [Display(Name = "PAN Number")]
         public string? PANNumber { get; set; }
 
         [RegularExpression(@"^\d{12}$", ErrorMessage = "Invalid Aadhar")]
+        [Display(Name = "Aadhar Number")]
         public string? AadharNumber { get; set; }
 
         // 🔹 Employment
         [Required]
+        [Display(Name = "Joining Date")]
         public DateTime JoiningDate { get; set; }
 
+        [Display(Name = "Confirmation Date")]
         public DateTime? ConfirmationDate { get; set; }
+
+        [Display(Name = "Relieving Date")]
         public DateTime? RelievingDate { get; set; }
 
         [Required]
+        [Display(Name = "Employment Type")]
         public EmploymentType EmploymentType { get; set; }
+
+        [Display(Name = "Email Confirmed")]
+        public bool EmailConfirmed { get; set; }
+
+        [Display(Name = "Phone Confirmed")]
+        public bool PhoneConfirmed { get; set; }
+        public IFormFile? UploadImage { get; set; }
+        public string? FilePath { get; set; }
+
+        public string CreatedBy { get; set; }
+        public DateTime? ModifiedOn { get; set; }
+        public string? ModifiedBy { get; set; }
+
     }
 
     // ==============================
@@ -185,75 +230,4 @@ namespace APP.Models.DTOs
         public decimal? MaxSalary { get; set; }
     }
 
-
-    // ==============================
-    // Country DTOs
-    // ==============================
-
-    public class CountryDto
-    {
-        public string? Id { get; set; }
-
-        public string Name { get; set; }
-        public string Code { get; set; }
-        public string PhoneCode { get; set; }
-    }
-
-    public class CountryListDto
-    {
-        public string Id { get; set; }
-
-        public string Name { get; set; }
-        public string Code { get; set; }
-        public string PhoneCode { get; set; }
-    }
-
-
-    // ==============================
-    // State DTOs
-    // ==============================
-
-    public class StateDto
-    {
-        public string? Id { get; set; }
-
-        public string Name { get; set; }
-        public string GSTStateCode { get; set; }
-
-        public string CountryId { get; set; }
-    }
-
-    public class StateListDto
-    {
-        public string Id { get; set; }
-
-        public string Name { get; set; }
-
-        public string CountryId { get; set; }
-        public string CountryName { get; set; }
-    }
-
-
-    // ==============================
-    // City DTOs
-    // ==============================
-
-    public class CityDto
-    {
-        public string? Id { get; set; }
-
-        public string Name { get; set; }
-
-        public string StateId { get; set; }
-    }
-
-    public class CityListDto
-    {
-        public string Id { get; set; }
-
-        public string Name { get; set; }
-
-        public string StateId { get; set; }
-        public string StateName { get; set; }
-    }
 }

@@ -4,32 +4,23 @@
     ViewData["Title"] = "Department List";
 }
 
-<div class="container-fluid py-4">
+<div class="panel panel-flat">
 
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="panel-heading">
 
-        <div>
+        <h5 class="panel-title">
 
-            <h3 class="fw-bold mb-1">
+            <i class="icon-tree6 position-left"></i>
+            Department Management
 
-                <i class="bi bi-diagram-3 text-primary"></i>
-                Department Management
+        </h5>
 
-            </h3>
-
-            <p class="text-muted mb-0">
-                Manage all departments
-            </p>
-
-        </div>
-
-        <div>
+        <div class="heading-elements">
 
             <a asp-action="Create"
-               class="btn btn-primary rounded-3 px-4 shadow-sm">
+               class="btn bg-primary btn-sm">
 
-                <i class="bi bi-plus-circle"></i>
+                <i class="icon-plus22 position-left"></i>
                 Add Department
 
             </a>
@@ -38,56 +29,123 @@
 
     </div>
 
-    <!-- Search -->
-    <div class="card border-0 shadow-sm rounded-4 mb-4">
+    <!-- KPI Cards -->
 
-        <div class="card-body">
+    <div class="panel-body">
 
-            <div class="row g-3">
+        <div class="row">
 
-                <div class="col-md-4">
+            <div class="col-md-3">
 
-                    <input type="text"
-                           id="searchInput"
-                           class="form-control"
-                           placeholder="Search Department..." />
+                <div class="panel bg-primary-400">
+                    <div class="panel-body text-center">
 
+                        <h3 class="no-margin">
+                            @Model.Count()
+                        </h3>
+
+                        <span>Total Departments</span>
+
+                    </div>
                 </div>
 
-                <div class="col-md-3">
+            </div>
 
-                    <select class="form-select">
+            <div class="col-md-3">
 
-                        <option value="">
-                            All Companies
-                        </option>
+                <div class="panel bg-success-400">
+                    <div class="panel-body text-center">
 
-                    </select>
+                        <h3 class="no-margin">
+                            @Model.Select(x => x.CompanyId).Distinct().Count()
+                        </h3>
 
+                        <span>Companies</span>
+
+                    </div>
                 </div>
 
-                <div class="col-md-3">
+            </div>
 
-                    <select class="form-select">
+            <div class="col-md-3">
 
-                        <option value="">
-                            All Branches
-                        </option>
+                <div class="panel bg-info-400">
+                    <div class="panel-body text-center">
 
-                    </select>
+                        <h3 class="no-margin">
+                            @Model.Select(x => x.BranchId).Distinct().Count()
+                        </h3>
 
+                        <span>Branches</span>
+
+                    </div>
                 </div>
 
-                <div class="col-md-2">
+            </div>
 
-                    <button class="btn btn-outline-primary w-100">
+            <div class="col-md-3">
 
-                        <i class="bi bi-funnel"></i>
-                        Filter
+                <div class="panel bg-warning-400">
+                    <div class="panel-body text-center">
 
-                    </button>
+                        <h3 class="no-margin">
+                            @Model.Count(x => x.ParentDepartmentId != null)
+                        </h3>
 
+                        <span>Sub Departments</span>
+
+                    </div>
                 </div>
+
+            </div>
+
+        </div>
+
+        <!-- Filters -->
+
+        <div class="row">
+
+            <div class="col-md-4">
+
+                <input type="text"
+                       id="searchInput"
+                       class="form-control"
+                       placeholder="Search Department..." />
+
+            </div>
+
+            <div class="col-md-3">
+
+                <select class="form-control select-search">
+
+                    <option value="">
+                        All Companies
+                    </option>
+
+                </select>
+
+            </div>
+
+            <div class="col-md-3">
+
+                <select class="form-control select-search">
+
+                    <option value="">
+                        All Branches
+                    </option>
+
+                </select>
+
+            </div>
+
+            <div class="col-md-2">
+
+                <button class="btn bg-primary btn-block">
+
+                    <i class="icon-search4 position-left"></i>
+                    Filter
+
+                </button>
 
             </div>
 
@@ -95,146 +153,136 @@
 
     </div>
 
-    <!-- Grid -->
-    <div class="card border-0 shadow rounded-4">
+    <!-- Department Grid -->
 
-        <div class="card-body p-0">
+    <table class="table datatable-scroll-y table-hover">
 
-            <div class="table-responsive">
+        <thead>
 
-                <table class="table table-hover align-middle mb-0">
+            <tr>
 
-                    <thead class="table-light">
+                <th>#</th>
+                <th>Department</th>
+                <th>Code</th>
+                <th>Company</th>
+                <th>Branch</th>
+                <th>Parent Department</th>
+                <th class="text-center">Actions</th>
 
-                        <tr>
+            </tr>
 
-                            <th>#</th>
-                            <th>Department</th>
-                            <th>Code</th>
-                            <th>Company</th>
-                            <th>Branch</th>
-                            <th>Parent Department</th>
-                            <th width="150">Action</th>
-                        </tr>
+        </thead>
 
-                    </thead>
+        <tbody>
 
-                    <tbody id="departmentTable">
+            @{
+                int sr = 1;
+            }
 
-                        @{
-                            int sr = 1;
-                        }
-                        @if (Model != null && Model.Any())
-                        {
-                            foreach (var item in Model)
-                            {
-                                <tr>
+            @foreach (var item in Model)
+            {
+                <tr>
 
-                                    <!-- Sr -->
-                                    <td>
-                                        @sr
-                                    </td>
+                    <td>@sr</td>
 
-                                    <!-- Name -->
-                                    <td>
+                    <td>
 
-                                        <div class="fw-semibold">
-                                            @item.Name
-                                        </div>
+                        <div class="text-semibold">
 
-                                    </td>
+                            <i class="icon-tree6 text-primary"></i>
+                            @item.Name
 
-                                    <!-- Code -->
-                                    <td>
+                        </div>
 
-                                        <span class="badge bg-light text-dark border">
-                                            @item.Code
-                                        </span>
+                    </td>
 
-                                    </td>
+                    <td>
 
-                                    <!-- Company -->
-                                    <td>
-                                        @(item.CompanyId != null &&
-                                          ViewBag.CompanyNames != null &&
-                                          ViewBag.CompanyNames.ContainsKey(item.CompanyId)
-                                            ? ViewBag.CompanyNames[item.CompanyId]
-                                            : "-")
-                                    </td>
+                        <span class="label bg-primary">
+                            @item.Code
+                        </span>
 
-                                    <!-- Branch -->
-                                    <td>
-                                        @(item.BranchId != null &&
-                                          ViewBag.BranchNames != null &&
-                                          ViewBag.BranchNames.ContainsKey(item.BranchId)
-                                            ? ViewBag.BranchNames[item.BranchId]
-                                            : "-")
-                                    </td>
+                    </td>
 
-                                    <!-- Parent Department -->
-                                    <td>
-                                        @(item.ParentDepartmentId != null &&
-                                          ViewBag.ParentDepartments != null &&
-                                          ViewBag.ParentDepartments.ContainsKey(item.ParentDepartmentId)
-                                            ? ViewBag.ParentDepartments[item.ParentDepartmentId]
-                                            : "-")
-                                    </td>
+                    <td>
 
-                                    <!-- Action -->
-                                    <td>
+                        @(item.CompanyId != null &&
+                          ViewBag.CompanyNames != null &&
+                          ViewBag.CompanyNames.ContainsKey(item.CompanyId)
+                            ? ViewBag.CompanyNames[item.CompanyId]
+                            : "-")
 
-                                        <div class="d-flex gap-2">
+                    </td>
 
-                                            <!-- Edit -->
-                                            <a asp-action="Edit"
-                                               asp-route-id="@item.Id"
-                                               class="btn btn-sm btn-outline-primary rounded-3">
+                    <td>
 
-                                                <i class="bi bi-pencil-square"></i>
+                        @(item.BranchId != null &&
+                          ViewBag.BranchNames != null &&
+                          ViewBag.BranchNames.ContainsKey(item.BranchId)
+                            ? ViewBag.BranchNames[item.BranchId]
+                            : "-")
 
-                                            </a>
+                    </td>
 
-                                            <!-- Details -->
-                                            <a asp-action="Details"
-                                               asp-route-id="@item.Id"
-                                               class="btn btn-sm btn-outline-info rounded-3">
+                    <td>
 
-                                                <i class="bi bi-eye"></i>
+                        @(item.ParentDepartmentId != null &&
+                          ViewBag.ParentDepartments != null &&
+                          ViewBag.ParentDepartments.ContainsKey(item.ParentDepartmentId)
+                            ? ViewBag.ParentDepartments[item.ParentDepartmentId]
+                            : "-")
 
-                                            </a>
+                    </td>
 
-                                            <!-- Delete -->
-                                            <a asp-action="Delete"
-                                               asp-route-id="@item.Id"
-                                               onclick="return confirm('Are you sure to delete this department?')"
-                                               class="btn btn-sm btn-outline-danger rounded-3">
+                    <td class="text-center">
 
-                                                <i class="bi bi-trash"></i>
+                        <ul class="icons-list">
 
-                                            </a>
+                            <li>
+                                <a asp-action="Details"
+                                   asp-route-id="@item.Id"
+                                   title="View">
 
-                                        </div>
+                                    <i class="icon-eye"></i>
 
-                                    </td>
+                                </a>
+                            </li>
 
-                                </tr>
+                            <li>
+                                <a asp-action="Edit"
+                                   asp-route-id="@item.Id"
+                                   title="Edit">
 
-                                sr++;
-                            }                            
-                        }
+                                    <i class="icon-pencil7"></i>
 
-                    </tbody>
+                                </a>
+                            </li>
 
-                </table>
+                            <li>
+                                <a asp-action="Delete"
+                                   asp-route-id="@item.Id"
+                                   onclick="return confirm('Delete this department?')"
+                                   title="Delete">
 
-            </div>
+                                    <i class="icon-trash"></i>
 
-        </div>
+                                </a>
+                            </li>
 
-    </div>
+                        </ul>
+
+                    </td>
+
+                </tr>
+
+                sr++;
+            }
+
+        </tbody>
+
+    </table>
 
 </div>
-
 @section Scripts {
 
     <script>

@@ -1,5 +1,5 @@
 ﻿using Application.DTOs.Employee;
-using Application.Interfaces.Employee;
+using Application.Interfaces.EmployeeInterface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

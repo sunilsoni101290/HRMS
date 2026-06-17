@@ -8,10 +8,11 @@ namespace APP.Models.DTOs
         public string Username { get; set; }
 
         [Required(ErrorMessage = "Password is required")]
+        [DataType(DataType.Password)]
         [MinLength(6, ErrorMessage = "Minimum 6 characters required")]
         public string Password { get; set; }
-
-        public bool RememberMe { get; set; }
+        public string IpAddress { get; set; } = string.Empty;
+        public bool RememberMe { get; set; } = false;
     }
 
     public class UserListDto

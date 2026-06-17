@@ -15,7 +15,7 @@ namespace Domain.Entities
         public string CompanyId { get; set; }
         public virtual Company Company { get; set; }
 
-        public string BranchId { get; set; }
+        public string? BranchId { get; set; }
         public virtual Branch Branch { get; set; }
 
         [Required]
@@ -44,6 +44,17 @@ namespace Domain.Entities
         public string? Remarks { get; set; }
 
         public bool IsManualEntry { get; set; } = false;
+
+
+        #region Biometric Logs 
+        public bool IsBiometricAttendance { get; set; }
+
+        public DateTime? ProcessedOn { get; set; }
+
+        public string? ProcessedBy { get; set; }
+
+        public string? SourceDeviceId { get; set; }
+        #endregion
 
         // Navigation
         public ICollection<AttendanceLog> Logs { get; set; }

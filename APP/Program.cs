@@ -1,3 +1,4 @@
+using APP.Models;
 using APP.Services.Implementations;
 using APP.Services.Interfaces;
 
@@ -14,7 +15,17 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient<IApiService, ApiService>(client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["ApiSettings:BaseUrl"]);
+    client.Timeout = TimeSpan.FromMinutes(5);
 });
+
+builder.Services.Configure<AppSettings>(
+    builder.Configuration.GetSection("AppSettings"));
+
+builder.Services.AddControllersWithViews()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = null;
+    });
 
 var app = builder.Build();
 

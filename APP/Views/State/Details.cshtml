@@ -1,0 +1,332 @@
+﻿@model StateDto
+
+@{
+    ViewData["Title"] = "State Details";
+}
+
+<div class="container-fluid py-4">
+
+    <div class="row justify-content-center">
+
+        <div class="col-lg-8">
+
+            <div class="card shadow border-0 rounded-4 overflow-hidden">
+
+                <!-- Header -->
+                <div class="card-header bg-primary text-white py-4">
+
+                    <div class="d-flex align-items-center">
+
+                        <div class="me-3">
+
+                            <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center"
+                                 style="width:70px;height:70px;">
+
+                                <i class="bi bi-geo-alt-fill fs-2"></i>
+
+                            </div>
+
+                        </div>
+
+                        <div>
+
+                            <h3 class="mb-1">
+                                @Model.Name
+                            </h3>
+
+                            <p class="mb-0 opacity-75">
+
+                                State Code :
+                                @Model.Code
+
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Body -->
+                <div class="card-body p-4">
+
+                    <div class="row g-4">
+
+                        <!-- State Information -->
+                        <div class="col-md-6">
+
+                            <div class="card border-0 shadow-sm rounded-4 h-100">
+
+                                <div class="card-header bg-light">
+
+                                    <h5 class="mb-0">
+
+                                        <i class="bi bi-info-circle text-primary"></i>
+                                        State Information
+
+                                    </h5>
+
+                                </div>
+
+                                <div class="card-body">
+
+                                    <table class="table table-borderless mb-0">
+
+                                        <tr>
+
+                                            <th width="180">
+                                                State Name
+                                            </th>
+
+                                            <td>
+                                                @Model.Name
+                                            </td>
+
+                                        </tr>
+
+                                        <tr>
+
+                                            <th>
+                                                State Code
+                                            </th>
+
+                                            <td>
+
+                                                <span class="badge bg-dark">
+                                                    @Model.Code
+                                                </span>
+
+                                            </td>
+
+                                        </tr>
+
+                                        <tr>
+
+                                            <th>
+                                                Country
+                                            </th>
+
+                                            <td>
+
+                                                <span class="badge bg-primary">
+                                                    @Model.CountryName
+                                                </span>
+
+                                            </td>
+
+                                        </tr>
+
+                                        <tr>
+
+                                            <th>
+                                                GST State Code
+                                            </th>
+
+                                            <td>
+
+                                                <span class="badge bg-success">
+                                                    @Model.GSTStateCode
+                                                </span>
+
+                                            </td>
+
+                                        </tr>
+
+                                    </table>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Audit Information -->
+                        <div class="col-md-6">
+
+                            <div class="card border-0 shadow-sm rounded-4 h-100">
+
+                                <div class="card-header bg-light">
+
+                                    <h5 class="mb-0">
+
+                                        <i class="bi bi-clock-history text-primary"></i>
+                                        Audit Information
+
+                                    </h5>
+
+                                </div>
+
+                                <div class="card-body">
+
+                                    <table class="table table-borderless mb-0">
+
+                                        <tr>
+
+                                            <th width="180">
+                                                Created By
+                                            </th>
+
+                                            <td>
+                                                @Model.CreatedBy
+                                            </td>
+
+                                        </tr>
+
+                                        <tr>
+
+                                            <th>
+                                                Modified By
+                                            </th>
+
+                                            <td>
+
+                                                @(string.IsNullOrEmpty(Model.ModifiedBy)
+                                                    ? "-"
+                                                    : Model.ModifiedBy)
+
+                                            </td>
+
+                                        </tr>
+
+                                        <tr>
+
+                                            <th>
+                                                Modified On
+                                            </th>
+
+                                            <td>
+
+                                                @(Model.ModifiedOn.HasValue
+                                                    ? Model.ModifiedOn.Value.ToString("dd MMM yyyy")
+                                                    : "-")
+
+                                            </td>
+
+                                        </tr>
+
+                                    </table>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Status -->
+                        <div class="col-md-12">
+
+                            <div class="card border-0 shadow-sm rounded-4">
+
+                                <div class="card-header bg-light">
+
+                                    <h5 class="mb-0">
+
+                                        <i class="bi bi-check-circle text-primary"></i>
+                                        State Status
+
+                                    </h5>
+
+                                </div>
+
+                                <div class="card-body">
+
+                                    <div class="row text-center">
+
+                                        <!-- Active -->
+                                        <div class="col-md-4">
+
+                                            <div class="border rounded-4 p-4">
+
+                                                <i class="bi bi-check-circle-fill text-success fs-1"></i>
+
+                                                <h6 class="mt-3">
+                                                    Current Status
+                                                </h6>
+
+                                                <span class="badge bg-success">
+                                                    Active
+                                                </span>
+
+                                            </div>
+
+                                        </div>
+
+                                        <!-- Country -->
+                                        <div class="col-md-4">
+
+                                            <div class="border rounded-4 p-4">
+
+                                                <i class="bi bi-globe2 text-primary fs-1"></i>
+
+                                                <h6 class="mt-3">
+                                                    Country
+                                                </h6>
+
+                                                <span class="badge bg-primary">
+                                                    @Model.CountryName
+                                                </span>
+
+                                            </div>
+
+                                        </div>
+
+                                        <!-- GST -->
+                                        <div class="col-md-4">
+
+                                            <div class="border rounded-4 p-4">
+
+                                                <i class="bi bi-receipt text-success fs-1"></i>
+
+                                                <h6 class="mt-3">
+                                                    GST Code
+                                                </h6>
+
+                                                <span class="badge bg-success">
+                                                    @Model.GSTStateCode
+                                                </span>
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="mt-4 text-end">
+
+                        <a asp-action="Index"
+                           class="btn btn-light border rounded-3 px-4">
+
+                            <i class="bi bi-arrow-left"></i>
+                            Back
+
+                        </a>
+
+                        <a asp-action="Edit"
+                           asp-route-id="@Model.Id"
+                           class="btn btn-primary rounded-3 px-4">
+
+                            <i class="bi bi-pencil-square"></i>
+                            Edit State
+
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

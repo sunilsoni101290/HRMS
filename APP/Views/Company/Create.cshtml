@@ -1,0 +1,552 @@
+﻿@model CompanyDto
+
+@{
+    ViewData["Title"] = "Company";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+
+            <i class="icon-office position-left"></i>
+
+            @(string.IsNullOrEmpty(Model?.Id)
+                ? "Create Company"
+                : "Edit Company")
+
+        </h5>
+
+        <div class="heading-elements">
+
+            <span class="text-muted">
+                Manage company master information
+            </span>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="@(Model.Id == null ? "Create" : "Edit")"
+              method="post"
+              enctype="multipart/form-data">
+
+            <input asp-for="Id" type="hidden" />
+            <input asp-for="TenantId" type="hidden" />
+
+            <!-- Company Information -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-office position-left"></i>
+                    Company Information
+
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-6">
+                        <div class="form-group">
+
+                            <label asp-for="Name"></label>
+
+                            <input asp-for="Name"
+                                   class="form-control"
+                                   placeholder="Company Name" />
+
+                            <span asp-validation-for="Name"
+                                  class="text-danger"></span>
+
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-group">
+
+                            <label asp-for="Code"></label>
+
+                            <input asp-for="Code"
+                                   class="form-control"
+                                   placeholder="Company Code" />
+
+                            <span asp-validation-for="Code"
+                                  class="text-danger"></span>
+
+                        </div>
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- Legal Information -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-file-text2 position-left"></i>
+                    Legal Information
+
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+
+                            <label asp-for="GSTNumber"></label>
+
+                            <input asp-for="GSTNumber"
+                                   class="form-control"
+                                   placeholder="GST Number" />
+
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+
+                            <label asp-for="PANNumber"></label>
+
+                            <input asp-for="PANNumber"
+                                   class="form-control"
+                                   placeholder="PAN Number" />
+
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+
+                            <label asp-for="CINNumber"></label>
+
+                            <input asp-for="CINNumber"
+                                   class="form-control"
+                                   placeholder="CIN Number" />
+
+                        </div>
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- Contact Information -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-phone position-left"></i>
+                    Contact Information
+
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+
+                            <label asp-for="Email"></label>
+
+                            <input asp-for="Email"
+                                   class="form-control"
+                                   placeholder="Company Email" />
+
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+
+                            <label asp-for="Phone"></label>
+
+                            <input asp-for="Phone"
+                                   class="form-control"
+                                   placeholder="Phone Number" />
+
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+
+                            <label asp-for="AlternatePhone"></label>
+
+                            <input asp-for="AlternatePhone"
+                                   class="form-control"
+                                   placeholder="Alternate Phone" />
+
+                        </div>
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- Address Information -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-location4 position-left"></i>
+                    Address Information
+
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-12">
+                        <div class="form-group">
+
+                            <label asp-for="Address"></label>
+
+                            <textarea asp-for="Address"
+                                      rows="3"
+                                      class="form-control"></textarea>
+
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="form-group">
+
+                            <label asp-for="CountryId"></label>
+
+                            <select asp-for="CountryId"
+                                    asp-items="ViewBag.CountryList"
+                                    id="CountryId"
+                                    class="form-control select-search">
+
+                                <option value="">
+                                    -- Select Country --
+                                </option>
+
+                            </select>
+
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="form-group">
+
+                            <label asp-for="StateId"></label>
+
+                            <select asp-for="StateId"
+                                    asp-items="ViewBag.StateList"
+                                    id="StateId"
+                                    class="form-control select-search">
+
+                                <option value="">
+                                    -- Select State --
+                                </option>
+
+                            </select>
+
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="form-group">
+
+                            <label asp-for="CityId"></label>
+
+                            <select asp-for="CityId"
+                                    asp-items="ViewBag.CityList"
+                                    id="CityId"
+                                    class="form-control select-search">
+
+                                <option value="">
+                                    -- Select City --
+                                </option>
+
+                            </select>
+
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="form-group">
+
+                            <label asp-for="Pincode"></label>
+
+                            <input asp-for="Pincode"
+                                   class="form-control"
+                                   placeholder="Pincode" />
+
+                        </div>
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- Business Information -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-briefcase position-left"></i>
+                    Business Information
+
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+
+                            <label asp-for="OwnershipType"></label>
+
+                            <select asp-for="OwnershipType"
+                                    asp-items="ViewBag.OwnershipTypeList"
+                                    class="form-control">
+
+                                <option value="">
+                                    -- Select Ownership --
+                                </option>
+
+                            </select>
+
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+
+                            <label asp-for="BusinessCategory"></label>
+
+                            <select asp-for="BusinessCategory"
+                                    asp-items="ViewBag.BusinessCategoryList"
+                                    class="form-control">
+
+                                <option value="">
+                                    -- Select Category --
+                                </option>
+
+                            </select>
+
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+
+                            <label asp-for="IncorporationDate"></label>
+
+                            <input asp-for="IncorporationDate"
+                                   type="date"
+                                   class="form-control" />
+
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-group">
+
+                            <label asp-for="WebsiteUrl"></label>
+
+                            <input asp-for="WebsiteUrl"
+                                   class="form-control"
+                                   placeholder="https://example.com" />
+
+                        </div>
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- Company Logo -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-image2 position-left"></i>
+                    Company Logo
+
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <input type="file"
+                                   name="LogoFile"
+                                   class="file-styled" />
+
+                        </div>
+
+                    </div>
+
+                    @if (Model?.Id != null && !string.IsNullOrEmpty(Model.Logo))
+                    {
+                        <div class="col-md-6">
+
+                            <img src="@Model.Logo"
+                                 class="img-thumbnail"
+                                 style="width:120px;height:120px;object-fit:cover;" />
+
+                            <input asp-for="Logo" type="hidden" />
+
+                        </div>
+                    }
+
+                </div>
+
+            </fieldset>
+
+            <!-- Buttons -->
+
+            <div class="text-right">
+
+                <a asp-action="Index"
+                   class="btn btn-default">
+
+                    <i class="icon-arrow-left13"></i>
+                    Back
+
+                </a>
+
+                <button type="submit"
+                        class="btn bg-primary">
+
+                    <i class="icon-checkmark3"></i>
+
+                    @(string.IsNullOrEmpty(Model?.Id)
+                        ? "Save"
+                        : "Update")
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+
+        $(document).on("change", "#CountryId", function () {
+        debugger;
+        let countryId = $(this).val();
+
+        console.log(countryId);
+
+        if (countryId == null || countryId === "") {
+
+        $("#StateId").html(
+        '<option value="">-- Select State --</option>'
+        );
+
+        return;
+        }
+
+        $.ajax({
+
+        url: '@Url.Action("GetStatesByCountry")',
+
+        type: 'GET',
+
+        data: { countryId: countryId },
+
+        success: function (response) {
+
+        let html = '<option value="">-- Select State --</option>';
+
+        $.each(response, function (i, item) {
+
+        html += `<option value="${item.value}">
+        ${item.text}
+        </option>`;
+        });
+
+        $("#StateId").html(html);
+        },
+
+        error: function (xhr) {
+
+        console.log(xhr);
+
+        alert("Error loading states");
+
+        }
+
+        });
+
+        });
+        $(document).on("change", "#StateId", function () {
+        debugger;
+        let stateId = $(this).val();
+
+        console.log(stateId);
+
+        if (stateId == null || stateId === "") {
+
+        $("#CityId").html(
+        '<option value="">-- Select City --</option>'
+        );
+
+        return;
+        }
+
+        $.ajax({
+
+        url: '@Url.Action("GetCityByState")',
+
+        type: 'GET',
+
+        data: { stateId: stateId },
+
+        success: function (response) {
+
+        let html = '<option value="">-- Select City --</option>';
+
+        $.each(response, function (i, item) {
+
+        html += `<option value="${item.value}">
+        ${item.text}
+        </option>`;
+        });
+
+        $("#CityId").html(html);
+        },
+
+        error: function (xhr) {
+
+        console.log(xhr);
+
+        alert("Error loading states");
+
+        }
+
+        });
+
+        });
+        });
+
+    </script>
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    
+}

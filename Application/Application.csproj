@@ -7,6 +7,22 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="DTOs\Holidays\**" />
+    <Compile Remove="Interfaces\Employee\**" />
+    <Compile Remove="Services\EmployeeSer\**" />
+    <EmbeddedResource Remove="DTOs\Holidays\**" />
+    <EmbeddedResource Remove="Interfaces\Employee\**" />
+    <EmbeddedResource Remove="Services\EmployeeSer\**" />
+    <None Remove="DTOs\Holidays\**" />
+    <None Remove="Interfaces\Employee\**" />
+    <None Remove="Services\EmployeeSer\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Services\Attendances\BiometricService.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Domain\Domain.csproj" />
     <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
   </ItemGroup>
@@ -17,6 +33,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Routing" Version="2.3.9" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
 </Project>

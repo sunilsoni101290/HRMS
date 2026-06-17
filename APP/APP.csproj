@@ -7,10 +7,20 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="wwwroot\images\companylogo\**" />
+    <Content Remove="wwwroot\images\companylogo\**" />
+    <EmbeddedResource Remove="wwwroot\images\companylogo\**" />
+    <None Remove="wwwroot\images\companylogo\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="ScaffoldingReadMe.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="Data\" />
     <Folder Include="Models\Employee\" />
     <Folder Include="Utilities\" />
-    <Folder Include="wwwroot\images\" />
     <Folder Include="wwwroot\js\" />
     <Folder Include="wwwroot\lib\bootstrap\" />
     <Folder Include="wwwroot\lib\bootstrap\dist\css\" />

@@ -1,0 +1,360 @@
+﻿@model CompanyDto
+
+@{
+    ViewData["Title"] = "Company Details";
+}
+<div class="panel panel-flat">
+
+    <!-- Company Header -->
+
+    <div class="panel-heading bg-primary">
+
+        <div class="media">
+
+            <div class="media-left">
+
+                @if (!string.IsNullOrEmpty(Model.Logo))
+                {
+                    <img src="@Model.Logo"
+                         class="img-circle img-lg border-white"
+                         style="width:90px;height:90px;object-fit:cover;" />
+                }
+                else
+                {
+                    <div class="bg-white text-primary text-center"
+                         style="width:90px;height:90px;line-height:90px;border-radius:50%;font-size:32px;font-weight:bold;">
+
+                        @NameHelper.GetNamePrefix(Model.Name)
+
+                    </div>
+                }
+
+            </div>
+
+            <div class="media-body">
+
+                <h3 class="text-white no-margin">
+                    @Model.Name
+                </h3>
+
+                <span class="text-white">
+                    Company Code : @Model.Code
+                </span>
+
+                <br />
+
+                <span class="text-white">
+                    @Model.Email
+                </span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <!-- KPI Cards -->
+
+        <div class="row">
+
+            <div class="col-md-3">
+
+                <div class="panel bg-primary-400">
+                    <div class="panel-body text-center">
+
+                        <i class="icon-office icon-2x"></i>
+
+                        <h5>@Model.BusinessCategory</h5>
+
+                        <span>Business Category</span>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="col-md-3">
+
+                <div class="panel bg-success-400">
+                    <div class="panel-body text-center">
+
+                        <i class="icon-file-check icon-2x"></i>
+
+                        <h5>GST Registered</h5>
+
+                        <span>Tax Status</span>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="col-md-3">
+
+                <div class="panel bg-info-400">
+                    <div class="panel-body text-center">
+
+                        <i class="icon-location4 icon-2x"></i>
+
+                        <h5>@Model.CityName</h5>
+
+                        <span>Location</span>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="col-md-3">
+
+                <div class="panel bg-warning-400">
+                    <div class="panel-body text-center">
+
+                        <i class="icon-calendar3 icon-2x"></i>
+
+                        <h5>
+                            @(Model.IncorporationDate?.ToString("yyyy") ?? "-")
+                        </h5>
+
+                        <span>Established</span>
+
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="row">
+
+            <!-- Basic Information -->
+
+            <div class="col-md-6">
+
+                <div class="panel panel-bordered">
+
+                    <div class="panel-heading">
+
+                        <h6 class="panel-title">
+                            <i class="icon-info22 position-left"></i>
+                            Basic Information
+                        </h6>
+
+                    </div>
+
+                    <table class="table table-striped">
+
+                        <tbody>
+
+                            <tr>
+                                <th width="180">Company Name</th>
+                                <td>@Model.Name</td>
+                            </tr>
+
+                            <tr>
+                                <th>Company Code</th>
+                                <td>@Model.Code</td>
+                            </tr>
+
+                            <tr>
+                                <th>Business Category</th>
+                                <td>@Model.BusinessCategory</td>
+                            </tr>
+
+                            <tr>
+                                <th>Ownership Type</th>
+                                <td>@Model.OwnershipType</td>
+                            </tr>
+
+                            <tr>
+                                <th>Website</th>
+                                <td>@Model.WebsiteUrl</td>
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+            <!-- Legal Information -->
+
+            <div class="col-md-6">
+
+                <div class="panel panel-bordered">
+
+                    <div class="panel-heading">
+
+                        <h6 class="panel-title">
+                            <i class="icon-file-text2 position-left"></i>
+                            Legal Information
+                        </h6>
+
+                    </div>
+
+                    <table class="table table-striped">
+
+                        <tbody>
+
+                            <tr>
+                                <th width="180">GST Number</th>
+                                <td>@Model.GSTNumber</td>
+                            </tr>
+
+                            <tr>
+                                <th>PAN Number</th>
+                                <td>@Model.PANNumber</td>
+                            </tr>
+
+                            <tr>
+                                <th>CIN Number</th>
+                                <td>@Model.CINNumber</td>
+                            </tr>
+
+                            <tr>
+                                <th>Incorporation Date</th>
+                                <td>
+                                    @(Model.IncorporationDate.HasValue
+                                        ? Model.IncorporationDate.Value.ToString("dd MMM yyyy")
+                                        : "-")
+                                </td>
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="row">
+
+            <!-- Contact Information -->
+
+            <div class="col-md-6">
+
+                <div class="panel panel-bordered">
+
+                    <div class="panel-heading">
+
+                        <h6 class="panel-title">
+                            <i class="icon-phone position-left"></i>
+                            Contact Information
+                        </h6>
+
+                    </div>
+
+                    <table class="table table-striped">
+
+                        <tbody>
+
+                            <tr>
+                                <th width="180">Email</th>
+                                <td>@Model.Email</td>
+                            </tr>
+
+                            <tr>
+                                <th>Phone</th>
+                                <td>@Model.Phone</td>
+                            </tr>
+
+                            <tr>
+                                <th>Alternate Phone</th>
+                                <td>@Model.AlternatePhone</td>
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+            <!-- Address Information -->
+
+            <div class="col-md-6">
+
+                <div class="panel panel-bordered">
+
+                    <div class="panel-heading">
+
+                        <h6 class="panel-title">
+                            <i class="icon-location3 position-left"></i>
+                            Address Information
+                        </h6>
+
+                    </div>
+
+                    <table class="table table-striped">
+
+                        <tbody>
+
+                            <tr>
+                                <th width="180">Country</th>
+                                <td>@Model.CountryName</td>
+                            </tr>
+
+                            <tr>
+                                <th>State</th>
+                                <td>@Model.StateName</td>
+                            </tr>
+
+                            <tr>
+                                <th>City</th>
+                                <td>@Model.CityName</td>
+                            </tr>
+
+                            <tr>
+                                <th>Pincode</th>
+                                <td>@Model.Pincode</td>
+                            </tr>
+
+                            <tr>
+                                <th>Address</th>
+                                <td>@Model.Address</td>
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Action Buttons -->
+
+        <div class="text-right">
+
+            <a asp-action="Index"
+               class="btn btn-default">
+
+                <i class="icon-arrow-left13"></i>
+                Back
+
+            </a>
+
+            <a asp-action="Edit"
+               asp-route-id="@Model.Id"
+               class="btn bg-primary">
+
+                <i class="icon-pencil7"></i>
+                Edit Company
+
+            </a>
+
+        </div>
+
+    </div>
+
+</div>

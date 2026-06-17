@@ -4,20 +4,20 @@ using Application.Interfaces;
 using Application.Interfaces.Attendances;
 using Application.Interfaces.Auth;
 using Application.Interfaces.Company;
-using Application.Interfaces.Employee;
+using Application.Interfaces.EmployeeInterface;
 using Application.Interfaces.ErrorLog;
-using Application.Interfaces.Holidays;
 using Application.Interfaces.JWT_TOKEN;
 using Application.Interfaces.Leaves;
+using Application.Interfaces.Masters;
 using Application.Services;
 using Application.Services.Attendances;
 using Application.Services.Auth;
 using Application.Services.CompanyService;
-using Application.Services.Employee;
+using Application.Services.EmployeeServices;
 using Application.Services.ErrorLogs;
-using Application.Services.Holidays;
 using Application.Services.JWT_Token;
 using Application.Services.Leaves;
+using Application.Services.Masters;
 using Infrastructure;
 using Infrastructure.Data;
 using Infrastructure.Interfaces;
@@ -41,9 +41,12 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 maxRetryCount: 5,
                 maxRetryDelay: TimeSpan.FromSeconds(10),
                 errorNumbersToAdd: null);
+
+            sqlOptions.CommandTimeout(120);
         }));
 
-// ======================================================
+/*
+ // ======================================================
 // CORS
 // ======================================================
 builder.Services.AddCors(options =>
@@ -56,6 +59,7 @@ builder.Services.AddCors(options =>
               .AllowCredentials();
     });
 });
+ */
 
 // ======================================================
 // CONTROLLERS
@@ -113,14 +117,21 @@ builder.Services.AddScoped<ISequenceService, SequenceService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
+builder.Services.AddScoped<IAppFeatureService, AppFeatureService>();
 builder.Services.AddScoped<IFinancialYearService, FinancialYearService>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
+builder.Services.AddScoped<IBiometricDeviceService, BiometricDeviceService>();
+builder.Services.AddScoped<IBiometricSyncService,BiometricSyncService>();
+builder.Services.AddScoped<IAttendanceProcessorService,AttendanceProcessorService>();
+builder.Services.AddScoped<ILeaveTypeService, LeaveTypeService>();
 builder.Services.AddScoped<ILeaveService, LeaveService>();
 builder.Services.AddScoped<ILeaveDashboardService, LeaveDashboardService>();
-builder.Services.AddScoped<IHolidayService, HolidayService>();
+builder.Services.AddScoped<IHolidayGroupService, HolidayGroupService>();
 builder.Services.AddScoped<ICompanyService, CompanyService>();
+builder.Services.AddScoped<IBranchService, BranchService>();
+builder.Services.AddScoped<ILocationService, LocationService>();
 builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 builder.Services.AddScoped<IDesignationService, DesignationService>();
 builder.Services.AddScoped<ICountryService, CountryService>();
@@ -129,6 +140,11 @@ builder.Services.AddScoped<ICityService, CityService>();
 builder.Services.AddScoped<IDropdownService,DropdownService>();
 builder.Services.AddScoped<IShiftService, ShiftService>();
 builder.Services.AddScoped<IEmployeeShiftMappingService, EmployeeShiftMappingService>();
+builder.Services.AddScoped<IHolidayGroupService, HolidayGroupService>();
+builder.Services.AddScoped<IWeekOffService, WeekOffService>();
+
+
+builder.Services.AddHttpClient();
 
 // ======================================================
 // SWAGGER

@@ -19,6 +19,14 @@ namespace Application.DTOs.Employee
         [Display(Name = "Last Name")]
         public string? LastName { get; set; }
 
+        [Required]
+        [Display(Name = "Employee Code")]
+        public string EmployeeCode { get; set; }
+
+        [Required]
+        [Display(Name = "Role")]
+        public string RoleId { get; set; }
+
         // 🔹 Multi-Tenant
         [Required]
         public string TenantId { get; set; }
@@ -30,6 +38,7 @@ namespace Application.DTOs.Employee
 
         [Display(Name = "Branch")]
         public string? BranchId { get; set; }
+        public string? ShiftId { get; set; }
 
         [Required]
         [Display(Name = "Department")]
@@ -54,9 +63,10 @@ namespace Application.DTOs.Employee
         public MaritalStatus MaritalStatus { get; set; }
 
         // 🔹 Contact Info
+        [Required]
         [MaxLength(150)]
         [EmailAddress]
-        public string? Email { get; set; }
+        public string Email { get; set; }
 
         [Required, MaxLength(15)]
         public string Phone { get; set; }
@@ -97,6 +107,20 @@ namespace Application.DTOs.Employee
         [Required]
         [Display(Name = "Employment Type")]
         public EmploymentType EmploymentType { get; set; }
+
+        [Display(Name = "Email Confirmed")]
+        public bool EmailConfirmed { get; set; }
+
+        [Display(Name = "Phone Confirmed")]
+        public bool PhoneConfirmed { get; set; }
+
+        // Branding
+        [Display(Name = "Upload Profile Photo")]
+        public string? FilePath { get; set; }
+        public string CreatedBy { get; set; }
+        public DateTime? ModifiedOn { get; set; }
+        public string? ModifiedBy { get; set; }
+
     }
 
     public class EmployeeHierarchyDto
@@ -159,6 +183,14 @@ namespace Application.DTOs.Employee
 
         public string? DesignationName { get; set; }
 
+        // Shift
+        public string? ShiftId { get; set; }
+
+        // RoleId
+        public string? RoleId { get; set; }
+
+        public string? shiftName { get; set; }
+
         // Reporting Manager
         public string? ReportingManagerId { get; set; }
 
@@ -178,6 +210,10 @@ namespace Application.DTOs.Employee
 
         public string? EmergencyContact { get; set; }
 
+        public bool EmailConfirmed { get; set; }
+
+        public bool PhoneConfirmed { get; set; }
+
         // Address
         public string? Address { get; set; }
 
@@ -196,6 +232,7 @@ namespace Application.DTOs.Employee
         public DateTime? RelievingDate { get; set; }
 
         public string? EmploymentType { get; set; }
+        public string? FilePath { get; set; }
     }
 
     public class PagedResult<T>
@@ -313,77 +350,5 @@ namespace Application.DTOs.Employee
 
         public decimal? MinSalary { get; set; }
         public decimal? MaxSalary { get; set; }
-    }
-
-
-    // ==============================
-    // Country DTOs
-    // ==============================
-
-    public class CountryDto
-    {
-        public string? Id { get; set; }
-
-        public string Name { get; set; }
-        public string Code { get; set; }
-        public string PhoneCode { get; set; }
-    }
-
-    public class CountryListDto
-    {
-        public string Id { get; set; }
-
-        public string Name { get; set; }
-        public string Code { get; set; }
-        public string PhoneCode { get; set; }
-    }
-
-
-    // ==============================
-    // State DTOs
-    // ==============================
-
-    public class StateDto
-    {
-        public string? Id { get; set; }
-
-        public string Name { get; set; }
-        public string GSTStateCode { get; set; }
-
-        public string CountryId { get; set; }
-    }
-
-    public class StateListDto
-    {
-        public string Id { get; set; }
-
-        public string Name { get; set; }
-
-        public string CountryId { get; set; }
-        public string CountryName { get; set; }
-    }
-
-
-    // ==============================
-    // City DTOs
-    // ==============================
-
-    public class CityDto
-    {
-        public string? Id { get; set; }
-
-        public string Name { get; set; }
-
-        public string StateId { get; set; }
-    }
-
-    public class CityListDto
-    {
-        public string Id { get; set; }
-
-        public string Name { get; set; }
-
-        public string StateId { get; set; }
-        public string StateName { get; set; }
     }
 }

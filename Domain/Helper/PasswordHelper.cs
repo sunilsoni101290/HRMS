@@ -32,9 +32,9 @@ namespace Domain.Helper
 
         public static string GeneratePassword(int passwordLength)
         {
-            if (passwordLength < 4)
+            if (passwordLength < 6)
                 throw new ArgumentException(
-                    "Password length must be at least 4.");
+                    "Password length must be at least 6 Character long.");
 
             StringBuilder password = new StringBuilder(passwordLength);
 

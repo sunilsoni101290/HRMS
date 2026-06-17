@@ -1,0 +1,285 @@
+﻿@model CountryDto
+
+@{
+    ViewData["Title"] = "Country Details";
+}
+
+<div class="panel panel-flat">
+
+    <!-- Header -->
+
+    <div class="panel-heading bg-primary">
+
+        <div class="media">
+
+            <div class="media-left">
+
+                <div class="bg-white text-primary text-center"
+                     style="width:80px;height:80px;line-height:80px;border-radius:50%;">
+
+                    <i class="icon-earth icon-3x"></i>
+
+                </div>
+
+            </div>
+
+            <div class="media-body">
+
+                <h4 class="text-white no-margin">
+                    @Model.Name
+                </h4>
+
+                <span class="text-white">
+                    Country Code : @Model.Code
+                </span>
+
+            </div>
+
+            <div class="media-right">
+
+                <span class="label bg-success">
+                    Active
+                </span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <!-- KPI Cards -->
+
+        <div class="row">
+
+            <div class="col-md-4">
+
+                <div class="panel bg-success-400">
+
+                    <div class="panel-body text-center">
+
+                        <i class="icon-checkmark-circle icon-2x"></i>
+
+                        <h5>Active</h5>
+
+                        <span>Current Status</span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="col-md-4">
+
+                <div class="panel bg-primary-400">
+
+                    <div class="panel-body text-center">
+
+                        <i class="icon-flag3 icon-2x"></i>
+
+                        <h5>@Model.Code</h5>
+
+                        <span>Country Code</span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="col-md-4">
+
+                <div class="panel bg-info-400">
+
+                    <div class="panel-body text-center">
+
+                        <i class="icon-phone icon-2x"></i>
+
+                        <h5>@Model.PhoneCode</h5>
+
+                        <span>Phone Code</span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="row">
+
+            <!-- Country Information -->
+
+            <div class="col-md-6">
+
+                <div class="panel panel-bordered">
+
+                    <div class="panel-heading">
+
+                        <h6 class="panel-title">
+                            <i class="icon-info22 position-left"></i>
+                            Country Information
+                        </h6>
+
+                    </div>
+
+                    <table class="table table-striped">
+
+                        <tbody>
+
+                            <tr>
+                                <th width="180">Country Name</th>
+                                <td>@Model.Name</td>
+                            </tr>
+
+                            <tr>
+                                <th>Country Code</th>
+                                <td>
+                                    <span class="label bg-primary">
+                                        @Model.Code
+                                    </span>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <th>Phone Code</th>
+                                <td>
+                                    <span class="label bg-success">
+                                        @Model.PhoneCode
+                                    </span>
+                                </td>
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+            <!-- Audit Information -->
+
+            <div class="col-md-6">
+
+                <div class="panel panel-bordered">
+
+                    <div class="panel-heading">
+
+                        <h6 class="panel-title">
+                            <i class="icon-history position-left"></i>
+                            Audit Information
+                        </h6>
+
+                    </div>
+
+                    <table class="table table-striped">
+
+                        <tbody>
+
+                            <tr>
+                                <th width="180">Created By</th>
+                                <td>@Model.CreatedBy</td>
+                            </tr>
+
+                            <tr>
+                                <th>Modified By</th>
+                                <td>
+                                    @(string.IsNullOrEmpty(Model.ModifiedBy)
+                                        ? "-"
+                                        : Model.ModifiedBy)
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <th>Modified On</th>
+                                <td>
+                                    @(Model.ModifiedOn.HasValue
+                                        ? Model.ModifiedOn.Value.ToString("dd MMM yyyy")
+                                        : "-")
+                                </td>
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Statistics -->
+
+        <div class="panel panel-flat">
+
+            <div class="panel-heading">
+
+                <h6 class="panel-title">
+
+                    <i class="icon-stats-bars position-left"></i>
+                    Country Statistics
+
+                </h6>
+
+            </div>
+
+            <table class="table table-bordered">
+
+                <tbody>
+
+                    <tr>
+                        <th width="250">Status</th>
+                        <td>
+                            <span class="label label-success">
+                                Active
+                            </span>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th>Country Code</th>
+                        <td>@Model.Code</td>
+                    </tr>
+
+                    <tr>
+                        <th>Phone Code</th>
+                        <td>@Model.PhoneCode</td>
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <!-- Actions -->
+
+        <div class="text-right">
+
+            <a asp-action="Index"
+               class="btn btn-default">
+
+                <i class="icon-arrow-left13"></i>
+                Back
+
+            </a>
+
+            <a asp-action="Edit"
+               asp-route-id="@Model.Id"
+               class="btn bg-primary">
+
+                <i class="icon-pencil7"></i>
+                Edit Country
+
+            </a>
+
+        </div>
+
+    </div>
+
+</div>

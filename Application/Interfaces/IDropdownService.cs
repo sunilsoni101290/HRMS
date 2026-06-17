@@ -11,14 +11,20 @@ namespace Application.Interfaces
         Task<List<DropdownDto>> GetStateDropdownAsync(string countryId);
         Task<List<DropdownDto>> GetCityDropdownAsync(string stateId);
         Task<List<DropdownDto>> GetCompanyDropdownAsync();
-        Task<List<DropdownDto>> GetBranchDropdownAsync();
+        Task<List<DropdownDto>> GetBranchDropdownAsync(string? companyId);
         Task<List<DropdownDto>> GetDepartmentDropdownAsync();
         Task<List<DropdownDto>> GetDesignationDropdownAsync();
+        Task<List<DropdownDto>> GetDesignationByDeptIdDropdownAsync(string?deptId);
         Task<List<DropdownDto>>GetEmployeeDropdownAsync();
         Task<List<DropdownDto>>GetRoleNameDropdownAsync();
         Task<List<DropdownDto>>GetReportingManagerDropdownAsync();
         Task<List<DropdownDto>> GetParentDepartmentDropdownAsync(string tenantId, string? departmentId = null);
         Task<List<DropdownDto>> GetParentDesignationDropdownAsync(string tenantId, string? designationId = null);
         Task<List<DropdownDto>> GetShiftDropdownAsync();
+        Task<List<DropdownDto>> GetDefaultShiftDropdownAsync();
+        Task<List<DropdownDto>> GetAppFeatureDropdownAsync();
+        Task<List<DropdownDto>> GetParentFeatureDropdownAsync();
+        Task<List<DropdownDto>> GetHolidayGroupDropdownAsync();
+        Task<List<DropdownDto>> GetLeaveTypeDropdownAsync();
     }
 }

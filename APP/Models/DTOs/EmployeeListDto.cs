@@ -32,6 +32,11 @@
 
         public string? DesignationName { get; set; }
 
+        // Shift
+        public string? ShiftId { get; set; }
+
+        public string? ShiftName { get; set; }
+
         // Reporting Manager
         public string? ReportingManagerId { get; set; }
 
@@ -69,6 +74,7 @@
         public DateTime? RelievingDate { get; set; }
 
         public string? EmploymentType { get; set; }
+        public string? FilePath { get; set; }
     }
 
     public class EmployeeDropdownDto

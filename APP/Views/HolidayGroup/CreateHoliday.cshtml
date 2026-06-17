@@ -1,0 +1,198 @@
+﻿@model HolidayGroupDetailDto
+
+@{
+    ViewData["Title"] = "Holiday Detail";
+}
+
+<div class="container-fluid py-4">
+
+    <div class="row justify-content-center">
+
+        <div class="col-lg-8">
+
+            <div class="card shadow border-0 rounded-4 overflow-hidden">
+
+                <!-- Header -->
+                <div class="card-header bg-warning text-dark py-4">
+
+                    <div class="d-flex align-items-center">
+
+                        <div class="me-3">
+
+                            <div class="bg-white text-warning rounded-circle d-flex align-items-center justify-content-center"
+                                 style="width:70px;height:70px;">
+
+                                <i class="bi bi-calendar-date-fill fs-2"></i>
+
+                            </div>
+
+                        </div>
+
+                        <div>
+
+                            <h3 class="mb-1">
+
+                                @(string.IsNullOrEmpty(Model?.Id)
+                                    ? "Add"
+                                    : "Edit")
+
+                            </h3>
+
+                            <p class="mb-0 opacity-75">
+                                Manage holiday group details
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Body -->
+                <div class="card-body p-4">
+
+                    <form asp-controller="HolidayGroup"
+                          asp-action="@(Model.Id == null ? "CreateHoliday" : "EditHoliday")"
+                          method="post">
+
+                        <!-- Hidden -->
+                        <input asp-for="Id" type="hidden" />
+                        <input asp-for="TenantId" type="hidden" />
+                        <input asp-for="HolidayGroupId" type="hidden" />
+
+                        <div class="row g-4">
+
+                            <!-- Holiday Group -->
+                            <div class="col-md-12">
+
+                                <label asp-for="HolidayGroupId"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <select asp-for="HolidayGroupId"
+                                        asp-items="ViewBag.HolidayGroupList"
+                                        class="form-select">
+
+                                    <option value="">
+                                        -- Select Holiday Group --
+                                    </option>
+
+                                </select>
+
+                                <span asp-validation-for="HolidayGroupId"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                            <!-- Holiday Date -->
+                            <div class="col-md-6">
+
+                                <label asp-for="HolidayDate"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <input asp-for="HolidayDate"
+                                       type="date"
+                                       class="form-control" />
+
+                                <span asp-validation-for="HolidayDate"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                            <!-- Holiday Name -->
+                            <div class="col-md-6">
+
+                                <label asp-for="HolidayName"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <input asp-for="HolidayName"
+                                       class="form-control"
+                                       placeholder="Enter Holiday Name" />
+
+                                <span asp-validation-for="HolidayName"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                            <!-- Remarks -->
+                            <div class="col-md-12">
+
+                                <label asp-for="Remarks"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <textarea asp-for="Remarks"
+                                          rows="3"
+                                          class="form-control"
+                                          placeholder="Enter Remarks"></textarea>
+
+                            </div>
+
+                            <!-- Optional -->
+                            <div class="col-md-12">
+
+                                <div class="form-check form-switch">
+
+                                    <input asp-for="IsOptional"
+                                           class="form-check-input"
+                                           type="checkbox" />
+
+                                    <label asp-for="IsOptional"
+                                           class="form-check-label fw-semibold">
+                                    </label>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="mt-5 d-flex justify-content-end gap-2">
+                            
+                            <a asp-controller="HolidayGroup"
+                               asp-action="HolidayList"
+                               asp-route-holidayGroupId="@Model.HolidayGroupId"
+                               title="Back to Holiday List"
+                               class="btn btn-sm btn-outline-primary rounded-3">
+
+                                <i class="bi bi-arrow-left"></i>
+                                Back
+
+                            </a>
+
+                            <a asp-controller="HolidayGroup"
+                               asp-action="HolidayList"
+                               asp-route-holidayGroupId="@Model.HolidayGroupId"
+                               class="btn btn-light border rounded-3 px-4">
+
+                                <i class="bi bi-arrow-left"></i>
+                                Back
+                            </a>
+
+                            <button type="submit"
+                                    class="btn btn-warning rounded-3 px-4">
+
+                                <i class="bi bi-check-circle"></i>
+
+                                @(string.IsNullOrEmpty(Model?.Id)
+                                    ? "Save"
+                                    : "Update")
+
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

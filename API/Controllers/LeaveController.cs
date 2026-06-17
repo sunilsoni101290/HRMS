@@ -12,12 +12,14 @@ namespace API.Controllers
     public class LeaveController : ControllerBase
     {
         private readonly ILeaveService _service;
-
-        public LeaveController(ILeaveService service)
+        private readonly ILeaveTypeService _leaveTypeService;
+        public LeaveController(ILeaveService service, ILeaveTypeService leaveTypeService)
         {
             _service = service;
+            _leaveTypeService = leaveTypeService;
         }
 
+        
         [HttpPost("apply")]
         public async Task<IActionResult> Apply([FromBody] LeaveApplyDto dto)
         {
