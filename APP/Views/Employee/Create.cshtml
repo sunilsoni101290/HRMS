@@ -31,7 +31,7 @@
 
             <form asp-action="@(Model.Id == null ? "Create" : "Edit")"
                   asp-controller="Employee"
-                  method="post">
+                  method="post" enctype="multipart/form-data">
 
                 <input asp-for="Id" type="hidden" />
                 <input asp-for="TenantId" type="hidden" />
@@ -48,6 +48,18 @@
                     <div class="card-body">
 
                         <div class="row g-4">
+
+                            <div class="col-md-4">
+
+                                <label asp-for="EmployeeCode" class="form-label"></label>
+
+                                <input asp-for="EmployeeCode"
+                                       class="form-control"
+                                       placeholder="Enter Employee Code" />
+
+                                <span asp-validation-for="EmployeeCode" class="text-danger"></span>
+
+                            </div>
 
                             <div class="col-md-4">
 
@@ -112,7 +124,7 @@
                                 </select>
 
                             </div>
-
+                           
                         </div>
 
                     </div>
@@ -131,14 +143,32 @@
                     <div class="card-body">
 
                         <div class="row g-4">
-
                             <div class="col-md-4">
 
-                                <label asp-for="CompanyId" class="form-label"></label>
+                                <label asp-for="RoleId" class="form-label"></label>
+
+                                <select asp-for="RoleId"
+                                        asp-items="ViewBag.RoleList"
+                                        class="form-select">
+
+                                    <option value="">
+                                        -- Select Role --
+                                    </option>
+
+                                </select>
+
+                            </div>
+                            <!-- Company -->
+                            <div class="col-md-4">
+
+                                <label asp-for="CompanyId"
+                                       class="form-label fw-semibold">
+                                </label>
 
                                 <select asp-for="CompanyId"
                                         asp-items="ViewBag.CompanyList"
-                                        class="form-select">
+                                        class="form-select"
+                                        id="CompanyId">
 
                                     <option value="">
                                         -- Select Company --
@@ -146,21 +176,30 @@
 
                                 </select>
 
-                            </div>
+                                <span asp-validation-for="CompanyId"
+                                      class="text-danger"></span>
 
+                            </div>
+                            <!-- Branch -->
                             <div class="col-md-4">
 
-                                <label asp-for="BranchId" class="form-label"></label>
+                                <label asp-for="BranchId"
+                                       class="form-label fw-semibold">
+                                </label>
 
                                 <select asp-for="BranchId"
                                         asp-items="ViewBag.BranchList"
-                                        class="form-select">
+                                        class="form-select"
+                                        id="BranchId">
 
                                     <option value="">
                                         -- Select Branch --
                                     </option>
 
                                 </select>
+
+                                <span asp-validation-for="BranchId"
+                                      class="text-danger"></span>
 
                             </div>
 
@@ -170,7 +209,8 @@
 
                                 <select asp-for="DepartmentId"
                                         asp-items="ViewBag.DepartmentList"
-                                        class="form-select">
+                                        class="form-select"
+                                        id="DepartmentId">
 
                                     <option value="">
                                         -- Select Department --
@@ -186,7 +226,8 @@
 
                                 <select asp-for="DesignationId"
                                         asp-items="ViewBag.DesignationList"
-                                        class="form-select">
+                                        class="form-select"
+                                        id="DesignationId">
 
                                     <option value="">
                                         -- Select Designation --
@@ -208,6 +249,17 @@
                                         -- Select Reporting Manager --
                                     </option>
 
+                                </select>
+
+                            </div>
+
+                            <div class="col-md-4">
+
+                                <label asp-for="ShiftId" class="form-label"></label>
+
+                                <select asp-for="ShiftId"
+                                        asp-items="ViewBag.ShiftList"
+                                        class="form-select">
                                 </select>
 
                             </div>
@@ -260,6 +312,38 @@
                                        placeholder="Enter Emergency Contact" />
 
                             </div>
+                            <!-- Email Confirmed -->
+                            <div class="col-md-4">
+
+                                <div class="form-check form-switch mt-2">
+
+                                    <input asp-for="EmailConfirmed"
+                                           class="form-check-input"
+                                           type="checkbox" />
+
+                                    <label asp-for="EmailConfirmed"
+                                           class="form-check-label fw-semibold">
+                                    </label>
+
+                                </div>
+
+                            </div>
+                            <!-- Phone Confirmed -->
+                            <div class="col-md-4">
+
+                                <div class="form-check form-switch mt-2">
+
+                                    <input asp-for="PhoneConfirmed"
+                                           class="form-check-input"
+                                           type="checkbox" />
+
+                                    <label asp-for="PhoneConfirmed"
+                                           class="form-check-label fw-semibold">
+                                    </label>
+
+                                </div>
+
+                            </div>
 
                             <div class="col-md-8">
 
@@ -280,9 +364,23 @@
                                        placeholder="Enter Pin Code" />
 
                             </div>
+                            <!-- Logo -->
+                            <div class="col-md-4">
 
+                                <label class="form-label fw-semibold">
+                                   Upload Profile Image
+                                </label>
+
+                                <input type="file" name="UploadImage"
+                                       class="form-control" />
+
+                            </div>
+                            @if (Model?.Id != null)
+                            {
+                                <img src="@Model.FilePath" style="width:100px;height:100px;" />
+                                <input asp-for="FilePath" type="hidden" />
+                            }
                         </div>
-
                     </div>
 
                 </div>
@@ -440,6 +538,128 @@
 </div>
 
 @section Scripts {
+
+        <script>
+
+        $(document).ready(function () {
+
+        // =========================================
+        // COMPANY CHANGE -> LOAD BRANCH
+        // =========================================
+
+        $(document).on("change", "#CompanyId", function () {
+
+        debugger;
+
+        let companyId = $(this).val();
+
+        console.log(companyId);
+
+        // Reset Branch Dropdown
+        if (companyId == null || companyId === "") {
+
+        $("#BranchId").html(
+        '<option value="">-- Select Branch --</option>'
+        );
+
+        return;
+        }
+
+        $.ajax({
+
+        url: '@Url.Action("GetBranchByCompanyId")',
+
+        type: 'GET',
+
+        data: { companyId: companyId },
+
+        success: function (response) {
+
+        let html =
+        '<option value="">-- Select Branch --</option>';
+
+        $.each(response, function (i, item) {
+
+        html += `
+        <option value="${item.value}">
+        ${item.text}
+        </option>`;
+        });
+
+        $("#BranchId").html(html);
+        },
+
+        error: function (xhr) {
+
+        console.log(xhr);
+
+        alert("Error loading branches");
+        }
+        });
+
+        });
+
+
+        // =========================================
+        // DEPARTMENT CHANGE -> LOAD DESIGNATION
+        // =========================================
+
+        $(document).on("change", "#DepartmentId", function () {
+
+        debugger;
+
+        let departmentId = $(this).val();
+
+        console.log(departmentId);
+
+        // Reset Designation Dropdown
+        if (departmentId == null || departmentId === "") {
+
+        $("#DesignationId").html(
+        '<option value="">-- Select Designation --</option>'
+        );
+
+        return;
+        }
+
+        $.ajax({
+
+        url: '@Url.Action("GetDesignationByDepartmentId")',
+
+        type: 'GET',
+
+        data: { departmentId: departmentId },
+
+        success: function (response) {
+
+        let html =
+        '<option value="">-- Select Designation --</option>';
+
+        $.each(response, function (i, item) {
+
+        html += `
+        <option value="${item.value}">
+        ${item.text}
+        </option>`;
+        });
+
+        $("#DesignationId").html(html);
+        },
+
+        error: function (xhr) {
+
+        console.log(xhr);
+
+        alert("Error loading designations");
+        }
+        });
+
+        });
+
+        });
+
+    </script>
+
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }

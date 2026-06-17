@@ -19,6 +19,7 @@ namespace Application.Mappings
 
                 FirstName = dto.FirstName,
                 LastName = dto.LastName,
+                EmployeeCode = dto.EmployeeCode,
 
                 TenantId = dto.TenantId,
                 CompanyId = dto.CompanyId,
@@ -38,6 +39,7 @@ namespace Application.Mappings
 
                 Address = dto.Address,
                 Pincode = dto.Pincode,
+                ShiftId=dto.ShiftId,
 
                 PANNumber = dto.PANNumber,
                 AadharNumber = dto.AadharNumber,
@@ -47,7 +49,9 @@ namespace Application.Mappings
                 RelievingDate = dto.RelievingDate,
 
                 EmploymentType = dto.EmploymentType,
-                CreatedBy="System"
+                FilePath = dto.FilePath,
+
+                CreatedBy = string.IsNullOrEmpty(dto.CreatedBy) ? "System" : dto.CreatedBy
             };
         }
 
@@ -55,6 +59,7 @@ namespace Application.Mappings
         {
             entity.FirstName = dto.FirstName;
             entity.LastName = dto.LastName;
+            entity.EmployeeCode = dto.EmployeeCode;
 
             entity.CompanyId = dto.CompanyId;
             entity.BranchId = dto.BranchId;
@@ -69,10 +74,12 @@ namespace Application.Mappings
 
             entity.Email = dto.Email;
             entity.Phone = dto.Phone;
+
             entity.EmergencyContact = dto.EmergencyContact;
 
             entity.Address = dto.Address;
             entity.Pincode = dto.Pincode;
+            entity.ShiftId = dto.ShiftId;
 
             entity.PANNumber = dto.PANNumber;
             entity.AadharNumber = dto.AadharNumber;
@@ -81,8 +88,10 @@ namespace Application.Mappings
             entity.ConfirmationDate = dto.ConfirmationDate;
             entity.RelievingDate = dto.RelievingDate;
 
+            entity.FilePath = dto.FilePath;
+
             entity.EmploymentType = dto.EmploymentType;
-            entity.ModifiedBy = "System";
+            entity.ModifiedBy = string.IsNullOrEmpty(dto.CreatedBy) ? "System" : dto.CreatedBy;
             entity.ModifiedOn = DateTime.UtcNow;
         }
 
@@ -117,6 +126,11 @@ namespace Application.Mappings
                     ? entity.Department.Name
                     : null,
 
+                ShiftId = entity.ShiftId,
+                shiftName = entity.DefaultShift != null
+                    ? entity.DefaultShift.Name
+                    : null,
+
                 DesignationId = entity.DesignationId,
                 DesignationName = entity.Designation != null
                     ? entity.Designation.Name
@@ -146,6 +160,8 @@ namespace Application.Mappings
                 JoiningDate = entity.JoiningDate,
                 ConfirmationDate = entity.ConfirmationDate,
                 RelievingDate = entity.RelievingDate,
+
+                FilePath = entity.FilePath,
 
                 EmploymentType = EnumHelper.GetEnumName<EmploymentType>((int)entity.EmploymentType),
             };

@@ -65,7 +65,7 @@ namespace Domain.Entities
 
         [MaxLength(12)]
         public string? AadharNumber { get; set; }
-
+        public string? FilePath { get; set; } // Image upload
         public string? ShiftId { get; set; }
         public virtual Shift DefaultShift { get; set; }
 

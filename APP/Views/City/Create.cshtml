@@ -1,0 +1,222 @@
+﻿@model CityDto
+
+@{
+    ViewData["Title"] = "City";
+}
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+
+            <i class="icon-city position-left"></i>
+
+            @(string.IsNullOrEmpty(Model?.Id)
+                ? "Create City"
+                : "Edit City")
+
+        </h5>
+
+        <div class="heading-elements">
+
+            <span class="text-muted">
+                Manage city master information
+            </span>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="@(Model.Id == null ? "Create" : "Edit")"
+              method="post">
+
+            <!-- Hidden Fields -->
+
+            <input asp-for="Id" type="hidden" />
+            <input asp-for="TenantId" type="hidden" />
+            <input asp-for="CreatedBy" type="hidden" />
+            <input asp-for="ModifiedBy" type="hidden" />
+            <input asp-for="ModifiedOn" type="hidden" />
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-location4 position-left"></i>
+
+                    City Information
+
+                </legend>
+
+                <div class="row">
+
+                    <!-- City Name -->
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="Name"></label>
+
+                            <input asp-for="Name"
+                                   class="form-control"
+                                   placeholder="Enter City Name" />
+
+                            <span asp-validation-for="Name"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Country -->
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="CountryId"></label>
+
+                            <select asp-for="CountryId"
+                                    asp-items="ViewBag.CountryList"
+                                    class="form-control select-search"
+                                    id="CountryId">
+
+                                <option value="">
+                                    -- Select Country --
+                                </option>
+
+                            </select>
+
+                            <span asp-validation-for="CountryId"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <!-- State -->
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="StateId"></label>
+
+                            <select asp-for="StateId"
+                                    asp-items="ViewBag.StateList"
+                                    class="form-control select-search"
+                                    id="StateId">
+
+                                <option value="">
+                                    -- Select State --
+                                </option>
+
+                            </select>
+
+                            <span asp-validation-for="StateId"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <div class="text-right">
+
+                <a asp-action="Index"
+                   class="btn btn-default">
+
+                    <i class="icon-arrow-left13"></i>
+                    Back
+
+                </a>
+
+                <button type="submit"
+                        class="btn bg-primary">
+
+                    <i class="icon-checkmark3"></i>
+
+                    @(string.IsNullOrEmpty(Model?.Id)
+                        ? "Save"
+                        : "Update")
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+
+            $(document).on("change", "#CountryId", function () {
+                debugger;
+                let countryId = $(this).val();
+
+                console.log(countryId);
+
+                if (countryId == null || countryId === "") {
+
+                    $("#StateId").html(
+                        '<option value="">-- Select State --</option>'
+                    );
+
+                    return;
+                }
+
+                $.ajax({
+
+                    url: '@Url.Action("GetStatesByCountry", "City")',
+
+                    type: 'GET',
+
+                    data: { countryId: countryId },
+
+                    success: function (response) {
+
+                        let html = '<option value="">-- Select State --</option>';
+
+                        $.each(response, function (i, item) {
+
+                            html += `<option value="${item.value}">
+                                        ${item.text}
+                                     </option>`;
+                        });
+
+                        $("#StateId").html(html);
+                    },
+
+                    error: function (xhr) {
+
+                        console.log(xhr);
+
+                        alert("Error loading states");
+
+                    }
+
+                });
+
+            });
+
+        });
+
+    </script>
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    
+}

@@ -128,9 +128,31 @@ namespace Domain.Entities
         // GST (Important for India)
         [MaxLength(15)]
         public string? GSTNumber { get; set; }
+        public string? CINNo { get; set; }
+        public bool IsHeadOffice { get; set; } = false;
 
         public override string GetSequencePrefix() => "BR";
-        // Branch Type
-        public bool IsHeadOffice { get; set; } = false;
+
+        // Navigation
+        public virtual ICollection<Location> Locations { get; set; }
+    }
+
+    public class Location : BaseEntity
+    {
+        [Required]
+        [MaxLength(200)]
+        public string LocationName { get; set; }
+
+        [MaxLength(50)]
+        public string LocationCode { get; set; }
+
+        [ForeignKey(nameof(Branch))]
+        public string BranchId { get; set; }
+
+        public virtual Branch Branch { get; set; }
+
+        public string? Address { get; set; }
+
+        public bool IsDefault { get; set; }
     }
 }

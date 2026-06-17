@@ -9,15 +9,24 @@
 
             <div class="d-flex align-items-center">
 
-                <div class="me-3">
+                <div class="me-4">
 
-                    <div class="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center"
-                         style="width:70px;height:70px;font-size:28px;font-weight:bold;">
+                    @if (!string.IsNullOrEmpty(Model.FilePath))
+                    {
+                        <img src="@Model.FilePath"
+                             alt="Employee Photo"
+                             class="rounded-circle border border-3 border-white shadow"
+                             style="width:80px;height:80px;object-fit:cover;" />
+                    }
+                    else
+                    {
+                        <div class="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center"
+                             style="width:80px;height:80px;font-size:28px;font-weight:bold;">
 
-                        @NameHelper.GetNamePrefix(Model.FirstName,Model.LastName)
+                            @NameHelper.GetNamePrefix(Model.FirstName, Model.LastName)
 
-                    </div>
-
+                        </div>
+                    }
                 </div>
 
                 <div>

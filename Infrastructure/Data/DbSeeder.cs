@@ -188,8 +188,8 @@ namespace Infrastructure.Data
                 throw new Exception("Tenant not found");
             }
 
-            await AppFeatureSeeder.SeedAsync(context);
-            await AppFeatureSeeder.SeedTenantFeatureAsync(context);
+            await AppFeatureSeeder.SeedAsync(context,tenantId);
+            //await AppFeatureSeeder.SeedTenantFeatureAsync(context);
 
             // =========================
             // 5. COMPANY
@@ -512,6 +512,47 @@ namespace Infrastructure.Data
             }
 
             // =========================
+            // 10. SHIFT
+            // =========================
+            // Check if shifts already exist
+                if (await context.Shifts.AnyAsync())
+                    return;
+
+                var shifts = new List<Shift>();
+                shifts.AddRange(new List<Shift>
+                {
+                    new Shift
+                    {
+                        Id = IDManager.GetNewId(new Shift()),
+                        Name = "General Shift",
+                        StartTime = new TimeSpan(9, 0, 0),
+                        EndTime = new TimeSpan(18, 0, 0),
+
+                        GraceInMinutes = 15,
+                        GraceOutMinutes = 15,
+
+                        HalfDayMinutes = 240,      // 4 Hours
+                        FullDayMinutes = 480,      // 8 Hours
+
+                        MinimumWorkingMinutes = 450,
+                        MaximumWorkingMinutes = 540,
+
+                        IsNightShift = false,
+
+                        IsDefaultShift=true,
+
+                        TenantId = tenantId,
+
+                        IsActive = true,
+                        CreatedBy="System",
+                        CreatedOn = DateTime.UtcNow
+                    }
+                });
+
+                await context.Shifts.AddRangeAsync(shifts);
+                await context.SaveChangesAsync();
+        
+            // =========================
             // 12. PERMISSIONS
             // =========================
             if (!context.Permissions.Any())
@@ -574,7 +615,7 @@ namespace Infrastructure.Data
                 await context.SaveChangesAsync();
             }
 
-            await AppFeatureSeeder.SeedRoleFeatureAsync(context);
+            //await AppFeatureSeeder.SeedRoleFeatureAsync(context);
 
             if (!context.RolePermissions.Any())
             {
@@ -740,263 +781,415 @@ namespace Infrastructure.Data
 
     public static class AppFeatureSeeder
     {
-        public static async Task SeedAsync(ApplicationDbContext context)
+        public static async Task SeedAsync(
+            ApplicationDbContext context,
+            string tenantId)
         {
             if (context.AppFeatures.Any())
                 return;
 
-            var tenantId = await context.Tenants
-                .Select(x => x.Id)
-                .FirstOrDefaultAsync();
-
-            if (string.IsNullOrEmpty(tenantId))
-                throw new Exception("Tenant not found");
-
             var features = new List<AppFeature>();
 
-            // 🔧 Helper
-            AppFeature Add(string name, string code, string module, string parentId = null, int order = 0)
+            // =====================================================
+            // 🔧 COMMON HELPER
+            // =====================================================
+
+            AppFeature Add(
+                string name,
+                string code,
+                string module,
+                string controller,
+                string action,
+                string? parentId = null,
+                string? icon = null,
+                AppFeatureType? category = null,
+                int order = 0,
+                bool isMenu = true,
+                bool isVisible = true,
+                bool canView = true,
+                bool canAdd = false,
+                bool canEdit = false,
+                bool canDelete = false,
+                bool canApprove = false,
+                bool canExport = false,
+                bool canPrint = false)
             {
-                var f = new AppFeature
+                var feature = new AppFeature
                 {
                     Id = IDManager.GetNewId(new AppFeature()),
+
                     Name = name,
                     Code = code,
                     Module = module,
-                    TenantId = tenantId,
+
+                    AppFeatureType = category,
+
+                    ControllerName = controller,
+                    ActionName = action,
+
                     ParentFeatureId = parentId,
+
+                    Icon = icon,
+
                     DisplayOrder = order,
 
-                    CreatedBy = "System"
+                    TenantId = tenantId,
+
+                    IsMenu = isMenu,
+                    IsVisible = isVisible,
+                    IsActive = true,
+
+                    CanView = canView,
+                    CanAdd = canAdd,
+                    CanEdit = canEdit,
+                    CanDelete = canDelete,
+                    CanApprove = canApprove,
+                    CanExport = canExport,
+                    CanPrint = canPrint,
+
+                    CreatedBy = "System",
+                    CreatedOn = DateTime.UtcNow
                 };
 
-                features.Add(f);
-                return f;
+                features.Add(feature);
+
+                return feature;
             }
 
-            // =========================
-            // ROOT
-            // =========================
-            var hrms = Add("HRMS", AppFeatureConstants.HRMS, AppFeatureConstants.HRMS, null, 1);
-
-            // =========================
+            // =====================================================
             // DASHBOARD
-            // =========================
-            Add("Dashboard", AppFeatureConstants.DASHBOARD, AppFeatureConstants.HRMS, hrms.Id, 1);
+            // =====================================================
 
-            // =========================
-            // EMPLOYEE MANAGEMENT
-            // =========================
-            var empMgmt = Add("Employee Management", AppFeatureConstants.EMPLOYEE_MANAGEMENT, AppFeatureConstants.HRMS, hrms.Id, 2);
+            Add(
+                "Dashboard",
+                AppFeatureConstants.DASHBOARD,
+                AppFeatureConstants.HRMS,
+                AppFeatureConstants.DASHBOARD_CONTROLLER,
+                AppFeatureConstants.DASHBOARD_ACTION,
+                icon: "bi bi-grid-fill",
+                category: AppFeatureType.Dashboard,
+                order: 1);
 
-            Add("Employee", AppFeatureConstants.EMPLOYEE, AppFeatureConstants.HRMS, empMgmt.Id);
-            Add("Employee Document", AppFeatureConstants.EMPLOYEE_DOCUMENT, AppFeatureConstants.HRMS, empMgmt.Id);
-            Add("Employee Shift", AppFeatureConstants.EMPLOYEE_SHIFT, AppFeatureConstants.HRMS, empMgmt.Id);
-            Add("Employee Bank", AppFeatureConstants.EMPLOYEE_BANK, AppFeatureConstants.HRMS, empMgmt.Id);
-            Add("PF / ESIC", AppFeatureConstants.EMPLOYEE_PF_ESIC, AppFeatureConstants.HRMS, empMgmt.Id);
+            // =====================================================
+            // MASTER
+            // =====================================================
 
-            // =========================
-            // ORGANIZATION
-            // =========================
-            var org = Add("Organization", AppFeatureConstants.ORGANIZATION, AppFeatureConstants.HRMS, hrms.Id, 3);
+            var master = Add(
+                "Master",
+                AppFeatureConstants.MASTER,
+                AppFeatureConstants.HRMS,
+                "",
+                "",
+                icon: "bi bi-database-fill",
+                category: AppFeatureType.Master,
+                order: 10);
 
-            Add("Company", AppFeatureConstants.COMPANY, AppFeatureConstants.HRMS, org.Id);
-            Add("Department", AppFeatureConstants.DEPARTMENT, AppFeatureConstants.HRMS, org.Id);
-            Add("Designation", AppFeatureConstants.DESIGNATION, AppFeatureConstants.HRMS, org.Id);
-            Add("Branch", AppFeatureConstants.BRANCH, AppFeatureConstants.HRMS, org.Id);
-            Add("Location", AppFeatureConstants.LOCATION, AppFeatureConstants.HRMS, org.Id);
+            Add("Country", AppFeatureConstants.COUNTRY, AppFeatureConstants.HRMS,
+                AppFeatureConstants.COUNTRY_CONTROLLER,
+                AppFeatureConstants.COUNTRY_ACTION,
+                master.Id,
+                "bi bi-globe",
+                AppFeatureType.Master,
+                11, canAdd: true, canEdit: true, canDelete: true);
 
-            // =========================
-            // ATTENDANCE
-            // =========================
-            var att = Add("Attendance Management", AppFeatureConstants.ATTENDANCE_MANAGEMENT, AppFeatureConstants.HRMS, hrms.Id, 4);
+            Add("State", AppFeatureConstants.STATE, AppFeatureConstants.HRMS,
+                AppFeatureConstants.STATE_CONTROLLER,
+                AppFeatureConstants.STATE_ACTION,
+                master.Id,
+                "bi bi-map",
+                AppFeatureType.Master,
+                12, canAdd: true, canEdit: true, canDelete: true);
 
-            Add("Attendance", AppFeatureConstants.ATTENDANCE, AppFeatureConstants.HRMS, att.Id);
-            Add("Attendance Log", AppFeatureConstants.ATTENDANCE_LOG, AppFeatureConstants.HRMS, att.Id);
-            Add("Shift", AppFeatureConstants.SHIFT, AppFeatureConstants.HRMS, att.Id);
+            Add("City", AppFeatureConstants.CITY, AppFeatureConstants.HRMS,
+                AppFeatureConstants.CITY_CONTROLLER,
+                AppFeatureConstants.CITY_ACTION,
+                master.Id,
+                "bi bi-building",
+                AppFeatureType.Master,
+                13, canAdd: true, canEdit: true, canDelete: true);
 
-            // =========================
-            // LEAVE
-            // =========================
-            var leave = Add("Leave Management", AppFeatureConstants.LEAVE_MANAGEMENT, AppFeatureConstants.HRMS, hrms.Id, 5);
+            Add("Holiday Group", AppFeatureConstants.HOLIDAY_GROUP, AppFeatureConstants.HRMS,
+                AppFeatureConstants.HOLIDAY_GROUP_CONTROLLER,
+                AppFeatureConstants.HOLIDAY_GROUP_ACTION,
+                master.Id,
+                "bi bi-calendar-week",
+                AppFeatureType.Master,
+                14, canAdd: true, canEdit: true);
 
-            Add("Leave Type", AppFeatureConstants.LEAVE_TYPE, AppFeatureConstants.HRMS, leave.Id);
-            Add("Leave Application", AppFeatureConstants.LEAVE_APPLICATION, AppFeatureConstants.HRMS, leave.Id);
-            Add("Leave Balance", AppFeatureConstants.LEAVE_BALANCE, AppFeatureConstants.HRMS, leave.Id);
-            Add("Leave Approval", AppFeatureConstants.LEAVE_APPROVAL, AppFeatureConstants.HRMS, leave.Id);
+            Add("Holiday", AppFeatureConstants.HOLIDAY, AppFeatureConstants.HRMS,
+                AppFeatureConstants.HOLIDAY_CONTROLLER,
+                AppFeatureConstants.HOLIDAY_ACTION,
+                master.Id,
+                "bi bi-calendar-event",
+                AppFeatureType.Master,
+                15, canAdd: true, canEdit: true);
 
-            // =========================
-            // PAYROLL
-            // =========================
-            var payroll = Add("Payroll", AppFeatureConstants.PAYROLL, AppFeatureConstants.HRMS, hrms.Id, 6);
+            Add("Financial Year", AppFeatureConstants.FINANCIAL_YEAR, AppFeatureConstants.HRMS,
+                AppFeatureConstants.FINANCIAL_YEAR_CONTROLLER,
+                AppFeatureConstants.FINANCIAL_YEAR_ACTION,
+                master.Id,
+                "bi bi-calendar-range",
+                AppFeatureType.Master,
+                16, canAdd: true, canEdit: true);
 
-            Add("Salary Structure", AppFeatureConstants.SALARY_STRUCTURE, AppFeatureConstants.HRMS, payroll.Id);
-            Add("Payroll Process", AppFeatureConstants.PAYROLL_PROCESS, AppFeatureConstants.HRMS, payroll.Id);
-            Add("Payslip", AppFeatureConstants.PAYSLIP, AppFeatureConstants.HRMS, payroll.Id);
-
-            // =========================
-            // RECRUITMENT
-            // =========================
-            var rec = Add("Recruitment", AppFeatureConstants.RECRUITMENT, AppFeatureConstants.HRMS, hrms.Id, 7);
-
-            Add("Job Opening", AppFeatureConstants.JOB_OPENING, AppFeatureConstants.HRMS, rec.Id);
-            Add("Candidate", AppFeatureConstants.CANDIDATE, AppFeatureConstants.HRMS, rec.Id);
-            Add("Interview", AppFeatureConstants.INTERVIEW, AppFeatureConstants.HRMS, rec.Id);
-
-            // =========================
-            // ASSET MANAGEMENT
-            // =========================
-            var asset = Add("Asset Management", AppFeatureConstants.ASSET_MANAGEMENT, AppFeatureConstants.HRMS, hrms.Id, 8);
-
-            Add("Asset", AppFeatureConstants.ASSET, AppFeatureConstants.HRMS, asset.Id);
-            Add("Asset Allocation", AppFeatureConstants.ASSET_ALLOCATION, AppFeatureConstants.HRMS, asset.Id);
-            Add("Asset History", AppFeatureConstants.ASSET_HISTORY, AppFeatureConstants.HRMS, asset.Id);
-
-            // =========================
-            // COMMUNICATION
-            // =========================
-            var comm = Add("Communication", AppFeatureConstants.COMMUNICATION, AppFeatureConstants.HRMS, hrms.Id, 9);
-
-            Add("Announcement", AppFeatureConstants.ANNOUNCEMENT, AppFeatureConstants.HRMS, comm.Id);
-            Add("Event", AppFeatureConstants.EVENT, AppFeatureConstants.HRMS, comm.Id);
-            Add("Event Participant", AppFeatureConstants.EVENT_PARTICIPANT, AppFeatureConstants.HRMS, comm.Id);
-
-            // =========================
-            // NOTIFICATION
-            // =========================
-            var notif = Add("Notification", AppFeatureConstants.NOTIFICATION, AppFeatureConstants.HRMS, hrms.Id, 10);
-
-            Add("Notification Group", AppFeatureConstants.NOTIFICATION_GROUP, AppFeatureConstants.HRMS, notif.Id);
-            Add("Notification Log", AppFeatureConstants.NOTIFICATION_LOG, AppFeatureConstants.HRMS, notif.Id);
-
-            // =========================
-            // MASTER DATA
-            // =========================
-            var master = Add("Master Data", AppFeatureConstants.MASTER, AppFeatureConstants.HRMS, hrms.Id, 11);
-
-            Add("Country", AppFeatureConstants.COUNTRY, AppFeatureConstants.HRMS, master.Id);
-            Add("State", AppFeatureConstants.STATE, AppFeatureConstants.HRMS, master.Id);
-            Add("City", AppFeatureConstants.CITY, AppFeatureConstants.HRMS, master.Id);
-            Add("Holiday", AppFeatureConstants.HOLIDAY, AppFeatureConstants.HRMS, master.Id);
-            Add("Financial Year", AppFeatureConstants.FINANCIAL_YEAR, AppFeatureConstants.HRMS, master.Id);
-
-            // =========================
+            // =====================================================
             // SECURITY
-            // =========================
-            var sec = Add("Security", AppFeatureConstants.SECURITY, AppFeatureConstants.HRMS, hrms.Id, 12);
+            // =====================================================
 
-            Add("User", AppFeatureConstants.USER, AppFeatureConstants.HRMS, sec.Id);
-            Add("Role", AppFeatureConstants.ROLE, AppFeatureConstants.HRMS, sec.Id);
-            Add("Permission", AppFeatureConstants.PERMISSION, AppFeatureConstants.HRMS, sec.Id);
-            Add("Login History", AppFeatureConstants.LOGIN_HISTORY, AppFeatureConstants.HRMS, sec.Id);
+            var security = Add(
+                "Security",
+                AppFeatureConstants.SECURITY,
+                AppFeatureConstants.HRMS,
+                "",
+                "",
+                icon: "bi bi-shield-lock-fill",
+                category: AppFeatureType.Security,
+                order: 20);
 
+            Add("Role", AppFeatureConstants.ROLE, AppFeatureConstants.HRMS,
+                AppFeatureConstants.ROLE_CONTROLLER,
+                AppFeatureConstants.ROLE_ACTION,
+                security.Id,
+                "bi bi-person-gear",
+                AppFeatureType.Security,
+                21, canAdd: true, canEdit: true, canDelete: true);
+
+            Add("User", AppFeatureConstants.USER, AppFeatureConstants.HRMS,
+                AppFeatureConstants.USER_CONTROLLER,
+                AppFeatureConstants.USER_ACTION,
+                security.Id,
+                "bi bi-people-fill",
+                AppFeatureType.Security,
+                22, canAdd: true, canEdit: true, canDelete: true);
+
+            Add("Permission", AppFeatureConstants.PERMISSION, AppFeatureConstants.HRMS,
+                AppFeatureConstants.PERMISSION_CONTROLLER,
+                AppFeatureConstants.PERMISSION_ACTION,
+                security.Id,
+                "bi bi-key-fill",
+                AppFeatureType.Security,
+                23, canEdit: true);
+
+            Add("Login History", AppFeatureConstants.LOGIN_HISTORY, AppFeatureConstants.HRMS,
+                AppFeatureConstants.LOGIN_HISTORY_CONTROLLER,
+                AppFeatureConstants.LOGIN_HISTORY_ACTION,
+                security.Id,
+                "bi bi-clock-history",
+                AppFeatureType.Security,
+                24);
+
+            // =====================================================
+            // ORGANIZATION
+            // =====================================================
+
+            var organization = Add(
+                "Organization",
+                AppFeatureConstants.ORGANIZATION,
+                AppFeatureConstants.HRMS,
+                "",
+                "",
+                icon: "bi bi-diagram-3-fill",
+                category: AppFeatureType.Master,
+                order: 30);
+
+            Add("Company", AppFeatureConstants.COMPANY, AppFeatureConstants.HRMS,
+                AppFeatureConstants.COMPANY_CONTROLLER,
+                AppFeatureConstants.COMPANY_ACTION,
+                organization.Id,
+                "bi bi-building-fill",
+                AppFeatureType.Master,
+                31, canAdd: true, canEdit: true);
+
+            Add("Department", AppFeatureConstants.DEPARTMENT, AppFeatureConstants.HRMS,
+                AppFeatureConstants.DEPARTMENT_CONTROLLER,
+                AppFeatureConstants.DEPARTMENT_ACTION,
+                organization.Id,
+                "bi bi-diagram-2-fill",
+                AppFeatureType.Master,
+                32, canAdd: true, canEdit: true, canDelete: true);
+
+            Add("Designation", AppFeatureConstants.DESIGNATION, AppFeatureConstants.HRMS,
+                AppFeatureConstants.DESIGNATION_CONTROLLER,
+                AppFeatureConstants.DESIGNATION_ACTION,
+                organization.Id,
+                "bi bi-award-fill",
+                AppFeatureType.Master,
+                33, canAdd: true, canEdit: true, canDelete: true);
+
+            Add("Branch", AppFeatureConstants.BRANCH, AppFeatureConstants.HRMS,
+                AppFeatureConstants.BRANCH_CONTROLLER,
+                AppFeatureConstants.BRANCH_ACTION,
+                organization.Id,
+                "bi bi-shop",
+                AppFeatureType.Master,
+                34, canAdd: true, canEdit: true);
+
+            Add("Location", AppFeatureConstants.LOCATION, AppFeatureConstants.HRMS,
+                AppFeatureConstants.LOCATION_CONTROLLER,
+                AppFeatureConstants.LOCATION_ACTION,
+                organization.Id,
+                "bi bi-geo-alt-fill",
+                AppFeatureType.Master,
+                35, canAdd: true, canEdit: true);
+
+            // =====================================================
+            // EMPLOYEE MANAGEMENT
+            // =====================================================
+
+            var employee = Add(
+                "Employee Management",
+                AppFeatureConstants.EMPLOYEE_MANAGEMENT,
+                AppFeatureConstants.HRMS,
+                "",
+                "",
+                icon: "bi bi-people-fill",
+                category: AppFeatureType.Transaction,
+                order: 40);
+
+            Add("Employee", AppFeatureConstants.EMPLOYEE, AppFeatureConstants.HRMS,
+                AppFeatureConstants.EMPLOYEE_CONTROLLER,
+                AppFeatureConstants.EMPLOYEE_ACTION,
+                employee.Id,
+                "bi bi-person-fill",
+                AppFeatureType.Transaction,
+                41, canAdd: true, canEdit: true, canDelete: true);
+
+            Add("Employee Document", AppFeatureConstants.EMPLOYEE_DOCUMENT, AppFeatureConstants.HRMS,
+                AppFeatureConstants.EMPLOYEE_DOCUMENT_CONTROLLER,
+                AppFeatureConstants.EMPLOYEE_DOCUMENT_ACTION,
+                employee.Id,
+                "bi bi-file-earmark-text-fill",
+                AppFeatureType.Transaction,
+                42, canAdd: true, canEdit: true);
+
+            Add("Employee Shift", AppFeatureConstants.EMPLOYEE_SHIFT, AppFeatureConstants.HRMS,
+                AppFeatureConstants.EMPLOYEE_SHIFT_CONTROLLER,
+                AppFeatureConstants.EMPLOYEE_SHIFT_ACTION,
+                employee.Id,
+                "bi bi-clock-fill",
+                AppFeatureType.Transaction,
+                43, canAdd: true, canEdit: true);
+
+            // =====================================================
+            // ATTENDANCE
+            // =====================================================
+
+            var attendance = Add(
+                "Attendance Management",
+                AppFeatureConstants.ATTENDANCE_MANAGEMENT,
+                AppFeatureConstants.HRMS,
+                "",
+                "",
+                icon: "bi bi-calendar-check-fill",
+                category: AppFeatureType.Transaction,
+                order: 50);
+
+            Add("Attendance", AppFeatureConstants.ATTENDANCE, AppFeatureConstants.HRMS,
+                AppFeatureConstants.ATTENDANCE_CONTROLLER,
+                AppFeatureConstants.ATTENDANCE_ACTION,
+                attendance.Id,
+                "bi bi-calendar2-check-fill",
+                AppFeatureType.Transaction,
+                51, canAdd: true, canEdit: true, canExport: true);
+
+            Add("Attendance Log", AppFeatureConstants.ATTENDANCE_LOG, AppFeatureConstants.HRMS,
+                AppFeatureConstants.ATTENDANCE_LOG_CONTROLLER,
+                AppFeatureConstants.ATTENDANCE_LOG_ACTION,
+                attendance.Id,
+                "bi bi-list-check",
+                AppFeatureType.Transaction,
+                52);
+
+            Add("Shift", AppFeatureConstants.SHIFT, AppFeatureConstants.HRMS,
+                AppFeatureConstants.SHIFT_CONTROLLER,
+                AppFeatureConstants.SHIFT_ACTION,
+                attendance.Id,
+                "bi bi-clock-history",
+                AppFeatureType.Transaction,
+                53, canAdd: true, canEdit: true);
+
+            // =====================================================
+            // LEAVE MANAGEMENT
+            // =====================================================
+
+            var leave = Add(
+                "Leave Management",
+                AppFeatureConstants.LEAVE_MANAGEMENT,
+                AppFeatureConstants.HRMS,
+                "",
+                "",
+                icon: "bi bi-calendar-minus-fill",
+                category: AppFeatureType.Transaction,
+                order: 60);
+
+            Add("Leave Type", AppFeatureConstants.LEAVE_TYPE, AppFeatureConstants.HRMS,
+                AppFeatureConstants.LEAVE_TYPE_CONTROLLER,
+                AppFeatureConstants.LEAVE_TYPE_ACTION,
+                leave.Id,
+                "bi bi-tags-fill",
+                AppFeatureType.Transaction,
+                61, canAdd: true, canEdit: true);
+
+            Add("Leave Application", AppFeatureConstants.LEAVE_APPLICATION, AppFeatureConstants.HRMS,
+                AppFeatureConstants.LEAVE_APPLICATION_CONTROLLER,
+                AppFeatureConstants.LEAVE_APPLICATION_ACTION,
+                leave.Id,
+                "bi bi-send-fill",
+                AppFeatureType.Transaction,
+                62, canAdd: true, canEdit: true);
+
+            Add("Leave Approval", AppFeatureConstants.LEAVE_APPROVAL, AppFeatureConstants.HRMS,
+                AppFeatureConstants.LEAVE_APPROVAL_CONTROLLER,
+                AppFeatureConstants.LEAVE_APPROVAL_ACTION,
+                leave.Id,
+                "bi bi-check-circle-fill",
+                AppFeatureType.Transaction,
+                63, canApprove: true);
+
+            // =====================================================
+            // PAYROLL
+            // =====================================================
+
+            var payroll = Add(
+                "Payroll",
+                AppFeatureConstants.PAYROLL,
+                AppFeatureConstants.HRMS,
+                "",
+                "",
+                icon: "bi bi-cash-stack",
+                category: AppFeatureType.Transaction,
+                order: 70);
+
+            Add("Salary Structure", AppFeatureConstants.SALARY_STRUCTURE, AppFeatureConstants.HRMS,
+                AppFeatureConstants.SALARY_STRUCTURE_CONTROLLER,
+                AppFeatureConstants.SALARY_STRUCTURE_ACTION,
+                payroll.Id,
+                "bi bi-wallet-fill",
+                AppFeatureType.Transaction,
+                71, canAdd: true, canEdit: true);
+
+            Add("Payroll Process", AppFeatureConstants.PAYROLL_PROCESS, AppFeatureConstants.HRMS,
+                AppFeatureConstants.PAYROLL_PROCESS_CONTROLLER,
+                AppFeatureConstants.PAYROLL_PROCESS_ACTION,
+                payroll.Id,
+                "bi bi-cpu-fill",
+                AppFeatureType.Transaction,
+                72, canAdd: true, canApprove: true);
+
+            Add("Payslip", AppFeatureConstants.PAYSLIP, AppFeatureConstants.HRMS,
+                AppFeatureConstants.PAYSLIP_CONTROLLER,
+                AppFeatureConstants.PAYSLIP_ACTION,
+                payroll.Id,
+                "bi bi-receipt",
+                AppFeatureType.Transaction,
+                73, canPrint: true, canExport: true);
+
+            // =====================================================
             // SAVE
+            // =====================================================
+
             await context.AppFeatures.AddRangeAsync(features);
-            await context.SaveChangesAsync();
-        }
-        public static async Task SeedTenantFeatureAsync(ApplicationDbContext context)
-        {
-            if (context.TenantFeatures.Any()) return;
 
-            var tenantId = await context.Tenants
-                .Select(x => x.Id)
-                .FirstOrDefaultAsync();
-
-            if (string.IsNullOrEmpty(tenantId))
-                throw new Exception("Tenant not found");
-
-            var features = await context.AppFeatures.ToListAsync();
-
-            var tenantFeatures = features.Select(f => new TenantFeature
-            {
-                Id = IDManager.GetNewId(new TenantFeature()),
-                TenantId = tenantId,
-                AppFeatureId = f.Id,
-                IsEnabled = true, // 🔥 सब enable (or plan based)
-
-                CreatedBy = "System"
-            }).ToList();
-
-            await context.TenantFeatures.AddRangeAsync(tenantFeatures);
-            await context.SaveChangesAsync();
-        }
-
-        public static async Task SeedRoleFeatureAsync(ApplicationDbContext context)
-        {
-            var tenantId = await context.Tenants
-                .Select(x => x.Id)
-                .FirstOrDefaultAsync();
-
-            if (string.IsNullOrEmpty(tenantId))
-                throw new Exception("Tenant not found");
-
-            if (context.RoleFeatures.Any()) return;
-
-            var roles = await context.Roles.ToListAsync();
-            var features = await context.AppFeatures.ToListAsync();
-
-            var roleFeatures = new List<RoleFeature>();
-
-            var superAdmin = roles.FirstOrDefault(x => x.Code == "SUPER_ADMIN");
-            var hrManager = roles.FirstOrDefault(x => x.Code == "HR_MANAGER");
-            var employee = roles.FirstOrDefault(x => x.Code == "EMPLOYEE");
-
-            if (superAdmin == null) throw new Exception("Roles not found");
-
-            // 👑 SUPER ADMIN → All Features
-            foreach (var f in features)
-            {
-                roleFeatures.Add(new RoleFeature
-                {
-                    Id = IDManager.GetNewId(new RoleFeature()),
-                    TenantId = tenantId,
-                    RoleId = superAdmin.Id,
-                    AppFeatureId = f.Id,
-                    IsEnabled = true,
-                    CreatedBy = "System",
-                });
-            }
-
-            // 👨‍💼 HR Manager → Limited Features
-            var hrFeatures = features.Where(f =>
-                f.Code.Contains("EMP") ||
-                f.Code.Contains("LEAVE") ||
-                f.Code.Contains("ATT")
-            ).ToList();
-
-            foreach (var f in hrFeatures)
-            {
-                roleFeatures.Add(new RoleFeature
-                {
-                    Id = IDManager.GetNewId(new RoleFeature()),
-                    TenantId = tenantId,
-                    RoleId = hrManager.Id,
-                    AppFeatureId = f.Id,
-                    IsEnabled = true,
-                    CreatedBy = "System",
-                });
-            }
-
-            // 👤 Employee → Only basic features
-            var empFeatures = features.Where(f =>
-                f.Code.Contains("DASHBOARD") ||
-                f.Code.Contains("LEAVE")
-            ).ToList();
-
-            foreach (var f in empFeatures)
-            {
-                roleFeatures.Add(new RoleFeature
-                {
-                    Id = IDManager.GetNewId(new RoleFeature()),
-                    TenantId = tenantId,
-                    RoleId = employee.Id,
-                    AppFeatureId = f.Id,
-                    IsEnabled = true,
-                    CreatedBy = "System",
-                });
-            }
-
-            await context.RoleFeatures.AddRangeAsync(roleFeatures);
             await context.SaveChangesAsync();
         }
     }

@@ -1,0 +1,239 @@
+﻿@model IEnumerable<BranchDto>
+
+@{
+    ViewData["Title"] = "Branch List";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-office position-left"></i>
+            Branch Management
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Create"
+               asp-controller="Company"
+               class="btn bg-warning btn-sm">
+
+                <i class="icon-plus22 position-left"></i>
+                Add Company
+
+            </a>
+
+            <a asp-action="Create"
+               class="btn bg-success btn-sm">
+
+                <i class="icon-plus22 position-left"></i>
+                Add Branch
+
+            </a>
+
+        </div>
+
+    </div>
+
+    <!-- KPI Summary -->
+
+    <div class="panel-body">
+
+        <div class="row">
+
+            <div class="col-md-3">
+                <div class="panel bg-primary-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">@Model.Count()</h3>
+                        <span>Total Branches</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="panel bg-success-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">
+                            @Model.Count(x => x.IsHeadOffice)
+                        </h3>
+                        <span>Head Offices</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="panel bg-info-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">
+                            @Model.Select(x => x.CompanyId).Distinct().Count()
+                        </h3>
+                        <span>Companies</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="panel bg-warning-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">
+                            @Model.Count(x => !x.IsHeadOffice)
+                        </h3>
+                        <span>Sub Branches</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Filters -->
+
+        <div class="row">
+
+            <div class="col-md-4">
+                <input type="text"
+                       id="searchInput"
+                       class="form-control"
+                       placeholder="Search Branch..." />
+            </div>
+
+            <div class="col-md-4">
+                <select class="form-control">
+                    <option value="">
+                        All Companies
+                    </option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <button class="btn bg-primary btn-block">
+                    <i class="icon-search4 position-left"></i>
+                    Search
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- DataTable -->
+
+    <table class="table datatable-scroll-y table-hover">
+
+        <thead>
+
+            <tr>
+
+                <th>#</th>
+                <th>Branch</th>
+                <th>Company</th>
+                <th>Phone</th>
+                <th>Location</th>
+                <th>Head Office</th>
+                <th class="text-center">Actions</th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            @{
+                int sr = 1;
+            }
+
+            @foreach (var item in Model)
+            {
+                <tr>
+
+                    <td>@sr</td>
+
+                    <td>
+
+                        <div class="text-semibold">
+                            <i class="icon-office text-success"></i>
+                            @item.Name
+                        </div>
+
+                        <span class="text-muted">
+                            @item.Code
+                        </span>
+
+                    </td>
+
+                    <td>
+
+                        <span class="label bg-primary">
+                            @item.CompanyName
+                        </span>
+
+                    </td>
+
+                    <td>
+                        @item.Phone
+                    </td>
+
+                    <td>
+                        @item.CityName, @item.StateName
+                    </td>
+
+                    <td>
+
+                        @if (item.IsHeadOffice)
+                        {
+                            <span class="label label-success">
+                                Yes
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="label label-default">
+                                No
+                            </span>
+                        }
+
+                    </td>
+
+                    <td class="text-center">
+
+                        <ul class="icons-list">
+
+                            <li>
+                                <a asp-action="Details"
+                                   asp-route-id="@item.Id"
+                                   title="View">
+                                    <i class="icon-eye"></i>
+                                </a>
+                            </li>
+
+                            <li>
+                                <a asp-action="Edit"
+                                   asp-route-id="@item.Id"
+                                   title="Edit">
+                                    <i class="icon-pencil7"></i>
+                                </a>
+                            </li>
+
+                            <li>
+                                <a asp-action="Delete"
+                                   asp-route-id="@item.Id"
+                                   onclick="return confirm('Delete this branch?')"
+                                   title="Delete">
+                                    <i class="icon-trash"></i>
+                                </a>
+                            </li>
+
+                        </ul>
+
+                    </td>
+
+                </tr>
+
+                sr++;
+            }
+
+        </tbody>
+
+    </table>
+
+</div>

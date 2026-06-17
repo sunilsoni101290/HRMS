@@ -23,6 +23,7 @@ namespace Domain.Entities
         public int FullDayMinutes { get; set; }
 
         public bool IsNightShift { get; set; } = false;
+        public bool IsDefaultShift { get; set; }
 
         // ✅ NEW (important for payroll rules)
         public int MinimumWorkingMinutes { get; set; }

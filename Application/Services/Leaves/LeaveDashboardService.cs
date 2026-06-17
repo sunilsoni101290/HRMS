@@ -45,8 +45,8 @@ namespace Application.Services.Leaves
 
             return balances.Select(x => new LeaveBalanceDto
             {
-                LeaveType = x.LeaveType.Name,
-                Opening = x.OpeningBalance,
+                LeaveTypeName = x.LeaveType.Name,
+                OpeningBalance = x.OpeningBalance,
                 Earned = x.Earned,
                 Used = x.Used,
                 Balance = x.Balance

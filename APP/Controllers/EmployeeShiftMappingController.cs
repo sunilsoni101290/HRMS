@@ -56,7 +56,7 @@ namespace APP.Controllers
         public async Task<IActionResult> Edit(string id)
         {
             var data = await _apiService
-                .GetAsync<DepartmentDto>($"EmployeeShiftMapping/{id}");
+                .GetAsync<EmployeeShiftMappingDto>($"EmployeeShiftMapping/{id}");
             await LoadDropdowns();
             return View("Create", data);
         }
@@ -68,6 +68,7 @@ namespace APP.Controllers
             {
                 dto.UpdatedOn = DateTime.UtcNow;
                 dto.ModifiedBy = _userId;
+                dto.CreatedBy = _userId;
 
                 await LoadDropdowns();
                 await _apiService
@@ -84,8 +85,7 @@ namespace APP.Controllers
         public async Task<IActionResult> Details(string id)
         {
             var data = await _apiService
-                .GetAsync<EmployeeListDto>($"EmployeeShiftMapping/{id}");
-
+                .GetAsync<EmployeeShiftMappingDto>($"EmployeeShiftMapping/{id}");
             if (data == null)
                 return NotFound();
 

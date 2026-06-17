@@ -8,8 +8,15 @@ namespace Application.DTOs.Auth
     {
         public string Username { get; set; }
         public string Password { get; set; }
+        public string IpAddress { get; set; }
     }
 
+    public class ChangePAsswordDto
+    {
+        public string UserId { get; set; }
+        public string OldPassword { get; set; }
+        public string NewPassword { get; set; }
+    } 
     public class UserListDto
     {
         public string Id { get; set; }

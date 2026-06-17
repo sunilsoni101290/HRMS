@@ -1,0 +1,256 @@
+﻿@model AppFeatureDto
+
+@{
+    ViewData["Title"] = "Feature Details";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="@Model.Icon position-left"></i>
+            @Model.Name
+        </h5>
+
+        <div class="heading-elements">
+
+            @if (Model.IsActive)
+            {
+                <span class="label label-success">
+                    Active
+                </span>
+            }
+            else
+            {
+                <span class="label label-danger">
+                    Inactive
+                </span>
+            }
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <div class="row">
+
+            <!-- Feature Information -->
+            <div class="col-md-6">
+
+                <div class="panel panel-bordered">
+
+                    <div class="panel-heading">
+                        <h6 class="panel-title">
+                            <i class="icon-info22 position-left"></i>
+                            Feature Information
+                        </h6>
+                    </div>
+
+                    <table class="table table-striped">
+
+                        <tbody>
+
+                            <tr>
+                                <th width="200">Feature Name</th>
+                                <td>@Model.Name</td>
+                            </tr>
+
+                            <tr>
+                                <th>Feature Code</th>
+                                <td>@Model.Code</td>
+                            </tr>
+
+                            <tr>
+                                <th>Module</th>
+                                <td>@Model.Module</td>
+                            </tr>
+
+                            <tr>
+                                <th>Parent Feature</th>
+                                <td>@(Model.ParentFeatureName ?? "-")</td>
+                            </tr>
+
+                            <tr>
+                                <th>Display Order</th>
+                                <td>@Model.DisplayOrder</td>
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+            <!-- Routing Information -->
+            <div class="col-md-6">
+
+                <div class="panel panel-bordered">
+
+                    <div class="panel-heading">
+                        <h6 class="panel-title">
+                            <i class="icon-tree7 position-left"></i>
+                            Routing Details
+                        </h6>
+                    </div>
+
+                    <table class="table table-striped">
+
+                        <tbody>
+
+                            <tr>
+                                <th width="200">Controller</th>
+                                <td>@Model.ControllerName</td>
+                            </tr>
+
+                            <tr>
+                                <th>Action</th>
+                                <td>@Model.ActionName</td>
+                            </tr>
+
+                            <tr>
+                                <th>Area</th>
+                                <td>@(Model.AreaName ?? "-")</td>
+                            </tr>
+
+                            <tr>
+                                <th>URL</th>
+                                <td>@(Model.Url ?? "-")</td>
+                            </tr>
+
+                            <tr>
+                                <th>Feature Type</th>
+                                <td>
+                                    <span class="label bg-info">
+                                        @Model.AppFeatureType
+                                    </span>
+                                </td>
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Permissions -->
+
+        <div class="panel panel-flat">
+
+            <div class="panel-heading">
+                <h6 class="panel-title">
+                    <i class="icon-shield2 position-left"></i>
+                    Permissions & Settings
+                </h6>
+            </div>
+
+            <table class="table table-bordered">
+
+                <thead>
+                    <tr>
+                        <th>Permission</th>
+                        <th>Status</th>
+                        <th>Permission</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    <tr>
+                        <td>View</td>
+                        <td>
+                            @(Model.CanView
+                                ? Html.Raw("<span class='label label-success'>Allowed</span>")
+                                : Html.Raw("<span class='label label-danger'>Denied</span>"))
+                        </td>
+
+                        <td>Add</td>
+                        <td>
+                            @(Model.CanAdd
+                                ? Html.Raw("<span class='label label-success'>Allowed</span>")
+                                : Html.Raw("<span class='label label-danger'>Denied</span>"))
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>Edit</td>
+                        <td>
+                            @(Model.CanEdit
+                                ? Html.Raw("<span class='label label-success'>Allowed</span>")
+                                : Html.Raw("<span class='label label-danger'>Denied</span>"))
+                        </td>
+
+                        <td>Delete</td>
+                        <td>
+                            @(Model.CanDelete
+                                ? Html.Raw("<span class='label label-success'>Allowed</span>")
+                                : Html.Raw("<span class='label label-danger'>Denied</span>"))
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>Approve</td>
+                        <td>
+                            @(Model.CanApprove
+                                ? Html.Raw("<span class='label label-success'>Allowed</span>")
+                                : Html.Raw("<span class='label label-danger'>Denied</span>"))
+                        </td>
+
+                        <td>Export</td>
+                        <td>
+                            @(Model.CanExport
+                                ? Html.Raw("<span class='label label-success'>Allowed</span>")
+                                : Html.Raw("<span class='label label-danger'>Denied</span>"))
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>Print</td>
+                        <td>
+                            @(Model.CanPrint
+                                ? Html.Raw("<span class='label label-success'>Allowed</span>")
+                                : Html.Raw("<span class='label label-danger'>Denied</span>"))
+                        </td>
+
+                        <td>HRMS Feature</td>
+                        <td>
+                            @(Model.IsHRMSFeature
+                                ? Html.Raw("<span class='label label-primary'>Yes</span>")
+                                : Html.Raw("<span class='label label-default'>No</span>"))
+                        </td>
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <div class="text-right">
+
+            <a asp-action="Index"
+               class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+
+            <a asp-action="Edit"
+               asp-route-id="@Model.Id"
+               class="btn bg-primary">
+                <i class="icon-pencil7"></i>
+                Edit
+            </a>
+
+        </div>
+
+    </div>
+
+</div>

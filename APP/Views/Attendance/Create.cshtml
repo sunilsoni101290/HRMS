@@ -1,42 +1,127 @@
 ﻿@model PunchRequestDto
 
 @{
-    ViewData["Title"] = "Employee Punch";
+    ViewData["Title"] = "Employee Attendance Punch";
 }
 
-<div class="container-fluid py-4">
+<div class="panel panel-flat">
+    <div class="panel-heading">
 
-    <div class="row justify-content-center">
+        <h5 class="panel-title">
+            <i class="icon-fingerprint position-left"></i>
+            Employee Attendance
+        </h5>
 
-        <div class="col-lg-7">
+        <div class="heading-elements">
+            <span class="label bg-success">
+                Live Attendance
+            </span>
+        </div>
 
-            <div class="card shadow border-0 rounded-4 overflow-hidden">
+    </div>
 
-                <!-- Header -->
-                <div class="card-header bg-success text-white py-4">
+    <div class="panel-body">
 
-                    <div class="d-flex align-items-center">
+        <!-- Status Summary -->
 
-                        <div class="me-3">
+        <div class="row">
 
-                            <div class="bg-white text-success rounded-circle d-flex align-items-center justify-content-center"
-                                 style="width:65px;height:65px;">
+            <div class="col-md-3">
+                <div class="panel bg-success-400">
+                    <div class="panel-body text-center">
+                        <h6 class="text-semibold">Current Status</h6>
+                        <h5 id="CurrentStatus">-</h5>
+                    </div>
+                </div>
+            </div>
 
-                                <i class="bi bi-fingerprint fs-2"></i>
+            <div class="col-md-3">
+                <div class="panel bg-primary-400">
+                    <div class="panel-body text-center">
+                        <h6 class="text-semibold">First In</h6>
+                        <h5 id="FirstIn">-</h5>
+                    </div>
+                </div>
+            </div>
 
-                            </div>
+            <div class="col-md-3">
+                <div class="panel bg-info-400">
+                    <div class="panel-body text-center">
+                        <h6 class="text-semibold">Working Hours</h6>
+                        <h5 id="WorkingHours">-</h5>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="panel bg-warning-400">
+                    <div class="panel-body text-center">
+                        <h6 class="text-semibold">Break Hours</h6>
+                        <h5 id="BreakHours">-</h5>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <form asp-action="SavePunch" method="post">
+
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-user position-left"></i>
+                    Attendance Information
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-4">
+
+                        <div class="form-group">
+
+                            <label>Employee</label>
+
+                            <select asp-for="EmployeeId"
+                                    asp-items="ViewBag.EmployeeList"
+                                    class="form-control"
+                                    id="EmployeeId">
+
+                                <option value="">
+                                    -- Select Employee --
+                                </option>
+
+                            </select>
 
                         </div>
 
-                        <div>
+                    </div>
 
-                            <h3 class="mb-1">
-                                Employee Attendance Punch
-                            </h3>
+                    <div class="col-md-2">
 
-                            <p class="mb-0 opacity-75">
-                                Mark employee in/out attendance
-                            </p>
+                        <div class="form-group">
+
+                            <label>Punch Time</label>
+
+                            <input asp-for="PunchTime"
+                                   readonly
+                                   id="PunchTime"
+                                   class="form-control" />
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label>Location</label>
+
+                            <textarea asp-for="Location"
+                                      id="Location"
+                                      rows="2"
+                                      class="form-control">
+                        </textarea>
 
                         </div>
 
@@ -44,183 +129,300 @@
 
                 </div>
 
-                <!-- Body -->
-                <div class="card-body p-4">
+            </fieldset>
 
-                    <form asp-action="SavePunch" method="post">
+            <!-- Action Buttons -->
 
-                        <div class="row g-4">
+            <div class="row" id="ActionButtons">
 
-                            <!-- Employee -->
-                            <div class="col-md-12">
+                <div class="col-md-3">
 
-                                <label asp-for="EmployeeId"
-                                       class="form-label fw-semibold">
+                    <button type="submit"
+                            name="PunchType"
+                            value="In"
+                            class="btn bg-success btn-labeled btn-labeled-left btn-block">
 
-                                    Employee
+                        <b>
+                            <i class="icon-enter"></i>
+                        </b>
 
-                                </label>
+                        Punch In
 
-                                <select asp-for="EmployeeId"
-                                        asp-items="ViewBag.EmployeeList"
-                                        class="form-select">
+                    </button>
 
-                                    <option value="">
-                                        -- Select Employee --
-                                    </option>
+                </div>
 
-                                </select>
+                <div class="col-md-3">
 
-                                <span asp-validation-for="EmployeeId"
-                                      class="text-danger"></span>
+                    <button type="submit"
+                            name="PunchType"
+                            value="BreakOut"
+                            class="btn bg-warning btn-labeled btn-labeled-left btn-block">
 
-                            </div>
+                        <b>
+                            <i class="icon-cup"></i>
+                        </b>
 
-                            <!-- Punch Time -->
-                            <div class="col-md-6">
+                        Break Out
 
-                                <label asp-for="PunchTime"
-                                       class="form-label fw-semibold">
+                    </button>
 
-                                    Punch Time
+                </div>
 
-                                </label>
+                <div class="col-md-3">
 
-                                <div class="input-group">
+                    <button type="submit"
+                            name="PunchType"
+                            value="BreakIn"
+                            class="btn bg-info btn-labeled btn-labeled-left btn-block">
 
-                                    <span class="input-group-text">
-                                        <i class="bi bi-clock-history"></i>
-                                    </span>
+                        <b>
+                            <i class="icon-loop3"></i>
+                        </b>
 
-                                    <input asp-for="PunchTime"
-                                           type="datetime-local"
-                                           class="form-control" />
+                        Break In
 
-                                </div>
+                    </button>
 
-                                <span asp-validation-for="PunchTime"
-                                      class="text-danger"></span>
+                </div>
 
-                            </div>
+                <div class="col-md-3">
 
-                            <!-- Device -->
-                            <div class="col-md-6">
+                    <button type="submit"
+                            name="PunchType"
+                            value="Out"
+                            class="btn bg-danger btn-labeled btn-labeled-left btn-block">
 
-                                <label asp-for="DeviceId"
-                                       class="form-label fw-semibold">
+                        <b>
+                            <i class="icon-exit3"></i>
+                        </b>
 
-                                    Device ID
+                        Punch Out
 
-                                </label>
-
-                                <div class="input-group">
-
-                                    <span class="input-group-text">
-                                        <i class="bi bi-phone"></i>
-                                    </span>
-
-                                    <input asp-for="DeviceId"
-                                           class="form-control"
-                                           placeholder="Enter Device ID" />
-
-                                </div>
-
-                            </div>
-
-                            <!-- Location -->
-                            <div class="col-md-12">
-
-                                <label asp-for="Location"
-                                       class="form-label fw-semibold">
-
-                                    Location
-
-                                </label>
-
-                                <div class="input-group">
-
-                                    <span class="input-group-text">
-                                        <i class="bi bi-geo-alt"></i>
-                                    </span>
-
-                                    <textarea asp-for="Location"
-                                              class="form-control"
-                                              rows="3"
-                                              placeholder="Enter Punch Location"></textarea>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                        <!-- Punch Buttons -->
-                        <div class="mt-5 d-flex justify-content-end gap-2">
-
-                            <a asp-action="Index"
-                               class="btn btn-light border rounded-3 px-4">
-
-                                <i class="bi bi-arrow-left"></i>
-                                Back
-
-                            </a>
-
-                            <!-- Punch In -->
-                            <button type="submit"
-                                    name="PunchType"
-                                    value="In"
-                                    class="btn btn-success rounded-3 px-4">
-
-                                <i class="bi bi-box-arrow-in-right"></i>
-                                Punch In
-
-                            </button>
-
-                            <!-- Punch Out -->
-                            <button type="submit"
-                                    name="PunchType"
-                                    value="Out"
-                                    class="btn btn-danger rounded-3 px-4">
-
-                                <i class="bi bi-box-arrow-right"></i>
-                                Punch Out
-
-                            </button>
-
-                        </div>
-                        <div class="col-md-6">
-                            @if (TempData["Success"] != null)
-                            {
-                                <div class="alert alert-success alert-dismissible fade show"
-                                     role="alert">
-
-                                    <i class="bi bi-check-circle-fill"></i>
-
-                                    @TempData["SuccessMessage"]
-
-                                    <button type="button"
-                                            class="btn-close"
-                                            data-bs-dismiss="alert">
-                                    </button>
-                                </div>
-                            }
-                        </div>
-                    </form>
+                    </button>
 
                 </div>
 
             </div>
 
-        </div>
+        </form>
 
     </div>
-
 </div>
+
 
 @section Scripts {
 
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
+    <script>
+
+        function updateTime() {
+
+            let now = new Date();
+
+            let formatted =
+                now.getFullYear() + "-" +
+                String(now.getMonth() + 1).padStart(2, '0') + "-" +
+                String(now.getDate()).padStart(2, '0') + "T" +
+                String(now.getHours()).padStart(2, '0') + ":" +
+                String(now.getMinutes()).padStart(2, '0');
+
+            document.getElementById("PunchTime")
+                .value = formatted;
+        }
+
+        updateTime();
+
+        setInterval(updateTime, 1000);
+
+        // GPS
+
+        if (navigator.geolocation) {
+
+            navigator.geolocation.getCurrentPosition(
+
+                async function(position) {
+
+                    let lat = position.coords.latitude;
+
+                    let lng = position.coords.longitude;
+
+                    let url =
+                        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
+
+                    let response = await fetch(url);
+
+                    let data = await response.json();
+
+                    if (data.display_name) {
+
+                        document.getElementById("Location")
+                            .value = data.display_name;
+                    }
+                }
+
+            );
+
+        }
+
+    </script>
+    <script>
+
+        $(document).ready(function () {
+
+            // Hide buttons initially
+            $("#ActionButtons").empty();
+
+            // Employee Change Event
+            $("#EmployeeId").change(function () {
+
+                let employeeId = $(this).val();
+
+                // No employee selected
+                if (!employeeId) {
+
+                    $("#CurrentStatus").text("-");
+                    $("#FirstIn").text("-");
+                    $("#WorkingHours").text("0");
+                    $("#BreakHours").text("0");
+
+                    // Hide all buttons
+                    $("#ActionButtons").empty();
+
+                    return;
+                }
+
+                $.ajax({
+
+                    url: '@Url.Action("GetEmployeeAttendanceStatus", "Attendance")',
+
+                    type: 'GET',
+
+                    data: { employeeId: employeeId },
+
+                    success: function (response) {
+
+                        console.log(response);
+
+                        // =========================
+                        // STATUS DATA
+                        // =========================
+
+                        $("#CurrentStatus").text(response.CurrentStatus ?? "-");
+
+                        if (response.FirstIn) {
+
+                            let firstInDate = new Date(response.FirstIn);
+
+                            let formattedFirstIn =
+                                firstInDate.getFullYear() + "-" +
+                                String(firstInDate.getMonth() + 1).padStart(2, '0') + "-" +
+                                String(firstInDate.getDate()).padStart(2, '0') + " " +
+                                firstInDate.toLocaleTimeString([], {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: true
+                                });
+
+                            $("#FirstIn").text(formattedFirstIn);
+                        }
+                        else {
+
+                            $("#FirstIn").text("-");
+                        }
+
+                        $("#WorkingHours").text(response.WorkingHours ?? 0);
+                        $("#BreakHours").text(response.BreakHours ?? 0);
+
+                        // =========================
+                        // BUTTONS
+                        // =========================
+
+                        let buttons = "";
+
+                        // Punch In
+                        if (response.CanPunchIn === true) {
+
+                            buttons += `
+                            <div class="col-md-6">
+                                <button type="submit"
+                                        name="PunchType"
+                                        value="In"
+                                        class="btn btn-success btn-lg w-100">
+                                    <i class="bi bi-box-arrow-in-right"></i>
+                                    Punch In
+                                </button>
+                            </div>`;
+                        }
+
+                        // Break Out
+                        if (response.CanBreakOut === true) {
+
+                            buttons += `
+                            <div class="col-md-6">
+                                <button type="submit"
+                                        name="PunchType"
+                                        value="BreakOut"
+                                        class="btn btn-warning btn-lg w-100">
+                                    <i class="bi bi-cup-hot"></i>
+                                    Break Out
+                                </button>
+                            </div>`;
+                        }
+
+                        // Break In
+                        if (response.CanBreakIn === true) {
+
+                            buttons += `
+                            <div class="col-md-6">
+                                <button type="submit"
+                                        name="PunchType"
+                                        value="BreakIn"
+                                        class="btn btn-info btn-lg w-100">
+                                    <i class="bi bi-arrow-repeat"></i>
+                                    Break In
+                                </button>
+                            </div>`;
+                        }
+
+                        // Punch Out
+                        if (response.CanPunchOut === true) {
+
+                            buttons += `
+                            <div class="col-md-6">
+                                <button type="submit"
+                                        name="PunchType"
+                                        value="Out"
+                                        class="btn btn-danger btn-lg w-100">
+                                    <i class="bi bi-box-arrow-right"></i>
+                                    Punch Out
+                                </button>
+                            </div>`;
+                        }
+
+                        // Render buttons
+                        $("#ActionButtons").html(buttons);
+                    },
+
+                    error: function (xhr, status, error) {
+
+                        console.log(xhr);
+                        console.log(status);
+                        console.log(error);
+
+                        $("#ActionButtons").empty();
+
+                        alert("Error loading employee attendance status.");
+                    }
+
+                });
+
+            });
+
+            // Trigger once on page load
+            $("#EmployeeId").trigger("change");
+
+        });
+
+    </script>
 
 }

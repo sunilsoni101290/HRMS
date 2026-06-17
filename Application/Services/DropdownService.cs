@@ -179,12 +179,12 @@ namespace Application.Services
                 .ToListAsync();
         }
 
-        public async Task<List<DropdownDto>> GetBranchDropdownAsync()
+        public async Task<List<DropdownDto>> GetBranchDropdownAsync(string? companyId)
         {
             return await _context.Branches
                 .Include(x => x.Company)
                 .AsNoTracking()
-
+                .Where(x=>x.CompanyId == companyId)
                 .OrderBy(x => x.Name)
 
                 .Select(x => new DropdownDto
@@ -275,6 +275,106 @@ namespace Application.Services
             .ToListAsync();
         }
 
+        public async Task<List<DropdownDto>> GetDefaultShiftDropdownAsync()
+        {
+            return await _context.Shifts
+            .AsNoTracking()
+            .Where(x => x.IsActive && x.IsDefaultShift)
+            .OrderBy(x => x.Name)
+            .Select(x => new DropdownDto
+            {
+                Value = x.Id,
+                Text = x.Name
+            })
+            .ToListAsync();
+        }
+        #endregion
+
+        #region App Features
+        public async Task<List<DropdownDto>> GetAppFeatureDropdownAsync()
+        {
+            return await _context.AppFeatures
+                .Where(x => x.IsActive)
+                .AsNoTracking()
+                .OrderBy(x => x.DisplayOrder)
+                .Select(x => new DropdownDto
+                {
+                    Value = x.Id,
+                    Text = x.Name
+                })
+                .ToListAsync();
+        }
+        #endregion
+
+        #region Parent App Features
+
+        public async Task<List<DropdownDto>> GetParentFeatureDropdownAsync()
+        {
+            return await _context.AppFeatures
+                .AsNoTracking()
+                .Where(x => x.IsActive && x.ParentFeatureId != null)
+                .Select(x => x.ParentFeature)
+                .Where(x => x != null)
+                .Distinct()
+                .OrderBy(x => x.DisplayOrder)
+                .Select(x => new DropdownDto
+                {
+                    Value = x.Id,
+                    Text = x.Name
+                })
+                .ToListAsync();
+        }
+
+        public async Task<List<DropdownDto>> GetHolidayGroupDropdownAsync()
+        {
+            return await _context.HolidayGroups
+            .AsNoTracking()
+            .OrderBy(x => x.Name)
+            .Select(x => new DropdownDto
+            {
+                Value = x.Id,
+                Text = x.Name
+            })
+            .ToListAsync();
+        }
+        #endregion
+
+        #region Designation by Department Id
+        public async Task<List<DropdownDto>> GetDesignationByDeptIdDropdownAsync(string? deptId)
+        {
+            return await _context.Designations
+                .AsNoTracking()
+
+                .Where(x => x.DepartmentId == deptId)
+
+                .Select(x => new DropdownDto
+                {
+                    Value = x.Id,
+                    Text = x.Name
+                })
+
+                .OrderBy(x => x.Text)
+
+                .ToListAsync();
+        }
+        #endregion
+
+        #region Leave Types
+        public async Task<List<DropdownDto>> GetLeaveTypeDropdownAsync()
+        {
+            return await _context.LeaveTypes
+                .AsNoTracking()
+
+                .Select(x => new DropdownDto
+                {
+                    Value = x.Id,
+                    Text = x.Name
+                })
+
+                .OrderBy(x => x.Text)
+
+                .ToListAsync();
+        }
         #endregion
     }
 }

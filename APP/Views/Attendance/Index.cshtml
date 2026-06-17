@@ -1,36 +1,27 @@
-﻿@model IEnumerable<AttendanceLogDto>
+﻿
+@model IEnumerable<AttendanceDto>
+
 
 @{
-    ViewData["Title"] = "Attendance Punch List";
+    ViewData["Title"] = "Attendance Dashboard";
 }
 
-<div class="container-fluid py-4">
+<div class="panel panel-flat">
 
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="panel-heading">
 
-        <div>
+        <h5 class="panel-title">
+            <i class="icon-calendar3 position-left"></i>
+            Attendance History
+        </h5>
 
-            <h3 class="fw-bold mb-1">
-
-                <i class="bi bi-fingerprint text-success"></i>
-                Attendance Management
-
-            </h3>
-
-            <p class="text-muted mb-0">
-                Employee punch in/out records
-            </p>
-
-        </div>
-
-        <div>
+        <div class="heading-elements">
 
             <a asp-action="Create"
-               class="btn btn-success rounded-3 px-4">
+               class="btn bg-primary btn-sm">
 
-                <i class="bi bi-plus-circle"></i>
-                Add Punch
+                <i class="icon-plus22 position-left"></i>
+                Add Attendance
 
             </a>
 
@@ -38,50 +29,52 @@
 
     </div>
 
-    <!-- Search -->
-    <div class="card border-0 shadow-sm rounded-4 mb-4">
+    <!-- Attendance Summary -->
 
-        <div class="card-body">
+    <div class="panel-body">
 
-            <div class="row g-3">
+        <div class="row">
 
-                <div class="col-md-4">
+            <div class="col-md-3">
 
-                    <input type="text"
-                           id="searchInput"
-                           class="form-control"
-                           placeholder="Search Employee..." />
-
+                <div class="panel bg-success-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">248</h3>
+                        <span>Total Present</span>
+                    </div>
                 </div>
 
-                <div class="col-md-3">
+            </div>
 
-                    <input type="date"
-                           class="form-control" />
+            <div class="col-md-3">
 
+                <div class="panel bg-danger-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">12</h3>
+                        <span>Absent</span>
+                    </div>
                 </div>
 
-                <div class="col-md-3">
+            </div>
 
-                    <select class="form-select">
+            <div class="col-md-3">
 
-                        <option value="">
-                            All Devices
-                        </option>
-
-                    </select>
-
+                <div class="panel bg-warning-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">18</h3>
+                        <span>Half Day</span>
+                    </div>
                 </div>
 
-                <div class="col-md-2">
+            </div>
 
-                    <button class="btn btn-outline-success w-100">
+            <div class="col-md-3">
 
-                        <i class="bi bi-funnel"></i>
-                        Filter
-
-                    </button>
-
+                <div class="panel bg-info-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">34:20</h3>
+                        <span>Total OT Hours</span>
+                    </div>
                 </div>
 
             </div>
@@ -90,146 +83,133 @@
 
     </div>
 
-    <!-- Table -->
-    <div class="card border-0 shadow rounded-4">
+    <table class="table datatable-scroll-y table-hover">
 
-        <div class="card-body p-0">
+        <thead>
 
-            <div class="table-responsive">
+            <tr>
 
-                <table class="table table-hover align-middle mb-0">
+                <th>Employee</th>
+                <th>Date</th>
+                <th>Shift</th>
+                <th>First In</th>
+                <th>Last Out</th>
+                <th>Working</th>
+                <th>Break</th>
+                <th>OT</th>
+                <th>Status</th>
+                <th class="text-center">Actions</th>
+            </tr>
 
-                    <thead class="table-light">
+        </thead>
 
-                        <tr>
+        <tbody>
 
-                            <th>#</th>
-                            <th>Employee</th>
-                            <th>Punch Time</th>
-                            <th>Punch Type</th>
-                            <th>Device ID</th>
-                            <th>Location</th>
-                            <th>Status</th>
-                            <th width="140">Action</th>
+            @if (Model != null && Model.Any())
+            {
+                foreach (var item in Model)
+                {
+                    <tr>
 
-                        </tr>
+                        <td>
 
-                    </thead>
+                            <div class="text-semibold">
+                                @item.EmployeeName
+                            </div>
 
-                    <tbody id="punchTable">
+                            <span class="text-muted">
+                                @item.CompanyName
+                            </span>
 
-                        @{
-                            int sr = 1;
-                        }
+                        </td>
 
-                        @foreach (var item in Model)
-                        {
-                            <tr>
+                        <td>
+                            @item.Date.ToString("dd MMM yyyy")
+                        </td>
 
-                                <td>
-                                    @sr
-                                </td>
+                        <td>
+                            @item.ShiftName
+                        </td>
 
-                                <!-- Employee -->
-                                <td>
+                        <td>
+                            @(item.FirstIn?.ToString("hh:mm tt") ?? "-")
+                        </td>
 
-                                    @(item.EmployeeId!=null && ViewBag.EmployeeNames != null &&
-                                        ViewBag.EmployeeNames.ContainsKey(item.EmployeeId)
-                                            ? ViewBag.EmployeeNames[item.EmployeeId]
-                                            : "-")
+                        <td>
+                            @(item.LastOut?.ToString("hh:mm tt") ?? "-")
+                        </td>
 
-                                </td>
+                        <td>
+                            <span class="label label-success">
+                                @item.WorkingHoursText
+                            </span>
+                        </td>
 
-                                <!-- Punch Time -->
-                                <td>
+                        <td>
+                            @item.BreakHours
+                        </td>
 
-                                    <span class="fw-semibold">
+                        <td>
+                            @item.OvertimeHours
+                        </td>
 
-                                        @item.PunchTime.ToString("dd MMM yyyy hh:mm tt")
+                        <td>
 
-                                    </span>
+                            @if (item.StatusText == "Present")
+                            {
+                                <span class="label label-success">
+                                    Present
+                                </span>
+                            }
+                            else if (item.StatusText == "HalfDay")
+                            {
+                                <span class="label label-warning">
+                                    Half Day
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="label label-danger">
+                                    Absent
+                                </span>
+                            }
 
-                                </td>
+                        </td>
+                        <td class="text-center">
 
-                                <td>
-                                    @item.PunchType
-                                </td>
+                            <ul class="icons-list">
 
-                                <!-- Device -->
-                                <td>
+                                <li>
+                                    <a asp-action="Details"
+                                       asp-route-id="@item.Id"
+                                       title="View">
+                                        <i class="icon-eye"></i>
+                                    </a>
+                                </li>
+                            </ul>
 
-                                    <span class="badge bg-dark">
-                                        @(string.IsNullOrEmpty(item.DeviceId)
-                                            ? "N/A"
-                                            : item.DeviceId)
-                                    </span>
+                        </td>
+                    </tr>
+                }
+            }
 
-                                </td>
+        </tbody>
 
-                                <!-- Location -->
-                                <td>
-
-                                    @(string.IsNullOrEmpty(item.Location)
-                                        ? "-"
-                                        : item.Location)
-
-                                </td>
-
-                                <!-- Status -->
-                                <td>
-
-                                    <span class="badge bg-success">
-                                        Recorded
-                                    </span>
-
-                                </td>
-
-                                <!-- Action -->
-                                <td>
-
-                                    <div class="d-flex gap-2">
-
-                                        <!-- View -->
-                                        <a asp-action="Details"
-                                           class="btn btn-sm btn-outline-info rounded-3">
-
-                                            <i class="bi bi-eye"></i>
-
-                                        </a>
-
-                                        <!-- Delete -->
-                                        <a asp-action="Delete"
-                                           onclick="return confirm('Delete this punch record?')"
-                                           class="btn btn-sm btn-outline-danger rounded-3">
-
-                                            <i class="bi bi-trash"></i>
-
-                                        </a>
-
-                                    </div>
-
-                                </td>
-
-                            </tr>
-
-                            sr++;
-                        }
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        </div>
-
-    </div>
+    </table>
 
 </div>
 
 @section Scripts {
-
+   
     <script>
+
+         setInterval(function () {
+
+            document.getElementById("liveClock")
+                .innerHTML =
+                new Date().toLocaleTimeString();
+
+        }, 1000);
 
         // Search Table
 
@@ -238,7 +218,7 @@
 
                 let value = this.value.toLowerCase();
 
-                let rows = document.querySelectorAll("#punchTable tr");
+                let rows = document.querySelectorAll("#attendancelist tr");
 
                 rows.forEach(function (row) {
 

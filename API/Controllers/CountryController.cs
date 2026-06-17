@@ -1,5 +1,6 @@
 ﻿using Application.DTOs.Employee;
-using Application.Interfaces.Employee;
+using Application.DTOs.Masters;
+using Application.Interfaces.Masters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -9,28 +10,37 @@ namespace API.Controllers
     #region Country API
 
     [ApiController]
-    [Route("api/country")]
+    [Route("api/[controller]")]
     [Authorize]
     public class CountryController : ControllerBase
     {
-        private readonly ICountryService _service;
+        private readonly ICountryService _countryService;
 
-        public CountryController(ICountryService service)
+        public CountryController(ICountryService countryService)
         {
-            _service = service;
+            _countryService = countryService;
         }
+
+        // ======================================================
+        // GET ALL
+        // ======================================================
 
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var data = await _service.GetAllAsync();
+            var data = await _countryService.GetAllAsync();
+
             return Ok(data);
         }
+
+        // ======================================================
+        // GET BY ID
+        // ======================================================
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
-            var data = await _service.GetByIdAsync(id);
+            var data = await _countryService.GetByIdAsync(id);
 
             if (data == null)
                 return NotFound();
@@ -38,41 +48,54 @@ namespace API.Controllers
             return Ok(data);
         }
 
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CountryDto dto)
-        {
-            var id = await _service.CreateAsync(dto);
+        // ======================================================
+        // CREATE
+        // ======================================================
 
-            return Ok(new
-            {
-                Message = "Country Created Successfully",
-                Id = id
-            });
+        [HttpPost]
+        public async Task<IActionResult> Create(CountryDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _countryService.CreateAsync(dto);
+
+            return Ok(result);
         }
+
+        // ======================================================
+        // UPDATE
+        // ======================================================
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(string id, [FromBody] CountryDto dto)
+        public async Task<IActionResult> Update(string id, CountryDto dto)
         {
-            var result = await _service.UpdateAsync(id, dto);
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
-            return Ok(new
-            {
-                Message = "Country Updated Successfully",
-                Id = result
-            });
+            var result = await _countryService.UpdateAsync(id, dto);
+
+            if (result == null)
+                return NotFound();
+
+            return Ok(result);
         }
+
+        // ======================================================
+        // DELETE
+        // ======================================================
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
-            var result = await _service.DeleteAsync(id);
+            var result = await _countryService.DeleteAsync(id);
 
             if (!result)
                 return NotFound();
 
             return Ok(new
             {
-                Message = "Country Deleted Successfully"
+                Message = "Country deleted successfully"
             });
         }
     }

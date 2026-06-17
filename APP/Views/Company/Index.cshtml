@@ -1,0 +1,236 @@
+﻿@model IEnumerable<CompanyDto>
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+
+            <i class="icon-office position-left"></i>
+            Company Management
+
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Create"
+               class="btn bg-primary btn-sm">
+
+                <i class="icon-plus22 position-left"></i>
+                Add Company
+
+            </a>
+
+            <a asp-action="Create"
+               asp-controller="Branch"
+               class="btn bg-success btn-sm">
+
+                <i class="icon-plus22 position-left"></i>
+                Add Branch
+
+            </a>
+
+        </div>
+
+    </div>
+
+    <!-- KPI Cards -->
+
+    <div class="panel-body">
+
+        <div class="row">
+
+            <div class="col-md-3">
+
+                <div class="panel bg-primary-400">
+
+                    <div class="panel-body text-center">
+
+                        <h3 class="no-margin">
+                            @Model.Count()
+                        </h3>
+
+                        <span>Total Companies</span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="col-md-3">
+
+                <div class="panel bg-success-400">
+
+                    <div class="panel-body text-center">
+
+                        <h3 class="no-margin">
+                            @Model.Count(x => !string.IsNullOrEmpty(x.GSTNumber))
+                        </h3>
+
+                        <span>GST Registered</span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="col-md-3">
+
+                <div class="panel bg-info-400">
+
+                    <div class="panel-body text-center">
+
+                        <h3 class="no-margin">
+                            @Model.Select(x => x.StateId).Distinct().Count()
+                        </h3>
+
+                        <span>States Covered</span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="col-md-3">
+
+                <div class="panel bg-warning-400">
+
+                    <div class="panel-body text-center">
+
+                        <h3 class="no-margin">
+                            @Model.Select(x => x.CityId).Distinct().Count()
+                        </h3>
+
+                        <span>Cities Covered</span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Company Grid -->
+
+    <table class="table datatable-scroll-y table-hover">
+
+        <thead>
+
+            <tr>
+
+                <th>#</th>
+                <th>Company</th>
+                <th>Code</th>
+                <th>Phone</th>
+                <th>Email</th>
+                <th>Location</th>
+                <th>GST Number</th>
+                <th class="text-center">Actions</th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            @{
+                int sr = 1;
+            }
+
+            @foreach (var item in Model)
+            {
+                <tr>
+
+                    <td>@sr</td>
+
+                    <td>
+
+                        <div class="text-semibold">
+
+                            <i class="icon-office text-primary"></i>
+                            @item.Name
+
+                        </div>
+
+                    </td>
+
+                    <td>
+
+                        <span class="label bg-primary">
+                            @item.Code
+                        </span>
+
+                    </td>
+
+                    <td>
+                        @item.Phone
+                    </td>
+
+                    <td>
+                        @item.Email
+                    </td>
+
+                    <td>
+
+                        @item.CityName,
+                        @item.StateName
+
+                    </td>
+
+                    <td>
+
+                        <span class="label bg-success">
+                            @item.GSTNumber
+                        </span>
+
+                    </td>
+
+                    <td class="text-center">
+
+                        <ul class="icons-list">
+
+                            <li>
+                                <a asp-action="Details"
+                                   asp-route-id="@item.Id"
+                                   title="View">
+                                    <i class="icon-eye"></i>
+                                </a>
+                            </li>
+
+                            <li>
+                                <a asp-action="Edit"
+                                   asp-route-id="@item.Id"
+                                   title="Edit">
+                                    <i class="icon-pencil7"></i>
+                                </a>
+                            </li>
+
+                            <li>
+                                <a asp-action="Delete"
+                                   asp-route-id="@item.Id"
+                                   onclick="return confirm('Delete this company?')"
+                                   title="Delete">
+                                    <i class="icon-trash"></i>
+                                </a>
+                            </li>
+
+                        </ul>
+
+                    </td>
+
+                </tr>
+
+                sr++;
+            }
+
+        </tbody>
+
+    </table>
+
+</div>

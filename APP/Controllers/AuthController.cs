@@ -4,6 +4,9 @@ using APP.Models.DTOs;
 using APP.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Newtonsoft.Json;
+using System.Net;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
 namespace APP.Controllers
@@ -47,57 +50,50 @@ namespace APP.Controllers
         [HttpPost]
         public async Task<IActionResult> Login(LoginDto model)
         {
+            if (!ModelState.IsValid)
+                return View(model);
+
             try
             {
+                string localIP = Dns.GetHostEntry(Dns.GetHostName())
+                    .AddressList
+                    .FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork)?
+                    .ToString();
+
+                model.IpAddress = localIP;
+
                 var response = await _apiService
-                    .PostAsync<AuthResponse>(
+                    .PostAsync<LoginDto, ApiResponse<AuthResponse>>(
                         "auth/login",
                         model);
 
-                if (response != null)
+                if (response != null && response.Success)
                 {
-                    HttpContext.Session.SetString(
-                        "AccessToken",
-                        response.AccessToken);
+                    HttpContext.Session.SetString("AccessToken", response.Data.AccessToken);
+                    HttpContext.Session.SetString("RefreshToken", response.Data.RefreshToken);
+                    HttpContext.Session.SetString("FullName", response.Data.FullName ?? "");
+                    HttpContext.Session.SetString("UserId", response.Data.UserId);
+                    HttpContext.Session.SetString("TenantId", response.Data.TenantId);
+                    HttpContext.Session.SetString("Designation", response.Data.Designation ?? "");
+                    HttpContext.Session.SetString("RoleName", response.Data.RoleName ?? "");
 
-                    HttpContext.Session.SetString(
-                        "RefreshToken",
-                        response.RefreshToken);
-
-                    HttpContext.Session.SetString(
-                        "FullName",
-                        response.FullName ?? "");
-
-                    HttpContext.Session.SetString(
-                        "UserId",
-                        response.UserId);
-
-                    HttpContext.Session.SetString(
-                        "TenantId",
-                        response.TenantId);
-
-                    HttpContext.Session.SetString(
-                        "Designation",
-                        response.Designation ?? ""
-                    );
-
-                    HttpContext.Session.SetString(
-                        "RoleName",
-                        response.RoleName ?? ""
-                    );
-                    return RedirectToAction("Index","Dashboard");
+                    return RedirectToAction("Index", "Dashboard");
                 }
 
-                ViewBag.Error = "Invalid Username or Password";
+                TempData["GlobalError"] = response?.Message ?? "Login failed.";
+            }
+            catch (ApiException ex)
+            {
+                var errorMessage = GetErrorMessage(ex.ResponseContent);
 
-                return View(model);
+                TempData["GlobalError"] = errorMessage;
             }
             catch (Exception ex)
             {
-                ViewBag.Error = ex.Message;
-
-                return View(model);
+                TempData["GlobalError"] = ex.Message;
             }
+
+            return View(model);
         }
 
         // =========================
@@ -225,5 +221,43 @@ namespace APP.Controllers
         }
 
         #endregion
+
+        private string GetErrorMessage(string json)
+        {
+            try
+            {
+                var obj = Newtonsoft.Json.Linq.JObject.Parse(json);
+
+                // Custom API Response
+                if (obj["Message"] != null)
+                    return obj["Message"]!.ToString();
+
+                // Errors Array
+                if (obj["Errors"] is Newtonsoft.Json.Linq.JArray errors &&
+                    errors.Count > 0)
+                {
+                    return errors[0]?.ToString();
+                }
+
+                // ASP.NET Core Validation Errors
+                if (obj["errors"] is Newtonsoft.Json.Linq.JObject validationErrors)
+                {
+                    foreach (var property in validationErrors.Properties())
+                    {
+                        if (property.Value is Newtonsoft.Json.Linq.JArray arr &&
+                            arr.Count > 0)
+                        {
+                            return arr[0]?.ToString();
+                        }
+                    }
+                }
+
+                return "An error occurred.";
+            }
+            catch
+            {
+                return "An error occurred.";
+            }
+        }
     }
 }

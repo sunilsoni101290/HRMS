@@ -1,0 +1,141 @@
+﻿@model WeekOffDto
+
+@{
+    ViewData["Title"] = "Week Off";
+}
+
+<div class="container-fluid py-4">
+
+    <div class="row justify-content-center">
+
+        <div class="col-lg-6">
+
+            <div class="card shadow border-0 rounded-4 overflow-hidden">
+
+                <!-- Header -->
+                <div class="card-header bg-info text-white py-4">
+
+                    <div class="d-flex align-items-center">
+
+                        <div class="me-3">
+
+                            <div class="bg-white text-info rounded-circle d-flex align-items-center justify-content-center"
+                                 style="width:70px;height:70px;">
+
+                                <i class="bi bi-calendar-week-fill fs-2"></i>
+
+                            </div>
+
+                        </div>
+
+                        <div>
+
+                            <h3 class="mb-1">
+
+                                @(string.IsNullOrEmpty(Model?.Id)
+                                    ? "Create Week Off"
+                                    : "Edit Week Off")
+
+                            </h3>
+
+                            <p class="mb-0 opacity-75">
+                                Manage weekly off days
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Body -->
+                <div class="card-body p-4">
+
+                    <form asp-action="@(Model.Id == null ? "Create" : "Edit")" method="post">
+
+                        <!-- Hidden -->
+                        <input asp-for="Id" type="hidden" />
+                        <input asp-for="TenantId" type="hidden" />
+                        <input asp-for="CreatedBy" type="hidden" />
+                        <input asp-for="ModifiedBy" type="hidden" />
+                        <input asp-for="ModifiedOn" type="hidden" />
+
+                        <div class="row g-4">
+
+                            <!-- Week Off Day -->
+                            <div class="col-md-12">
+
+                                <label asp-for="Day"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <div class="input-group">
+
+                                    <span class="input-group-text">
+
+                                        <i class="bi bi-calendar-day"></i>
+
+                                    </span>
+
+                                    <select asp-for="Day"
+                                            asp-items="ViewBag.DayList"
+                                            class="form-select">
+
+                                        <option value="">
+                                            -- Select Week Off Day --
+                                        </option>
+
+                                    </select>
+
+                                </div>
+
+                                <span asp-validation-for="Day"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="mt-5 d-flex justify-content-end gap-2">
+
+                            <a asp-action="Index"
+                               class="btn btn-light border rounded-3 px-4">
+
+                                <i class="bi bi-arrow-left"></i>
+                                Back
+
+                            </a>
+
+                            <button type="submit"
+                                    class="btn btn-info text-white rounded-3 px-4">
+
+                                <i class="bi bi-check-circle"></i>
+
+                                @(string.IsNullOrEmpty(Model?.Id)
+                                    ? "Save Week Off"
+                                    : "Update Week Off")
+
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts {
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+}

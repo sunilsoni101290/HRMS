@@ -112,6 +112,7 @@ namespace APP.Controllers
                 "Value",
                 "Text");
 
+            ViewBag.CompanyNames = companies.ToDictionary(x => x.Value, x => x.Text);
 
             // Department
             var parentDesignations = await _apiService
@@ -122,12 +123,15 @@ namespace APP.Controllers
                 "Value",
                 "Text");
 
+            ViewBag.ParentDesignations = parentDesignations.ToDictionary(x => x.Value, x => x.Text);
 
             // Department
             var departments = await _apiService
                 .GetAsync<List<DropdownDto>>($"dropdown/department");
 
             ViewBag.DepartmentList = new SelectList(departments,"Value","Text");
+
+            ViewBag.ParentDepartments = departments.ToDictionary(x => x.Value, x => x.Text);
         }
 
         #endregion

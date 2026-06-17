@@ -1,0 +1,263 @@
+﻿@model IEnumerable<CountryDto>
+
+@{
+    ViewData["Title"] = "Country List";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+
+            <i class="icon-earth position-left"></i>
+            Country Management
+
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Create"
+               class="btn bg-primary btn-sm">
+
+                <i class="icon-plus22 position-left"></i>
+                Add Country
+
+            </a>
+
+        </div>
+
+    </div>
+
+    <!-- KPI Cards -->
+
+    <div class="panel-body">
+
+        <div class="row">
+
+            <div class="col-md-4">
+
+                <div class="panel bg-primary-400">
+
+                    <div class="panel-body text-center">
+
+                        <h3 class="no-margin">
+                            @Model.Count()
+                        </h3>
+
+                        <span>Total Countries</span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="col-md-4">
+
+                <div class="panel bg-success-400">
+
+                    <div class="panel-body text-center">
+
+                        <h3 class="no-margin">
+                            @Model.Count(x => !string.IsNullOrEmpty(x.PhoneCode))
+                        </h3>
+
+                        <span>Phone Codes Configured</span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="col-md-4">
+
+                <div class="panel bg-info-400">
+
+                    <div class="panel-body text-center">
+
+                        <h3 class="no-margin">
+                            @Model.Count()
+                        </h3>
+
+                        <span>Active Countries</span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Search -->
+
+        <div class="row">
+
+            <div class="col-md-10">
+
+                <input type="text"
+                       id="searchInput"
+                       class="form-control"
+                       placeholder="Search Country..." />
+
+            </div>
+
+            <div class="col-md-2">
+
+                <button class="btn bg-primary btn-block">
+
+                    <i class="icon-search4 position-left"></i>
+                    Search
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Grid -->
+
+    <table id="countryTable" class="table datatable-scroll-y table-hover">
+
+        <thead>
+
+            <tr>
+
+                <th>#</th>
+                <th>Country</th>
+                <th>Country Code</th>
+                <th>Phone Code</th>
+                <th>Status</th>
+                <th class="text-center">Actions</th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            @{
+                int sr = 1;
+            }
+
+            @foreach (var item in Model)
+            {
+                <tr>
+
+                    <td>@sr</td>
+
+                    <td>
+
+                        <div class="text-semibold">
+
+                            <i class="icon-flag3 text-primary"></i>
+                            @item.Name
+
+                        </div>
+
+                    </td>
+
+                    <td>
+
+                        <span class="label bg-primary">
+                            @item.Code
+                        </span>
+
+                    </td>
+
+                    <td>
+
+                        <span class="label bg-success">
+                            @item.PhoneCode
+                        </span>
+
+                    </td>
+
+                    <td>
+
+                        <span class="label label-success">
+                            Active
+                        </span>
+
+                    </td>
+
+                    <td class="text-center">
+
+                        <ul class="icons-list">
+
+                            <li>
+                                <a asp-action="Details"
+                                   asp-route-id="@item.Id"
+                                   title="View">
+
+                                    <i class="icon-eye"></i>
+
+                                </a>
+                            </li>
+
+                            <li>
+                                <a asp-action="Edit"
+                                   asp-route-id="@item.Id"
+                                   title="Edit">
+
+                                    <i class="icon-pencil7"></i>
+
+                                </a>
+                            </li>
+
+                            <li>
+                                <a asp-action="Delete"
+                                   asp-route-id="@item.Id"
+                                   onclick="return confirm('Delete this country?')"
+                                   title="Delete">
+
+                                    <i class="icon-trash"></i>
+
+                                </a>
+                            </li>
+
+                        </ul>
+
+                    </td>
+
+                </tr>
+
+                sr++;
+            }
+
+        </tbody>
+
+    </table>
+
+</div>
+@section Scripts {
+
+    <script>
+
+        // Search Table
+
+        document.getElementById("searchInput")
+            .addEventListener("keyup", function () {
+
+                let value = this.value.toLowerCase();
+
+                let rows = document.querySelectorAll("#countryTable tr");
+
+                rows.forEach(function (row) {
+
+                    let text = row.innerText.toLowerCase();
+
+                    row.style.display =
+                        text.includes(value) ? "" : "none";
+
+                });
+
+            });
+
+    </script>
+
+}

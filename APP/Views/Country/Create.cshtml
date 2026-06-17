@@ -1,0 +1,229 @@
+﻿@model CountryDto
+
+@{
+    ViewData["Title"] = "Country";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+
+            <i class="icon-earth position-left"></i>
+
+            @(string.IsNullOrEmpty(Model?.Id)
+                ? "Create Country"
+                : "Edit Country")
+
+        </h5>
+
+        <div class="heading-elements">
+
+            <span class="text-muted">
+                Manage country master information
+            </span>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="@(Model.Id == null ? "Create" : "Edit")"
+              method="post">
+
+            <!-- Hidden Fields -->
+
+            <input asp-for="Id" type="hidden" />
+            <input asp-for="TenantId" type="hidden" />
+            <input asp-for="CreatedBy" type="hidden" />
+            <input asp-for="ModifiedBy" type="hidden" />
+            <input asp-for="ModifiedOn" type="hidden" />
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-flag3 position-left"></i>
+                    Country Information
+
+                </legend>
+
+                <div class="row">
+
+                    <!-- Country Name -->
+
+                    <div class="col-md-12">
+
+                        <div class="form-group">
+
+                            <label asp-for="Name"></label>
+
+                            <input asp-for="Name"
+                                   class="form-control"
+                                   placeholder="Enter Country Name" />
+
+                            <span asp-validation-for="Name"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Country Code -->
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="Code"></label>
+
+                            <input asp-for="Code"
+                                   class="form-control text-uppercase"
+                                   placeholder="IN / US / UK" />
+
+                            <span asp-validation-for="Code"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Phone Code -->
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="PhoneCode"></label>
+
+                            <input asp-for="PhoneCode"
+                                   class="form-control"
+                                   placeholder="+91" />
+
+                            <span asp-validation-for="PhoneCode"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- Preview Section -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-eye position-left"></i>
+                    Preview
+
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-4">
+
+                        <div class="panel bg-primary-400">
+
+                            <div class="panel-body text-center">
+
+                                <i class="icon-earth icon-2x"></i>
+
+                                <h5 id="countryNamePreview">
+                                    @(Model?.Name ?? "Country")
+                                </h5>
+
+                                <span>Country Name</span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-4">
+
+                        <div class="panel bg-success-400">
+
+                            <div class="panel-body text-center">
+
+                                <i class="icon-flag3 icon-2x"></i>
+
+                                <h5 id="countryCodePreview">
+                                    @(Model?.Code ?? "--")
+                                </h5>
+
+                                <span>Country Code</span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-4">
+
+                        <div class="panel bg-info-400">
+
+                            <div class="panel-body text-center">
+
+                                <i class="icon-phone icon-2x"></i>
+
+                                <h5 id="phoneCodePreview">
+                                    @(Model?.PhoneCode ?? "--")
+                                </h5>
+
+                                <span>Phone Code</span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- Footer -->
+
+            <div class="text-right">
+
+                <a asp-action="Index"
+                   class="btn btn-default">
+
+                    <i class="icon-arrow-left13"></i>
+                    Back
+
+                </a>
+
+                <button type="submit"
+                        class="btn bg-primary">
+
+                    <i class="icon-checkmark3"></i>
+
+                    @(string.IsNullOrEmpty(Model?.Id)
+                        ? "Save Country"
+                        : "Update Country")
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+@section Scripts {
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+}

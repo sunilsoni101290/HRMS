@@ -1,7 +1,7 @@
 ﻿using Application.DTOs.Company;
 using Application.DTOs.Employee;
 using Application.Interfaces.Company;
-using Application.Interfaces.Employee;
+using Application.Interfaces.EmployeeInterface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -11,28 +11,27 @@ namespace API.Controllers
     #region Company API
 
     [ApiController]
-    [Route("api/company")]
+    [Route("api/[controller]")]
     [Authorize]
     public class CompanyController : ControllerBase
     {
-        private readonly ICompanyService _service;
+        private readonly ICompanyService _companyService;
 
-        public CompanyController(ICompanyService service)
+        public CompanyController(ICompanyService companyService)
         {
-            _service = service;
+            _companyService = companyService;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var data = await _service.GetAllAsync();
-            return Ok(data);
+            return Ok(await _companyService.GetAllAsync());
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
-            var data = await _service.GetByIdAsync(id);
+            var data = await _companyService.GetByIdAsync(id);
 
             if (data == null)
                 return NotFound();
@@ -41,41 +40,34 @@ namespace API.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CompanyDto dto)
+        public async Task<IActionResult> Create(CompanyDto dto)
         {
-            var id = await _service.CreateAsync(dto);
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
-            return Ok(new
-            {
-                Message = "Company Created Successfully",
-                Id = id
-            });
+            return Ok(await _companyService.CreateAsync(dto));
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(string id, [FromBody] CompanyDto dto)
+        public async Task<IActionResult> Update(string id, CompanyDto dto)
         {
-            var result = await _service.UpdateAsync(id, dto);
+            var data = await _companyService.UpdateAsync(id, dto);
 
-            return Ok(new
-            {
-                Message = "Company Updated Successfully",
-                Id = result
-            });
+            if (data == null)
+                return NotFound();
+
+            return Ok(data);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
-            var result = await _service.DeleteAsync(id);
+            var result = await _companyService.DeleteAsync(id);
 
             if (!result)
                 return NotFound();
 
-            return Ok(new
-            {
-                Message = "Company Deleted Successfully"
-            });
+            return Ok();
         }
     }
 

@@ -11,6 +11,15 @@
 
         public int OnLeaveToday { get; set; }
 
+        public int NewJoiners { get; set; }
+        public int ResignedEmployees { get; set; }
+
+        public int LateArrivals { get; set; }
+        public int OnLeave { get; set; }
+
+        public int OpenPositions { get; set; }
+        public int PendingApprovals { get; set; }
+
         public List<EmployeeViewModel> RecentJoinees { get; set; }
         public List<EmployeeViewModel> UpcomingBirthdays { get; set; }
 

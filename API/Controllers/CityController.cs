@@ -1,5 +1,7 @@
 ﻿using Application.DTOs.Employee;
-using Application.Interfaces.Employee;
+using Application.DTOs.Masters;
+using Application.Interfaces.EmployeeInterface;
+using Application.Interfaces.Masters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -9,28 +11,37 @@ namespace API.Controllers
     #region City API
 
     [ApiController]
-    [Route("api/city")]
+    [Route("api/[controller]")]
     [Authorize]
     public class CityController : ControllerBase
     {
-        private readonly ICityService _service;
+        private readonly ICityService _cityService;
 
-        public CityController(ICityService service)
+        public CityController(ICityService cityService)
         {
-            _service = service;
+            _cityService = cityService;
         }
+
+        // ======================================================
+        // GET ALL
+        // ======================================================
 
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var data = await _service.GetAllAsync();
+            var data = await _cityService.GetAllAsync();
+
             return Ok(data);
         }
+
+        // ======================================================
+        // GET BY ID
+        // ======================================================
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
-            var data = await _service.GetByIdAsync(id);
+            var data = await _cityService.GetByIdAsync(id);
 
             if (data == null)
                 return NotFound();
@@ -38,41 +49,54 @@ namespace API.Controllers
             return Ok(data);
         }
 
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CityDto dto)
-        {
-            var id = await _service.CreateAsync(dto);
+        // ======================================================
+        // CREATE
+        // ======================================================
 
-            return Ok(new
-            {
-                Message = "City Created Successfully",
-                Id = id
-            });
+        [HttpPost]
+        public async Task<IActionResult> Create(CityDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _cityService.CreateAsync(dto);
+
+            return Ok(result);
         }
+
+        // ======================================================
+        // UPDATE
+        // ======================================================
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(string id, [FromBody] CityDto dto)
+        public async Task<IActionResult> Update(string id, CityDto dto)
         {
-            var result = await _service.UpdateAsync(id, dto);
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
-            return Ok(new
-            {
-                Message = "City Updated Successfully",
-                Id = result
-            });
+            var result = await _cityService.UpdateAsync(id, dto);
+
+            if (result == null)
+                return NotFound();
+
+            return Ok(result);
         }
+
+        // ======================================================
+        // DELETE
+        // ======================================================
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
-            var result = await _service.DeleteAsync(id);
+            var result = await _cityService.DeleteAsync(id);
 
             if (!result)
                 return NotFound();
 
             return Ok(new
             {
-                Message = "City Deleted Successfully"
+                Message = "City deleted successfully"
             });
         }
     }

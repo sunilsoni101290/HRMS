@@ -25,10 +25,27 @@ namespace APP.Controllers
 
         public async Task<IActionResult> Index()
         {
+           
             var data = await _apiService
-                .GetAsync<List<AttendanceLogDto>>($"attendance/get-all-attendance-logs");
+                .GetAsync<List<AttendanceDto>>($"attendance/get-all-attendance-list");
+            return View(data);
+        }
 
-            await LoadDropdowns();
+        [HttpGet]
+        public async Task<JsonResult> GetEmployeeAttendanceStatus(string employeeId)
+        {
+            var data = await _apiService
+                .GetAsync<AttendanceCurrentStatusDto>(
+                    $"attendance/current-status/{employeeId}");
+
+            return Json(data);
+        }
+
+        public async Task<IActionResult> Details(string id)
+        {
+            var data = await _apiService.GetAsync<AttendanceDto>(
+                $"attendance/get-attendance-detail/{id}"
+            );
 
             return View(data);
         }
@@ -37,29 +54,64 @@ namespace APP.Controllers
         public async Task<IActionResult> Create()
         {
             await LoadDropdowns();
-            return View(new PunchRequestDto() { DeviceId = GetDeviceId() });
+            return View(new PunchRequestDto());
         }
 
         [HttpPost]
         public async Task<IActionResult> SavePunch(PunchRequestDto dto,string PunchType)
         {
-            if (ModelState.IsValid)
+            if (dto!=null && !string.IsNullOrEmpty(PunchType))
             {
-                dto.DeviceId = GetDeviceId();
+                string userAgent = Request.Headers["User-Agent"].ToString();
+
+                var device = GetDeviceInfo(userAgent);
+
+                dto.DeviceType= device.DeviceType;
+                dto.OS = device.OS;
+                dto.Browser = device.Browser;
+                dto.Version = device.Version;
+
                 await LoadDropdowns();
 
                 if (PunchType == "In")
                 {
+                    dto.CreatedBy = _userId;
                     await _apiService.PostAsync<dynamic>($"attendance/punch-in", dto);
                     TempData["SuccessMessage"] = "Punch In recorded successfully.";
-                    return View(dto);
-                }
-                else if (PunchType == "Out")
+
+                    return View("Create", dto);
+                }                
+                if (PunchType == "BreakOut")
                 {
+                    dto.CreatedBy = _userId;
+                    dto.ModifiedBy = _userId;
+                    dto.ModifiedOn = DateTime.Now;
+
+                    await _apiService.PostAsync<dynamic>($"attendance/break-out", dto);
+                    TempData["SuccessMessage"] = "Break Out recorded successfully.";
+                    return View("Create", dto);
+                }
+                if (PunchType == "BreakIn")
+                {
+                    dto.CreatedBy = _userId;
+                    dto.ModifiedBy = _userId;
+                    dto.ModifiedOn = DateTime.Now;
+
+                    await _apiService.PostAsync<dynamic>($"attendance/break-in", dto);
+                    TempData["SuccessMessage"] = "Break In recorded successfully.";
+                    return View("Create", dto);
+                }
+                if (PunchType == "Out")
+                {
+                    dto.CreatedBy = _userId;
+                    dto.ModifiedBy = _userId;
+                    dto.ModifiedOn = DateTime.Now;
+
                     await _apiService.PostAsync<dynamic>($"attendance/punch-out", dto);
                     TempData["SuccessMessage"] = "Punch Out recorded successfully.";
-                    return View(dto);
+                    return View("Create", dto);
                 }
+
             }
             return RedirectToAction("Index");
         }
@@ -82,18 +134,47 @@ namespace APP.Controllers
         #endregion
 
         #region Get Device Id
-
-        private string GetDeviceId()
+        public static DeviceInfo GetDeviceInfo(string userAgent)
         {
-            string ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "UnknownIP";
+            var info = new DeviceInfo();
 
-            string userAgent = HttpContext.Request.Headers["User-Agent"].ToString();
+            // Browser
+            if (userAgent.Contains("Edg"))
+                info.Browser = "Edge";
+            else if (userAgent.Contains("Chrome"))
+                info.Browser = "Chrome";
+            else if (userAgent.Contains("Firefox"))
+                info.Browser = "Firefox";
+            else if (userAgent.Contains("Safari"))
+                info.Browser = "Safari";
+            else
+                info.Browser = "Unknown";
 
-            string browser = HttpContext.Request.Headers["sec-ch-ua"].ToString();
+            // OS
+            if (userAgent.Contains("Windows"))
+                info.OS = "Windows";
+            else if (userAgent.Contains("Android"))
+                info.OS = "Android";
+            else if (userAgent.Contains("iPhone"))
+                info.OS = "iPhone";
+            else if (userAgent.Contains("Mac"))
+                info.OS = "Mac";
+            else
+                info.OS = "Unknown";
 
-            string deviceId = $"{ipAddress}-{userAgent}-{browser}";
+            // Device Type
+            if (userAgent.Contains("Mobile"))
+                info.DeviceType = "Mobile";
+            else
+                info.DeviceType = "Desktop";
 
-            return deviceId;
+            // Browser Version
+            var match = System.Text.RegularExpressions.Regex.Match(userAgent, @"(Edg|Chrome|Firefox)/(\d+)");
+
+            if (match.Success)
+                info.Version = match.Groups[2].Value;
+
+            return info;
         }
 
         #endregion

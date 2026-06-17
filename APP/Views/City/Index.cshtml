@@ -1,0 +1,284 @@
+﻿@model IEnumerable<CityDto>
+
+@{
+    ViewData["Title"] = "City List";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-city position-left"></i>
+            City Management
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Create"
+               class="btn bg-primary btn-sm">
+
+                <i class="icon-plus22 position-left"></i>
+                Add City
+
+            </a>
+
+        </div>
+
+    </div>
+
+    <!-- KPI Summary -->
+
+    <div class="panel-body">
+
+        <div class="row">
+
+            <div class="col-md-3">
+
+                <div class="panel bg-primary-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">@Model.Count()</h3>
+                        <span>Total Cities</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="col-md-3">
+
+                <div class="panel bg-success-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">
+                            @Model.Select(x => x.StateId).Distinct().Count()
+                        </h3>
+                        <span>States Covered</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="col-md-3">
+
+                <div class="panel bg-info-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">
+                            @Model.Select(x => x.CountryId).Distinct().Count()
+                        </h3>
+                        <span>Countries</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="col-md-3">
+
+                <div class="panel bg-warning-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">
+                            @Model.Count()
+                        </h3>
+                        <span>Active Cities</span>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Filters -->
+
+        <div class="row">
+
+            <div class="col-md-4">
+
+                <input type="text"
+                       id="searchInput"
+                       class="form-control"
+                       placeholder="Search City..." />
+
+            </div>
+
+            <div class="col-md-3">
+
+                <select class="form-control">
+
+                    <option value="">
+                        All States
+                    </option>
+
+                </select>
+
+            </div>
+
+            <div class="col-md-3">
+
+                <select class="form-control">
+
+                    <option value="">
+                        All Countries
+                    </option>
+
+                </select>
+
+            </div>
+
+            <div class="col-md-2">
+
+                <button class="btn bg-primary btn-block">
+
+                    <i class="icon-search4 position-left"></i>
+                    Search
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Data Table -->
+
+    <table id="cityTable" class="table datatable-scroll-y table-hover">
+
+        <thead>
+
+            <tr>
+
+                <th>#</th>
+                <th>City</th>
+                <th>State</th>
+                <th>Country</th>
+                <th>Modified On</th>
+                <th>Status</th>
+                <th class="text-center">Actions</th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            @{
+                int sr = 1;
+            }
+
+            @foreach (var item in Model)
+            {
+                <tr>
+
+                    <td>@sr</td>
+
+                    <td>
+
+                        <div class="text-semibold">
+
+                            <i class="icon-city text-primary"></i>
+                            @item.Name
+
+                        </div>
+
+                    </td>
+
+                    <td>
+
+                        <span class="label bg-success">
+                            @item.StateName
+                        </span>
+
+                    </td>
+
+                    <td>
+
+                        <span class="label bg-primary">
+                            @item.CountryName
+                        </span>
+
+                    </td>
+
+                    <td>
+
+                        @(item.ModifiedOn.HasValue
+                            ? item.ModifiedOn.Value.ToString("dd MMM yyyy")
+                            : "-")
+
+                    </td>
+
+                    <td>
+
+                        <span class="label label-success">
+                            Active
+                        </span>
+
+                    </td>
+
+                    <td class="text-center">
+
+                        <ul class="icons-list">
+
+                            <li>
+                                <a asp-action="Details"
+                                   asp-route-id="@item.Id"
+                                   title="View">
+                                    <i class="icon-eye"></i>
+                                </a>
+                            </li>
+
+                            <li>
+                                <a asp-action="Edit"
+                                   asp-route-id="@item.Id"
+                                   title="Edit">
+                                    <i class="icon-pencil7"></i>
+                                </a>
+                            </li>
+
+                            <li>
+                                <a asp-action="Delete"
+                                   asp-route-id="@item.Id"
+                                   onclick="return confirm('Delete this city?')"
+                                   title="Delete">
+                                    <i class="icon-trash"></i>
+                                </a>
+                            </li>
+
+                        </ul>
+
+                    </td>
+
+                </tr>
+
+                sr++;
+            }
+
+        </tbody>
+
+    </table>
+
+</div>
+@section Scripts {
+
+    <script>
+
+        // Search Table
+
+        document.getElementById("searchInput")
+            .addEventListener("keyup", function () {
+
+                let value = this.value.toLowerCase();
+
+                let rows = document.querySelectorAll("#cityTable tr");
+
+                rows.forEach(function (row) {
+
+                    let text = row.innerText.toLowerCase();
+
+                    row.style.display =
+                        text.includes(value) ? "" : "none";
+
+                });
+
+            });
+
+    </script>
+
+}

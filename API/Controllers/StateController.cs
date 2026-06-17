@@ -1,5 +1,7 @@
 ﻿using Application.DTOs.Employee;
-using Application.Interfaces.Employee;
+using Application.DTOs.Masters;
+using Application.Interfaces.EmployeeInterface;
+using Application.Interfaces.Masters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -9,28 +11,37 @@ namespace API.Controllers
     #region State API
 
     [ApiController]
-    [Route("api/state")]
+    [Route("api/[controller]")]
     [Authorize]
     public class StateController : ControllerBase
     {
-        private readonly IStateService _service;
+        private readonly IStateService _stateService;
 
-        public StateController(IStateService service)
+        public StateController(IStateService stateService)
         {
-            _service = service;
+            _stateService = stateService;
         }
+
+        // ======================================================
+        // GET ALL
+        // ======================================================
 
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var data = await _service.GetAllAsync();
+            var data = await _stateService.GetAllAsync();
+
             return Ok(data);
         }
+
+        // ======================================================
+        // GET BY ID
+        // ======================================================
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
-            var data = await _service.GetByIdAsync(id);
+            var data = await _stateService.GetByIdAsync(id);
 
             if (data == null)
                 return NotFound();
@@ -38,41 +49,54 @@ namespace API.Controllers
             return Ok(data);
         }
 
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] StateDto dto)
-        {
-            var id = await _service.CreateAsync(dto);
+        // ======================================================
+        // CREATE
+        // ======================================================
 
-            return Ok(new
-            {
-                Message = "State Created Successfully",
-                Id = id
-            });
+        [HttpPost]
+        public async Task<IActionResult> Create(StateDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _stateService.CreateAsync(dto);
+
+            return Ok(result);
         }
+
+        // ======================================================
+        // UPDATE
+        // ======================================================
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(string id, [FromBody] StateDto dto)
+        public async Task<IActionResult> Update(string id, StateDto dto)
         {
-            var result = await _service.UpdateAsync(id, dto);
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
-            return Ok(new
-            {
-                Message = "State Updated Successfully",
-                Id = result
-            });
+            var result = await _stateService.UpdateAsync(id, dto);
+
+            if (result == null)
+                return NotFound();
+
+            return Ok(result);
         }
+
+        // ======================================================
+        // DELETE
+        // ======================================================
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
-            var result = await _service.DeleteAsync(id);
+            var result = await _stateService.DeleteAsync(id);
 
             if (!result)
                 return NotFound();
 
             return Ok(new
             {
-                Message = "State Deleted Successfully"
+                Message = "State deleted successfully"
             });
         }
     }

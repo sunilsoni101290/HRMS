@@ -1,0 +1,209 @@
+﻿@model StateDto
+
+@{
+    ViewData["Title"] = "State";
+}
+
+<div class="container-fluid py-4">
+
+    <div class="row justify-content-center">
+
+        <div class="col-lg-8">
+
+            <div class="card shadow border-0 rounded-4 overflow-hidden">
+
+                <!-- Header -->
+                <div class="card-header bg-primary text-white py-4">
+
+                    <div class="d-flex align-items-center">
+
+                        <div class="me-3">
+
+                            <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center"
+                                 style="width:70px;height:70px;">
+
+                                <i class="bi bi-geo-alt-fill fs-2"></i>
+
+                            </div>
+
+                        </div>
+
+                        <div>
+
+                            <h3 class="mb-1">
+
+                                @(string.IsNullOrEmpty(Model?.Id)
+                                    ? "Create State"
+                                    : "Edit State")
+
+                            </h3>
+
+                            <p class="mb-0 opacity-75">
+                                Manage state master information
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Body -->
+                <div class="card-body p-4">
+
+                    <form asp-action="@(Model.Id == null ? "Create" : "Edit")" method="post">
+
+                        <!-- Hidden -->
+                        <input asp-for="Id" type="hidden" />
+                        <input asp-for="TenantId" type="hidden" />
+                        <input asp-for="CreatedBy" type="hidden" />
+                        <input asp-for="ModifiedBy" type="hidden" />
+                        <input asp-for="ModifiedOn" type="hidden" />
+
+                        <div class="row g-4">
+
+                            <!-- State Name -->
+                            <div class="col-md-6">
+
+                                <label asp-for="Name"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <div class="input-group">
+
+                                    <span class="input-group-text">
+
+                                        <i class="bi bi-building"></i>
+
+                                    </span>
+
+                                    <input asp-for="Name"
+                                           class="form-control"
+                                           placeholder="Enter State Name" />
+
+                                </div>
+
+                                <span asp-validation-for="Name"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                            <!-- State Code -->
+                            <div class="col-md-6">
+
+                                <label asp-for="Code"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <div class="input-group">
+
+                                    <span class="input-group-text">
+
+                                        <i class="bi bi-code-square"></i>
+
+                                    </span>
+
+                                    <input asp-for="Code"
+                                           class="form-control"
+                                           placeholder="MH / DL / GJ" />
+
+                                </div>
+
+                                <span asp-validation-for="Code"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                            <!-- Country -->
+                            <div class="col-md-6">
+
+                                <label asp-for="CountryId"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <select asp-for="CountryId"
+                                        asp-items="ViewBag.CountryList"
+                                        class="form-select">
+
+                                    <option value="">
+                                        -- Select Country --
+                                    </option>
+
+                                </select>
+
+                                <span asp-validation-for="CountryId"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                            <!-- GST State Code -->
+                            <div class="col-md-6">
+
+                                <label asp-for="GSTStateCode"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <div class="input-group">
+
+                                    <span class="input-group-text">
+
+                                        <i class="bi bi-receipt"></i>
+
+                                    </span>
+
+                                    <input asp-for="GSTStateCode"
+                                           class="form-control"
+                                           placeholder="27" />
+
+                                </div>
+
+                                <span asp-validation-for="GSTStateCode"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="mt-5 d-flex justify-content-end gap-2">
+
+                            <a asp-action="Index"
+                               class="btn btn-light border rounded-3 px-4">
+
+                                <i class="bi bi-arrow-left"></i>
+                                Back
+
+                            </a>
+
+                            <button type="submit"
+                                    class="btn btn-primary rounded-3 px-4">
+
+                                <i class="bi bi-check-circle"></i>
+
+                                @(string.IsNullOrEmpty(Model?.Id)
+                                    ? "Save"
+                                    : "Update")
+
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts {
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+}

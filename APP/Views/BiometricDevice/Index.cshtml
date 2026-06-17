@@ -1,0 +1,226 @@
+﻿@model IEnumerable<BiometricDeviceDto>
+
+@{
+    ViewData["Title"] = "Biometric Devices";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-fingerprint position-left"></i>
+            Biometric Device Management
+        </h5>
+        <div class="heading-elements">
+
+            <a asp-action="Create"
+               class="btn bg-primary btn-sm">
+                <i class="icon-plus22 position-left"></i>
+                Add Device
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary -->
+
+    <div class="panel-body">
+
+        <div class="row">
+
+            <div class="col-md-3">
+
+                <div class="panel bg-primary-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">@Model.Count()</h3>
+                        <span>Total Devices</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="col-md-3">
+
+                <div class="panel bg-success-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">
+                            @Model.Count(x => x.IsActive)
+                        </h3>
+                        <span>Active Devices</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="col-md-3">
+
+                <div class="panel bg-danger-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">
+                            @Model.Count(x => !x.IsActive)
+                        </h3>
+                        <span>Inactive Devices</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="col-md-3">
+
+                <div class="panel bg-info-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">24x7</h3>
+                        <span>Monitoring</span>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Device List -->
+
+    <table class="table datatable-scroll-y table-hover">
+
+        <thead>
+
+            <tr>
+
+                <th>Device Name</th>
+                <th>Code</th>
+                <th>IP Address</th>
+                <th>Port</th>
+                <th>API URL</th>
+                <th>Username</th>
+                <th>Status</th>
+                <th class="text-center">Actions</th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            @foreach (var item in Model)
+            {
+                <tr>
+
+                    <td>
+
+                        <div class="text-semibold">
+                            @item.DeviceName
+                        </div>
+
+                    </td>
+
+                    <td>
+                        @item.DeviceCode
+                    </td>
+
+                    <td>
+                        @item.IPAddress
+                    </td>
+
+                    <td>
+                        @item.Port
+                    </td>
+
+                    <td>
+
+                        <span title="@item.ApiUrl">
+
+                            @(item.ApiUrl?.Length > 40
+                                ? item.ApiUrl.Substring(0, 40) + "..."
+                                : item.ApiUrl)
+
+                        </span>
+
+                    </td>
+
+                    <td>
+                        @item.Username
+                    </td>
+
+                    <td>
+
+                        @if (item.IsActive)
+                        {
+                            <span class="label label-success">
+                                Active
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="label label-danger">
+                                Inactive
+                            </span>
+                        }
+
+                    </td>
+
+                    <td class="text-center">
+
+                        <ul class="icons-list">
+
+                            <li>
+                                <a asp-action="Details"
+                                   asp-route-id="@item.Id"
+                                   title="View">
+                                    <i class="icon-eye"></i>
+                                </a>
+                            </li>
+
+                            <li>
+                                <a asp-action="Edit"
+                                   asp-route-id="@item.Id"
+                                   title="Edit">
+                                    <i class="icon-pencil7"></i>
+                                </a>
+                            </li>
+
+                            <li>
+                                <a asp-action="Delete"
+                                   asp-route-id="@item.Id"
+                                   title="Delete">
+                                    <i class="icon-trash"></i>
+                                </a>
+                            </li>
+
+                            <li>
+                                <a asp-action="TestConnection"
+                                   asp-route-id="@item.Id"
+                                   title="Test Connection">
+                                    <i class="icon-connection"></i>
+                                </a>
+                            </li>
+
+                            <li>
+                                <a asp-action="SyncEmployees"
+                                   asp-route-id="@item.Id"
+                                   title="Sync Employees">
+                                    <i class="icon-sync"></i>
+                                </a>
+                            </li>
+
+                            <li>
+                                <a asp-action="DownloadAttendance"
+                                   asp-route-id="@item.Id"
+                                   title="Download Attendance">
+                                    <i class="icon-download"></i>
+                                </a>
+                            </li>
+
+                        </ul>
+
+                    </td>
+
+                </tr>
+            }
+
+        </tbody>
+
+    </table>
+
+</div>

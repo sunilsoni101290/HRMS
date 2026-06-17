@@ -1,6 +1,6 @@
 ﻿using Application.DTOs.Leaves;
-using Application.Interfaces.Holidays;
 using Application.Interfaces.Leaves;
+using Application.Interfaces.Masters;
 using Domain.Entities;
 using Infrastructure;
 using Infrastructure.Interfaces;
@@ -15,14 +15,14 @@ namespace Application.Services.Leaves
     public class LeaveService : ILeaveService
     {
         private readonly ApplicationDbContext _db;
-        private readonly IHolidayService _holidayService;
+        private readonly IWeekOffService _weekOffService;
         private readonly ITenantService _tenantService;
         private string tenantId=string.Empty;
-        public LeaveService(ApplicationDbContext db, IHolidayService holidayService,ITenantService tenantService)
+        public LeaveService(ApplicationDbContext db, IWeekOffService weekOffService,ITenantService tenantService)
         {
             _db = db;
             _tenantService = tenantService;
-            _holidayService = holidayService;
+            _weekOffService = weekOffService;
         }
 
         #region 📝 APPLY LEAVE
@@ -238,8 +238,8 @@ namespace Application.Services.Leaves
 
             for (var d = dto.FromDate.Date; d <= dto.ToDate.Date; d = d.AddDays(1))
             {
-                var isHoliday = await _holidayService.IsHoliday(d, tenantId);
-                var isWeekOff = await _holidayService.IsWeekOff(d, tenantId);
+                var isHoliday = await _weekOffService.IsHoliday(d, tenantId);
+                var isWeekOff = await _weekOffService.IsWeekOff(d, tenantId);
 
                 if (isHoliday || isWeekOff)
                     continue;
@@ -257,8 +257,8 @@ namespace Application.Services.Leaves
 
             foreach (var date in dates)
             {
-                var isHoliday = await _holidayService.IsHoliday(date, tenantId);
-                var isWeekOff = await _holidayService.IsWeekOff(date, tenantId);
+                var isHoliday = await _weekOffService.IsHoliday(date, tenantId);
+                var isWeekOff = await _weekOffService.IsWeekOff(date, tenantId);
 
                 if (isHoliday || isWeekOff)
                 {
@@ -300,11 +300,11 @@ namespace Application.Services.Leaves
             var before = dto.FromDate.AddDays(-1);
             var after = dto.ToDate.AddDays(1);
 
-            var beforeIsOff = await _holidayService.IsHoliday(before, companyId)
-                             || await _holidayService.IsWeekOff(before, companyId);
+            var beforeIsOff = await _weekOffService.IsHoliday(before, companyId)
+                             || await _weekOffService.IsWeekOff(before, companyId);
 
-            var afterIsOff = await _holidayService.IsHoliday(after, companyId)
-                            || await _holidayService.IsWeekOff(after, companyId);
+            var afterIsOff = await _weekOffService.IsHoliday(after, companyId)
+                            || await _weekOffService.IsWeekOff(after, companyId);
 
             return beforeIsOff && afterIsOff;
         }

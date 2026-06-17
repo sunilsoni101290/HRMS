@@ -1,9 +1,19 @@
 ﻿using Microsoft.AspNetCore.Mvc.Rendering;
+using System.ComponentModel.DataAnnotations;
 
 namespace APP.Helpers
 {
     public class EnumExtensions
     {
+        public enum AppFeatureType
+        {
+            Dashboard = 0,
+            Master = 1,
+            Transaction = 2,
+            Report = 3,
+            Setting = 4,
+            Security = 5
+        }
         public enum Gender
         {
             Male = 1,
@@ -252,7 +262,116 @@ namespace APP.Helpers
             Agriculture = 17,      // Farming / Agro business
             Hospitality = 18       // Hotel / Restaurant
         }
+    public enum DocumentType
+    {
+        // Government ID Proofs
+
+        [Display(Name = "Aadhaar Card")]
+        AadhaarCard = 1,
+
+        [Display(Name = "PAN Card")]
+        PANCard = 2,
+
+        [Display(Name = "Passport")]
+        Passport = 3,
+
+        [Display(Name = "Driving License")]
+        DrivingLicense = 4,
+
+        [Display(Name = "Voter ID")]
+        VoterID = 5,
+
+
+        // Employee Documents
+
+        [Display(Name = "Resume")]
+        Resume = 6,
+
+        [Display(Name = "Offer Letter")]
+        OfferLetter = 7,
+
+        [Display(Name = "Appointment Letter")]
+        AppointmentLetter = 8,
+
+        [Display(Name = "Experience Letter")]
+        ExperienceLetter = 9,
+
+        [Display(Name = "Relieving Letter")]
+        RelievingLetter = 10,
+
+        [Display(Name = "Salary Slip")]
+        SalarySlip = 11,
+
+
+        // Education Documents
+
+        [Display(Name = "Education Certificate")]
+        EducationCertificate = 12,
+
+        [Display(Name = "Degree Certificate")]
+        DegreeCertificate = 13,
+
+        [Display(Name = "10th Marksheet")]
+        Marksheet10th = 14,
+
+        [Display(Name = "12th Marksheet")]
+        Marksheet12th = 15,
+
+        [Display(Name = "Graduation Certificate")]
+        GraduationCertificate = 16,
+
+        [Display(Name = "Post Graduation Certificate")]
+        PostGraduationCertificate = 17,
+
+
+        // Bank Documents
+
+        [Display(Name = "Bank Passbook")]
+        BankPassbook = 18,
+
+        [Display(Name = "Cancel Cheque")]
+        CancelCheque = 19,
+
+        [Display(Name = "Bank Statement")]
+        BankStatement = 20,
+
+
+        // HR & Compliance Documents
+
+        [Display(Name = "PF Document")]
+        PFDocument = 21,
+
+        [Display(Name = "ESIC Document")]
+        ESICDocument = 22,
+
+        [Display(Name = "Medical Certificate")]
+        MedicalCertificate = 23,
+
+        [Display(Name = "Address Proof")]
+        AddressProof = 24,
+
+        [Display(Name = "Photo")]
+        Photo = 25,
+
+        [Display(Name = "Signature")]
+        Signature = 26,
+
+
+        // Other Documents
+
+        [Display(Name = "Birth Certificate")]
+        BirthCertificate = 27,
+
+        [Display(Name = "Marriage Certificate")]
+        MarriageCertificate = 28,
+
+        [Display(Name = "Police Verification")]
+        PoliceVerification = 29,
+
+        [Display(Name = "Other")]
+        Other = 30
     }
+}
 
     public static class EnumHelper
     {

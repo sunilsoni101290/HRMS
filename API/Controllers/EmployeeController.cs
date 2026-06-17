@@ -1,6 +1,7 @@
 ﻿using Application.Common.Responses;
+using Application.DTOs.Attendances;
 using Application.DTOs.Employee;
-using Application.Interfaces.Employee;
+using Application.Interfaces.EmployeeInterface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -36,17 +37,27 @@ namespace API.Controllers
         [HttpPost("add-employee")]
         public async Task<IActionResult> Create([FromBody] EmployeeDto dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var id = await _service.CreateAsync(dto);
-
-            return Ok(new
+            try
             {
-                Success = true,
-                Message = "Employee created successfully",
-                Id = id
-            });
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                var result = await _service.CreateAsync(dto);
+
+                return Ok(new ApiResponse<BiometricDeviceDto>
+                {
+                    Success = true,
+                    Message = "Biometric device created successfully.",
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Failed to create biometric device."
+                });
+            }
         }
 
         // ==============================

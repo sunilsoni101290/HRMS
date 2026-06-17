@@ -42,7 +42,7 @@ namespace API.Controllers
         }
         #endregion
 
-        #region State Dropdown
+        #region State Dropdown by CountryId
         [HttpGet("state/{countryId}")]
         public async Task<IActionResult>GetStateDropdown(string countryId)
         {
@@ -54,7 +54,7 @@ namespace API.Controllers
         }
         #endregion
 
-        #region City Dropdown
+        #region City Dropdown by StateId
         [HttpGet("city/{stateId}")]
         public async Task<IActionResult>GetCityDropdown(string stateId)
         {
@@ -78,13 +78,13 @@ namespace API.Controllers
         }
         #endregion
 
-        #region Company Dropdown
-        [HttpGet("branch")]
-        public async Task<IActionResult>GetBranchDropdown()
+        #region Branch Dropdown BY Company Id
+        [HttpGet("branch/{companyId}")]
+        public async Task<IActionResult>GetBranchDropdown(string? companyId)
         {
             var data =
                 await _dropdownService
-                .GetBranchDropdownAsync();
+                .GetBranchDropdownAsync(companyId);
 
             return Ok(data);
         }
@@ -169,6 +169,60 @@ namespace API.Controllers
             var data =
                 await _dropdownService
                 .GetShiftDropdownAsync();
+
+            return Ok(data);
+        }
+        #endregion
+
+        #region Default Shift Dropdown
+        [HttpGet("default-shift")]
+        public async Task<IActionResult> GetDefualtShiftDropdown()
+        {
+            var data =
+                await _dropdownService
+                .GetDefaultShiftDropdownAsync();
+
+            return Ok(data);
+        }
+        #endregion
+
+        #region Parent App Features Dropdown
+        [HttpGet("parent-appfeature")]
+        public async Task<IActionResult> GetparentDropdown()
+        {
+            var result = await _dropdownService.GetParentFeatureDropdownAsync();
+
+            return Ok(result);
+        }
+        #endregion
+
+        #region App Features Dropdown
+        [HttpGet("appfeature")]
+        public async Task<IActionResult> GetDropdown()
+        {
+            var result = await _dropdownService.GetAppFeatureDropdownAsync();
+
+            return Ok(result);
+        }
+        #endregion
+
+        #region Holiday Group Dropdown
+        [HttpGet("holidaygroup")]
+        public async Task<IActionResult> GetHolidayGroupDropdown()
+        {
+            var result = await _dropdownService.GetHolidayGroupDropdownAsync();
+
+            return Ok(result);
+        }
+        #endregion
+
+        #region Designantion Dropdown by Department
+        [HttpGet("designation/{deptId}")]
+        public async Task<IActionResult> GetDesignantionByDepartmentDropdown(string deptId)
+        {
+            var data =
+                await _dropdownService
+                .GetDesignationByDeptIdDropdownAsync(deptId);
 
             return Ok(data);
         }

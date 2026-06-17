@@ -1,0 +1,254 @@
+﻿@model FinancialYearDto
+
+@{
+    ViewData["Title"] = "Financial Year";
+}
+
+<div class="container-fluid py-4">
+
+    <div class="row justify-content-center">
+
+        <div class="col-lg-9">
+
+            <div class="card shadow border-0 rounded-4 overflow-hidden">
+
+                <!-- Header -->
+                <div class="card-header bg-success text-white py-4">
+
+                    <div class="d-flex align-items-center">
+
+                        <div class="me-3">
+
+                            <div class="bg-white text-success rounded-circle d-flex align-items-center justify-content-center"
+                                 style="width:70px;height:70px;">
+
+                                <i class="bi bi-calendar-range-fill fs-2"></i>
+
+                            </div>
+
+                        </div>
+
+                        <div>
+
+                            <h3 class="mb-1">
+
+                                @(string.IsNullOrEmpty(Model?.Id)
+                                    ? "Create Financial Year"
+                                    : "Edit Financial Year")
+
+                            </h3>
+
+                            <p class="mb-0 opacity-75">
+                                Manage company financial year settings
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Body -->
+                <div class="card-body p-4">
+
+                    <form asp-action="@(Model.Id == null ? "Create" : "Edit")" method="post">
+
+                        <!-- Hidden -->
+                        <input asp-for="Id" type="hidden" />
+                        <input asp-for="TenantId" type="hidden" />
+                        <input asp-for="CreatedBy" type="hidden" />
+                        <input asp-for="ModifiedBy" type="hidden" />
+                        <input asp-for="ModifiedOn" type="hidden" />
+
+                        <div class="row g-4">
+
+                            <!-- Financial Year Name -->
+                            <div class="col-md-6">
+
+                                <label asp-for="Name"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <div class="input-group">
+
+                                    <span class="input-group-text">
+
+                                        <i class="bi bi-calendar-event"></i>
+
+                                    </span>
+
+                                    <input asp-for="Name"
+                                           class="form-control"
+                                           placeholder="2025-2026" />
+
+                                </div>
+
+                                <span asp-validation-for="Name"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                            <!-- Code -->
+                            <div class="col-md-6">
+
+                                <label asp-for="Code"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <div class="input-group">
+
+                                    <span class="input-group-text">
+
+                                        <i class="bi bi-code-square"></i>
+
+                                    </span>
+
+                                    <input asp-for="Code"
+                                           class="form-control"
+                                           placeholder="FY25-26" />
+
+                                </div>
+
+                                <span asp-validation-for="Code"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                            <!-- Start Date -->
+                            <div class="col-md-6">
+
+                                <label asp-for="StartDate"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <input asp-for="StartDate"
+                                       type="date"
+                                       class="form-control" />
+
+                                <span asp-validation-for="StartDate"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                            <!-- End Date -->
+                            <div class="col-md-6">
+
+                                <label asp-for="EndDate"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <input asp-for="EndDate"
+                                       type="date"
+                                       class="form-control" />
+
+                                <span asp-validation-for="EndDate"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                            <!-- Status -->
+                            <div class="col-md-6">
+
+                                <label asp-for="Status"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <select asp-for="Status"
+                                        asp-items="EnumHelper.GetEnumList<EnumExtensions.FinancialYearStatus>()"
+                                        class="form-select">
+
+                                    <option value="">
+                                        -- Select Status --
+                                    </option>
+
+                                </select>
+
+                                <span asp-validation-for="Status"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                            <!-- Company -->
+                            <div class="col-md-6">
+
+                                <label asp-for="CompanyId"
+                                       class="form-label fw-semibold">
+                                </label>
+
+                                <select asp-for="CompanyId"
+                                        asp-items="ViewBag.CompanyList"
+                                        class="form-select">
+
+                                    <option value="">
+                                        -- Select Company --
+                                    </option>
+
+                                </select>
+
+                                <span asp-validation-for="CompanyId"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                            <!-- Current FY -->
+                            <div class="col-md-12">
+
+                                <div class="form-check form-switch mt-2">
+
+                                    <input asp-for="IsCurrent"
+                                           class="form-check-input"
+                                           type="checkbox" />
+
+                                    <label asp-for="IsCurrent"
+                                           class="form-check-label fw-semibold">
+                                    </label>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="mt-5 d-flex justify-content-end gap-2">
+
+                            <a asp-action="Index"
+                               class="btn btn-light border rounded-3 px-4">
+
+                                <i class="bi bi-arrow-left"></i>
+                                Back
+
+                            </a>
+
+                            <button type="submit"
+                                    class="btn btn-success rounded-3 px-4">
+
+                                <i class="bi bi-check-circle"></i>
+
+                                @(string.IsNullOrEmpty(Model?.Id)
+                                    ? "Save"
+                                    : "Update")
+
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts {
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+}

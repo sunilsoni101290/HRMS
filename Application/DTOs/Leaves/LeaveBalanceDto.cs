@@ -1,16 +1,40 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Text;
 
 namespace Application.DTOs.Leaves
 {
     public class LeaveBalanceDto
     {
-        public string LeaveType { get; set; }
-        public decimal Opening { get; set; }
+        public string? Id { get; set; }
+
+        [Required(ErrorMessage = "Employee is required")]
+        public string EmployeeId { get; set; }
+
+        public string? EmployeeName { get; set; }
+
+        [Required(ErrorMessage = "Leave Type is required")]
+        public string LeaveTypeId { get; set; }
+
+        public string? LeaveTypeName { get; set; }
+
+        [Required(ErrorMessage = "Year is required")]
+        public int Year { get; set; }
+
+        public decimal OpeningBalance { get; set; }
+
         public decimal Earned { get; set; }
+
         public decimal Used { get; set; }
+
         public decimal Balance { get; set; }
+
+        public string CreatedBy { get; set; }
+
+        public DateTime? ModifiedOn { get; set; }
+
+        public string? ModifiedBy { get; set; }
     }
 
     public class LeaveDashboardSummaryDto

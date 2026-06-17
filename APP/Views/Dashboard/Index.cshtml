@@ -2,1062 +2,1320 @@
 @model DashboardViewModel
 
 @{
-    ViewData["Title"] = "Dashboard";
+	ViewBag.Title = "Dashboard";
 }
-<link href="~/css/dashboard.css" rel="stylesheet" />
-<!-- ================= STAT CARDS ================= -->
-<div class="dashboard-header mb-4">
 
-    <div class="row align-items-center">
+<div class="row">
 
-        <div class="col-lg-8">
-
-            <h1 class="welcome-title">
-                Welcome back, HR Manager 👋
-            </h1>
-
-            <p class="welcome-subtitle">
-                Here's what's happening across the organization today.
-            </p>
-
-        </div>
-
-        <div class="col-lg-4">
-
-            <div class="header-actions">
-
-                <button class="btn btn-action">
-
-                    <i class="bi bi-plus-lg"></i>
-
-                    Quick Action
-
-                </button>
-
+    <!-- Total Employees -->
+    <div class="col-md-3">
+        <div class="panel panel-body bg-primary-400">
+            <div class="media no-margin">
+                <div class="media-left media-middle">
+                    <i class="icon-users icon-3x opacity-75"></i>
+                </div>
+                <div class="media-body text-right">
+                    <h3 class="no-margin">@Model.TotalEmployees</h3>
+                    <span class="text-uppercase text-size-mini">
+                        Total Employees
+                    </span>
+                </div>
             </div>
-
         </div>
+    </div>
 
+    <!-- Active Employees -->
+    <div class="col-md-3">
+        <div class="panel panel-body bg-success-400">
+            <div class="media no-margin">
+                <div class="media-left media-middle">
+                    <i class="icon-user-check icon-3x opacity-75"></i>
+                </div>
+                <div class="media-body text-right">
+                    <h3 class="no-margin">@Model.ActiveEmployees</h3>
+                    <span class="text-uppercase text-size-mini">
+                        Active Employees
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Joiners -->
+    <div class="col-md-3">
+        <div class="panel panel-body bg-indigo-400">
+            <div class="media no-margin">
+                <div class="media-left media-middle">
+                    <i class="icon-user-plus icon-3x opacity-75"></i>
+                </div>
+                <div class="media-body text-right">
+                    <h3 class="no-margin">@Model.NewJoiners</h3>
+                    <span class="text-uppercase text-size-mini">
+                        New Joiners
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resigned Employees -->
+    <div class="col-md-3">
+        <div class="panel panel-body bg-danger-400">
+            <div class="media no-margin">
+                <div class="media-left media-middle">
+                    <i class="icon-user-minus icon-3x opacity-75"></i>
+                </div>
+                <div class="media-body text-right">
+                    <h3 class="no-margin">@Model.ResignedEmployees</h3>
+                    <span class="text-uppercase text-size-mini">
+                        Resigned
+                    </span>
+                </div>
+            </div>
+        </div>
     </div>
 
 </div>
 
-<!-- ================= STATS CARDS ================= -->
+<div class="row">
 
-<div class="row g-4">
-
-    <!-- CARD 1 -->
-    <div class="col-xl-3 col-md-6">
-
-        <div class="stats-card">
-
-            <div class="stats-top">
-
-                <div>
-                    <h6>TOTAL EMPLOYEES</h6>
-                    <h2>@Model.TotalEmployees</h2>
+    <!-- Present Today -->
+    <div class="col-md-3">
+        <div class="panel panel-body bg-teal-400">
+            <div class="media no-margin">
+                <div class="media-left media-middle">
+                    <i class="icon-checkmark-circle icon-3x opacity-75"></i>
                 </div>
-
-                <div class="stats-icon blue">
-                    <i class="bi bi-people"></i>
+                <div class="media-body text-right">
+                    <h3 class="no-margin">@Model.PresentToday</h3>
+                    <span class="text-uppercase text-size-mini">
+                        Present Today
+                    </span>
                 </div>
-
             </div>
-
         </div>
-
     </div>
 
-    <!-- CARD 2 -->
-    <div class="col-xl-3 col-md-6">
-
-        <div class="stats-card">
-
-            <div class="stats-top">
-
-                <div>
-                    <h6>PRESENT TODAY</h6>
-                    <h2>@Model.PresentToday</h2>
+    <!-- Absent Today -->
+    <div class="col-md-3">
+        <div class="panel panel-body bg-warning-400">
+            <div class="media no-margin">
+                <div class="media-left media-middle">
+                    <i class="icon-cross2 icon-3x opacity-75"></i>
                 </div>
-
-                <div class="stats-icon green">
-                    <i class="bi bi-check-lg"></i>
+                <div class="media-body text-right">
+                    <h3 class="no-margin">@Model.AbsentToday</h3>
+                    <span class="text-uppercase text-size-mini">
+                        Absent Today
+                    </span>
                 </div>
-
             </div>
-
         </div>
-
     </div>
 
-    <!-- CARD 3 -->
-    <div class="col-xl-3 col-md-6">
-
-        <div class="stats-card">
-
-            <div class="stats-top">
-
-                <div>
-                    <h6>ON LEAVE</h6>
-                    <h2>@Model.OnLeaveToday</h2>
+    <!-- Late Arrivals -->
+    <div class="col-md-3">
+        <div class="panel panel-body bg-orange-400">
+            <div class="media no-margin">
+                <div class="media-left media-middle">
+                    <i class="icon-alarm icon-3x opacity-75"></i>
                 </div>
-
-                <div class="stats-icon orange">
-                    <i class="bi bi-calendar-event"></i>
+                <div class="media-body text-right">
+                    <h3 class="no-margin">@Model.LateArrivals</h3>
+                    <span class="text-uppercase text-size-mini">
+                        Late Arrivals
+                    </span>
                 </div>
-
             </div>
-
         </div>
-
     </div>
 
-    <!-- CARD 4 -->
-    <div class="col-xl-3 col-md-6">
-
-        <div class="stats-card">
-
-            <div class="stats-top">
-
-                <div>
-                    <h6>OPEN POSITIONS</h6>
-                    <h2>28</h2>
+    <!-- On Leave -->
+    <div class="col-md-3">
+        <div class="panel panel-body bg-purple-400">
+            <div class="media no-margin">
+                <div class="media-left media-middle">
+                    <i class="icon-calendar3 icon-3x opacity-75"></i>
                 </div>
-
-                <div class="stats-icon sky">
-                    <i class="bi bi-briefcase"></i>
+                <div class="media-body text-right">
+                    <h3 class="no-margin">@Model.OnLeave</h3>
+                    <span class="text-uppercase text-size-mini">
+                        On Leave
+                    </span>
                 </div>
-
             </div>
-
         </div>
-
     </div>
 
 </div>
 
-<div class="row g-4 mt-1">
+<div class="row">
 
-    <!-- ================= RECENT LEAVE REQUEST ================= -->
-
-    <div class="col-xl-8">
-
-        <div class="custom-card">
-
-            <div class="card-header-custom">
-
-                <h4>Recent Leave Requests</h4>
-
-                <a href="#" class="view-all-btn">
-                    View all
-                </a>
-
+    <!-- Open Positions -->
+    <div class="col-md-6">
+        <div class="panel panel-body bg-blue-400">
+            <div class="media no-margin">
+                <div class="media-left media-middle">
+                    <i class="icon-briefcase icon-3x opacity-75"></i>
+                </div>
+                <div class="media-body text-right">
+                    <h3 class="no-margin">@Model.OpenPositions</h3>
+                    <span class="text-uppercase text-size-mini">
+                        Open Positions
+                    </span>
+                </div>
             </div>
+        </div>
+    </div>
 
-            <div class="table-responsive">
+    <!-- Pending Approvals -->
+    <div class="col-md-6">
+        <div class="panel panel-body bg-pink-400">
+            <div class="media no-margin">
+                <div class="media-left media-middle">
+                    <i class="icon-hour-glass icon-3x opacity-75"></i>
+                </div>
+                <div class="media-body text-right">
+                    <h3 class="no-margin">@Model.PendingApprovals</h3>
+                    <span class="text-uppercase text-size-mini">
+                        Pending Approvals
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                <table class="table leave-table align-middle">
+</div>
 
-                    <thead>
-                        <tr>
-                            <th>EMPLOYEE</th>
-                            <th>TYPE</th>
-                            <th>DURATION</th>
-                            <th>STATUS</th>
-                        </tr>
-                    </thead>
+<!-- Recent Leave Requests -->
+<div class="panel panel-flat">
 
-                    <tbody>
+    <div class="panel-heading">
+        <h6 class="panel-title">
+            <i class="icon-airplane3 position-left"></i>
+            Recent Leave Requests
+        </h6>
 
-                        <tr>
-                            <td class="fw-semibold">Rahul Sharma</td>
-                            <td>Annual Leave</td>
-                            <td>May 13 – May 17</td>
+        <div class="heading-elements">
+            <span class="badge bg-warning">
+                18 Pending
+            </span>
+        </div>
+    </div>
 
-                            <td>
-                                <span class="status-badge pending">
-                                    Pending
-                                </span>
-                            </td>
-                        </tr>
+    <!-- Summary -->
+    <div class="table-responsive">
+        <table class="table table-xlg text-nowrap">
+            <tbody>
+                <tr>
 
-                        <tr>
-                            <td class="fw-semibold">Priya Patel</td>
-                            <td>Sick Leave</td>
-                            <td>May 10 – May 11</td>
+                    <td class="col-md-4">
+                        <div class="media-left media-middle">
+                            <a href="#" class="btn border-warning text-warning btn-flat btn-rounded btn-icon">
+                                <i class="icon-airplane3"></i>
+                            </a>
+                        </div>
 
-                            <td>
-                                <span class="status-badge approved">
+                        <div class="media-left">
+                            <h5 class="text-semibold no-margin">
+                                42
+                                <small class="display-block">
+                                    Total Requests
+                                </small>
+                            </h5>
+                        </div>
+                    </td>
+
+                    <td class="col-md-3">
+                        <div class="media-left media-middle">
+                            <a href="#" class="btn border-success text-success btn-flat btn-rounded btn-icon">
+                                <i class="icon-checkmark3"></i>
+                            </a>
+                        </div>
+
+                        <div class="media-left">
+                            <h5 class="text-semibold no-margin">
+                                16
+                                <small class="display-block">
                                     Approved
-                                </span>
-                            </td>
-                        </tr>
+                                </small>
+                            </h5>
+                        </div>
+                    </td>
 
-                        <tr>
-                            <td class="fw-semibold">Sunny Singh</td>
-                            <td>Personal Leave</td>
-                            <td>May 20 – May 20</td>
+                    <td class="col-md-3">
+                        <div class="media-left media-middle">
+                            <a href="#" class="btn border-danger text-danger btn-flat btn-rounded btn-icon">
+                                <i class="icon-cross2"></i>
+                            </a>
+                        </div>
 
-                            <td>
-                                <span class="status-badge pending">
-                                    Pending
-                                </span>
-                            </td>
-                        </tr>
+                        <div class="media-left">
+                            <h5 class="text-semibold no-margin">
+                                8
+                                <small class="display-block">
+                                    Rejected
+                                </small>
+                            </h5>
+                        </div>
+                    </td>
 
-                        <tr class="active-row">
-                            <td class="fw-semibold">Leena Roy</td>
-                            <td>Annual Leave</td>
-                            <td>Jun 01 – Jun 05</td>
+                    <td class="text-right">
+                        <a href="#" class="btn bg-primary">
+                            View All
+                        </a>
+                    </td>
 
-                            <td>
-                                <span class="status-badge approved">
-                                    Approved
-                                </span>
-                            </td>
-                        </tr>
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        </div>
-
+                </tr>
+            </tbody>
+        </table>
     </div>
 
-    <!-- ================= HEADCOUNT BY DEPT ================= -->
+    <!-- Leave Requests List -->
+    <div class="table-responsive">
 
-    <div class="col-xl-4">
+        <table class="table text-nowrap">
 
-        <div class="custom-card">
+            <thead>
+                <tr>
+                    <th style="width:70px">Date</th>
+                    <th>Employee</th>
+                    <th>Leave Type</th>
+                    <th>Duration</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
 
-            <div class="card-header-custom">
-                <h4>Headcount by Dept</h4>
-            </div>
+            <tbody>
 
-            <!-- ITEM -->
-            <div class="dept-item">
+                <tr class="active border-double">
+                    <td colspan="4">
+                        Pending Approval
+                    </td>
 
-                <div class="dept-header">
-                    <span>Engineering</span>
-                    <span>82</span>
-                </div>
+                    <td class="text-right">
+                        <span class="badge bg-warning">
+                            18
+                        </span>
+                    </td>
+                </tr>
 
-                <div class="progress custom-progress">
-                    <div class="progress-bar blue-bar"
-                         style="width:82%">
-                    </div>
-                </div>
+                <tr>
+                    <td>
+                        <h6 class="no-margin">
+                            13
+                            <small class="display-block">
+                                JUN
+                            </small>
+                        </h6>
+                    </td>
 
-            </div>
+                    <td>
+                        <div class="media-left">
+                            <img src="/Content/images/user.png"
+                                 class="img-circle img-xs"
+                                 alt="">
+                        </div>
 
-            <!-- ITEM -->
-            <div class="dept-item">
+                        <div class="media-body">
+                            <span class="text-semibold">
+                                Rahul Sharma
+                            </span>
 
-                <div class="dept-header">
-                    <span>Marketing</span>
-                    <span>34</span>
-                </div>
+                            <div class="text-muted text-size-small">
+                                Software Developer
+                            </div>
+                        </div>
+                    </td>
 
-                <div class="progress custom-progress">
-                    <div class="progress-bar green-bar"
-                         style="width:34%">
-                    </div>
-                </div>
+                    <td>
+                        Casual Leave
+                    </td>
 
-            </div>
+                    <td>
+                        2 Days
+                    </td>
 
-            <!-- ITEM -->
-            <div class="dept-item">
+                    <td>
+                        <span class="label bg-warning">
+                            Pending
+                        </span>
+                    </td>
+                </tr>
 
-                <div class="dept-header">
-                    <span>Finance</span>
-                    <span>28</span>
-                </div>
+                <tr>
+                    <td>
+                        <h6 class="no-margin">
+                            12
+                            <small class="display-block">
+                                JUN
+                            </small>
+                        </h6>
+                    </td>
 
-                <div class="progress custom-progress">
-                    <div class="progress-bar orange-bar"
-                         style="width:28%">
-                    </div>
-                </div>
+                    <td>
+                        <div class="media-left">
+                            <img src="/Content/images/user.png"
+                                 class="img-circle img-xs"
+                                 alt="">
+                        </div>
 
-            </div>
+                        <div class="media-body">
+                            <span class="text-semibold">
+                                Priya Singh
+                            </span>
 
-            <!-- ITEM -->
-            <div class="dept-item">
+                            <div class="text-muted text-size-small">
+                                HR Manager
+                            </div>
+                        </div>
+                    </td>
 
-                <div class="dept-header">
-                    <span>Sales</span>
-                    <span>52</span>
-                </div>
+                    <td>
+                        Sick Leave
+                    </td>
 
-                <div class="progress custom-progress">
-                    <div class="progress-bar purple-bar"
-                         style="width:52%">
-                    </div>
-                </div>
+                    <td>
+                        1 Day
+                    </td>
 
-            </div>
+                    <td>
+                        <span class="label bg-success">
+                            Approved
+                        </span>
+                    </td>
+                </tr>
 
-            <!-- ITEM -->
-            <div class="dept-item">
+                <tr>
+                    <td>
+                        <h6 class="no-margin">
+                            11
+                            <small class="display-block">
+                                JUN
+                            </small>
+                        </h6>
+                    </td>
 
-                <div class="dept-header">
-                    <span>HR</span>
-                    <span>18</span>
-                </div>
+                    <td>
+                        <div class="media-left">
+                            <img src="/Content/images/user.png"
+                                 class="img-circle img-xs"
+                                 alt="">
+                        </div>
 
-                <div class="progress custom-progress">
-                    <div class="progress-bar cyan-bar"
-                         style="width:18%">
-                    </div>
-                </div>
+                        <div class="media-body">
+                            <span class="text-semibold">
+                                Amit Verma
+                            </span>
 
-            </div>
+                            <div class="text-muted text-size-small">
+                                Accountant
+                            </div>
+                        </div>
+                    </td>
 
-            <!-- ITEM -->
-            <div class="dept-item mb-0">
+                    <td>
+                        Earned Leave
+                    </td>
 
-                <div class="dept-header">
-                    <span>Design</span>
-                    <span>22</span>
-                </div>
+                    <td>
+                        5 Days
+                    </td>
 
-                <div class="progress custom-progress">
-                    <div class="progress-bar red-bar"
-                         style="width:22%">
-                    </div>
-                </div>
+                    <td>
+                        <span class="label bg-danger">
+                            Rejected
+                        </span>
+                    </td>
+                </tr>
 
-            </div>
+                <tr>
+                    <td>
+                        <h6 class="no-margin">
+                            10
+                            <small class="display-block">
+                                JUN
+                            </small>
+                        </h6>
+                    </td>
 
-        </div>
+                    <td>
+                        <div class="media-left">
+                            <img src="/Content/images/user.png"
+                                 class="img-circle img-xs"
+                                 alt="">
+                        </div>
+
+                        <div class="media-body">
+                            <span class="text-semibold">
+                                Neha Gupta
+                            </span>
+
+                            <div class="text-muted text-size-small">
+                                Designer
+                            </div>
+                        </div>
+                    </td>
+
+                    <td>
+                        Work From Home
+                    </td>
+
+                    <td>
+                        3 Days
+                    </td>
+
+                    <td>
+                        <span class="label bg-info">
+                            Forwarded
+                        </span>
+                    </td>
+                </tr>
+
+            </tbody>
+
+        </table>
 
     </div>
 
 </div>
-
-<!-- ================= ROW ================= -->
-
-<div class="row g-4 mt-1">
-
-    <!-- ================= RECENT ACTIVITY ================= -->
-
-    <div class="col-xl-6">
-
-        <div class="activity-card">
-
-            <!-- HEADER -->
-            <div class="card-header-custom">
-
-                <h4>Recent Activity</h4>
-
-                <a href="#" class="action-link">
-                    Clear all
-                </a>
-
-            </div>
-
-            <!-- BODY -->
-            <div class="card-body-custom">
-
-                <!-- ITEM -->
-                <div class="activity-item">
-
-                    <div class="activity-left">
-
-                        <span class="activity-dot green-dot"></span>
-
-                        <div class="activity-content">
-
-                            <p>
-                                <strong>Priya Patel</strong>
-                                checked in at 9:02 AM
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                    <span class="activity-time">
-                        2m ago
-                    </span>
-
-                </div>
-
-                <!-- ITEM -->
-                <div class="activity-item">
-
-                    <div class="activity-left">
-
-                        <span class="activity-dot blue-dot"></span>
-
-                        <div class="activity-content">
-
-                            <p>
-                                <strong>New employee</strong>
-                                David Wilson onboarded to Sales
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                    <span class="activity-time">
-                        1h ago
-                    </span>
-
-                </div>
-
-                <!-- ITEM -->
-                <div class="activity-item">
-
-                    <div class="activity-left">
-
-                        <span class="activity-dot orange-dot"></span>
-
-                        <div class="activity-content">
-
-                            <p>
-                                <strong>James Anderson</strong>
-                                submitted a leave request
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                    <span class="activity-time">
-                        2h ago
-                    </span>
-
-                </div>
-
-                <!-- ITEM -->
-                <div class="activity-item">
-
-                    <div class="activity-left">
-
-                        <span class="activity-dot red-dot"></span>
-
-                        <div class="activity-content">
-
-                            <p>
-                                <strong>Michael Brown</strong>
-                                marked absent
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                    <span class="activity-time">
-                        3h ago
-                    </span>
-
-                </div>
-
-                <!-- ITEM -->
-                <div class="activity-item">
-
-                    <div class="activity-left">
-
-                        <span class="activity-dot teal-dot"></span>
-
-                        <div class="activity-content">
-
-                            <p>
-                                <strong>May payroll</strong>
-                                processing initiated
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                    <span class="activity-time">
-                        5h ago
-                    </span>
-
-                </div>
-
-                <!-- ITEM -->
-                <div class="activity-item mb-0 border-0">
-
-                    <div class="activity-left">
-
-                        <span class="activity-dot blue-dot"></span>
-
-                        <div class="activity-content">
-
-                            <p>
-                                <strong>Lisa Martinez</strong>
-                                leave approved by Manager
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                    <span class="activity-time">
-                        Yesterday
-                    </span>
-
-                </div>
-
-            </div>
-
+<!-- /Recent Leave Requests -->
+
+<!-- Upcoming Events -->
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h6 class="panel-title">
+            <i class="icon-calendar3 position-left"></i>
+            Upcoming Events
+        </h6>
+
+        <div class="heading-elements">
+            <span class="badge bg-primary">
+                8 Upcoming
+            </span>
         </div>
-
     </div>
 
-    <!-- ================= UPCOMING EVENTS ================= -->
+    <!-- Summary -->
+    <div class="table-responsive">
+        <table class="table table-xlg text-nowrap">
+            <tbody>
+                <tr>
 
-    <div class="col-xl-6">
-
-        <div class="activity-card">
-
-            <!-- HEADER -->
-            <div class="card-header-custom">
-
-                <h4>Upcoming Events</h4>
-
-                <a href="#" class="action-link">
-                    Add event
-                </a>
-
-            </div>
-
-            <!-- BODY -->
-            <div class="card-body-custom">
-
-                <!-- EVENT -->
-                <div class="event-item">
-
-                    <div class="event-left">
-
-                        <span class="activity-dot blue-dot"></span>
-
-                        <div>
-
-                            <h5>Team All-Hands Meeting</h5>
-
-                            <p>
-                                May 15, 2026 • 10:00 AM
-                            </p>
-
+                    <td class="col-md-4">
+                        <div class="media-left media-middle">
+                            <a href="#" class="btn border-primary text-primary btn-flat btn-rounded btn-icon">
+                                <i class="icon-calendar"></i>
+                            </a>
                         </div>
 
-                    </div>
+                        <div class="media-left">
+                            <h5 class="text-semibold no-margin">
+                                8
+                                <small class="display-block">
+                                    Total Upcoming Events
+                                </small>
+                            </h5>
+                        </div>
+                    </td>
 
-                    <span class="event-badge">
-                        4d
-                    </span>
-
-                </div>
-
-                <!-- EVENT -->
-                <div class="event-item">
-
-                    <div class="event-left">
-
-                        <span class="activity-dot orange-dot"></span>
-
-                        <div>
-
-                            <h5>Q2 Performance Reviews</h5>
-
-                            <p>
-                                May 20–30, 2026
-                            </p>
-
+                    <td class="col-md-3">
+                        <div class="media-left media-middle">
+                            <a href="#" class="btn border-success text-success btn-flat btn-rounded btn-icon">
+                                <i class="icon-gift"></i>
+                            </a>
                         </div>
 
-                    </div>
+                        <div class="media-left">
+                            <h5 class="text-semibold no-margin">
+                                3
+                                <small class="display-block">
+                                    Birthdays
+                                </small>
+                            </h5>
+                        </div>
+                    </td>
 
-                    <span class="event-badge">
-                        9d
-                    </span>
-
-                </div>
-
-                <!-- EVENT -->
-                <div class="event-item">
-
-                    <div class="event-left">
-
-                        <span class="activity-dot green-dot"></span>
-
-                        <div>
-
-                            <h5>New Hire Orientation</h5>
-
-                            <p>
-                                May 22, 2026 • 9:00 AM
-                            </p>
-
+                    <td class="col-md-3">
+                        <div class="media-left media-middle">
+                            <a href="#" class="btn border-danger text-danger btn-flat btn-rounded btn-icon">
+                                <i class="icon-flag3"></i>
+                            </a>
                         </div>
 
-                    </div>
+                        <div class="media-left">
+                            <h5 class="text-semibold no-margin">
+                                2
+                                <small class="display-block">
+                                    Holidays
+                                </small>
+                            </h5>
+                        </div>
+                    </td>
 
-                    <span class="event-badge">
-                        11d
-                    </span>
+                    <td class="col-md-2 text-right">
+                        <a href="#" class="btn bg-primary">
+                            View Calendar
+                        </a>
+                    </td>
 
-                </div>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 
-                <!-- EVENT -->
-                <div class="event-item">
+    <!-- Event List -->
+    <div class="table-responsive">
 
-                    <div class="event-left">
+        <table class="table text-nowrap">
 
-                        <span class="activity-dot teal-dot"></span>
+            <tbody>
 
-                        <div>
+                <tr class="active border-double">
+                    <td colspan="4">
+                        Today's Events
+                    </td>
 
-                            <h5>Payroll Processing Deadline</h5>
+                    <td class="text-right">
+                        <span class="badge bg-success">
+                            2
+                        </span>
+                    </td>
+                </tr>
 
-                            <p>
-                                May 25, 2026
-                            </p>
+                <tr>
+                    <td width="70">
+                        <h5 class="text-primary no-margin">
+                            13
+                            <small class="display-block">
+                                JUN
+                            </small>
+                        </h5>
+                    </td>
 
+                    <td width="60">
+                        <a href="#" class="btn bg-success btn-rounded btn-icon btn-xs">
+                            <i class="icon-gift"></i>
+                        </a>
+                    </td>
+
+                    <td>
+                        <div class="text-semibold">
+                            Rahul Sharma Birthday
                         </div>
 
-                    </div>
+                        <span class="text-muted">
+                            Sales Department
+                        </span>
+                    </td>
 
-                    <span class="event-badge">
-                        14d
-                    </span>
+                    <td>
+                        <span class="label bg-success">
+                            Birthday
+                        </span>
+                    </td>
 
-                </div>
+                    <td class="text-right">
+                        Today
+                    </td>
+                </tr>
 
-                <!-- EVENT -->
-                <div class="event-item mb-0 border-0">
+                <tr>
+                    <td>
+                        <h5 class="text-info no-margin">
+                            15
+                            <small class="display-block">
+                                JUN
+                            </small>
+                        </h5>
+                    </td>
 
-                    <div class="event-left">
+                    <td>
+                        <a href="#" class="btn bg-info btn-rounded btn-icon btn-xs">
+                            <i class="icon-users"></i>
+                        </a>
+                    </td>
 
-                        <span class="activity-dot red-dot"></span>
-
-                        <div>
-
-                            <h5>Annual Compliance Training</h5>
-
-                            <p>
-                                May 28, 2026
-                            </p>
-
+                    <td>
+                        <div class="text-semibold">
+                            Employee Engagement Program
                         </div>
 
-                    </div>
+                        <span class="text-muted">
+                            HR Department
+                        </span>
+                    </td>
 
-                    <span class="event-badge">
-                        17d
-                    </span>
+                    <td>
+                        <span class="label bg-info">
+                            Activity
+                        </span>
+                    </td>
 
-                </div>
+                    <td class="text-right">
+                        10:00 AM
+                    </td>
+                </tr>
 
-            </div>
+                <tr class="active border-double">
+                    <td colspan="4">
+                        Upcoming Holidays
+                    </td>
 
-        </div>
+                    <td class="text-right">
+                        <span class="badge bg-danger">
+                            2
+                        </span>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <h5 class="text-danger no-margin">
+                            21
+                            <small class="display-block">
+                                JUN
+                            </small>
+                        </h5>
+                    </td>
+
+                    <td>
+                        <a href="#" class="btn bg-danger btn-rounded btn-icon btn-xs">
+                            <i class="icon-flag3"></i>
+                        </a>
+                    </td>
+
+                    <td>
+                        <div class="text-semibold">
+                            International Yoga Day
+                        </div>
+
+                        <span class="text-muted">
+                            Company Holiday
+                        </span>
+                    </td>
+
+                    <td>
+                        <span class="label bg-danger">
+                            Holiday
+                        </span>
+                    </td>
+
+                    <td class="text-right">
+                        Sunday
+                    </td>
+                </tr>
+
+            </tbody>
+
+        </table>
 
     </div>
 
 </div>
+<!-- /Upcoming Events -->
 
-<!-- ================= UPCOMING BIRTHDAY ================= -->
+<!-- Upcoming Birthdays -->
+<div class="panel panel-flat">
 
-<div class="row g-4 mt-1">
+    <div class="panel-heading">
+        <h6 class="panel-title">
+            <i class="icon-gift position-left"></i>
+            Upcoming Birthdays
+        </h6>
 
-    <div class="col-xl-6">
-
-        <div class="activity-card">
-
-            <!-- HEADER -->
-            <div class="card-header-custom">
-
-                <h4>Upcoming Birthdays</h4>
-
-                <a href="#" class="action-link">
-                    View all
-                </a>
-
-            </div>
-
-            <!-- BODY -->
-            <div class="birthday-wrapper">
-
-                <!-- ITEM -->
-                <div class="birthday-item">
-
-                    <img src="https://i.pravatar.cc/100?img=11">
-
-                    <div class="birthday-content">
-
-                        <h5>Sarah Johnson</h5>
-
-                        <p>UI/UX Designer</p>
-
-                    </div>
-
-                    <span class="birthday-date">
-                        14 May
-                    </span>
-
-                </div>
-
-                <!-- ITEM -->
-                <div class="birthday-item">
-
-                    <img src="https://i.pravatar.cc/100?img=12">
-
-                    <div class="birthday-content">
-
-                        <h5>Michael Brown</h5>
-
-                        <p>Software Engineer</p>
-
-                    </div>
-
-                    <span class="birthday-date">
-                        16 May
-                    </span>
-
-                </div>
-
-                <!-- ITEM -->
-                <div class="birthday-item">
-
-                    <img src="https://i.pravatar.cc/100?img=13">
-
-                    <div class="birthday-content">
-
-                        <h5>Emma Wilson</h5>
-
-                        <p>HR Executive</p>
-
-                    </div>
-
-                    <span class="birthday-date">
-                        19 May
-                    </span>
-
-                </div>
-
-                <!-- ITEM -->
-                <div class="birthday-item border-0">
-
-                    <img src="https://i.pravatar.cc/100?img=14">
-
-                    <div class="birthday-content">
-
-                        <h5>David Clark</h5>
-
-                        <p>Marketing Manager</p>
-
-                    </div>
-
-                    <span class="birthday-date">
-                        22 May
-                    </span>
-
-                </div>
-
-            </div>
-
+        <div class="heading-elements">
+            <span class="badge bg-success">
+                12 This Month
+            </span>
         </div>
-
     </div>
-    <!-- ================= ANNOUNCEMENTS ================= -->
 
-    <div class="col-xl-6">
+    <!-- Summary -->
+    <div class="table-responsive">
+        <table class="table table-xlg text-nowrap">
+            <tbody>
+                <tr>
 
-        <div class="announcement-card">
-
-            <!-- HEADER -->
-            <div class="card-header-custom">
-
-                <h4>Announcements</h4>
-
-                <a href="#" class="action-link">
-                    View all
-                </a>
-
-            </div>
-
-            <!-- BODY -->
-            <div class="announcement-wrapper">
-
-                <!-- ITEM -->
-                <div class="announcement-item">
-
-                    <div class="announcement-icon blue-bg">
-                        <i class="bi bi-megaphone"></i>
-                    </div>
-
-                    <div class="announcement-content">
-
-                        <div class="announcement-top">
-
-                            <h5>Company Town Hall Meeting</h5>
-
-                            <span class="announcement-date">
-                                Today
-                            </span>
-
+                    <td class="col-md-4">
+                        <div class="media-left media-middle">
+                            <a href="#" class="btn border-success text-success btn-flat btn-rounded btn-icon">
+                                <i class="icon-gift"></i>
+                            </a>
                         </div>
 
-                        <p>
-                            Join the company-wide town hall meeting today at
-                            4:00 PM in the main conference hall.
-                        </p>
+                        <div class="media-left">
+                            <h5 class="text-semibold no-margin">
+                                12
+                                <small class="display-block">
+                                    Birthdays This Month
+                                </small>
+                            </h5>
+                        </div>
+                    </td>
 
-                    </div>
-
-                </div>
-
-                <!-- ITEM -->
-                <div class="announcement-item">
-
-                    <div class="announcement-icon green-bg">
-                        <i class="bi bi-trophy"></i>
-                    </div>
-
-                    <div class="announcement-content">
-
-                        <div class="announcement-top">
-
-                            <h5>Employee of the Month</h5>
-
-                            <span class="announcement-date">
-                                1 day ago
-                            </span>
-
+                    <td class="col-md-3">
+                        <div class="media-left media-middle">
+                            <a href="#" class="btn border-primary text-primary btn-flat btn-rounded btn-icon">
+                                <i class="icon-calendar"></i>
+                            </a>
                         </div>
 
-                        <p>
-                            Congratulations to Priya Patel from Engineering
-                            for outstanding performance this month.
-                        </p>
+                        <div class="media-left">
+                            <h5 class="text-semibold no-margin">
+                                2
+                                <small class="display-block">
+                                    Today
+                                </small>
+                            </h5>
+                        </div>
+                    </td>
 
-                    </div>
-
-                </div>
-
-                <!-- ITEM -->
-                <div class="announcement-item">
-
-                    <div class="announcement-icon orange-bg">
-                        <i class="bi bi-calendar-event"></i>
-                    </div>
-
-                    <div class="announcement-content">
-
-                        <div class="announcement-top">
-
-                            <h5>Holiday Notice</h5>
-
-                            <span class="announcement-date">
-                                2 days ago
-                            </span>
-
+                    <td class="col-md-3">
+                        <div class="media-left media-middle">
+                            <a href="#" class="btn border-warning text-warning btn-flat btn-rounded btn-icon">
+                                <i class="icon-cake"></i>
+                            </a>
                         </div>
 
-                        <p>
-                            Office will remain closed on Friday due to the
-                            national public holiday.
-                        </p>
-
-                    </div>
-
-                </div>
-
-                <!-- ITEM -->
-                <div class="announcement-item border-0 mb-0">
-
-                    <div class="announcement-icon red-bg">
-                        <i class="bi bi-shield-check"></i>
-                    </div>
-
-                    <div class="announcement-content">
-
-                        <div class="announcement-top">
-
-                            <h5>Security Awareness Training</h5>
-
-                            <span class="announcement-date">
-                                3 days ago
-                            </span>
-
+                        <div class="media-left">
+                            <h5 class="text-semibold no-margin">
+                                5
+                                <small class="display-block">
+                                    This Week
+                                </small>
+                            </h5>
                         </div>
+                    </td>
 
-                        <p>
-                            Mandatory cybersecurity training session scheduled
-                            for all employees next Monday.
-                        </p>
+                    <td class="text-right">
+                        <a href="#" class="btn bg-success">
+                            View All
+                        </a>
+                    </td>
 
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
+                </tr>
+            </tbody>
+        </table>
     </div>
-</div>
 
-<!-- ================= UPCOMING HOLIDAYS ================= -->
+    <!-- Birthday List -->
+    <div class="table-responsive">
+        <table class="table text-nowrap">
 
-<div class="row g-4 mt-1">
+            <tbody>
 
-    <div class="col-xl-12">
+                <tr class="active border-double">
+                    <td colspan="4">
+                        Today's Birthdays
+                    </td>
 
-        <div class="holiday-card">
+                    <td class="text-right">
+                        <span class="badge bg-success">2</span>
+                    </td>
+                </tr>
 
-            <!-- HEADER -->
-            <div class="card-header-custom">
+                <tr>
+                    <td width="70">
+                        <h5 class="text-success no-margin">13</h5>
+                        <small>JUN</small>
+                    </td>
 
-                <h4>Upcoming Holidays</h4>
+                    <td width="60">
+                        <img src="/Content/images/user.png"
+                             class="img-circle img-xs">
+                    </td>
 
-                <a href="#" class="action-link">
-                    View calendar
-                </a>
-
-            </div>
-
-            <!-- BODY -->
-            <div class="holiday-wrapper">
-
-                <!-- ITEM -->
-                <div class="holiday-item">
-
-                    <div class="holiday-left">
-
-                        <div class="holiday-icon blue-bg">
-                            <i class="bi bi-stars"></i>
+                    <td>
+                        <div class="text-semibold">
+                            Rahul Sharma
                         </div>
+                        <span class="text-muted">
+                            Software Developer
+                        </span>
+                    </td>
 
-                        <div class="holiday-content">
+                    <td>
+                        <span class="label bg-success">
+                            Birthday
+                        </span>
+                    </td>
 
-                            <h5>Independence Day</h5>
+                    <td class="text-right">
+                        🎂 Today
+                    </td>
+                </tr>
 
-                            <p>
-                                National Holiday • India
-                            </p>
+                <tr>
+                    <td>
+                        <h5 class="text-primary no-margin">15</h5>
+                        <small>JUN</small>
+                    </td>
 
+                    <td>
+                        <img src="/Content/images/user.png"
+                             class="img-circle img-xs">
+                    </td>
+
+                    <td>
+                        <div class="text-semibold">
+                            Priya Singh
                         </div>
+                        <span class="text-muted">
+                            HR Manager
+                        </span>
+                    </td>
 
-                    </div>
+                    <td>
+                        <span class="label bg-primary">
+                            Upcoming
+                        </span>
+                    </td>
 
-                    <div class="holiday-right">
+                    <td class="text-right">
+                        2 Days
+                    </td>
+                </tr>
 
-                        <h6>15 Aug</h6>
+            </tbody>
 
-                        <span>Friday</span>
-
-                    </div>
-
-                </div>
-
-                <!-- ITEM -->
-                <div class="holiday-item">
-
-                    <div class="holiday-left">
-
-                        <div class="holiday-icon orange-bg">
-                            <i class="bi bi-lamp"></i>
-                        </div>
-
-                        <div class="holiday-content">
-
-                            <h5>Diwali Festival</h5>
-
-                            <p>
-                                Festival of Lights
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                    <div class="holiday-right">
-
-                        <h6>21 Oct</h6>
-
-                        <span>Tuesday</span>
-
-                    </div>
-
-                </div>
-
-                <!-- ITEM -->
-                <div class="holiday-item">
-
-                    <div class="holiday-left">
-
-                        <div class="holiday-icon green-bg">
-                            <i class="bi bi-tree"></i>
-                        </div>
-
-                        <div class="holiday-content">
-
-                            <h5>Christmas Day</h5>
-
-                            <p>
-                                Public Holiday
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                    <div class="holiday-right">
-
-                        <h6>25 Dec</h6>
-
-                        <span>Thursday</span>
-
-                    </div>
-
-                </div>
-
-                <!-- ITEM -->
-                <div class="holiday-item border-0 mb-0">
-
-                    <div class="holiday-left">
-
-                        <div class="holiday-icon red-bg">
-                            <i class="bi bi-flag"></i>
-                        </div>
-
-                        <div class="holiday-content">
-
-                            <h5>Republic Day</h5>
-
-                            <p>
-                                National Celebration
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                    <div class="holiday-right">
-
-                        <h6>26 Jan</h6>
-
-                        <span>Monday</span>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
+        </table>
     </div>
 
 </div>
+<!-- /Upcoming Birthdays -->
+
+<!-- Announcements -->
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h6 class="panel-title">
+            <i class="icon-megaphone position-left"></i>
+            Announcements
+        </h6>
+
+        <div class="heading-elements">
+            <span class="badge bg-primary">
+                6 Active
+            </span>
+        </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="table-responsive">
+        <table class="table table-xlg text-nowrap">
+            <tbody>
+                <tr>
+
+                    <td class="col-md-4">
+                        <div class="media-left media-middle">
+                            <a href="#" class="btn border-primary text-primary btn-flat btn-rounded btn-icon">
+                                <i class="icon-megaphone"></i>
+                            </a>
+                        </div>
+
+                        <div class="media-left">
+                            <h5 class="text-semibold no-margin">
+                                6
+                                <small class="display-block">
+                                    Active Announcements
+                                </small>
+                            </h5>
+                        </div>
+                    </td>
+
+                    <td class="col-md-3">
+                        <div class="media-left media-middle">
+                            <a href="#" class="btn border-success text-success btn-flat btn-rounded btn-icon">
+                                <i class="icon-newspaper"></i>
+                            </a>
+                        </div>
+
+                        <div class="media-left">
+                            <h5 class="text-semibold no-margin">
+                                3
+                                <small class="display-block">
+                                    This Week
+                                </small>
+                            </h5>
+                        </div>
+                    </td>
+
+                    <td class="col-md-3">
+                        <div class="media-left media-middle">
+                            <a href="#" class="btn border-warning text-warning btn-flat btn-rounded btn-icon">
+                                <i class="icon-bell2"></i>
+                            </a>
+                        </div>
+
+                        <div class="media-left">
+                            <h5 class="text-semibold no-margin">
+                                1
+                                <small class="display-block">
+                                    High Priority
+                                </small>
+                            </h5>
+                        </div>
+                    </td>
+
+                    <td class="text-right">
+                        <a href="#" class="btn bg-primary">
+                            View All
+                        </a>
+                    </td>
+
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Announcement List -->
+    <div class="table-responsive">
+        <table class="table text-nowrap">
+
+            <tbody>
+
+                <tr class="active border-double">
+                    <td colspan="4">
+                        Latest Announcements
+                    </td>
+
+                    <td class="text-right">
+                        <span class="badge bg-primary">6</span>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td width="70">
+                        <h5 class="text-primary no-margin">13</h5>
+                        <small>JUN</small>
+                    </td>
+
+                    <td width="60">
+                        <span class="btn bg-primary btn-rounded btn-icon btn-xs">
+                            <i class="icon-megaphone"></i>
+                        </span>
+                    </td>
+
+                    <td>
+                        <div class="text-semibold">
+                            Annual Performance Review
+                        </div>
+
+                        <span class="text-muted">
+                            Performance review cycle starts from 20th June.
+                        </span>
+                    </td>
+
+                    <td>
+                        <span class="label bg-primary">
+                            General
+                        </span>
+                    </td>
+
+                    <td class="text-right">
+                        HR Dept.
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <h5 class="text-danger no-margin">12</h5>
+                        <small>JUN</small>
+                    </td>
+
+                    <td>
+                        <span class="btn bg-danger btn-rounded btn-icon btn-xs">
+                            <i class="icon-warning22"></i>
+                        </span>
+                    </td>
+
+                    <td>
+                        <div class="text-semibold">
+                            Office Maintenance Notice
+                        </div>
+
+                        <span class="text-muted">
+                            Power shutdown scheduled on Sunday.
+                        </span>
+                    </td>
+
+                    <td>
+                        <span class="label bg-danger">
+                            Important
+                        </span>
+                    </td>
+
+                    <td class="text-right">
+                        Admin
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <h5 class="text-success no-margin">10</h5>
+                        <small>JUN</small>
+                    </td>
+
+                    <td>
+                        <span class="btn bg-success btn-rounded btn-icon btn-xs">
+                            <i class="icon-trophy3"></i>
+                        </span>
+                    </td>
+
+                    <td>
+                        <div class="text-semibold">
+                            Employee of the Month
+                        </div>
+
+                        <span class="text-muted">
+                            Congratulations to Amit Verma.
+                        </span>
+                    </td>
+
+                    <td>
+                        <span class="label bg-success">
+                            Achievement
+                        </span>
+                    </td>
+
+                    <td class="text-right">
+                        Management
+                    </td>
+                </tr>
+
+            </tbody>
+
+        </table>
+    </div>
+
+</div>
+<!-- /Announcements -->
+
+<!-- Headcount by Department -->
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h6 class="panel-title">
+            <i class="icon-users4 position-left"></i>
+            Headcount by Department
+        </h6>
+
+        <div class="heading-elements">
+            <span class="badge bg-primary">
+                248 Employees
+            </span>
+        </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="table-responsive">
+        <table class="table table-xlg text-nowrap">
+            <tbody>
+                <tr>
+
+                    <td class="col-md-4">
+                        <div class="media-left media-middle">
+                            <a href="#" class="btn border-primary text-primary btn-flat btn-rounded btn-icon">
+                                <i class="icon-users4"></i>
+                            </a>
+                        </div>
+
+                        <div class="media-left">
+                            <h5 class="text-semibold no-margin">
+                                248
+                                <small class="display-block">
+                                    Total Employees
+                                </small>
+                            </h5>
+                        </div>
+                    </td>
+
+                    <td class="col-md-3">
+                        <div class="media-left media-middle">
+                            <a href="#" class="btn border-success text-success btn-flat btn-rounded btn-icon">
+                                <i class="icon-office"></i>
+                            </a>
+                        </div>
+
+                        <div class="media-left">
+                            <h5 class="text-semibold no-margin">
+                                12
+                                <small class="display-block">
+                                    Departments
+                                </small>
+                            </h5>
+                        </div>
+                    </td>
+
+                    <td class="col-md-3">
+                        <div class="media-left media-middle">
+                            <a href="#" class="btn border-warning text-warning btn-flat btn-rounded btn-icon">
+                                <i class="icon-user-plus"></i>
+                            </a>
+                        </div>
+
+                        <div class="media-left">
+                            <h5 class="text-semibold no-margin">
+                                18
+                                <small class="display-block">
+                                    New Joiners
+                                </small>
+                            </h5>
+                        </div>
+                    </td>
+
+                    <td class="text-right">
+                        <a href="#" class="btn bg-primary">
+                            View Report
+                        </a>
+                    </td>
+
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Department List -->
+    <div class="table-responsive">
+        <table class="table text-nowrap">
+
+            <thead>
+                <tr>
+                    <th>Department</th>
+                    <th>Headcount</th>
+                    <th>Percentage</th>
+                    <th style="width:200px;">Distribution</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                <tr>
+                    <td>
+                        <span class="text-semibold">
+                            Information Technology
+                        </span>
+                    </td>
+
+                    <td>
+                        <span class="badge bg-primary">
+                            82
+                        </span>
+                    </td>
+
+                    <td>33%</td>
+
+                    <td>
+                        <div class="progress">
+                            <div class="progress-bar bg-primary"
+                                 style="width:33%">
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <span class="text-semibold">
+                            Human Resources
+                        </span>
+                    </td>
+
+                    <td>
+                        <span class="badge bg-success">
+                            24
+                        </span>
+                    </td>
+
+                    <td>10%</td>
+
+                    <td>
+                        <div class="progress">
+                            <div class="progress-bar bg-success"
+                                 style="width:10%">
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <span class="text-semibold">
+                            Sales & Marketing
+                        </span>
+                    </td>
+
+                    <td>
+                        <span class="badge bg-warning">
+                            56
+                        </span>
+                    </td>
+
+                    <td>23%</td>
+
+                    <td>
+                        <div class="progress">
+                            <div class="progress-bar bg-warning"
+                                 style="width:23%">
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <span class="text-semibold">
+                            Finance
+                        </span>
+                    </td>
+
+                    <td>
+                        <span class="badge bg-info">
+                            18
+                        </span>
+                    </td>
+
+                    <td>7%</td>
+
+                    <td>
+                        <div class="progress">
+                            <div class="progress-bar bg-info"
+                                 style="width:7%">
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <span class="text-semibold">
+                            Operations
+                        </span>
+                    </td>
+
+                    <td>
+                        <span class="badge bg-danger">
+                            68
+                        </span>
+                    </td>
+
+                    <td>27%</td>
+
+                    <td>
+                        <div class="progress">
+                            <div class="progress-bar bg-danger"
+                                 style="width:27%">
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+
+            </tbody>
+
+        </table>
+    </div>
+
+</div>
+<!-- /Headcount by Department -->

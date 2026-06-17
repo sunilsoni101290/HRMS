@@ -1,0 +1,316 @@
+﻿@model AttendanceDto
+
+@{
+    ViewData["Title"] = "Attendance Details";
+}
+
+<div class="panel panel-flat">
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-calendar3 position-left"></i>
+            Attendance Details
+        </h5>
+
+        <div class="heading-elements">
+
+            @switch (Model.Status)
+            {
+                case EnumExtensions.AttendanceStatus.Present:
+                    <span class="label label-success">Present</span>
+                    break;
+
+                case EnumExtensions.AttendanceStatus.Absent:
+                    <span class="label label-danger">Absent</span>
+                    break;
+
+                case EnumExtensions.AttendanceStatus.HalfDay:
+                    <span class="label label-warning">Half Day</span>
+                    break;
+
+                case EnumExtensions.AttendanceStatus.Leave:
+                    <span class="label label-info">Leave</span>
+                    break;
+            }
+
+        </div>
+
+    </div>
+
+    <!-- KPI Summary -->
+
+    <div class="panel-body">
+
+        <div class="row">
+
+            <div class="col-md-3">
+                <div class="panel bg-success-400">
+                    <div class="panel-body text-center">
+                        <h6>Working Hours</h6>
+                        <h4>@Model.WorkingHoursText</h4>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="panel bg-warning-400">
+                    <div class="panel-body text-center">
+                        <h6>Break Hours</h6>
+                        <h4>@Model.BreakHours</h4>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="panel bg-info-400">
+                    <div class="panel-body text-center">
+                        <h6>Overtime</h6>
+                        <h4>@Model.OvertimeHours</h4>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="panel bg-primary-400">
+                    <div class="panel-body text-center">
+                        <h6>Shift</h6>
+                        <h4>@Model.ShiftName</h4>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="row">
+
+            <!-- Employee Information -->
+
+            <div class="col-md-6">
+
+                <div class="panel panel-bordered">
+
+                    <div class="panel-heading">
+                        <h6 class="panel-title">
+                            <i class="icon-user position-left"></i>
+                            Employee Information
+                        </h6>
+                    </div>
+
+                    <table class="table table-striped">
+
+                        <tbody>
+
+                            <tr>
+                                <th width="200">Employee</th>
+                                <td>@Model.EmployeeName</td>
+                            </tr>
+
+                            <tr>
+                                <th>Company</th>
+                                <td>@Model.CompanyName</td>
+                            </tr>
+
+                            <tr>
+                                <th>Branch</th>
+                                <td>@Model.BranchName</td>
+                            </tr>
+
+                            <tr>
+                                <th>Date</th>
+                                <td>@Model.Date.ToString("dd MMM yyyy")</td>
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+            <!-- Timing Details -->
+
+            <div class="col-md-6">
+
+                <div class="panel panel-bordered">
+
+                    <div class="panel-heading">
+                        <h6 class="panel-title">
+                            <i class="icon-watch2 position-left"></i>
+                            Timing Details
+                        </h6>
+                    </div>
+
+                    <table class="table table-striped">
+
+                        <tbody>
+
+                            <tr>
+                                <th width="200">First In</th>
+                                <td>
+                                    @(Model.FirstIn.HasValue
+                                        ? Model.FirstIn.Value.ToString("dd MMM yyyy hh:mm tt")
+                                        : "-")
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <th>Last Out</th>
+                                <td>
+                                    @(Model.LastOut.HasValue
+                                        ? Model.LastOut.Value.ToString("dd MMM yyyy hh:mm tt")
+                                        : "-")
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <th>Working Hours</th>
+                                <td>
+                                    <span class="label label-success">
+                                        @Model.WorkingHoursText
+                                    </span>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <th>OT Hours</th>
+                                <td>@Model.OvertimeHours</td>
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Attendance Flags -->
+
+        <div class="panel panel-flat">
+
+            <div class="panel-heading">
+                <h6 class="panel-title">
+                    <i class="icon-flag3 position-left"></i>
+                    Attendance Flags
+                </h6>
+            </div>
+
+            <table class="table table-bordered">
+
+                <thead>
+                    <tr>
+                        <th>Flag</th>
+                        <th>Status</th>
+                        <th>Flag</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    <tr>
+
+                        <td>Late Coming</td>
+
+                        <td>
+                            @if (Model.IsLate)
+                            {
+                                <span class="label label-warning">Yes</span>
+                            }
+                            else
+                            {
+                                <span class="label label-success">No</span>
+                            }
+                        </td>
+
+                        <td>Early Exit</td>
+
+                        <td>
+                            @if (Model.IsEarlyExit)
+                            {
+                                <span class="label label-danger">Yes</span>
+                            }
+                            else
+                            {
+                                <span class="label label-success">No</span>
+                            }
+                        </td>
+
+                    </tr>
+
+                    <tr>
+
+                        <td>Manual Entry</td>
+
+                        <td>
+                            @if (Model.IsManualEntry)
+                            {
+                                <span class="label label-info">Manual</span>
+                            }
+                            else
+                            {
+                                <span class="label label-success">Auto</span>
+                            }
+                        </td>
+
+                        <td>Status</td>
+
+                        <td>
+                            <span class="label label-primary">
+                                @Model.StatusText
+                            </span>
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Remarks))
+        {
+            <div class="panel panel-flat">
+
+                <div class="panel-heading">
+                    <h6 class="panel-title">
+                        <i class="icon-comment-discussion position-left"></i>
+                        Remarks
+                    </h6>
+                </div>
+
+                <div class="panel-body">
+                    @Model.Remarks
+                </div>
+
+            </div>
+        }
+
+        <div class="text-right">
+
+            <a asp-action="Index"
+               class="btn btn-default">
+
+                <i class="icon-arrow-left13"></i>
+                Back
+
+            </a>
+
+            <a asp-action="Edit"
+               asp-route-id="@Model.Id"
+               class="btn bg-primary">
+
+                <i class="icon-pencil7"></i>
+                Edit
+
+            </a>
+
+        </div>
+
+    </div>
+
+</div>

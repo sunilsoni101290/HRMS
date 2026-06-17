@@ -1,0 +1,275 @@
+﻿@model AttendanceLogDto
+
+@{
+    ViewData["Title"] = "Attendance Log Details";
+}
+
+<div class="panel panel-flat">
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-fingerprint position-left"></i>
+            Attendance Log Details
+        </h5>
+
+        <div class="heading-elements">
+
+            @if (Model.PunchType == "In")
+            {
+                <span class="label label-success">
+                    Punch In
+                </span>
+            }
+            else
+            {
+                <span class="label label-danger">
+                    Punch Out
+                </span>
+            }
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <!-- Summary Cards -->
+
+        <div class="row">
+
+            <div class="col-md-3">
+
+                <div class="panel bg-success-400">
+                    <div class="panel-body text-center">
+                        <h6>Punch Type</h6>
+                        <h4>@Model.PunchType</h4>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="col-md-3">
+
+                <div class="panel bg-primary-400">
+                    <div class="panel-body text-center">
+                        <h6>Device</h6>
+                        <h4>@Model.DeviceType</h4>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="col-md-3">
+
+                <div class="panel bg-info-400">
+                    <div class="panel-body text-center">
+                        <h6>OS</h6>
+                        <h4>@Model.OS</h4>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="col-md-3">
+
+                <div class="panel bg-warning-400">
+                    <div class="panel-body text-center">
+                        <h6>Entry Type</h6>
+                        <h4>
+                            @(Model.IsManual ? "Manual" : "Auto")
+                        </h4>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="row">
+
+            <!-- Employee Information -->
+
+            <div class="col-md-6">
+
+                <div class="panel panel-bordered">
+
+                    <div class="panel-heading">
+                        <h6 class="panel-title">
+                            <i class="icon-user position-left"></i>
+                            Employee Information
+                        </h6>
+                    </div>
+
+                    <table class="table table-striped">
+
+                        <tbody>
+
+                            <tr>
+                                <th width="200">Employee</th>
+                                <td>
+                                    @(Model.EmployeeId != null &&
+                                      ViewBag.EmployeeNames != null &&
+                                      ViewBag.EmployeeNames.ContainsKey(Model.EmployeeId)
+                                        ? ViewBag.EmployeeNames[Model.EmployeeId]
+                                        : "-")
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <th>Punch Time</th>
+                                <td>
+                                    @Model.PunchTime.ToString("dd MMM yyyy hh:mm:ss tt")
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <th>Location</th>
+                                <td>
+                                    @(string.IsNullOrWhiteSpace(Model.Location)
+                                        ? "-"
+                                        : Model.Location)
+                                </td>
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+            <!-- Device Information -->
+
+            <div class="col-md-6">
+
+                <div class="panel panel-bordered">
+
+                    <div class="panel-heading">
+                        <h6 class="panel-title">
+                            <i class="icon-laptop position-left"></i>
+                            Device Information
+                        </h6>
+                    </div>
+
+                    <table class="table table-striped">
+
+                        <tbody>
+
+                            <tr>
+                                <th width="200">Browser</th>
+                                <td>@Model.Browser</td>
+                            </tr>
+
+                            <tr>
+                                <th>Browser Version</th>
+                                <td>@Model.Version</td>
+                            </tr>
+
+                            <tr>
+                                <th>Operating System</th>
+                                <td>@Model.OS</td>
+                            </tr>
+
+                            <tr>
+                                <th>Device Type</th>
+                                <td>@Model.DeviceType</td>
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Audit Information -->
+
+        <div class="panel panel-flat">
+
+            <div class="panel-heading">
+
+                <h6 class="panel-title">
+                    <i class="icon-shield-check position-left"></i>
+                    Audit Information
+                </h6>
+
+            </div>
+
+            <table class="table table-bordered">
+
+                <tbody>
+
+                    <tr>
+
+                        <th width="250">
+                            Entry Source
+                        </th>
+
+                        <td>
+
+                            @if (Model.IsManual)
+                            {
+                                <span class="label label-warning">
+                                    Manual Entry
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="label label-success">
+                                    Automatic Entry
+                                </span>
+                            }
+
+                        </td>
+
+                    </tr>
+
+                    <tr>
+
+                        <th>
+                            Punch Status
+                        </th>
+
+                        <td>
+
+                            @if (Model.PunchType == "In")
+                            {
+                                <span class="label label-success">
+                                    Employee Checked In
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="label label-danger">
+                                    Employee Checked Out
+                                </span>
+                            }
+
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <div class="text-right">
+
+            <a asp-action="Index"
+               class="btn btn-default">
+
+                <i class="icon-arrow-left13"></i>
+                Back
+
+            </a>
+
+        </div>
+
+    </div>
+</div>
