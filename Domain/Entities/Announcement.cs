@@ -32,10 +32,10 @@ namespace Domain.Entities
         public virtual Role Role { get; set; }
 
         // Attachment
-        public string AttachmentUrl { get; set; }
+        public string? AttachmentUrl { get; set; }
 
         // Priority
-        public int Priority { get; set; } = 1;
+        public AnnouncementPriority Priority { get; set; }
 
         public string CompanyId { get; set; }
         public string BranchId { get; set; }

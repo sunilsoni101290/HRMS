@@ -12,7 +12,7 @@ namespace Domain.Entities
         public string Action { get; set; }
         // Created / Allocated / Returned / Repair / Scrap
 
-        public string ReferenceId { get; set; } // AllocationId etc.
+        public string? ReferenceId { get; set; } // AllocationId etc.
 
         public DateTime ActionDate { get; set; }
 

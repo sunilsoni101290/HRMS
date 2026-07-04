@@ -1,0 +1,106 @@
+﻿@model List<LeaveApprovalHistoryDetailDto>
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-calendar3 position-left"></i>
+            Leave Approval History
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Index" asp-controller="LeaveApplication"
+               class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+
+        </div>
+
+    </div>
+    <div class="panel-body">
+    <table class="table table-bordered">
+
+        <thead>
+
+            <tr>
+
+                <th>Date</th>
+                <th>Employee</th>
+                <th>Leave Type</th>
+                <th>Action</th>
+                <th>Action By</th>
+                <th>Remarks</th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            @foreach (var item in Model)
+            {
+                <tr>
+
+                    <td>
+                        @item.ActionDate.ToString("dd-MMM-yyyy HH:mm")
+                    </td>
+
+                    <td>
+                        @item.EmployeeName
+                    </td>
+
+                    <td>
+                        @item.LeaveTypeName
+                    </td>
+
+                    <td>
+
+                        @if (item.Action ==
+                            EnumExtensions.ApprovalStatus.Approved)
+                        {
+                            <span class="label bg-success">
+                                Approved
+                            </span>
+                        }
+                        else if (item.Action ==
+                            EnumExtensions.ApprovalStatus.Rejected)
+                        {
+                            <span class="label bg-danger">
+                                Rejected
+                            </span>
+                        }
+                        else if (item.Action ==
+                            EnumExtensions.ApprovalStatus.Pending)
+                        {
+                            <span class="label bg-warning">
+                                Pending
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="label bg-info">
+                                Cancelled
+                            </span>
+                        }
+
+                    </td>
+
+                    <td>
+                        @item.ActionBy
+                    </td>
+
+                    <td>
+                        @item.Remarks
+                    </td>
+
+                </tr>
+            }
+
+        </tbody>
+
+    </table>
+    </div>
+</div>

@@ -4,43 +4,93 @@
     ViewData["Title"] = "Location";
 }
 
-<div class="container-fluid py-4">
+<form asp-action="@(string.IsNullOrEmpty(Model?.Id) ? "Create" : "Edit")"
+      method="post">
 
-    <div class="row justify-content-center">
+    ```
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="CreatedBy" type="hidden" />
+    <input asp-for="ModifiedBy" type="hidden" />
+    <input asp-for="ModifiedOn" type="hidden" />
 
-        <div class="col-lg-8">
+    <div class="panel panel-flat">
 
-            <div class="card shadow border-0 rounded-4 overflow-hidden">
+        <div class="panel-heading">
 
-                <!-- Header -->
-                <div class="card-header bg-warning py-4">
+            <h5 class="panel-title">
 
-                    <div class="d-flex align-items-center">
+                <i class="icon-location4 position-left"></i>
 
-                        <div class="me-3">
+                @(string.IsNullOrEmpty(Model?.Id)
+                    ? "Create Location"
+                    : "Edit Location")
 
-                            <div class="bg-white text-warning rounded-circle d-flex align-items-center justify-content-center"
-                                 style="width:80px;height:80px;">
+            </h5>
 
-                                <i class="bi bi-geo-alt-fill fs-1"></i>
+            <div class="heading-elements">
 
-                            </div>
+                <a asp-action="Index"
+                   class="btn btn-default">
+
+                    <i class="icon-arrow-left13"></i>
+
+                    Back
+
+                </a>
+
+            </div>
+
+        </div>
+
+        <div class="panel-body">
+
+            <div asp-validation-summary="ModelOnly"
+                 class="alert alert-danger">
+            </div>
+
+            <!-- Basic Information -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-info22 position-left"></i>
+
+                    Basic Information
+
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="LocationName"></label>
+
+                            <input asp-for="LocationName"
+                                   class="form-control"
+                                   placeholder="Enter Location Name" />
+
+                            <span asp-validation-for="LocationName"
+                                  class="text-danger"></span>
 
                         </div>
 
-                        <div>
+                    </div>
 
-                            <h3 class="mb-1">
+                    <div class="col-md-6">
 
-                                @(string.IsNullOrEmpty(Model?.Id)
-                                    ? "Create Location"
-                                    : "Edit Location")
+                        <div class="form-group">
 
-                            </h3>
+                            <label asp-for="LocationCode"></label>
 
-                            <p class="mb-0 opacity-75">
-                                Manage branch locations and addresses
-                            </p>
+                            <input asp-for="LocationCode"
+                                   class="form-control"
+                                   placeholder="Enter Location Code" />
+
+                            <span asp-validation-for="LocationCode"
+                                  class="text-danger"></span>
 
                         </div>
 
@@ -48,185 +98,160 @@
 
                 </div>
 
-                <!-- Body -->
-                <div class="card-body p-4">
+            </fieldset>
 
-                    <form asp-action="@(Model.Id == null ? "Create" : "Edit")" method="post"
-                          enctype="multipart/form-data">
+            <!-- Organization -->
 
-                        <!-- Hidden -->
-                        <input asp-for="Id" type="hidden" />
-                        <input asp-for="CreatedBy" type="hidden" />
-                        <input asp-for="ModifiedBy" type="hidden" />
-                        <input asp-for="ModifiedOn" type="hidden" />
+            <fieldset>
 
-                        <div class="row g-4">
+                <legend class="text-semibold">
 
-                            <!-- Location Name -->
-                            <div class="col-md-6">
+                    <i class="icon-office position-left"></i>
 
-                                <label asp-for="LocationName"
-                                       class="form-label fw-semibold">
-                                </label>
+                    Organization
 
-                                <div class="input-group">
+                </legend>
 
-                                    <span class="input-group-text">
+                <div class="row">
 
-                                        <i class="bi bi-buildings"></i>
+                    <div class="col-md-6">
 
-                                    </span>
+                        <div class="form-group">
 
-                                    <input asp-for="LocationName"
-                                           class="form-control"
-                                           placeholder="Enter Location Name" />
+                            <label asp-for="CompanyId"></label>
 
-                                </div>
+                            <select asp-for="CompanyId"
+                                    asp-items="ViewBag.CompanyList"
+                                    class="form-control"
+                                    id="CompanyId">
 
-                                <span asp-validation-for="LocationName"
-                                      class="text-danger"></span>
+                                <option value="">
+                                    Select Company
+                                </option>
 
-                            </div>
-
-                            <!-- Location Code -->
-                            <div class="col-md-6">
-
-                                <label asp-for="LocationCode"
-                                       class="form-label fw-semibold">
-                                </label>
-
-                                <div class="input-group">
-
-                                    <span class="input-group-text">
-
-                                        <i class="bi bi-upc-scan"></i>
-
-                                    </span>
-
-                                    <input asp-for="LocationCode"
-                                           class="form-control"
-                                           placeholder="Enter Location Code" />
-
-                                </div>
-
-                                <span asp-validation-for="LocationCode"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                            <!-- Company -->
-                            <div class="col-md-6">
-
-                                <label asp-for="CompanyId"
-                                       class="form-label fw-semibold">
-                                </label>
-
-                                <select asp-for="CompanyId"
-                                        asp-items="ViewBag.CompanyList"
-                                        class="form-select"
-                                        id="CompanyId">
-
-                                    <option value="">
-                                        -- Select Company --
-                                    </option>
-
-                                </select>
-
-                                <span asp-validation-for="CompanyId"
-                                      class="text-danger"></span>
-
-                            </div>
-                            <!-- Branch -->
-                            <div class="col-md-6">
-
-                                <label asp-for="BranchId"
-                                       class="form-label fw-semibold">
-                                </label>
-
-                                <select asp-for="BranchId"
-                                        asp-items="ViewBag.BranchList"
-                                        class="form-select"
-                                        id="BranchId">
-
-                                    <option value="">
-                                        -- Select Branch --
-                                    </option>
-
-                                </select>
-
-                                <span asp-validation-for="BranchId"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                            <!-- Address -->
-                            <div class="col-md-12">
-
-                                <label asp-for="Address"
-                                       class="form-label fw-semibold">
-                                </label>
-
-                                <textarea asp-for="Address"
-                                          rows="4"
-                                          class="form-control"
-                                          placeholder="Enter Location Address"></textarea>
-
-                            </div>
-
-                            <!-- Default -->
-                            <div class="col-md-12">
-
-                                <div class="form-check form-switch mt-2">
-
-                                    <input asp-for="IsDefault"
-                                           class="form-check-input"
-                                           type="checkbox" />
-
-                                    <label asp-for="IsDefault"
-                                           class="form-check-label fw-semibold">
-                                    </label>
-
-                                </div>
-
-                            </div>
+                            </select>
 
                         </div>
 
-                        <!-- Footer -->
-                        <div class="mt-5 d-flex justify-content-end gap-2">
+                    </div>
 
-                            <a asp-action="Index"
-                               class="btn btn-light border rounded-3 px-4">
+                    <div class="col-md-6">
 
-                                <i class="bi bi-arrow-left"></i>
-                                Back
+                        <div class="form-group">
 
-                            </a>
+                            <label asp-for="BranchId"></label>
 
-                            <button type="submit"
-                                    class="btn btn-warning rounded-3 px-4">
+                            <select asp-for="BranchId"
+                                    asp-items="ViewBag.BranchList"
+                                    class="form-control"
+                                    id="BranchId">
 
-                                <i class="bi bi-check-circle"></i>
+                                <option value="">
+                                    Select Branch
+                                </option>
 
-                                @(string.IsNullOrEmpty(Model?.Id)
-                                    ? "Save Location"
-                                    : "Update Location")
-
-                            </button>
+                            </select>
 
                         </div>
 
-                    </form>
+                    </div>
 
                 </div>
 
-            </div>
+            </fieldset>
+
+            <!-- Address -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-home position-left"></i>
+
+                    Address
+
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-12">
+
+                        <div class="form-group">
+
+                            <label asp-for="Address"></label>
+
+                            <textarea asp-for="Address"
+                                      rows="4"
+                                      class="form-control"
+                                      placeholder="Enter Complete Address">
+                        </textarea>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- Settings -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-cog3 position-left"></i>
+
+                    Settings
+
+                </legend>
+
+                <div class="checkbox">
+
+                    <label>
+
+                        <input asp-for="IsDefault"
+                               type="checkbox" />
+
+                        Set as Default Location
+
+                    </label>
+
+                </div>
+
+            </fieldset>
+
+        </div>
+
+        <div class="panel-footer text-right">
+
+            <button type="reset"
+                    class="btn btn-default">
+
+                <i class="icon-reset"></i>
+
+                Reset
+
+            </button>
+
+            <button type="submit"
+                    class="btn bg-primary">
+
+                <i class="icon-floppy-disk"></i>
+
+                @(string.IsNullOrEmpty(Model?.Id)
+                    ? "Save"
+                    : "Update")
+
+            </button>
 
         </div>
 
     </div>
+    ```
 
-</div>
+</form>
+
 
 @section Scripts {
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>

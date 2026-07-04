@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using static Domain.Enums.EnumExtensions;
 
 namespace Application.DTOs.Employee
 {
@@ -27,4 +28,5 @@ namespace Application.DTOs.Employee
         public string Name { get; set; }
         public string Designation { get; set; }
     }
+
 }

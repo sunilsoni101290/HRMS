@@ -1,0 +1,160 @@
+@model EventDto
+
+@{
+    ViewData["Title"] = "Event";
+    bool isEdit = !string.IsNullOrEmpty(Model?.Id);
+    string TimeVal(TimeSpan? t) => t.HasValue ? t.Value.ToString(@"hh\:mm") : "";
+}
+
+<form asp-action="@(isEdit ? "Edit" : "Create")" asp-controller="Event" asp-route-id="@Model?.Id" method="post">
+
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="TenantId" type="hidden" />
+    <input asp-for="CreatedBy" type="hidden" />
+
+    <div class="panel panel-flat">
+
+        <div class="panel-heading">
+            <h5 class="panel-title">
+                <i class="icon-calendar3 position-left"></i>
+                @(isEdit ? "Edit Event" : "New Event")
+            </h5>
+            <div class="heading-elements">
+                <a asp-action="Index" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
+            </div>
+        </div>
+
+        <div class="panel-body">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="form-group">
+                        <label asp-for="Title"></label> <span class="text-danger">*</span>
+                        <input asp-for="Title" class="form-control" placeholder="Event title" />
+                        <span asp-validation-for="Title" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="EventType"></label>
+                        <select asp-for="EventType" class="form-control">
+                            <option value="1">Meeting</option>
+                            <option value="2">Holiday</option>
+                            <option value="3">Training</option>
+                            <option value="4">Celebration</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Description"></label>
+                <textarea asp-for="Description" class="form-control" rows="3" placeholder="Event details..."></textarea>
+            </div>
+
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="StartDate"></label> <span class="text-danger">*</span>
+                        <input asp-for="StartDate" type="date" class="form-control" value="@Model?.StartDate.ToString("yyyy-MM-dd")" />
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="EndDate"></label> <span class="text-danger">*</span>
+                        <input asp-for="EndDate" type="date" class="form-control" value="@Model?.EndDate.ToString("yyyy-MM-dd")" />
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="StartTime"></label>
+                        <input name="StartTime" type="time" class="form-control" value="@TimeVal(Model?.StartTime)" />
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="EndTime"></label>
+                        <input name="EndTime" type="time" class="form-control" value="@TimeVal(Model?.EndTime)" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="Location"></label>
+                        <input asp-for="Location" class="form-control" placeholder="Venue / link" />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="OrganizedBy"></label>
+                        <input asp-for="OrganizedBy" class="form-control" placeholder="Organizer" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group" style="margin-top:28px;">
+                        <label class="checkbox-inline">
+                            <input asp-for="IsForAll" type="checkbox" id="IsForAll" /> For everyone
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group" style="margin-top:28px;">
+                        <label class="checkbox-inline">
+                            <input asp-for="SendReminder" type="checkbox" /> Send reminder
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="ReminderBeforeMinutes"></label>
+                        <input asp-for="ReminderBeforeMinutes" type="number" class="form-control" placeholder="e.g. 30" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="row" id="targetRow">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="DepartmentId"></label>
+                        <select asp-for="DepartmentId" asp-items="ViewBag.DepartmentList" class="form-control">
+                            <option value="">All Departments</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="RoleId"></label>
+                        <select asp-for="RoleId" asp-items="ViewBag.RoleList" class="form-control">
+                            <option value="">All Roles</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-footer text-right">
+            <button type="submit" class="btn bg-primary"><i class="icon-floppy-disk"></i> @(isEdit ? "Update" : "Save")</button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    <script>
+        $(function () {
+            function toggleTarget() { $("#targetRow").toggle(!$("#IsForAll").is(":checked")); }
+            $("#IsForAll").on("change", toggleTarget);
+            toggleTarget();
+        });
+    </script>
+    <partial name="_ValidationScriptsPartial" />
+}

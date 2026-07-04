@@ -104,5 +104,14 @@ namespace API.Controllers
 
             return Ok(result);
         }
+
+        [AllowAnonymous]
+        [HttpGet("menu/user/{userId}")]
+        public async Task<IActionResult> GetMenuByUser(string userId)
+        {
+            var result = await _service.GetMenuByUserAsync(userId);
+
+            return Ok(result);
+        }
     }
 }

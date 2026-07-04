@@ -1,0 +1,394 @@
+﻿@model EmployeeDocumentDto
+@Html.AntiForgeryToken()
+
+<input asp-for="Id" type="hidden" />
+<input asp-for="FileName" type="hidden" />
+<input asp-for="FilePath" type="hidden" />
+<input asp-for="FileExtension" type="hidden" />
+<input asp-for="FileSize" type="hidden" />
+<div class="panel panel-flat">
+    <!-- Header -->
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-file-text2 position-left text-primary"></i>
+            Employee Document Management
+        </h5>
+        <div class="heading-elements">
+            <span class="label bg-primary">
+                HRMS Document Center
+            </span>
+        </div>
+    </div>
+    <!-- Validation -->
+    <div class="panel-body">
+        <div asp-validation-summary="ModelOnly"
+             class="alert alert-danger">
+        </div>
+        <!-- ===================================================== -->
+        <!-- Employee Information -->
+        <!-- ===================================================== -->
+        <fieldset>
+            <legend class="text-semibold">
+                <i class="icon-user position-left"></i>
+                Employee Information
+            </legend>
+            <div class="row">
+                <!-- Employee -->
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="EmployeeId"
+                               class="text-semibold">
+                        </label>
+                        <span class="text-danger">*</span>
+                        <select asp-for="EmployeeId"
+                                asp-items="ViewBag.EmployeeList"
+                                class="form-control chosen-select">
+                            <option value="">
+                                -- Select Employee --
+                            </option>
+                        </select>
+                        <span asp-validation-for="EmployeeId"
+                              class="text-danger"></span>
+                    </div>
+                </div>
+                <!-- Document Type -->
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="DocumentType"
+                               class="text-semibold">
+                        </label>
+                        <span class="text-danger">*</span>
+                        <select asp-for="DocumentType"
+                                asp-items="Html.GetEnumSelectList<EnumExtensions.EmployeeDocumentType>()"
+                                class="form-control">
+                            <option value="">
+                                -- Select Document Type --
+                            </option>
+                        </select>
+                        <span asp-validation-for="DocumentType"
+                              class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+        <!-- ===================================================== -->
+        <!-- Document Information -->
+        <!-- ===================================================== -->
+        <fieldset>
+            <legend class="text-semibold">
+                <i class="icon-folder-open position-left"></i>
+                Document Information
+            </legend>
+            <div class="row">
+                <!-- Document Name -->
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="DocumentName"></label>
+                        <input asp-for="DocumentName"
+                               class="form-control"
+                               maxlength="200"
+                               placeholder="Enter Document Name" />
+                        <span asp-validation-for="DocumentName"
+                              class="text-danger"></span>
+                    </div>
+                </div>
+                <!-- Document Number -->
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="DocumentNumber"></label>
+                        <input asp-for="DocumentNumber"
+                               class="form-control"
+                               maxlength="100"
+                               placeholder="Enter Document Number" />
+                        <span asp-validation-for="DocumentNumber"
+                              class="text-danger"></span>
+                    </div>
+                </div>
+                <!-- Issue Date -->
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="IssueDate"></label>
+                        <input asp-for="IssueDate"
+                               type="date"
+                               class="form-control" />
+                        <span asp-validation-for="IssueDate"
+                              class="text-danger"></span>
+                    </div>
+                </div>
+                <!-- Expiry Date -->
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="ExpiryDate"></label>
+                        <input asp-for="ExpiryDate"
+                               type="date"
+                               class="form-control" />
+                        <span asp-validation-for="ExpiryDate"
+                              class="text-danger"></span>
+                    </div>
+                </div>
+                <!-- Issued By -->
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="IssuedBy"></label>
+                        <input asp-for="IssuedBy"
+                               class="form-control"
+                               maxlength="200"
+                               placeholder="Issuing Authority" />
+                        <span asp-validation-for="IssuedBy"
+                              class="text-danger"></span>
+                    </div>
+                </div>
+                <!-- Verified -->
+                <div class="col-md-4">
+                    <div class="checkbox">
+                        <label>
+                            <input asp-for="IsVerified"
+                                   class="styled"
+                                   type="checkbox" />
+                            Verified Document
+                        </label>
+                    </div>
+                </div>
+                <!-- Remarks -->
+                <div class="col-md-8">
+                    <div class="form-group">
+                        <label asp-for="Remarks"></label>
+                        <textarea asp-for="Remarks"
+                                  rows="3"
+                                  maxlength="500"
+                                  class="form-control"
+                                  placeholder="Enter Remarks"></textarea>
+                        <span asp-validation-for="Remarks"
+                              class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+        <!-- ===================================================== -->
+        <!-- Document Upload Center -->
+        <!-- ===================================================== -->
+        <fieldset>
+            <legend class="text-semibold">
+                <i class="icon-cloud-upload2 position-left"></i>
+                Document Upload Center
+            </legend>
+            <div class="row">
+                <!-- Upload Area -->
+                <div class="col-md-8">
+                    <div id="dropZone"
+                         class="upload-zone text-center">
+                        <i class="icon-cloud-upload2 upload-icon"></i>
+                        <h3 class="text-semibold">
+                            Drag &amp; Drop Document Here
+                        </h3>
+                        <p class="text-muted">
+                            OR
+                        </p>
+                        <label class="btn bg-primary">
+                            <i class="icon-folder-open"></i>
+                            Browse File
+                            <input type="file"
+                                   id="DocumentFile"
+                                   name="DocumentFile"
+                                   hidden
+                                   accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" />
+                        </label>
+                        <br /><br />
+                        <span class="label bg-success">PDF</span>
+                        <span class="label bg-info">JPG</span>
+                        <span class="label bg-warning">PNG</span>
+                        <span class="label bg-primary">DOC</span>
+                        <span class="label bg-danger">XLS</span>
+                        <br /><br />
+                        <small class="text-muted">
+                            Maximum File Size :
+                            <strong>5 MB</strong>
+                        </small>
+                    </div>
+                </div>
+                <!-- Upload Guidelines -->
+                <div class="col-md-4">
+                    <div class="panel panel-body border-left-info">
+                        <h5 class="text-semibold">
+                            <i class="icon-info22"></i>
+                            Upload Guidelines
+                        </h5>
+                        <ul class="list-icons">
+                            <li>
+                                <i class="icon-checkmark-circle text-success"></i>
+                                Upload clear scanned documents
+                            </li>
+                            <li>
+                                <i class="icon-checkmark-circle text-success"></i>
+                                Maximum size 5 MB
+                            </li>
+                            <li>
+                                <i class="icon-checkmark-circle text-success"></i>
+                                PDF preferred
+                            </li>
+                            <li>
+                                <i class="icon-checkmark-circle text-success"></i>
+                                Images should be readable
+                            </li>
+                            <li>
+                                <i class="icon-checkmark-circle text-success"></i>
+                                Supported: PDF, JPG, PNG, DOC, XLS
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <hr />
+            <!-- Current Uploaded File -->
+            <div class="row">
+                <div class="col-md-12">
+                    <div id="currentFilePanel"
+                         class="panel panel-body bg-success-300"
+                         style="display:@(string.IsNullOrWhiteSpace(Model.FilePath) ? "none" : "block")">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h5 class="text-semibold">
+                                    <i class="icon-file-check"></i>
+                                    Current Uploaded Document
+                                </h5>
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <td width="180">File Name</td>
+                                        <td>
+                                            <strong id="currentFileName">@Model.FileName</strong>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Extension</td>
+                                        <td id="currentFileExtension">@Model.FileExtension</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Size</td>
+                                        <td id="currentFileSize">
+                                            @if (Model.FileSize.HasValue)
+                                            {
+                                                @($"{(Model.FileSize.Value / 1024.0):N2} KB")
+                                            }
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-md-4 text-right">
+                                @if (!string.IsNullOrWhiteSpace(Model.FilePath))
+                                {
+                                    <a href="@Model.FilePath"
+                                       target="_blank"
+                                       class="btn bg-primary">
+                                        <i class="icon-eye"></i>
+                                        View
+                                    </a>
+                                    <br />
+
+                                    <br />
+                                    <a href="@Url.Action("Download", "EmployeeDocument", new { id = Model.Id })"
+                                       class="btn bg-success">
+                                        <i class="icon-download"></i>
+                                        Download
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Upload Progress -->
+            <div class="row">
+                <div class="col-md-12">
+                    <div id="uploadProgressContainer" style="display:none;">
+                        <div class="progress progress-lg">
+                            <div id="uploadProgress"
+                                 class="progress-bar progress-bar-success progress-bar-striped active"
+                                 style="width:0%">
+                                0%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <hr />
+            <!-- ============================================= -->
+            <!-- Document Preview -->
+            <!-- ============================================= -->
+            <div class="row">
+                <div class="col-md-12">
+                    <div id="previewContainer"
+                         class="panel panel-flat border-primary"
+                         style="display:none;">
+                        <div class="panel-heading">
+                            <h5 class="panel-title">
+                                <i class="icon-eye position-left"></i>
+                                Document Preview
+                            </h5>
+                        </div>
+                        <div class="panel-body text-center">
+                            <!-- Image Preview -->
+                            <img id="imagePreview"
+                                 class="img-responsive img-thumbnail"
+                                 style="display:none; max-height:450px; margin:auto;" />
+                            <!-- PDF Preview -->
+                            <iframe id="pdfPreview"
+                                    style="display:none; width:100%; height:650px; border:1px solid #ddd; border-radius:4px;">
+                            </iframe>
+                            <!-- Office File Preview -->
+                            <div id="fileInfo" class="alert alert-info" style="display:none;">
+                                <i class="icon-file-text2" style="font-size:45px;"></i>
+                                <br /><br />
+                                <h5 class="text-semibold">
+                                    <span id="selectedFileName"></span>
+                                </h5>
+                                <p class="text-muted">
+                                    Preview is unavailable for this file type.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- ============================================= -->
+            <!-- Upload Actions -->
+            <!-- ============================================= -->
+            <div class="row">
+                <div class="col-md-12 text-right">
+                    <button type="button" id="btnUploadFile" class="btn bg-success">
+                        <i class="icon-cloud-upload2"></i>
+                        Upload
+                    </button>
+                    <button type="button" id="btnReplaceFile" class="btn bg-warning">
+                        <i class="icon-loop3"></i>
+                        Replace File
+                    </button>
+                    <button type="button" id="btnNewVersion" class="btn bg-primary">
+                        <i class="icon-copy3"></i>
+                        Upload New Version
+                    </button>
+                    <button type="button" id="btnRemoveFile" class="btn bg-danger">
+                        <i class="icon-trash"></i>
+                        Remove
+                    </button>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+    <!-- ============================================= -->
+    <!-- Footer -->
+    <!-- ============================================= -->
+    <div class="panel-footer text-right">
+        <a asp-action="Index" class="btn btn-default">
+            <i class="icon-arrow-left13"></i>
+            Back
+        </a>
+        <button type="reset" class="btn btn-warning">
+            <i class="icon-reset"></i>
+            Reset
+        </button>
+        <button type="submit" class="btn bg-primary">
+            <i class="icon-floppy-disk"></i>
+            @(string.IsNullOrEmpty(Model.Id) ? "Save Document" : "Update Document")
+        </button>
+    </div>
+</div>

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Domain.Entities;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
@@ -6,53 +7,65 @@ using static Domain.Enums.EnumExtensions;
 
 namespace Application.DTOs.Employee
 {
-    public class EmployeeDto
+    public class EmployeeDto : IValidatableObject
     {
-        // 🔹 Id (for update / detail)
+        // Id
         public string? Id { get; set; }
 
-        [Required, MaxLength(100)]
-        [Display(Name ="First Name")]
+        #region Basic Information
+
+        [Required(ErrorMessage = "First Name is required.")]
+        [Display(Name = "First Name")]
+        [StringLength(100, MinimumLength = 2)]
         public string FirstName { get; set; }
 
-        [MaxLength(100)]
         [Display(Name = "Last Name")]
+        [StringLength(100)]
         public string? LastName { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "Employee Code is required.")]
         [Display(Name = "Employee Code")]
+        [StringLength(20)]
+        [RegularExpression(@"^[A-Za-z0-9_-]+$", ErrorMessage = "Employee Code can contain only letters, numbers, hyphen (-) and underscore (_).")]
         public string EmployeeCode { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "Please select Role.")]
         [Display(Name = "Role")]
         public string RoleId { get; set; }
 
-        // 🔹 Multi-Tenant
+        #endregion
+
+        #region Multi Tenant
+
         [Required]
         public string TenantId { get; set; }
 
-        // 🔹 Organization Mapping
-        [Required]
+        [Required(ErrorMessage = "Please select Company.")]
         [Display(Name = "Company")]
         public string CompanyId { get; set; }
 
         [Display(Name = "Branch")]
         public string? BranchId { get; set; }
+
+        [Display(Name = "Shift")]
         public string? ShiftId { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "Please select Department.")]
         [Display(Name = "Department")]
         public string DepartmentId { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "Please select Designation.")]
         [Display(Name = "Designation")]
         public string DesignationId { get; set; }
 
         [Display(Name = "Reporting Manager")]
         public string? ReportingManagerId { get; set; }
 
-        // 🔹 Personal Info
-        [Display(Name = "DOB")]
+        #endregion
+
+        #region Personal Information
+
+        [Display(Name = "Date of Birth")]
         public DateTime? DateOfBirth { get; set; }
 
         [Required]
@@ -62,38 +75,53 @@ namespace Application.DTOs.Employee
         [Display(Name = "Marital Status")]
         public MaritalStatus MaritalStatus { get; set; }
 
-        // 🔹 Contact Info
-        [Required]
-        [MaxLength(150)]
-        [EmailAddress]
+        #endregion
+
+        #region Contact Information
+
+        [Required(ErrorMessage = "Email is required.")]
+        [EmailAddress(ErrorMessage = "Invalid Email Address.")]
+        [StringLength(150)]
         public string Email { get; set; }
 
-        [Required, MaxLength(15)]
+        [Required(ErrorMessage = "Phone Number is required.")]
+        [Display(Name = "Phone")]
+        [RegularExpression(@"^[6-9]\d{9}$", ErrorMessage = "Invalid Mobile Number.")]
         public string Phone { get; set; }
 
-        [MaxLength(15)]
         [Display(Name = "Emergency Contact")]
+        [RegularExpression(@"^[6-9]\d{9}$", ErrorMessage = "Invalid Emergency Contact.")]
         public string? EmergencyContact { get; set; }
 
-        // 🔹 Address
-        [Required]
+        #endregion
+
+        #region Address
+
+        [Required(ErrorMessage = "Address is required.")]
+        [StringLength(500)]
         public string Address { get; set; }
 
         [Required]
-        [RegularExpression(@"^\d{6}$", ErrorMessage = "Invalid Pincode")]
         [Display(Name = "Pin Code")]
+        [RegularExpression(@"^\d{6}$", ErrorMessage = "Invalid Pin Code.")]
         public string Pincode { get; set; }
 
-        // 🔹 KYC
-        [RegularExpression(@"[A-Z]{5}[0-9]{4}[A-Z]{1}", ErrorMessage = "Invalid PAN")]
-        [Display(Name = "PAN #")]
+        #endregion
+
+        #region KYC
+
+        [Display(Name = "PAN Number")]
+        [RegularExpression(@"^[A-Z]{5}[0-9]{4}[A-Z]{1}$", ErrorMessage = "Invalid PAN Number.")]
         public string? PANNumber { get; set; }
 
-        [RegularExpression(@"^\d{12}$", ErrorMessage = "Invalid Aadhar")]
-        [Display(Name = "Aadhar #")]
+        [Display(Name = "Aadhaar Number")]
+        [RegularExpression(@"^\d{12}$", ErrorMessage = "Invalid Aadhaar Number.")]
         public string? AadharNumber { get; set; }
 
-        // 🔹 Employment
+        #endregion
+
+        #region Employment
+
         [Required]
         [Display(Name = "Joining Date")]
         public DateTime JoiningDate { get; set; }
@@ -108,19 +136,98 @@ namespace Application.DTOs.Employee
         [Display(Name = "Employment Type")]
         public EmploymentType EmploymentType { get; set; }
 
+        #endregion
+
+        #region Verification
+
         [Display(Name = "Email Confirmed")]
         public bool EmailConfirmed { get; set; }
 
         [Display(Name = "Phone Confirmed")]
         public bool PhoneConfirmed { get; set; }
 
-        // Branding
-        [Display(Name = "Upload Profile Photo")]
+        #endregion
+
+        #region Profile
+
+        [Display(Name = "Profile Photo")]
         public string? FilePath { get; set; }
+
+        #endregion
+
+        #region Passport Details 
+        public string PassportNumber { get; set; }
+        public DateTime IssueDate { get; set; }
+        public DateTime ExpiryDate { get; set; }
+        public string PlaceOfIssue { get; set; }
+
+        [Display(Name = "Nationality")]
+        public Nationality Nationality { get; set; } = Nationality.Indian;
+
+        [Display(Name = "Passport Status")]
+        public PassportStatus PassportStatus { get; set; } = PassportStatus.NotAvailable;
+
+        [Display(Name = "Passport Issuing Country")]
+        public string? CountryId { get; set; }
+
+        [Display(Name = "Passport Document")]
+        public string? PassportFilePath { get; set; }
+        #endregion
+
+        #region Audit
+
+        [Required]
         public string CreatedBy { get; set; }
+
         public DateTime? ModifiedOn { get; set; }
+
         public string? ModifiedBy { get; set; }
 
+        #endregion
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if (DateOfBirth.HasValue &&
+                DateOfBirth.Value.Date > DateTime.Today)
+            {
+                yield return new ValidationResult(
+                    "Date of Birth cannot be in the future.",
+                    new[] { nameof(DateOfBirth) });
+            }
+
+            if (DateOfBirth.HasValue &&
+                JoiningDate <= DateOfBirth.Value)
+            {
+                yield return new ValidationResult(
+                    "Joining Date must be after Date of Birth.",
+                    new[] { nameof(JoiningDate) });
+            }
+
+            if (ConfirmationDate.HasValue &&
+                ConfirmationDate < JoiningDate)
+            {
+                yield return new ValidationResult(
+                    "Confirmation Date cannot be before Joining Date.",
+                    new[] { nameof(ConfirmationDate) });
+            }
+
+            if (RelievingDate.HasValue &&
+                RelievingDate < JoiningDate)
+            {
+                yield return new ValidationResult(
+                    "Relieving Date cannot be before Joining Date.",
+                    new[] { nameof(RelievingDate) });
+            }
+
+
+            if (!string.IsNullOrWhiteSpace(Id) &&
+                ReportingManagerId == Id)
+            {
+                yield return new ValidationResult(
+                    "Employee cannot report to themselves.",
+                    new[] { nameof(ReportingManagerId) });
+            }
+        }
     }
 
     public class EmployeeHierarchyDto
@@ -233,6 +340,26 @@ namespace Application.DTOs.Employee
 
         public string? EmploymentType { get; set; }
         public string? FilePath { get; set; }
+
+        #region Passport Details 
+        public string PassportNumber { get; set; }
+        public DateTime IssueDate { get; set; }
+        public DateTime ExpiryDate { get; set; }
+        public string PlaceOfIssue { get; set; }
+
+        [Display(Name = "Nationality")]
+        public Nationality Nationality { get; set; } = Nationality.Indian;
+
+        [Display(Name = "Passport Status")]
+        public PassportStatus PassportStatus { get; set; } = PassportStatus.NotAvailable;
+
+        [Display(Name = "Passport Issuing Country")]
+        public string? CountryId { get; set; }
+        public string? CountryName { get; set; }
+
+        [Display(Name = "Passport Document")]
+        public string? PassportFilePath { get; set; }
+        #endregion
     }
 
     public class PagedResult<T>
@@ -319,8 +446,8 @@ namespace Application.DTOs.Employee
         public int Level { get; set; }
 
         // Salary
-        public decimal? MinSalary { get; set; }
-        public decimal? MaxSalary { get; set; }
+        public decimal MinSalary { get; set; } = 0.00m;
+        public decimal MaxSalary { get; set; } = 0.00m;
 
         public string CreatedBy { get; set; }
 
@@ -348,7 +475,7 @@ namespace Application.DTOs.Employee
         public string? ParentDesignationId { get; set; }
         public int Level { get; set; }
 
-        public decimal? MinSalary { get; set; }
-        public decimal? MaxSalary { get; set; }
+        public decimal MinSalary { get; set; } = 0.00m;
+        public decimal MaxSalary { get; set; } = 0.00m;
     }
 }

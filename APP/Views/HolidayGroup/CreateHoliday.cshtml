@@ -1,46 +1,179 @@
 ﻿@model HolidayGroupDetailDto
 
 @{
-    ViewData["Title"] = "Holiday Detail";
+    ViewData["Title"] = "Holiday";
 }
 
-<div class="container-fluid py-4">
+<form asp-controller="HolidayGroup"
+      asp-action="@(string.IsNullOrEmpty(Model?.Id) ? "CreateHoliday" : "EditHoliday")"
+      method="post">
 
-    <div class="row justify-content-center">
+    <!-- Hidden Fields -->
 
-        <div class="col-lg-8">
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="TenantId" type="hidden" />
+    <input asp-for="HolidayGroupId" type="hidden" />
 
-            <div class="card shadow border-0 rounded-4 overflow-hidden">
+    <div class="panel panel-flat">
 
-                <!-- Header -->
-                <div class="card-header bg-warning text-dark py-4">
+        <!-- Header -->
 
-                    <div class="d-flex align-items-center">
+        <div class="panel-heading">
 
-                        <div class="me-3">
+            <h5 class="panel-title">
 
-                            <div class="bg-white text-warning rounded-circle d-flex align-items-center justify-content-center"
-                                 style="width:70px;height:70px;">
+                <i class="icon-calendar52 position-left"></i>
 
-                                <i class="bi bi-calendar-date-fill fs-2"></i>
+                @(string.IsNullOrEmpty(Model?.Id)
+                    ? "Create Holiday"
+                    : "Edit Holiday")
+
+            </h5>
+
+            <div class="heading-elements">
+
+                <a asp-controller="HolidayGroup"
+                   asp-action="HolidayList"
+                   asp-route-holidayGroupId="@Model.HolidayGroupId"
+                   class="btn btn-default">
+
+                    <i class="icon-arrow-left13 position-left"></i>
+
+                    Back
+
+                </a>
+
+            </div>
+
+        </div>
+
+        <!-- Body -->
+
+        <div class="panel-body">
+
+            <div asp-validation-summary="ModelOnly"
+                 class="alert alert-danger">
+            </div>
+
+            <!-- ===================================== -->
+            <!-- Holiday Information -->
+            <!-- ===================================== -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-info22 position-left"></i>
+
+                    Holiday Information
+
+                </legend>
+
+                <div class="row">
+
+                    <!-- Holiday Group -->
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="HolidayGroupId"></label>
+
+                            <select asp-for="HolidayGroupId"
+                                    asp-items="ViewBag.HolidayGroupList"
+                                    class="form-control select-search">
+
+                                <option value="">
+
+                                    -- Select Holiday Group --
+
+                                </option>
+
+                            </select>
+
+                            <span asp-validation-for="HolidayGroupId"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Holiday Date -->
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="HolidayDate"></label>
+
+                            <input asp-for="HolidayDate"
+                                   type="date"
+                                   class="form-control" />
+
+                            <span asp-validation-for="HolidayDate"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Holiday Name -->
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="HolidayName"></label>
+
+                            <input asp-for="HolidayName"
+                                   class="form-control"
+                                   placeholder="Enter Holiday Name" />
+
+                            <span asp-validation-for="HolidayName"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Holiday Type -->
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label>&nbsp;</label>
+
+                            <div class="checkbox">
+
+                                <label>
+
+                                    <input asp-for="IsOptional"
+                                           type="checkbox"
+                                           class="styled" />
+
+                                    Optional Holiday
+
+                                </label>
 
                             </div>
 
                         </div>
 
-                        <div>
+                    </div>
 
-                            <h3 class="mb-1">
+                    <!-- Remarks -->
 
-                                @(string.IsNullOrEmpty(Model?.Id)
-                                    ? "Add"
-                                    : "Edit")
+                    <div class="col-md-12">
 
-                            </h3>
+                        <div class="form-group">
 
-                            <p class="mb-0 opacity-75">
-                                Manage holiday group details
-                            </p>
+                            <label asp-for="Remarks"></label>
+
+                            <textarea asp-for="Remarks"
+                                      rows="4"
+                                      class="form-control"
+                                      placeholder="Enter Remarks"></textarea>
 
                         </div>
 
@@ -48,151 +181,459 @@
 
                 </div>
 
-                <!-- Body -->
-                <div class="card-body p-4">
+            </fieldset>
 
-                    <form asp-controller="HolidayGroup"
-                          asp-action="@(Model.Id == null ? "CreateHoliday" : "EditHoliday")"
-                          method="post">
+            <!-- ===================================== -->
+            <!-- Preview -->
+            <!-- ===================================== -->
 
-                        <!-- Hidden -->
-                        <input asp-for="Id" type="hidden" />
-                        <input asp-for="TenantId" type="hidden" />
-                        <input asp-for="HolidayGroupId" type="hidden" />
+            <fieldset>
 
-                        <div class="row g-4">
+                <legend class="text-semibold">
 
-                            <!-- Holiday Group -->
-                            <div class="col-md-12">
+                    <i class="icon-display4 position-left"></i>
 
-                                <label asp-for="HolidayGroupId"
-                                       class="form-label fw-semibold">
-                                </label>
+                    Holiday Preview
 
-                                <select asp-for="HolidayGroupId"
-                                        asp-items="ViewBag.HolidayGroupList"
-                                        class="form-select">
+                </legend>
 
-                                    <option value="">
-                                        -- Select Holiday Group --
-                                    </option>
+                <div class="row">
 
-                                </select>
+                    <div class="col-md-4">
 
-                                <span asp-validation-for="HolidayGroupId"
-                                      class="text-danger"></span>
+                        <div class="panel bg-primary-400">
 
-                            </div>
+                            <div class="panel-body">
 
-                            <!-- Holiday Date -->
-                            <div class="col-md-6">
+                                <h4 class="no-margin">
 
-                                <label asp-for="HolidayDate"
-                                       class="form-label fw-semibold">
-                                </label>
+                                    <span id="HolidayNamePreview">
 
-                                <input asp-for="HolidayDate"
-                                       type="date"
-                                       class="form-control" />
+                                        @(string.IsNullOrWhiteSpace(Model?.HolidayName)
+                                            ? "-"
+                                            : Model.HolidayName)
 
-                                <span asp-validation-for="HolidayDate"
-                                      class="text-danger"></span>
+                                    </span>
 
-                            </div>
+                                </h4>
 
-                            <!-- Holiday Name -->
-                            <div class="col-md-6">
-
-                                <label asp-for="HolidayName"
-                                       class="form-label fw-semibold">
-                                </label>
-
-                                <input asp-for="HolidayName"
-                                       class="form-control"
-                                       placeholder="Enter Holiday Name" />
-
-                                <span asp-validation-for="HolidayName"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                            <!-- Remarks -->
-                            <div class="col-md-12">
-
-                                <label asp-for="Remarks"
-                                       class="form-label fw-semibold">
-                                </label>
-
-                                <textarea asp-for="Remarks"
-                                          rows="3"
-                                          class="form-control"
-                                          placeholder="Enter Remarks"></textarea>
-
-                            </div>
-
-                            <!-- Optional -->
-                            <div class="col-md-12">
-
-                                <div class="form-check form-switch">
-
-                                    <input asp-for="IsOptional"
-                                           class="form-check-input"
-                                           type="checkbox" />
-
-                                    <label asp-for="IsOptional"
-                                           class="form-check-label fw-semibold">
-                                    </label>
-
-                                </div>
+                                Holiday Name
 
                             </div>
 
                         </div>
 
-                        <!-- Footer -->
-                        <div class="mt-5 d-flex justify-content-end gap-2">
-                            
-                            <a asp-controller="HolidayGroup"
-                               asp-action="HolidayList"
-                               asp-route-holidayGroupId="@Model.HolidayGroupId"
-                               title="Back to Holiday List"
-                               class="btn btn-sm btn-outline-primary rounded-3">
+                    </div>
 
-                                <i class="bi bi-arrow-left"></i>
-                                Back
+                    <div class="col-md-4">
 
-                            </a>
+                        <div class="panel bg-success-400">
 
-                            <a asp-controller="HolidayGroup"
-                               asp-action="HolidayList"
-                               asp-route-holidayGroupId="@Model.HolidayGroupId"
-                               class="btn btn-light border rounded-3 px-4">
+                            <div class="panel-body">
 
-                                <i class="bi bi-arrow-left"></i>
-                                Back
-                            </a>
+                                <h4 class="no-margin">
 
-                            <button type="submit"
-                                    class="btn btn-warning rounded-3 px-4">
+                                    <span id="HolidayDatePreview">
 
-                                <i class="bi bi-check-circle"></i>
+                                        @(Model.HolidayDate == DateTime.MinValue
+                                            ? "-"
+                                            : Model.HolidayDate.ToString("dd-MMM-yyyy"))
 
-                                @(string.IsNullOrEmpty(Model?.Id)
-                                    ? "Save"
-                                    : "Update")
+                                    </span>
 
-                            </button>
+                                </h4>
+
+                                Holiday Date
+
+                            </div>
 
                         </div>
 
-                    </form>
+                    </div>
+
+                    <div class="col-md-4">
+
+                        <div class="panel bg-warning-400">
+
+                            <div class="panel-body">
+
+                                <h4 class="no-margin">
+
+                                    <span id="HolidayTypePreview">
+
+                                        @(Model.IsOptional
+                                            ? "Optional"
+                                            : "Mandatory")
+
+                                    </span>
+
+                                </h4>
+
+                                Holiday Type
+
+                            </div>
+
+                        </div>
+
+                    </div>
 
                 </div>
 
-            </div>
+            </fieldset>
+            <!-- ===================================== -->
+            <!-- Summary -->
+            <!-- ===================================== -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-list3 position-left"></i>
+
+                    Summary
+
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-12">
+
+                        <div class="alert alert-info no-margin">
+
+                            <i class="icon-info22"></i>
+
+                            Fill all required fields before saving.
+                            The holiday will be available under the selected
+                            Holiday Group calendar.
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+        </div>
+
+        <!-- Footer -->
+
+        <div class="panel-footer text-right">
+
+            <a asp-controller="HolidayGroup"
+               asp-action="HolidayList"
+               asp-route-holidayGroupId="@Model.HolidayGroupId"
+               class="btn btn-default">
+
+                <i class="icon-arrow-left13 position-left"></i>
+
+                Back
+
+            </a>
+
+            <button type="reset"
+                    class="btn btn-warning">
+
+                <i class="icon-reset position-left"></i>
+
+                Reset
+
+            </button>
+
+            <button type="submit"
+                    class="btn bg-primary">
+
+                <i class="icon-floppy-disk position-left"></i>
+
+                @(string.IsNullOrEmpty(Model?.Id)
+                    ? "Save Holiday"
+                    : "Update Holiday")
+
+            </button>
 
         </div>
 
     </div>
 
-</div>
+</form>
+@section Scripts {
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+
+        $(document).ready(function () {
+
+            //=========================================
+            // Chosen Dropdown
+            //=========================================
+
+            if ($(".select-search").length) {
+
+                $(".select-search").chosen({
+
+                    width: "100%",
+                    search_contains: true,
+                    allow_single_deselect: true
+
+                });
+
+            }
+
+            //=========================================
+            // Holiday Name Preview
+            //=========================================
+
+            $("#HolidayName").keyup(function () {
+
+                var value = $(this).val();
+
+                if (value == "")
+                    value = "-";
+
+                $("#HolidayNamePreview").text(value);
+
+            });
+
+            //=========================================
+            // Holiday Date Preview
+            //=========================================
+
+            $("#HolidayDate").change(function () {
+
+                var value = $(this).val();
+
+                if (value == "") {
+
+                    $("#HolidayDatePreview").text("-");
+
+                    return;
+
+                }
+
+                var date = new Date(value);
+
+                var options = {
+
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+
+                };
+
+                $("#HolidayDatePreview")
+                    .text(date.toLocaleDateString('en-GB', options));
+
+            });
+
+            //=========================================
+            // Holiday Type Preview
+            //=========================================
+
+            $("#IsOptional").change(function () {
+
+                if ($(this).is(":checked")) {
+
+                    $("#HolidayTypePreview")
+                        .text("Optional");
+
+                }
+                else {
+
+                    $("#HolidayTypePreview")
+                        .text("Mandatory");
+
+                }
+
+            });
+
+            //=========================================
+            // Client Validation
+            //=========================================
+
+            $("form").submit(function () {
+
+                if ($("#HolidayGroupId").val() == "") {
+
+                    alert("Please select Holiday Group.");
+
+                    $("#HolidayGroupId").focus();
+
+                    return false;
+
+                }
+
+                if ($("#HolidayDate").val() == "") {
+
+                    alert("Please select Holiday Date.");
+
+                    $("#HolidayDate").focus();
+
+                    return false;
+
+                }
+
+                if ($("#HolidayName").val().trim() == "") {
+
+                    alert("Please enter Holiday Name.");
+
+                    $("#HolidayName").focus();
+
+                    return false;
+
+                }
+
+                return true;
+
+            });
+
+        });
+
+    </script>
+
+    <style>
+
+        /*=========================================
+                    Panel
+                =========================================*/
+
+        .panel-heading {
+            padding: 18px 20px;
+        }
+
+        .panel-title {
+            font-weight: 600;
+        }
+
+        .panel-body {
+            padding: 20px;
+        }
+
+        .panel-footer {
+            background: #fafafa;
+            padding: 15px 20px;
+        }
+
+        /*=========================================
+                    Fieldset
+                =========================================*/
+
+        fieldset {
+            border: 1px solid #e5e5e5;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        legend {
+            width: auto;
+            border: none;
+            padding: 0 10px;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        /*=========================================
+                    Form
+                =========================================*/
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-control {
+            border-radius: 3px;
+        }
+
+        textarea {
+            resize: vertical;
+        }
+
+        /*=========================================
+                    Dashboard Cards
+                =========================================*/
+
+        .panel.bg-primary-400,
+        .panel.bg-success-400,
+        .panel.bg-warning-400 {
+            margin-bottom: 15px;
+            border-radius: 3px;
+        }
+
+            .panel.bg-primary-400 h4,
+            .panel.bg-success-400 h4,
+            .panel.bg-warning-400 h4 {
+                color: #fff;
+                font-weight: 600;
+                margin-bottom: 6px;
+            }
+
+        /*=========================================
+                    Validation
+                =========================================*/
+
+        .text-danger {
+            font-size: 12px;
+        }
+
+        .validation-summary-errors ul {
+            margin-bottom: 0;
+        }
+
+        /*=========================================
+                    Buttons
+                =========================================*/
+
+        .btn {
+            min-width: 110px;
+        }
+
+        /*=========================================
+                    Chosen
+                =========================================*/
+
+        .chosen-container {
+            width: 100% !important;
+        }
+
+        .chosen-single {
+            height: 36px !important;
+            line-height: 34px !important;
+        }
+
+        /*=========================================
+                    Alert
+                =========================================*/
+
+        .alert {
+            margin-bottom: 20px;
+        }
+
+        /*=========================================
+                    Checkbox
+                =========================================*/
+
+        .checkbox {
+            padding-top: 8px;
+        }
+
+        /*=========================================
+                    Responsive
+                =========================================*/
+
+        @@media (max-width:768px) {
+
+            .panel-footer {
+                text-align: center !important;
+            }
+
+                .panel-footer .btn {
+                    width: 100%;
+                    margin-bottom: 10px;
+                }
+        }
+
+    </style>
+
+}

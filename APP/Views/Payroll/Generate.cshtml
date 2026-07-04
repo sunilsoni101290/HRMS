@@ -1,0 +1,92 @@
+@model PayrollGenerateDto
+
+@{
+    ViewData["Title"] = "Generate Payroll";
+}
+
+<form asp-action="Generate" asp-controller="Payroll" method="post">
+
+    <input asp-for="CreatedBy" type="hidden" />
+    <input asp-for="TenantId" type="hidden" />
+
+    <div class="panel panel-flat">
+
+        <div class="panel-heading">
+            <h5 class="panel-title"><i class="icon-gear position-left"></i> Generate Payroll</h5>
+            <div class="heading-elements">
+                <a asp-action="Index" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
+            </div>
+        </div>
+
+        <div class="panel-body">
+            <div class="alert alert-info">
+                <i class="icon-info22"></i>
+                Payroll is generated from each employee's latest salary structure.
+                Earnings are prorated by attendance (present days / working days) when the option below is enabled.
+                Existing records for the same month are skipped.
+            </div>
+
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="SalaryYear"></label>
+                        <select asp-for="SalaryYear" class="form-control">
+                            @for (int y = DateTime.UtcNow.Year; y >= DateTime.UtcNow.Year - 5; y--)
+                            {
+                                <option value="@y">@y</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="SalaryMonth"></label>
+                        <select asp-for="SalaryMonth" class="form-control">
+                            @for (int m = 1; m <= 12; m++)
+                            {
+                                var name = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m);
+                                <option value="@m">@name</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="EmployeeId"></label>
+                        <select asp-for="EmployeeId" asp-items="ViewBag.EmployeeList" class="form-control">
+                            <option value="">All Employees</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="CompanyId"></label>
+                        <select asp-for="CompanyId" asp-items="ViewBag.CompanyList" class="form-control">
+                            <option value="">All Companies</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group" style="margin-top:28px;">
+                        <label class="checkbox-inline">
+                            <input asp-for="Prorated" type="checkbox" /> Prorate earnings by attendance
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-footer text-right">
+            <button type="submit" class="btn bg-primary">
+                <i class="icon-cog3"></i> Generate
+            </button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

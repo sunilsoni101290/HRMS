@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using static Domain.Enums.EnumExtensions;
 
 namespace Application.Services
 {
@@ -135,6 +136,8 @@ namespace Application.Services
         public async Task<List<DropdownDto>>
             GetEmployeeDropdownAsync()
         {
+            try
+            {
             return await _context.Employees
                 .AsNoTracking()
 
@@ -153,6 +156,11 @@ namespace Application.Services
                 })
 
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<DropdownDto>();
+            }
         }
 
         #endregion
@@ -181,6 +189,8 @@ namespace Application.Services
 
         public async Task<List<DropdownDto>> GetBranchDropdownAsync(string? companyId)
         {
+            try
+            {
             return await _context.Branches
                 .Include(x => x.Company)
                 .AsNoTracking()
@@ -198,10 +208,17 @@ namespace Application.Services
                 })
 
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<DropdownDto>();
+            }
         }
 
         public async Task<List<DropdownDto>> GetParentDepartmentDropdownAsync(string tenantId,string? departmentId = null)
         {
+            try
+            {
             var query = _context.Departments
                 .AsNoTracking()
                 .Where(x => x.TenantId == tenantId);
@@ -220,10 +237,17 @@ namespace Application.Services
                     Text = x.Name
                 })
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<DropdownDto>();
+            }
         }
 
         public async Task<List<DropdownDto>> GetParentDesignationDropdownAsync(string tenantId, string? designationId = null)
         {
+            try
+            {
             var query = _context.Designations
                 .AsNoTracking()
                 .Where(x => x.TenantId == tenantId);
@@ -242,10 +266,17 @@ namespace Application.Services
                     Text = x.Name
                 })
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<DropdownDto>();
+            }
         }
 
         public async Task<List<DropdownDto>> GetRoleNameDropdownAsync()
         {
+            try
+            {
             return await _context.Roles
                 .AsNoTracking()
 
@@ -259,10 +290,17 @@ namespace Application.Services
                 })
 
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<DropdownDto>();
+            }
         }
 
         public async Task<List<DropdownDto>> GetShiftDropdownAsync()
         {
+            try
+            {
             return await _context.Shifts
             .AsNoTracking()
             .Where(x => x.IsActive)
@@ -273,10 +311,17 @@ namespace Application.Services
                 Text = x.Name
             })
             .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<DropdownDto>();
+            }
         }
 
         public async Task<List<DropdownDto>> GetDefaultShiftDropdownAsync()
         {
+            try
+            {
             return await _context.Shifts
             .AsNoTracking()
             .Where(x => x.IsActive && x.IsDefaultShift)
@@ -287,12 +332,19 @@ namespace Application.Services
                 Text = x.Name
             })
             .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<DropdownDto>();
+            }
         }
         #endregion
 
         #region App Features
         public async Task<List<DropdownDto>> GetAppFeatureDropdownAsync()
         {
+            try
+            {
             return await _context.AppFeatures
                 .Where(x => x.IsActive)
                 .AsNoTracking()
@@ -303,6 +355,11 @@ namespace Application.Services
                     Text = x.Name
                 })
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<DropdownDto>();
+            }
         }
         #endregion
 
@@ -310,6 +367,8 @@ namespace Application.Services
 
         public async Task<List<DropdownDto>> GetParentFeatureDropdownAsync()
         {
+            try
+            {
             return await _context.AppFeatures
                 .AsNoTracking()
                 .Where(x => x.IsActive && x.ParentFeatureId != null)
@@ -323,10 +382,17 @@ namespace Application.Services
                     Text = x.Name
                 })
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<DropdownDto>();
+            }
         }
 
         public async Task<List<DropdownDto>> GetHolidayGroupDropdownAsync()
         {
+            try
+            {
             return await _context.HolidayGroups
             .AsNoTracking()
             .OrderBy(x => x.Name)
@@ -336,12 +402,19 @@ namespace Application.Services
                 Text = x.Name
             })
             .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<DropdownDto>();
+            }
         }
         #endregion
 
         #region Designation by Department Id
         public async Task<List<DropdownDto>> GetDesignationByDeptIdDropdownAsync(string? deptId)
         {
+            try
+            {
             return await _context.Designations
                 .AsNoTracking()
 
@@ -356,12 +429,19 @@ namespace Application.Services
                 .OrderBy(x => x.Text)
 
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<DropdownDto>();
+            }
         }
         #endregion
 
         #region Leave Types
         public async Task<List<DropdownDto>> GetLeaveTypeDropdownAsync()
         {
+            try
+            {
             return await _context.LeaveTypes
                 .AsNoTracking()
 
@@ -374,6 +454,182 @@ namespace Application.Services
                 .OrderBy(x => x.Text)
 
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<DropdownDto>();
+            }
+        }
+        #endregion
+
+        #region Asset Category
+        public async Task<List<DropdownDto>> GetAssetCategoryDropdownAsync()
+        {
+            try
+            {
+            return await _context.AssetCategories
+                .AsNoTracking()
+
+                .Where(x => !x.IsDeleted)
+
+                .Select(x => new DropdownDto
+                {
+                    Value = x.Id,
+                    Text = x.Name
+                })
+
+                .OrderBy(x => x.Text)
+
+                .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<DropdownDto>();
+            }
+        }
+        #endregion
+
+        #region Available Assets (Unallocated + optionally the current one)
+        public async Task<List<DropdownDto>> GetAvailableAssetDropdownAsync(string? assetId = null)
+        {
+            try
+            {
+            return await _context.Assets
+                .AsNoTracking()
+
+                .Where(x => !x.IsDeleted
+                         && (x.Id == assetId
+                             || !_context.AssetAllocations
+                                    .Any(a => a.AssetId == x.Id
+                                           && a.ReturnedOn == null
+                                           && !a.IsDeleted)))
+
+                .Select(x => new DropdownDto
+                {
+                    Value = x.Id,
+                    Text = x.AssetCode != null
+                        ? x.Name + " (" + x.AssetCode + ")"
+                        : x.Name
+                })
+
+                .OrderBy(x => x.Text)
+
+                .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<DropdownDto>();
+            }
+        }
+        #endregion
+
+        #region Salary Component
+        public async Task<List<DropdownDto>> GetSalaryComponentDropdownAsync()
+        {
+            try
+            {
+            return await _context.SalaryComponents
+                .AsNoTracking()
+
+                .Where(x => !x.IsDeleted)
+
+                .Select(x => new DropdownDto
+                {
+                    Value = x.Id,
+                    Text = x.Name + " (" + x.Code + ")"
+                })
+
+                .OrderBy(x => x.Text)
+
+                .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<DropdownDto>();
+            }
+        }
+        #endregion
+
+        #region Job Opening (Open positions)
+        public async Task<List<DropdownDto>> GetJobOpeningDropdownAsync()
+        {
+            try
+            {
+            return await _context.JobOpenings
+                .AsNoTracking()
+
+                .Where(x => !x.IsDeleted && x.Status == JobStatus.Open)
+
+                .Select(x => new DropdownDto
+                {
+                    Value = x.Id,
+                    Text = x.Title
+                })
+
+                .OrderBy(x => x.Text)
+
+                .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<DropdownDto>();
+            }
+        }
+        #endregion
+
+        #region Candidate
+        public async Task<List<DropdownDto>> GetCandidateDropdownAsync()
+        {
+            try
+            {
+            return await _context.Candidates
+                .AsNoTracking()
+
+                .Where(x => !x.IsDeleted)
+
+                .Select(x => new DropdownDto
+                {
+                    Value = x.Id,
+                    Text = x.Name
+                })
+
+                .OrderBy(x => x.Text)
+
+                .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<DropdownDto>();
+            }
+        }
+        #endregion
+
+        #region Candidate Application
+        public async Task<List<DropdownDto>> GetApplicationDropdownAsync()
+        {
+            try
+            {
+            return await _context.CandidateApplications
+                .AsNoTracking()
+
+                .Where(x => !x.IsDeleted)
+
+                .Select(x => new DropdownDto
+                {
+                    Value = x.Id,
+                    Text = (x.Candidate != null ? x.Candidate.Name : "")
+                         + " - "
+                         + (x.JobOpening != null ? x.JobOpening.Title : "")
+                })
+
+                .OrderBy(x => x.Text)
+
+                .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<DropdownDto>();
+            }
         }
         #endregion
     }

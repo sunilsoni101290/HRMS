@@ -166,10 +166,6 @@ namespace Infrastructure.Data
                     SubscriptionStartDate = DateTime.UtcNow,
                     SubscriptionEndDate = DateTime.UtcNow.AddYears(1),
 
-                    PlanName = "Enterprise",
-                    MaxUsers = 100,
-                    MaxBranches = 10,
-
                     WebsiteUrl = "https://default.com",
                     CreatedBy = "System"
                 };
@@ -189,6 +185,9 @@ namespace Infrastructure.Data
             }
 
             await AppFeatureSeeder.SeedAsync(context,tenantId);
+
+            // Idempotent: adds new module menus + rectifies existing ones on every startup
+            await AppFeatureSeeder.ReconcileModulesAsync(context, tenantId);
             //await AppFeatureSeeder.SeedTenantFeatureAsync(context);
 
             // =========================
@@ -401,6 +400,45 @@ namespace Infrastructure.Data
                 await context.SaveChangesAsync();
             }
 
+            #region Shift
+
+            if (await context.Shifts.AnyAsync())
+                return;
+
+            var shift = new Shift
+            {
+                // BaseEntity
+                Id = IDManager.GetNewId(new Shift()),
+                TenantId = tenantId,
+                IsActive = true,
+                IsDeleted = false,
+                CreatedBy = "System",
+                CreatedOn = DateTime.UtcNow,
+
+                // Shift
+                Name = "General Shift",
+                StartTime = new TimeSpan(9, 0, 0),      // 09:00 AM
+                EndTime = new TimeSpan(18, 0, 0),       // 06:00 PM
+
+                GraceInMinutes = 15,
+                GraceOutMinutes = 15,
+
+                // Attendance Rules
+                HalfDayMinutes = 240,                   // 4 Hours
+                FullDayMinutes = 480,                   // 8 Hours
+
+                MinimumWorkingMinutes = 480,            // 8 Hours
+                MaximumWorkingMinutes = 600,            // 10 Hours
+
+                IsNightShift = false,
+                IsDefaultShift = true
+            };
+
+            await context.Shifts.AddAsync(shift);
+            await context.SaveChangesAsync();
+
+            #endregion
+
             // =========================
             // 10. EMPLOYEE
             // =========================
@@ -413,96 +451,174 @@ namespace Infrastructure.Data
                 var hrMgrDesg = await context.Designations.FirstOrDefaultAsync(x => x.Code == "HR-MGR");
                 var devDesg = await context.Designations.FirstOrDefaultAsync(x => x.Code == "DEV");
 
-                if (tenantId == null || companyId == null ||
-                    hrDept == null || itDept == null || ceoDesg == null)
-                    {
-                        throw new Exception("Required master data not found.");
-                    }
+                var defaultShift = await context.Shifts.FirstOrDefaultAsync();
+                var india = await context.Countries.FirstOrDefaultAsync(x => x.Name == "India");
 
-                // 👑 CEO (Top Level - No Manager)
+                if (tenantId == null ||
+                    companyId == null ||
+                    hrDept == null ||
+                    itDept == null ||
+                    ceoDesg == null ||
+                    hrMgrDesg == null ||
+                    devDesg == null ||
+                    defaultShift == null)
+                {
+                    throw new Exception("Required master data not found.");
+                }
+
+                // ================= CEO =================
+
                 var ceo = new Employee
                 {
                     Id = IDManager.GetNewId(new Employee()),
                     EmployeeCode = "EMP001",
-                    FirstName = "Amit",
-                    LastName = "Sharma",
+
+                    FirstName = "Sunil",
+                    LastName = "Soni",
 
                     TenantId = tenantId,
                     CompanyId = companyId,
                     BranchId = null,
+
                     DepartmentId = hrDept.Id,
                     DesignationId = ceoDesg.Id,
 
-                    JoiningDate = DateTime.UtcNow.AddYears(-5),
-                    EmploymentType = EmploymentType.Permanent,
+                    ReportingManagerId = null,
+
+                    ShiftId = defaultShift.Id,
+
+                    DateOfBirth = new DateTime(1980, 5, 10),
 
                     Gender = Gender.Male,
                     MaritalStatus = MaritalStatus.Married,
 
                     Phone = "9000000001",
-                    Email = "ceo@company.com",
+                    Email = "sunil.soni190@gmail.com",
+
                     Address = "Mumbai",
                     Pincode = "400001",
+
+                    PANNumber = "ABCDE1234F",
+                    AadharNumber = "123412341234",
+
+                    JoiningDate = DateTime.UtcNow.AddYears(-5),
+                    ConfirmationDate = DateTime.UtcNow.AddYears(-5).AddMonths(6),
+
+                    EmploymentType = EmploymentType.Permanent,
+
+                    PassportNumber = "N1234567",
+                    IssueDate = new DateTime(2022, 1, 1),
+                    ExpiryDate = new DateTime(2032, 1, 1),
+                    PlaceOfIssue = "Mumbai",
+
+                    Nationality = Nationality.Indian,
+                    PassportStatus = PassportStatus.Active,
+
+                    CountryId = india?.Id,
 
                     CreatedBy = "System"
                 };
 
-                // 👨‍💼 HR Manager (Reports to CEO)
+                // ================= HR Manager =================
+
                 var hrManager = new Employee
                 {
                     Id = IDManager.GetNewId(new Employee()),
                     EmployeeCode = "EMP002",
+
                     FirstName = "Neha",
                     LastName = "Verma",
 
                     TenantId = tenantId,
                     CompanyId = companyId,
-                    BranchId = null,
+
                     DepartmentId = hrDept.Id,
                     DesignationId = hrMgrDesg.Id,
 
                     ReportingManagerId = ceo.Id,
 
-                    JoiningDate = DateTime.UtcNow.AddYears(-3),
-                    EmploymentType = EmploymentType.Permanent,
+                    ShiftId = defaultShift.Id,
+
+                    DateOfBirth = new DateTime(1990, 8, 15),
 
                     Gender = Gender.Female,
                     MaritalStatus = MaritalStatus.Unmarried,
 
                     Phone = "9000000002",
                     Email = "hr@company.com",
+
                     Address = "Mumbai",
                     Pincode = "400001",
+
+                    PANNumber = "PQRSX2345L",
+                    AadharNumber = "234523452345",
+
+                    JoiningDate = DateTime.UtcNow.AddYears(-3),
+                    ConfirmationDate = DateTime.UtcNow.AddYears(-3).AddMonths(6),
+
+                    EmploymentType = EmploymentType.Permanent,
+
+                    PassportNumber = "N2345678",
+                    IssueDate = new DateTime(2021, 3, 15),
+                    ExpiryDate = new DateTime(2031, 3, 15),
+                    PlaceOfIssue = "Mumbai",
+
+                    Nationality = Nationality.Indian,
+                    PassportStatus = PassportStatus.Active,
+
+                    CountryId = india?.Id,
 
                     CreatedBy = "System"
                 };
 
-                // 👨‍💻 Developer (Reports to HR Manager / IT Manager ideally)
+                // ================= Developer =================
+
                 var developer = new Employee
                 {
                     Id = IDManager.GetNewId(new Employee()),
                     EmployeeCode = "EMP003",
+
                     FirstName = "Rahul",
                     LastName = "Patel",
 
                     TenantId = tenantId,
                     CompanyId = companyId,
-                    BranchId = null,
+
                     DepartmentId = itDept.Id,
                     DesignationId = devDesg.Id,
 
                     ReportingManagerId = hrManager.Id,
 
-                    JoiningDate = DateTime.UtcNow.AddYears(-1),
-                    EmploymentType = EmploymentType.Permanent,
+                    ShiftId = defaultShift.Id,
+
+                    DateOfBirth = new DateTime(1998, 2, 20),
 
                     Gender = Gender.Male,
                     MaritalStatus = MaritalStatus.Unmarried,
 
                     Phone = "9000000003",
-                    Email = "dev@company.com",
+                    Email = "developer@company.com",
+
                     Address = "Pune",
                     Pincode = "411001",
+
+                    PANNumber = "LMNOP6789Q",
+                    AadharNumber = "345634563456",
+
+                    JoiningDate = DateTime.UtcNow.AddYears(-1),
+                    ConfirmationDate = DateTime.UtcNow.AddMonths(-6),
+
+                    EmploymentType = EmploymentType.Permanent,
+
+                    PassportNumber = "N3456789",
+                    IssueDate = new DateTime(2023, 5, 1),
+                    ExpiryDate = new DateTime(2033, 5, 1),
+                    PlaceOfIssue = "Pune",
+
+                    Nationality = Nationality.Indian,
+                    PassportStatus = PassportStatus.Active,
+
+                    CountryId = india?.Id,
 
                     CreatedBy = "System"
                 };
@@ -511,47 +627,6 @@ namespace Infrastructure.Data
                 await context.SaveChangesAsync();
             }
 
-            // =========================
-            // 10. SHIFT
-            // =========================
-            // Check if shifts already exist
-                if (await context.Shifts.AnyAsync())
-                    return;
-
-                var shifts = new List<Shift>();
-                shifts.AddRange(new List<Shift>
-                {
-                    new Shift
-                    {
-                        Id = IDManager.GetNewId(new Shift()),
-                        Name = "General Shift",
-                        StartTime = new TimeSpan(9, 0, 0),
-                        EndTime = new TimeSpan(18, 0, 0),
-
-                        GraceInMinutes = 15,
-                        GraceOutMinutes = 15,
-
-                        HalfDayMinutes = 240,      // 4 Hours
-                        FullDayMinutes = 480,      // 8 Hours
-
-                        MinimumWorkingMinutes = 450,
-                        MaximumWorkingMinutes = 540,
-
-                        IsNightShift = false,
-
-                        IsDefaultShift=true,
-
-                        TenantId = tenantId,
-
-                        IsActive = true,
-                        CreatedBy="System",
-                        CreatedOn = DateTime.UtcNow
-                    }
-                });
-
-                await context.Shifts.AddRangeAsync(shifts);
-                await context.SaveChangesAsync();
-        
             // =========================
             // 12. PERMISSIONS
             // =========================
@@ -742,6 +817,10 @@ namespace Infrastructure.Data
                 await context.UserRoles.AddAsync(userRole);
                 await context.SaveChangesAsync();
             }
+
+            // Idempotent RBAC: generate permissions for every screen feature and
+            // grant them to Super Admin. Runs after roles/features are in place.
+            await AppFeatureSeeder.ReconcilePermissionsAsync(context, tenantId);
         }
 
         public static string GetNextCodeSequence(ApplicationDbContext _context, string module)
@@ -1191,6 +1270,331 @@ namespace Infrastructure.Data
             await context.AppFeatures.AddRangeAsync(features);
 
             await context.SaveChangesAsync();
+        }
+
+        // =====================================================
+        // 🔁 IDEMPOTENT RECONCILE (safe to run on every startup)
+        //    - adds new module menus (Assets, Recruitment, Communication)
+        //    - extends Payroll (Salary Component, Dashboard, Register)
+        //    - rectifies broken controllers (PayrollProcess/Payslip/Interview)
+        //    Upserts by Code: inserts if missing, updates if present.
+        // =====================================================
+        public static async Task ReconcileModulesAsync(
+            ApplicationDbContext context,
+            string tenantId)
+        {
+            var desired = new List<AppFeature>();
+
+            // NOTE: ParentFeatureId temporarily holds the parent CODE; resolved below.
+            AppFeature Def(
+                string name,
+                string code,
+                string controller,
+                string action,
+                string? parentCode = null,
+                string? icon = null,
+                AppFeatureType category = AppFeatureType.Transaction,
+                int order = 0,
+                bool isMenu = true,
+                bool canView = true,
+                bool canAdd = false,
+                bool canEdit = false,
+                bool canDelete = false,
+                bool canApprove = false,
+                bool canExport = false,
+                bool canPrint = false)
+            {
+                var f = new AppFeature
+                {
+                    Id = IDManager.GetNewId(new AppFeature()),
+                    Name = name,
+                    Code = code,
+                    Module = AppFeatureConstants.HRMS,
+                    AppFeatureType = category,
+                    ControllerName = controller,
+                    ActionName = action,
+                    ParentFeatureId = parentCode,
+                    Icon = icon,
+                    DisplayOrder = order,
+                    TenantId = tenantId,
+                    IsMenu = isMenu,
+                    IsVisible = true,
+                    IsActive = true,
+                    CanView = canView,
+                    CanAdd = canAdd,
+                    CanEdit = canEdit,
+                    CanDelete = canDelete,
+                    CanApprove = canApprove,
+                    CanExport = canExport,
+                    CanPrint = canPrint,
+                    CreatedBy = "System",
+                    CreatedOn = DateTime.UtcNow
+                };
+                desired.Add(f);
+                return f;
+            }
+
+            // ---------------- EMPLOYEE SELF-SERVICE ----------------
+            Def("My Dashboard", AppFeatureConstants.EMPLOYEE_DASHBOARD,
+                AppFeatureConstants.EMPLOYEE_DASHBOARD_CONTROLLER, AppFeatureConstants.EMPLOYEE_DASHBOARD_ACTION,
+                null, "bi bi-speedometer2", AppFeatureType.Dashboard, 2);
+
+            Def("Tasks", AppFeatureConstants.EMPLOYEE_TASK,
+                AppFeatureConstants.EMPLOYEE_TASK_CONTROLLER, AppFeatureConstants.EMPLOYEE_TASK_ACTION,
+                null, "bi bi-check2-square", AppFeatureType.Transaction, 3,
+                canAdd: true, canEdit: true, canDelete: true);
+
+            // ---------------- PAYROLL (ensure parent + children + fixes) ----------------
+            Def("Payroll", AppFeatureConstants.PAYROLL, "", "",
+                null, "bi bi-cash-stack", AppFeatureType.Transaction, 70);
+
+            Def("Salary Component", AppFeatureConstants.SALARY_COMPONENT,
+                AppFeatureConstants.SALARY_COMPONENT_CONTROLLER, AppFeatureConstants.SALARY_COMPONENT_ACTION,
+                AppFeatureConstants.PAYROLL, "bi bi-cash-coin", AppFeatureType.Master, 70,
+                canAdd: true, canEdit: true, canDelete: true);
+
+            Def("Salary Structure", AppFeatureConstants.SALARY_STRUCTURE,
+                AppFeatureConstants.SALARY_STRUCTURE_CONTROLLER, AppFeatureConstants.SALARY_STRUCTURE_ACTION,
+                AppFeatureConstants.PAYROLL, "bi bi-wallet-fill", AppFeatureType.Transaction, 71,
+                canAdd: true, canEdit: true, canDelete: true);
+
+            Def("Payroll Processing", AppFeatureConstants.PAYROLL_PROCESS,
+                AppFeatureConstants.PAYROLL_PROCESS_CONTROLLER, AppFeatureConstants.PAYROLL_PROCESS_ACTION,
+                AppFeatureConstants.PAYROLL, "bi bi-cpu-fill", AppFeatureType.Transaction, 72,
+                canAdd: true, canApprove: true);
+
+            Def("Payroll Dashboard", AppFeatureConstants.PAYROLL_DASHBOARD,
+                AppFeatureConstants.PAYROLL_DASHBOARD_CONTROLLER, AppFeatureConstants.PAYROLL_DASHBOARD_ACTION,
+                AppFeatureConstants.PAYROLL, "bi bi-graph-up", AppFeatureType.Dashboard, 73);
+
+            Def("Payroll Register", AppFeatureConstants.PAYROLL_REGISTER,
+                AppFeatureConstants.PAYROLL_REGISTER_CONTROLLER, AppFeatureConstants.PAYROLL_REGISTER_ACTION,
+                AppFeatureConstants.PAYROLL, "bi bi-file-earmark-spreadsheet", AppFeatureType.Report, 74,
+                canExport: true, canPrint: true);
+
+            // Retire the broken Payslip menu (opened per-payroll instead)
+            Def("Payslip", AppFeatureConstants.PAYSLIP,
+                AppFeatureConstants.PAYSLIP_CONTROLLER, AppFeatureConstants.PAYSLIP_ACTION,
+                AppFeatureConstants.PAYROLL, "bi bi-receipt", AppFeatureType.Transaction, 75,
+                isMenu: false, canPrint: true);
+
+            // ---------------- ASSET MANAGEMENT ----------------
+            Def("Asset Management", AppFeatureConstants.ASSET_MANAGEMENT, "", "",
+                null, "bi bi-box-seam-fill", AppFeatureType.Transaction, 80);
+
+            Def("Asset Category", AppFeatureConstants.ASSET_CATEGORY,
+                AppFeatureConstants.ASSET_CATEGORY_CONTROLLER, AppFeatureConstants.ASSET_CATEGORY_ACTION,
+                AppFeatureConstants.ASSET_MANAGEMENT, "bi bi-grid-fill", AppFeatureType.Master, 81,
+                canAdd: true, canEdit: true, canDelete: true);
+
+            Def("Asset", AppFeatureConstants.ASSET,
+                AppFeatureConstants.ASSET_CONTROLLER, AppFeatureConstants.ASSET_ACTION,
+                AppFeatureConstants.ASSET_MANAGEMENT, "bi bi-laptop", AppFeatureType.Transaction, 82,
+                canAdd: true, canEdit: true, canDelete: true);
+
+            Def("Asset Allocation", AppFeatureConstants.ASSET_ALLOCATION,
+                AppFeatureConstants.ASSET_ALLOCATION_CONTROLLER, AppFeatureConstants.ASSET_ALLOCATION_ACTION,
+                AppFeatureConstants.ASSET_MANAGEMENT, "bi bi-arrow-left-right", AppFeatureType.Transaction, 83,
+                canAdd: true, canEdit: true);
+
+            // ---------------- RECRUITMENT ----------------
+            Def("Recruitment", AppFeatureConstants.RECRUITMENT, "", "",
+                null, "bi bi-person-badge-fill", AppFeatureType.Transaction, 90);
+
+            Def("Job Openings", AppFeatureConstants.JOB_OPENING,
+                AppFeatureConstants.JOB_OPENING_CONTROLLER, AppFeatureConstants.JOB_OPENING_ACTION,
+                AppFeatureConstants.RECRUITMENT, "bi bi-briefcase-fill", AppFeatureType.Transaction, 91,
+                canAdd: true, canEdit: true, canDelete: true);
+
+            Def("Candidates", AppFeatureConstants.CANDIDATE,
+                AppFeatureConstants.CANDIDATE_CONTROLLER, AppFeatureConstants.CANDIDATE_ACTION,
+                AppFeatureConstants.RECRUITMENT, "bi bi-people-fill", AppFeatureType.Transaction, 92,
+                canAdd: true, canEdit: true, canDelete: true);
+
+            Def("Applications", AppFeatureConstants.CANDIDATE_APPLICATION,
+                AppFeatureConstants.CANDIDATE_APPLICATION_CONTROLLER, AppFeatureConstants.CANDIDATE_APPLICATION_ACTION,
+                AppFeatureConstants.RECRUITMENT, "bi bi-clipboard-check-fill", AppFeatureType.Transaction, 93,
+                canAdd: true, canEdit: true);
+
+            Def("Interviews", AppFeatureConstants.INTERVIEW,
+                AppFeatureConstants.INTERVIEW_CONTROLLER, AppFeatureConstants.INTERVIEW_ACTION,
+                AppFeatureConstants.RECRUITMENT, "bi bi-calendar-event-fill", AppFeatureType.Transaction, 94,
+                canAdd: true, canEdit: true);
+
+            Def("Recruitment Dashboard", AppFeatureConstants.RECRUITMENT_DASHBOARD,
+                AppFeatureConstants.RECRUITMENT_DASHBOARD_CONTROLLER, AppFeatureConstants.RECRUITMENT_DASHBOARD_ACTION,
+                AppFeatureConstants.RECRUITMENT, "bi bi-graph-up-arrow", AppFeatureType.Dashboard, 95);
+
+            // ---------------- COMMUNICATION ----------------
+            Def("Communication", AppFeatureConstants.COMMUNICATION, "", "",
+                null, "bi bi-megaphone-fill", AppFeatureType.Transaction, 100);
+
+            Def("Announcements", AppFeatureConstants.ANNOUNCEMENT,
+                AppFeatureConstants.ANNOUNCEMENT_CONTROLLER, AppFeatureConstants.ANNOUNCEMENT_ACTION,
+                AppFeatureConstants.COMMUNICATION, "bi bi-bullhorn-fill", AppFeatureType.Transaction, 101,
+                canAdd: true, canEdit: true, canDelete: true);
+
+            Def("Events", AppFeatureConstants.EVENT,
+                AppFeatureConstants.EVENT_CONTROLLER, AppFeatureConstants.EVENT_ACTION,
+                AppFeatureConstants.COMMUNICATION, "bi bi-calendar3", AppFeatureType.Transaction, 102,
+                canAdd: true, canEdit: true, canDelete: true);
+
+            Def("Notifications", AppFeatureConstants.NOTIFICATION,
+                AppFeatureConstants.NOTIFICATION_CONTROLLER, AppFeatureConstants.NOTIFICATION_ACTION,
+                AppFeatureConstants.COMMUNICATION, "bi bi-bell-fill", AppFeatureType.Transaction, 103);
+
+            // ---------------- RECONCILE (upsert by Code) ----------------
+            var existing = await context.AppFeatures.ToListAsync();
+
+            var existingByCode = existing
+                .Where(f => !string.IsNullOrEmpty(f.Code))
+                .GroupBy(f => f.Code)
+                .ToDictionary(g => g.Key, g => g.First());
+
+            string? FinalId(string? code)
+            {
+                if (string.IsNullOrEmpty(code)) return null;
+                if (existingByCode.TryGetValue(code, out var e)) return e.Id;
+                var d = desired.FirstOrDefault(x => x.Code == code);
+                return d?.Id;
+            }
+
+            foreach (var d in desired)
+            {
+                var parentFinalId = FinalId(d.ParentFeatureId);
+
+                if (existingByCode.TryGetValue(d.Code, out var current))
+                {
+                    current.Name = d.Name;
+                    current.Module = d.Module;
+                    current.ControllerName = d.ControllerName;
+                    current.ActionName = d.ActionName;
+                    current.ParentFeatureId = parentFinalId;
+                    current.Icon = d.Icon;
+                    current.DisplayOrder = d.DisplayOrder;
+                    current.AppFeatureType = d.AppFeatureType;
+                    current.IsMenu = d.IsMenu;
+                    current.IsVisible = d.IsVisible;
+                    current.IsActive = d.IsActive;
+                    current.CanView = d.CanView;
+                    current.CanAdd = d.CanAdd;
+                    current.CanEdit = d.CanEdit;
+                    current.CanDelete = d.CanDelete;
+                    current.CanApprove = d.CanApprove;
+                    current.CanExport = d.CanExport;
+                    current.CanPrint = d.CanPrint;
+                    current.ModifiedBy = "System";
+                    current.ModifiedOn = DateTime.UtcNow;
+                    context.AppFeatures.Update(current);
+                }
+                else
+                {
+                    d.ParentFeatureId = parentFinalId;
+                    await context.AppFeatures.AddAsync(d);
+                }
+            }
+
+            await context.SaveChangesAsync();
+        }
+
+        // =====================================================
+        // 🔐 IDEMPOTENT PERMISSION RECONCILE
+        //    - generates View/Create/Edit/Delete/Approve/Export/Print
+        //      permissions per screen feature (driven by its Can* flags)
+        //    - grants every permission to the Super Admin role
+        //    Safe to run on every startup.
+        // =====================================================
+        public static async Task ReconcilePermissionsAsync(
+            ApplicationDbContext context,
+            string tenantId)
+        {
+            // Only features that map to an actual screen get permissions.
+            var features = await context.AppFeatures
+                .Where(f => f.IsActive
+                         && f.ControllerName != null
+                         && f.ControllerName != "")
+                .ToListAsync();
+
+            var existingByCode = (await context.Permissions.ToListAsync())
+                .Where(p => !string.IsNullOrEmpty(p.Code))
+                .GroupBy(p => p.Code)
+                .ToDictionary(g => g.Key, g => g.First());
+
+            var toAdd = new List<Permission>();
+
+            void AddPerm(AppFeature f, string action, string label)
+            {
+                var code = f.Code + "_" + action.ToUpper();
+                if (existingByCode.ContainsKey(code)) return;
+                if (toAdd.Any(p => p.Code == code)) return;
+
+                toAdd.Add(new Permission
+                {
+                    Id = IDManager.GetNewId(new Permission()),
+                    Name = label + " " + f.Name,
+                    Code = code,
+                    Module = string.IsNullOrEmpty(f.Module) ? Modules.HRMS : f.Module,
+                    FeatureId = f.Code,
+                    Action = action,
+                    DisplayOrder = f.DisplayOrder,
+                    TenantId = tenantId,
+                    CreatedBy = "System",
+                    CreatedOn = DateTime.UtcNow
+                });
+            }
+
+            foreach (var f in features)
+            {
+                AddPerm(f, Actions.View, "View");
+                if (f.CanAdd) AddPerm(f, Actions.Create, "Create");
+                if (f.CanEdit) AddPerm(f, Actions.Edit, "Edit");
+                if (f.CanDelete) AddPerm(f, Actions.Delete, "Delete");
+                if (f.CanApprove) AddPerm(f, Actions.Approve, "Approve");
+                if (f.CanExport) AddPerm(f, Actions.Export, "Export");
+                if (f.CanPrint) AddPerm(f, "Print", "Print");
+            }
+
+            if (toAdd.Count > 0)
+            {
+                await context.Permissions.AddRangeAsync(toAdd);
+                await context.SaveChangesAsync();
+            }
+
+            // Super Admin → every permission (fills the gaps for new features)
+            var superAdmin = await context.Roles
+                .FirstOrDefaultAsync(r => r.Code == ConstantHelper.SUPER_ADMIN);
+
+            if (superAdmin != null)
+            {
+                var allPermissionIds = await context.Permissions
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var linked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == superAdmin.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var newLinks = allPermissionIds
+                    .Where(pid => !linked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = superAdmin.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (newLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(newLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
         }
     }
 }

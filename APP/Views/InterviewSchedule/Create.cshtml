@@ -1,0 +1,95 @@
+@model InterviewScheduleDto
+
+@{
+    ViewData["Title"] = "Interview";
+    bool isEdit = !string.IsNullOrEmpty(Model?.Id);
+}
+
+<form asp-action="@(isEdit ? "Edit" : "Create")" asp-controller="InterviewSchedule" asp-route-id="@Model?.Id" method="post">
+
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="TenantId" type="hidden" />
+    <input asp-for="CreatedBy" type="hidden" />
+
+    <div class="panel panel-flat">
+
+        <div class="panel-heading">
+            <h5 class="panel-title">
+                <i class="icon-calendar position-left"></i>
+                @(isEdit ? "Edit Interview" : "Schedule Interview")
+            </h5>
+            <div class="heading-elements">
+                <a asp-action="Index" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
+            </div>
+        </div>
+
+        <div class="panel-body">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="CandidateApplicationId"></label> <span class="text-danger">*</span>
+                        <select asp-for="CandidateApplicationId" asp-items="ViewBag.ApplicationList" class="form-control">
+                            <option value="">Select Application</option>
+                        </select>
+                        <span asp-validation-for="CandidateApplicationId" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="InterviewerId"></label> <span class="text-danger">*</span>
+                        <select asp-for="InterviewerId" asp-items="ViewBag.InterviewerList" class="form-control">
+                            <option value="">Select Interviewer</option>
+                        </select>
+                        <span asp-validation-for="InterviewerId" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="InterviewDate"></label> <span class="text-danger">*</span>
+                        <input asp-for="InterviewDate" type="datetime-local" class="form-control"
+                               value="@Model?.InterviewDate.ToString("yyyy-MM-ddTHH:mm")" />
+                        <span asp-validation-for="InterviewDate" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="Mode"></label>
+                        <select asp-for="Mode" asp-items="ViewBag.ModeList" class="form-control"></select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="Status"></label>
+                        <select asp-for="Status" asp-items="ViewBag.StatusList" class="form-control"></select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label asp-for="Feedback"></label>
+                        <textarea asp-for="Feedback" class="form-control" rows="3" placeholder="Interview feedback / notes..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-footer text-right">
+            <button type="submit" class="btn bg-primary"><i class="icon-floppy-disk"></i> @(isEdit ? "Update" : "Schedule")</button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    <partial name="_ValidationScriptsPartial" />
+}

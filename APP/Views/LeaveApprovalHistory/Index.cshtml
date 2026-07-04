@@ -1,0 +1,158 @@
+﻿
+@model IEnumerable<LeaveApprovalHistoryDetailDto>
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+
+            <i class="icon-history position-left"></i>
+
+            Leave Approval History
+
+        </h5>
+
+    </div>
+
+    <div class="panel-body">
+
+        <div class="row">
+
+            <div class="col-md-3">
+                <input type="text"
+                       class="form-control"
+                       placeholder="Search Employee..." />
+            </div>
+
+            <div class="col-md-3">
+                <select class="form-control">
+                    <option value="">All Leave Types</option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <select class="form-control">
+                    <option value="">All Actions</option>
+                    <option>Approved</option>
+                    <option>Rejected</option>
+                    <option>Cancelled</option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <button class="btn bg-primary">
+                    <i class="icon-search4"></i>
+                    Search
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <table class="table table-bordered table-striped datatable-basic">
+
+        <thead>
+
+            <tr>
+
+                <th>Application No</th>
+                <th>Employee</th>
+                <th>Leave Type</th>
+                <th>Period</th>
+                <th>Days</th>
+                <th>Action</th>
+                <th>Action By</th>
+                <th>Action Date</th>
+                <th>Remarks</th>
+                <th width="100">Action</th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            @foreach (var item in Model)
+            {
+                <tr>
+
+                    <td>
+                        <strong>@item.LeaveApplicationNo</strong>
+                    </td>
+
+                    <td>@item.EmployeeName</td>
+
+                    <td>
+
+                        <span class="label bg-primary">
+                            @item.LeaveTypeName
+                        </span>
+
+                    </td>
+
+                    <td>
+                        @item.FromDate.ToString("dd-MMM-yyyy")
+                        <br />
+                        @item.ToDate.ToString("dd-MMM-yyyy")
+                    </td>
+
+                    <td>@item.TotalDays</td>
+
+                    <td>
+
+                        @if (item.Action == EnumExtensions.ApprovalStatus.Approved)
+                        {
+                            <span class="label bg-success">
+                                Approved
+                            </span>
+                        }
+                        else if (item.Action == EnumExtensions.ApprovalStatus.Rejected)
+                        {
+                            <span class="label bg-danger">
+                                Rejected
+                            </span>
+                        }
+                        else if (item.Action == EnumExtensions.ApprovalStatus.Cancelled)
+                        {
+                            <span class="label bg-danger">
+                                Cancelled
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="label bg-warning">
+                                Pending
+                            </span>
+                        }
+                    </td>
+
+                    <td>@item.ActionByName</td>
+
+                    <td>
+                        @item.ActionDate.ToString("dd-MMM-yyyy HH:mm")
+                    </td>
+
+                    <td>@item.Remarks</td>
+
+                    <td>
+
+                        <a asp-action="Details"
+                           asp-route-id="@item.Id"
+                           class="btn btn-default btn-icon">
+
+                            <i class="icon-eye"></i>
+
+                        </a>
+
+                    </td>
+
+                </tr>
+            }
+
+        </tbody>
+
+    </table>
+
+</div>

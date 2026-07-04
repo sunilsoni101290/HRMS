@@ -4,6 +4,8 @@
     {
         Task<TResponse> GetAsync<TResponse>(string url);
 
+        Task<TResponse> GetAsync<TRequest, TResponse>(string url, TRequest data);
+
         Task<TResponse> PostAsync<TRequest, TResponse>(
             string url,
             TRequest data);

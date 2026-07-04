@@ -1,5 +1,6 @@
-﻿@using APP.Models;
-@model DashboardViewModel
+﻿
+@using APP.Models;
+@model DashboardKpiDto
 
 @{
 	ViewBag.Title = "Dashboard";
@@ -138,7 +139,7 @@
                     <i class="icon-calendar3 icon-3x opacity-75"></i>
                 </div>
                 <div class="media-body text-right">
-                    <h3 class="no-margin">@Model.OnLeave</h3>
+                    <h3 class="no-margin">@Model.OnLeaveToday</h3>
                     <span class="text-uppercase text-size-mini">
                         On Leave
                     </span>
@@ -198,7 +199,7 @@
 
         <div class="heading-elements">
             <span class="badge bg-warning">
-                18 Pending
+                @Model.PendingRequests
             </span>
         </div>
     </div>
@@ -218,7 +219,7 @@
 
                         <div class="media-left">
                             <h5 class="text-semibold no-margin">
-                                42
+                                @Model.TotalRequests
                                 <small class="display-block">
                                     Total Requests
                                 </small>
@@ -235,7 +236,7 @@
 
                         <div class="media-left">
                             <h5 class="text-semibold no-margin">
-                                16
+                                @Model.ApprovedRequests
                                 <small class="display-block">
                                     Approved
                                 </small>
@@ -252,7 +253,7 @@
 
                         <div class="media-left">
                             <h5 class="text-semibold no-margin">
-                                8
+                                @Model.RejectedRequests
                                 <small class="display-block">
                                     Rejected
                                 </small>
@@ -289,188 +290,78 @@
             <tbody>
 
                 <tr class="active border-double">
-                    <td colspan="4">
-                        Pending Approval
-                    </td>
+                    <td colspan="4">Pending Approval</td>
 
                     <td class="text-right">
                         <span class="badge bg-warning">
-                            18
+                            @Model.PendingRequests
                         </span>
                     </td>
                 </tr>
 
-                <tr>
-                    <td>
-                        <h6 class="no-margin">
-                            13
-                            <small class="display-block">
-                                JUN
-                            </small>
-                        </h6>
-                    </td>
+                @foreach (var item in Model.RecentLeaveRequests)
+                {
+                    <tr>
 
-                    <td>
-                        <div class="media-left">
-                            <img src="/Content/images/user.png"
-                                 class="img-circle img-xs"
-                                 alt="">
-                        </div>
+                        <td>
+                            <h6 class="no-margin">
+                                @item.FromDate.ToString("dd")
+                                <small class="display-block">
+                                    @item.FromDate.ToString("MMM").ToUpper()
+                                </small>
+                            </h6>
+                        </td>
 
-                        <div class="media-body">
-                            <span class="text-semibold">
-                                Rahul Sharma
-                            </span>
-
-                            <div class="text-muted text-size-small">
-                                Software Developer
+                        <td>
+                            <div class="media-left">
+                                <img src="@(string.IsNullOrEmpty(item.EmployeePhoto))"
+                                     class="img-circle img-xs" />
                             </div>
-                        </div>
-                    </td>
 
-                    <td>
-                        Casual Leave
-                    </td>
+                            <div class="media-body">
+                                <span class="text-semibold">
+                                    @item.EmployeeName
+                                </span>
 
-                    <td>
-                        2 Days
-                    </td>
-
-                    <td>
-                        <span class="label bg-warning">
-                            Pending
-                        </span>
-                    </td>
-                </tr>
-
-                <tr>
-                    <td>
-                        <h6 class="no-margin">
-                            12
-                            <small class="display-block">
-                                JUN
-                            </small>
-                        </h6>
-                    </td>
-
-                    <td>
-                        <div class="media-left">
-                            <img src="/Content/images/user.png"
-                                 class="img-circle img-xs"
-                                 alt="">
-                        </div>
-
-                        <div class="media-body">
-                            <span class="text-semibold">
-                                Priya Singh
-                            </span>
-
-                            <div class="text-muted text-size-small">
-                                HR Manager
+                                <div class="text-muted text-size-small">
+                                    @item.Designation
+                                </div>
                             </div>
-                        </div>
-                    </td>
+                        </td>
 
-                    <td>
-                        Sick Leave
-                    </td>
+                        <td>
+                            @item.LeaveType
+                        </td>
 
-                    <td>
-                        1 Day
-                    </td>
+                        <td>
+                            @item.TotalDays Day@(item.TotalDays > 1 ? "s" : "")
+                        </td>
 
-                    <td>
-                        <span class="label bg-success">
-                            Approved
-                        </span>
-                    </td>
-                </tr>
+                        <td>
 
-                <tr>
-                    <td>
-                        <h6 class="no-margin">
-                            11
-                            <small class="display-block">
-                                JUN
-                            </small>
-                        </h6>
-                    </td>
+                            @switch (item.Status)
+                            {
+                                case EnumExtensions.ApprovalStatus.Pending:
+                                    <span class="label bg-warning">Pending</span>
+                                    break;
 
-                    <td>
-                        <div class="media-left">
-                            <img src="/Content/images/user.png"
-                                 class="img-circle img-xs"
-                                 alt="">
-                        </div>
+                                case EnumExtensions.ApprovalStatus.Approved:
+                                    <span class="label bg-success">Approved</span>
+                                    break;
 
-                        <div class="media-body">
-                            <span class="text-semibold">
-                                Amit Verma
-                            </span>
+                                case EnumExtensions.ApprovalStatus.Rejected:
+                                    <span class="label bg-danger">Rejected</span>
+                                    break;
 
-                            <div class="text-muted text-size-small">
-                                Accountant
-                            </div>
-                        </div>
-                    </td>
+                                case EnumExtensions.ApprovalStatus.OnHold:
+                                    <span class="label bg-info">On Hold</span>
+                                    break;
+                            }
 
-                    <td>
-                        Earned Leave
-                    </td>
+                        </td>
 
-                    <td>
-                        5 Days
-                    </td>
-
-                    <td>
-                        <span class="label bg-danger">
-                            Rejected
-                        </span>
-                    </td>
-                </tr>
-
-                <tr>
-                    <td>
-                        <h6 class="no-margin">
-                            10
-                            <small class="display-block">
-                                JUN
-                            </small>
-                        </h6>
-                    </td>
-
-                    <td>
-                        <div class="media-left">
-                            <img src="/Content/images/user.png"
-                                 class="img-circle img-xs"
-                                 alt="">
-                        </div>
-
-                        <div class="media-body">
-                            <span class="text-semibold">
-                                Neha Gupta
-                            </span>
-
-                            <div class="text-muted text-size-small">
-                                Designer
-                            </div>
-                        </div>
-                    </td>
-
-                    <td>
-                        Work From Home
-                    </td>
-
-                    <td>
-                        3 Days
-                    </td>
-
-                    <td>
-                        <span class="label bg-info">
-                            Forwarded
-                        </span>
-                    </td>
-                </tr>
+                    </tr>
+                }
 
             </tbody>
 
@@ -492,7 +383,7 @@
 
         <div class="heading-elements">
             <span class="badge bg-primary">
-                8 Upcoming
+                @Model.UpcomingEvents.TotalUpcomingEvents @Html.Raw("Upcoming")
             </span>
         </div>
     </div>
@@ -512,7 +403,7 @@
 
                         <div class="media-left">
                             <h5 class="text-semibold no-margin">
-                                8
+                                @Model.UpcomingEvents.TotalUpcomingEvents @Html.Raw("Upcoming")
                                 <small class="display-block">
                                     Total Upcoming Events
                                 </small>
@@ -529,7 +420,7 @@
 
                         <div class="media-left">
                             <h5 class="text-semibold no-margin">
-                                3
+                                @Model.UpcomingEvents.BirthdayCount
                                 <small class="display-block">
                                     Birthdays
                                 </small>
@@ -546,7 +437,7 @@
 
                         <div class="media-left">
                             <h5 class="text-semibold no-margin">
-                                2
+                                @Model.UpcomingEvents.HolidayCount
                                 <small class="display-block">
                                     Holidays
                                 </small>
@@ -579,133 +470,91 @@
 
                     <td class="text-right">
                         <span class="badge bg-success">
-                            2
+                            @Model.UpcomingEvents.TodayEventCount
                         </span>
                     </td>
                 </tr>
 
-                <tr>
-                    <td width="70">
-                        <h5 class="text-primary no-margin">
-                            13
-                            <small class="display-block">
-                                JUN
-                            </small>
-                        </h5>
-                    </td>
+                @foreach (var item in Model.UpcomingEvents.Events)
+                {
+                    <tr>
+                        <td width="70">
 
-                    <td width="60">
-                        <a href="#" class="btn bg-success btn-rounded btn-icon btn-xs">
-                            <i class="icon-gift"></i>
-                        </a>
-                    </td>
+                            <h5 class="text-@item.Color no-margin">
 
-                    <td>
-                        <div class="text-semibold">
-                            Rahul Sharma Birthday
-                        </div>
+                                @item.EventDate.ToString("dd")
 
-                        <span class="text-muted">
-                            Sales Department
-                        </span>
-                    </td>
+                                <small class="display-block">
+                                    @item.EventDate.ToString("MMM").ToUpper()
+                                </small>
 
-                    <td>
-                        <span class="label bg-success">
-                            Birthday
-                        </span>
-                    </td>
+                            </h5>
 
-                    <td class="text-right">
-                        Today
-                    </td>
-                </tr>
+                        </td>
 
-                <tr>
-                    <td>
-                        <h5 class="text-info no-margin">
-                            15
-                            <small class="display-block">
-                                JUN
-                            </small>
-                        </h5>
-                    </td>
+                        <td width="60">
 
-                    <td>
-                        <a href="#" class="btn bg-info btn-rounded btn-icon btn-xs">
-                            <i class="icon-users"></i>
-                        </a>
-                    </td>
+                            <a class="btn bg-@item.Color btn-rounded btn-icon btn-xs">
+                                <i class="@item.Icon"></i>
+                            </a>
 
-                    <td>
-                        <div class="text-semibold">
-                            Employee Engagement Program
-                        </div>
+                        </td>
 
-                        <span class="text-muted">
-                            HR Department
-                        </span>
-                    </td>
+                        <td>
 
-                    <td>
-                        <span class="label bg-info">
-                            Activity
-                        </span>
-                    </td>
+                            <div class="text-semibold">
+                                @item.Title
+                            </div>
 
-                    <td class="text-right">
-                        10:00 AM
-                    </td>
-                </tr>
+                            <span class="text-muted">
+                                @(string.IsNullOrWhiteSpace(item.Department)
+                                    ? item.Description
+                                    : item.Department)
+                            </span>
 
-                <tr class="active border-double">
-                    <td colspan="4">
-                        Upcoming Holidays
-                    </td>
+                        </td>
 
-                    <td class="text-right">
-                        <span class="badge bg-danger">
-                            2
-                        </span>
-                    </td>
-                </tr>
+                        <td>
 
-                <tr>
-                    <td>
-                        <h5 class="text-danger no-margin">
-                            21
-                            <small class="display-block">
-                                JUN
-                            </small>
-                        </h5>
-                    </td>
+                            @{
+                                string css = item.EventType switch
+                                {
+                                    "Birthday" => "success",
+                                    "Holiday" => "danger",
+                                    "Meeting" => "primary",
+                                    "Training" => "warning",
+                                    "Celebration" => "success",
+                                    _ => "info"
+                                };
+                            }
 
-                    <td>
-                        <a href="#" class="btn bg-danger btn-rounded btn-icon btn-xs">
-                            <i class="icon-flag3"></i>
-                        </a>
-                    </td>
+                            <span class="label bg-@css">
+                                @item.EventType
+                            </span>
 
-                    <td>
-                        <div class="text-semibold">
-                            International Yoga Day
-                        </div>
+                        </td>
 
-                        <span class="text-muted">
-                            Company Holiday
-                        </span>
-                    </td>
+                        <td class="text-right">
 
-                    <td>
-                        <span class="label bg-danger">
-                            Holiday
-                        </span>
-                    </td>
+                            @if (item.EventDate.Date == DateTime.Today)
+                            {
+                                <span class="text-success text-semibold">
+                                    Today
+                                </span>
+                            }
+                            else if (item.StartTime.HasValue)
+                            {
+                                @item.StartTime.Value.ToString(@"hh\:mm")
+                            }
+                            else
+                            {
+                                @item.EventDate.ToString("ddd")
+                            }
 
-                    <td class="text-right">
-                        Sunday
-                    </td>
-                </tr>
+                        </td>
+
+                    </tr>
+                }
 
             </tbody>
 
@@ -727,7 +576,7 @@
 
         <div class="heading-elements">
             <span class="badge bg-success">
-                12 This Month
+                @Model.BirthdayDashboard?.BirthdaysThisMonth @Html.Raw("This Month")
             </span>
         </div>
     </div>
@@ -747,7 +596,7 @@
 
                         <div class="media-left">
                             <h5 class="text-semibold no-margin">
-                                12
+                                @Model.BirthdayDashboard?.BirthdaysThisMonth
                                 <small class="display-block">
                                     Birthdays This Month
                                 </small>
@@ -764,7 +613,7 @@
 
                         <div class="media-left">
                             <h5 class="text-semibold no-margin">
-                                2
+                                @Model.BirthdayDashboard?.BirthdaysToday
                                 <small class="display-block">
                                     Today
                                 </small>
@@ -781,7 +630,7 @@
 
                         <div class="media-left">
                             <h5 class="text-semibold no-margin">
-                                5
+                                @Model.BirthdayDashboard?.BirthdaysThisWeek
                                 <small class="display-block">
                                     This Week
                                 </small>
@@ -812,74 +661,95 @@
                     </td>
 
                     <td class="text-right">
-                        <span class="badge bg-success">2</span>
+                        <span class="badge bg-success">
+                            @Model.BirthdayDashboard?.BirthdaysToday
+                        </span>
                     </td>
                 </tr>
 
-                <tr>
-                    <td width="70">
-                        <h5 class="text-success no-margin">13</h5>
-                        <small>JUN</small>
-                    </td>
+                @if (Model.BirthdayDashboard != null && Model.BirthdayDashboard.Birthdays.Any())
+                {
+                    foreach (var item in Model.BirthdayDashboard.Birthdays)
+                    {
+                        <tr>
 
-                    <td width="60">
-                        <img src="/Content/images/user.png"
-                             class="img-circle img-xs">
-                    </td>
+                            <td width="70">
 
-                    <td>
-                        <div class="text-semibold">
-                            Rahul Sharma
-                        </div>
-                        <span class="text-muted">
-                            Software Developer
-                        </span>
-                    </td>
+                                <h5 class="@(item.DaysLeft == 0 ? "text-success" : "text-primary") no-margin">
 
-                    <td>
-                        <span class="label bg-success">
-                            Birthday
-                        </span>
-                    </td>
+                                    @item.Birthday.ToString("dd")
 
-                    <td class="text-right">
-                        🎂 Today
-                    </td>
-                </tr>
+                                </h5>
 
-                <tr>
-                    <td>
-                        <h5 class="text-primary no-margin">15</h5>
-                        <small>JUN</small>
-                    </td>
+                                <small>
+                                    @item.Birthday.ToString("MMM").ToUpper()
+                                </small>
 
-                    <td>
-                        <img src="/Content/images/user.png"
-                             class="img-circle img-xs">
-                    </td>
+                            </td>
 
-                    <td>
-                        <div class="text-semibold">
-                            Priya Singh
-                        </div>
-                        <span class="text-muted">
-                            HR Manager
-                        </span>
-                    </td>
+                            <td width="60">
 
-                    <td>
-                        <span class="label bg-primary">
-                            Upcoming
-                        </span>
-                    </td>
+                                <img src="@(string.IsNullOrWhiteSpace(item.Photo)
+                                    ? "/Content/images/user.png"
+                                    : item.Photo)"
+                                     class="img-circle img-xs" />
 
-                    <td class="text-right">
-                        2 Days
-                    </td>
-                </tr>
+                            </td>
 
+                            <td>
+
+                                <div class="text-semibold">
+
+                                    @item.EmployeeName
+
+                                </div>
+
+                                <span class="text-muted">
+
+                                    @item.Designation
+
+                                </span>
+
+                            </td>
+
+                            <td>
+
+                                @if (item.DaysLeft == 0)
+                                {
+                                    <span class="label bg-success">
+                                        Birthday
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="label bg-primary">
+                                        Upcoming
+                                    </span>
+                                }
+
+                            </td>
+
+                            <td class="text-right">
+
+                                @if (item.DaysLeft == 0)
+                                {
+                                    <span style="font-size:16px;">🎂 Today</span>
+                                }
+                                else if (item.DaysLeft == 1)
+                                {
+                                    <span>Tomorrow</span>
+                                }
+                                else
+                                {
+                                    <span>@item.DaysLeft Days</span>
+                                }
+
+                            </td>
+
+                        </tr>
+                    }
+                }
             </tbody>
-
         </table>
     </div>
 
@@ -897,7 +767,7 @@
 
         <div class="heading-elements">
             <span class="badge bg-primary">
-                6 Active
+                @Model.AnnouncementDashboard?.ActiveAnnouncements @Html.Raw("Active")
             </span>
         </div>
     </div>
@@ -917,7 +787,7 @@
 
                         <div class="media-left">
                             <h5 class="text-semibold no-margin">
-                                6
+                                @Model.AnnouncementDashboard?.ActiveAnnouncements
                                 <small class="display-block">
                                     Active Announcements
                                 </small>
@@ -934,7 +804,7 @@
 
                         <div class="media-left">
                             <h5 class="text-semibold no-margin">
-                                3
+                                @Model.AnnouncementDashboard?.ThisWeekAnnouncements
                                 <small class="display-block">
                                     This Week
                                 </small>
@@ -951,7 +821,7 @@
 
                         <div class="media-left">
                             <h5 class="text-semibold no-margin">
-                                1
+                                @Model.AnnouncementDashboard?.HighPriorityAnnouncements
                                 <small class="display-block">
                                     High Priority
                                 </small>
@@ -982,108 +852,74 @@
                     </td>
 
                     <td class="text-right">
-                        <span class="badge bg-primary">6</span>
+                        <span class="badge bg-primary">
+                            @Model.AnnouncementDashboard?.ActiveAnnouncements
+                        </span>
                     </td>
                 </tr>
 
-                <tr>
-                    <td width="70">
-                        <h5 class="text-primary no-margin">13</h5>
-                        <small>JUN</small>
-                    </td>
+                @if (Model.AnnouncementDashboard != null && Model.AnnouncementDashboard.Announcements.Any())
+                {
+                    foreach (var item in Model.AnnouncementDashboard.Announcements)
+                    {
+                        <tr>
 
-                    <td width="60">
-                        <span class="btn bg-primary btn-rounded btn-icon btn-xs">
-                            <i class="icon-megaphone"></i>
-                        </span>
-                    </td>
+                            <td width="70">
 
-                    <td>
-                        <div class="text-semibold">
-                            Annual Performance Review
-                        </div>
+                                <h5 class="text-@item.Color no-margin">
+                                    @item.StartDate.ToString("dd")
+                                </h5>
 
-                        <span class="text-muted">
-                            Performance review cycle starts from 20th June.
-                        </span>
-                    </td>
+                                <small>
+                                    @item.StartDate.ToString("MMM").ToUpper()
+                                </small>
 
-                    <td>
-                        <span class="label bg-primary">
-                            General
-                        </span>
-                    </td>
+                            </td>
 
-                    <td class="text-right">
-                        HR Dept.
-                    </td>
-                </tr>
+                            <td width="60">
 
-                <tr>
-                    <td>
-                        <h5 class="text-danger no-margin">12</h5>
-                        <small>JUN</small>
-                    </td>
+                                <span class="btn bg-@item.Color btn-rounded btn-icon btn-xs">
+                                    <i class="@item.Icon"></i>
+                                </span>
 
-                    <td>
-                        <span class="btn bg-danger btn-rounded btn-icon btn-xs">
-                            <i class="icon-warning22"></i>
-                        </span>
-                    </td>
+                            </td>
 
-                    <td>
-                        <div class="text-semibold">
-                            Office Maintenance Notice
-                        </div>
+                            <td>
 
-                        <span class="text-muted">
-                            Power shutdown scheduled on Sunday.
-                        </span>
-                    </td>
+                                <div class="text-semibold">
+                                    @item.Title
+                                </div>
 
-                    <td>
-                        <span class="label bg-danger">
-                            Important
-                        </span>
-                    </td>
+                                <span class="text-muted">
+                                    @item.Description
+                                </span>
 
-                    <td class="text-right">
-                        Admin
-                    </td>
-                </tr>
+                            </td>
 
-                <tr>
-                    <td>
-                        <h5 class="text-success no-margin">10</h5>
-                        <small>JUN</small>
-                    </td>
+                            <td>
 
-                    <td>
-                        <span class="btn bg-success btn-rounded btn-icon btn-xs">
-                            <i class="icon-trophy3"></i>
-                        </span>
-                    </td>
+                                @{
+                                    string labelCss = item.Priority switch
+                                    {
+                                        EnumExtensions.AnnouncementPriority.High => "danger",
+                                        EnumExtensions.AnnouncementPriority.Medium => "warning",
+                                        _ => "primary"
+                                    };
+                                }
 
-                    <td>
-                        <div class="text-semibold">
-                            Employee of the Month
-                        </div>
+                                <span class="label bg-@labelCss">
+                                    @item.Type
+                                </span>
 
-                        <span class="text-muted">
-                            Congratulations to Amit Verma.
-                        </span>
-                    </td>
+                            </td>
 
-                    <td>
-                        <span class="label bg-success">
-                            Achievement
-                        </span>
-                    </td>
+                            <td class="text-right">
+                                @item.Department
+                            </td>
 
-                    <td class="text-right">
-                        Management
-                    </td>
-                </tr>
+                        </tr>
+                    }
+                }
 
             </tbody>
 
@@ -1104,7 +940,7 @@
 
         <div class="heading-elements">
             <span class="badge bg-primary">
-                248 Employees
+                @Model.DepartmentDashboard?.TotalEmployees Employees
             </span>
         </div>
     </div>
@@ -1124,7 +960,7 @@
 
                         <div class="media-left">
                             <h5 class="text-semibold no-margin">
-                                248
+                                @Model.DepartmentDashboard?.TotalEmployees
                                 <small class="display-block">
                                     Total Employees
                                 </small>
@@ -1141,7 +977,7 @@
 
                         <div class="media-left">
                             <h5 class="text-semibold no-margin">
-                                12
+                                @Model.DepartmentDashboard?.TotalDepartments
                                 <small class="display-block">
                                     Departments
                                 </small>
@@ -1158,7 +994,7 @@
 
                         <div class="media-left">
                             <h5 class="text-semibold no-margin">
-                                18
+                                @Model.DepartmentDashboard?.NewJoiners
                                 <small class="display-block">
                                     New Joiners
                                 </small>
@@ -1192,126 +1028,41 @@
 
             <tbody>
 
-                <tr>
-                    <td>
-                        <span class="text-semibold">
-                            Information Technology
-                        </span>
-                    </td>
+                @if (Model.DepartmentDashboard != null && Model.DepartmentDashboard.Departments.Any())
+                {
+                    foreach (var item in Model.DepartmentDashboard.Departments)
+                    {
+                        <tr>
 
-                    <td>
-                        <span class="badge bg-primary">
-                            82
-                        </span>
-                    </td>
+                            <td>
+                                <span class="text-semibold">
+                                    @item.DepartmentName
+                                </span>
+                            </td>
 
-                    <td>33%</td>
+                            <td>
+                                <span class="badge bg-@item.Color">
+                                    @item.EmployeeCount
+                                </span>
+                            </td>
 
-                    <td>
-                        <div class="progress">
-                            <div class="progress-bar bg-primary"
-                                 style="width:33%">
-                            </div>
-                        </div>
-                    </td>
-                </tr>
+                            <td>
+                                @item.Percentage.ToString("0.##")%
+                            </td>
 
-                <tr>
-                    <td>
-                        <span class="text-semibold">
-                            Human Resources
-                        </span>
-                    </td>
+                            <td style="width:200px;">
 
-                    <td>
-                        <span class="badge bg-success">
-                            24
-                        </span>
-                    </td>
+                                <div class="progress">
+                                    <div class="progress-bar bg-@item.Color"
+                                         style="width:@item.Percentage%">
+                                    </div>
+                                </div>
 
-                    <td>10%</td>
+                            </td>
 
-                    <td>
-                        <div class="progress">
-                            <div class="progress-bar bg-success"
-                                 style="width:10%">
-                            </div>
-                        </div>
-                    </td>
-                </tr>
-
-                <tr>
-                    <td>
-                        <span class="text-semibold">
-                            Sales & Marketing
-                        </span>
-                    </td>
-
-                    <td>
-                        <span class="badge bg-warning">
-                            56
-                        </span>
-                    </td>
-
-                    <td>23%</td>
-
-                    <td>
-                        <div class="progress">
-                            <div class="progress-bar bg-warning"
-                                 style="width:23%">
-                            </div>
-                        </div>
-                    </td>
-                </tr>
-
-                <tr>
-                    <td>
-                        <span class="text-semibold">
-                            Finance
-                        </span>
-                    </td>
-
-                    <td>
-                        <span class="badge bg-info">
-                            18
-                        </span>
-                    </td>
-
-                    <td>7%</td>
-
-                    <td>
-                        <div class="progress">
-                            <div class="progress-bar bg-info"
-                                 style="width:7%">
-                            </div>
-                        </div>
-                    </td>
-                </tr>
-
-                <tr>
-                    <td>
-                        <span class="text-semibold">
-                            Operations
-                        </span>
-                    </td>
-
-                    <td>
-                        <span class="badge bg-danger">
-                            68
-                        </span>
-                    </td>
-
-                    <td>27%</td>
-
-                    <td>
-                        <div class="progress">
-                            <div class="progress-bar bg-danger"
-                                 style="width:27%">
-                            </div>
-                        </div>
-                    </td>
-                </tr>
-
+                        </tr>
+                    }
+                }
             </tbody>
 
         </table>

@@ -1,0 +1,109 @@
+﻿
+@model IEnumerable<LeaveBalanceTransactionDto>
+
+@{
+    ViewData["Title"] = "Leave Balance Transanction";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+
+            <i class="icon-history position-left"></i>
+
+            Leave Transactions
+
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Index"
+               class="btn btn-default">
+
+                <i class="icon-arrow-left13"></i>
+                Back
+
+            </a>
+
+        </div>
+
+    </div>
+
+    <table class="table datatable-scroll-y">
+
+        <thead>
+
+            <tr>
+
+                <th>Date</th>
+                <th>Employee</th>
+                <th>Leave Type</th>
+                <th>Type</th>
+                <th>Qty</th>
+                <th>Before</th>
+                <th>After</th>
+                <th>Remarks</th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            @foreach (var item in Model)
+            {
+                <tr>
+
+                    <td>
+
+                        @item.TransactionDate.ToString("dd-MMM-yyyy")
+
+                    </td>
+
+                    <td>@item.EmployeeName</td>
+
+                    <td>@item.LeaveTypeName</td>
+
+                    <td>
+
+                        @switch (item.TransactionType)
+                        {
+                            case EnumExtensions.LeaveTransactionType.Allocate:
+                                <span class="badge bg-info">Allocate</span>
+                                break;
+
+                            case EnumExtensions.LeaveTransactionType.Credit:
+                                <span class="badge bg-success">Credit</span>
+                                break;
+
+                            case EnumExtensions.LeaveTransactionType.Deduct:
+                                <span class="badge bg-danger">Deduct</span>
+                                break;
+
+                            case EnumExtensions.LeaveTransactionType.CarryForward:
+                                <span class="badge bg-warning text-dark">
+                                    Carry Forward
+                                </span>
+                                break;
+                        }
+
+                    </td>
+
+                    <td>@item.Quantity</td>
+
+                    <td>@item.BalanceBefore</td>
+
+                    <td>@item.BalanceAfter</td>
+
+                    <td>@item.Remarks</td>
+
+                </tr>
+            }
+
+        </tbody>
+
+    </table>
+
+</div>

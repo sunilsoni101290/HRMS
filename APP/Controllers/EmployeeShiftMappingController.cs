@@ -46,8 +46,10 @@ namespace APP.Controllers
                 dto.CreatedBy= _userId;
                 await LoadDropdowns();
                 await _apiService.PostAsync<dynamic>("EmployeeShiftMapping", dto);
+
                 TempData["Success"] = "Record created successfully.";
-                return View(dto);
+
+                return RedirectToAction(nameof(Index));
             }
             return RedirectToAction(nameof(Index));
         }
@@ -73,8 +75,10 @@ namespace APP.Controllers
                 await LoadDropdowns();
                 await _apiService
                     .PutAsync<dynamic>($"EmployeeShiftMapping/{id}", dto);
+
                 TempData["Success"] = "Record updated successfully.";
-                return View("Create", dto);
+
+                return RedirectToAction(nameof(Index));
             }
 
             return RedirectToAction(nameof(Index));

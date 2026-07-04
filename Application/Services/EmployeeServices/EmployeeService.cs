@@ -34,6 +34,8 @@ namespace Application.Services.EmployeeServices
         }
         public async Task<PagedResult<EmployeeListDto>> SearchAsync(EmployeeSearchRequest request)
         {
+            try
+            {
             var query = _db.Employees
                 .Where(x => !x.IsDeleted)
                 .AsQueryable();
@@ -93,9 +95,16 @@ namespace Application.Services.EmployeeServices
                 PageSize = request.PageSize,
                 Data = data
             };
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
         public async Task<string> CreateAsync(EmployeeDto dto)
         {
+            try
+            {
             // =========================================
             // VALIDATION
             // =========================================
@@ -275,6 +284,11 @@ namespace Application.Services.EmployeeServices
             {
                 throw;
             }
+            }
+            catch (Exception ex)
+            {
+                return ex.ToString();
+            }
         }
 
         // ==============================
@@ -282,6 +296,8 @@ namespace Application.Services.EmployeeServices
         // ==============================
         public async Task<bool> DeleteMultipleAsync(List<string> ids)
         {
+            try
+            {
             if (ids == null || !ids.Any())
                 return false;
 
@@ -301,6 +317,11 @@ namespace Application.Services.EmployeeServices
 
             await SaveAsync();
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         // ==============================
@@ -308,6 +329,8 @@ namespace Application.Services.EmployeeServices
         // ==============================
         public async Task<List<EmployeeListDto>> GetAllAsync()
         {
+            try
+            {
             var employees = await _db.Employees
                 .Include(x => x.Company)
                 .Include(x => x.Branch)
@@ -315,6 +338,7 @@ namespace Application.Services.EmployeeServices
                 .Include(x => x.Designation)
                 .Include(x => x.ReportingManager)
                 .Include(x => x.DefaultShift)
+                .Include(x => x.Country)
                 .AsNoTracking()
                 .Where(x => !x.IsDeleted)
                 .ToListAsync();
@@ -322,6 +346,11 @@ namespace Application.Services.EmployeeServices
             return employees
                 .Select(EmployeeMapper.ToDto)
                 .ToList();
+            }
+            catch (Exception)
+            {
+                return new List<EmployeeListDto>();
+            }
         }
 
         // ==============================
@@ -329,10 +358,17 @@ namespace Application.Services.EmployeeServices
         // ==============================
         public async Task<List<EmployeeListDto>> GetByDepartmentAsync(string departmentId)
         {
+            try
+            {
             return await _db.Employees
                 .Where(x => x.DepartmentId == departmentId && !x.IsDeleted)
                 .Select(x => EmployeeMapper.ToDto(x))
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<EmployeeListDto>();
+            }
         }
 
         // ==============================
@@ -340,10 +376,17 @@ namespace Application.Services.EmployeeServices
         // ==============================
         public async Task<List<EmployeeListDto>> GetByDesignationAsync(string designationId)
         {
+            try
+            {
             return await _db.Employees
                 .Where(x => x.DesignationId == designationId && !x.IsDeleted)
                 .Select(x => EmployeeMapper.ToDto(x))
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<EmployeeListDto>();
+            }
         }
 
         // ==============================
@@ -351,6 +394,8 @@ namespace Application.Services.EmployeeServices
         // ==============================
         public async Task<EmployeeListDto> GetByIdAsync(string id)
         {
+            try
+            {
             var entity = await _db.Employees.AsNoTracking()
                 .Include(x=>x.Company)
                 .Include(x=>x.Branch)
@@ -358,12 +403,18 @@ namespace Application.Services.EmployeeServices
                 .Include(x=>x.Designation)
                 .Include(x=>x.ReportingManager)
                 .Include(x=>x.DefaultShift)
+                .Include(x=>x.Country)
                 .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
 
             if (entity == null)
                 return null;
 
             return EmployeeMapper.ToDto(entity);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         // ==============================
@@ -371,6 +422,8 @@ namespace Application.Services.EmployeeServices
         // ==============================
         public async Task<bool> UpdateAsync(EmployeeDto dto)
         {
+            try
+            {
             var entity = await _db.Employees.FindAsync(dto.Id);
 
             if (entity == null)
@@ -381,11 +434,18 @@ namespace Application.Services.EmployeeServices
             await SaveAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         // ✅ HIERARCHY
         public async Task<List<EmployeeHierarchyDto>> GetHierarchyAsync(string tenantId)
         {
+            try
+            {
             var employees = await _db.Employees
                 .Where(x => x.TenantId == tenantId && !x.IsDeleted)
                 .Select(x => new
@@ -426,6 +486,11 @@ namespace Application.Services.EmployeeServices
             }).ToList();
 
             return hierarchy;
+            }
+            catch (Exception)
+            {
+                return new List<EmployeeHierarchyDto>();
+            }
         }
 
         #region GENERATE UNIQUE USERNAME

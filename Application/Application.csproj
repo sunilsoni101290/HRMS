@@ -28,11 +28,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Interfaces\KPI\" />
     <Folder Include="Validators\" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Routing" Version="2.3.9" />
+    <PackageReference Include="Microsoft.AspNetCore.Routing" Version="2.3.11" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 

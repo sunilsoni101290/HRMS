@@ -1,0 +1,142 @@
+@model EmployeeDocumentDto
+
+@{
+    ViewData["Title"] = "Employee Document";
+    bool isEdit = !string.IsNullOrEmpty(Model?.Id);
+}
+
+<form asp-action="@(isEdit ? "Edit" : "Create")" asp-controller="EmployeeDocument"
+      asp-route-id="@Model?.Id" method="post" enctype="multipart/form-data">
+
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="TenantId" type="hidden" />
+    <input asp-for="CreatedBy" type="hidden" />
+    <input asp-for="FileName" type="hidden" />
+    <input asp-for="FilePath" type="hidden" />
+    <input asp-for="FileExtension" type="hidden" />
+    <input asp-for="FileSize" type="hidden" />
+
+    <div class="panel panel-flat">
+
+        <div class="panel-heading">
+            <h5 class="panel-title">
+                <i class="icon-file-text2 position-left"></i>
+                @(isEdit ? "Edit Document" : "Upload Document")
+            </h5>
+            <div class="heading-elements">
+                <a asp-action="Index" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
+            </div>
+        </div>
+
+        <div class="panel-body">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <fieldset>
+                <legend class="text-semibold"><i class="icon-info22 position-left"></i> Document Details</legend>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="EmployeeId"></label> <span class="text-danger">*</span>
+                            <select asp-for="EmployeeId" asp-items="ViewBag.EmployeeList" class="form-control">
+                                <option value="">Select Employee</option>
+                            </select>
+                            <span asp-validation-for="EmployeeId" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="DocumentType"></label> <span class="text-danger">*</span>
+                            <select asp-for="DocumentType" asp-items="ViewBag.DocumentTypes" class="form-control">
+                                <option value="">Select Type</option>
+                            </select>
+                            <span asp-validation-for="DocumentType" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="DocumentNumber"></label>
+                            <input asp-for="DocumentNumber" class="form-control" placeholder="e.g. Aadhaar / PAN number" />
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="DocumentName"></label>
+                            <input asp-for="DocumentName" class="form-control" placeholder="Friendly name (optional)" />
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend class="text-semibold"><i class="icon-calendar position-left"></i> Validity</legend>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="IssueDate"></label>
+                            <input asp-for="IssueDate" type="date" class="form-control" value="@(Model?.IssueDate?.ToString("yyyy-MM-dd"))" />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="ExpiryDate"></label>
+                            <input asp-for="ExpiryDate" type="date" class="form-control" value="@(Model?.ExpiryDate?.ToString("yyyy-MM-dd"))" />
+                            <span asp-validation-for="ExpiryDate" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="IssuedBy"></label>
+                            <input asp-for="IssuedBy" class="form-control" placeholder="Issuing authority" />
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend class="text-semibold"><i class="icon-upload position-left"></i> File</legend>
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="form-group">
+                            <label asp-for="UploadFile"></label>
+                            @if (!isEdit) { <span class="text-danger">*</span> }
+                            <input type="file" name="UploadFile" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" />
+                            <span asp-validation-for="UploadFile" class="text-danger"></span>
+                            <span class="help-block">PDF, image, Word or Excel. Max 5 MB.</span>
+                            @if (isEdit && !string.IsNullOrEmpty(Model.FilePath))
+                            {
+                                <span class="help-block">
+                                    Current file: <a href="@Model.FilePath" target="_blank">@(Model.FileName ?? "View")</a>
+                                    <em class="text-muted">— leave empty to keep it.</em>
+                                </span>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label asp-for="Remarks"></label>
+                            <textarea asp-for="Remarks" class="form-control" rows="2" placeholder="Notes (optional)"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+
+        <div class="panel-footer text-right">
+            <button type="submit" class="btn bg-primary">
+                <i class="icon-floppy-disk"></i> @(isEdit ? "Update" : "Save")
+            </button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    <partial name="_ValidationScriptsPartial" />
+}

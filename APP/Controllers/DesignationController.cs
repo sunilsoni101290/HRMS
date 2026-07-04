@@ -5,6 +5,7 @@ using APP.Services.Interfaces;
 using Humanizer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace APP.Controllers
 {
@@ -63,11 +64,20 @@ namespace APP.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> Details(string id)
+        {
+            var data = await _apiService
+                .GetAsync<DesignationDto>($"designation/{id}");
+            await LoadDropdowns(data.ParentDesignationId, data.CompanyId);
+            return View(data);
+        }
+
+        [HttpGet]
         public async Task<IActionResult> Edit(string id)
         {
             var data = await _apiService
                 .GetAsync<DesignationDto>($"designation/{id}");
-            await LoadDropdowns();
+            await LoadDropdowns(data.ParentDesignationId,data.CompanyId);
             return View("Create",data);
         }
 
@@ -80,8 +90,8 @@ namespace APP.Controllers
                 dto.CreatedBy = _userId;
                 dto.ModifiedBy = _userId;
                 dto.ModifiedOn = DateTime.UtcNow;
-                
-                await LoadDropdowns();
+
+                await LoadDropdowns(dto.ParentDesignationId, dto.CompanyId);
                 await _apiService
                 .PutAsync<dynamic>($"designation/{id}", dto);
 
@@ -101,19 +111,8 @@ namespace APP.Controllers
 
         #region Load Dropdowns
 
-        private async Task LoadDropdowns(string? designationId = null)
+        private async Task LoadDropdowns(string? designationId = null, string? companyId = null)
         {
-            // Company
-            var companies = await _apiService
-                .GetAsync<List<DropdownDto>>($"dropdown/company");
-
-            ViewBag.CompanyList = new SelectList(
-                companies,
-                "Value",
-                "Text");
-
-            ViewBag.CompanyNames = companies.ToDictionary(x => x.Value, x => x.Text);
-
             // Department
             var parentDesignations = await _apiService
                 .GetAsync<List<DropdownDto>>($"dropdown/parent-designation?tenantId={_tenantId}&designationId={designationId}");
@@ -132,9 +131,60 @@ namespace APP.Controllers
             ViewBag.DepartmentList = new SelectList(departments,"Value","Text");
 
             ViewBag.ParentDepartments = departments.ToDictionary(x => x.Value, x => x.Text);
+
+            // =========================
+            // Company Dropdown
+            // =========================
+            var companies = await _apiService
+                .GetAsync<List<DropdownDto>>($"dropdown/company");
+
+            ViewBag.CompanyList = new SelectList(
+                companies,
+                "Value",
+                "Text");
+
+            ViewBag.CompanyNames = companies.ToDictionary(x => x.Value, x => x.Text);
+
+            // =========================
+            // Brances Dropdown
+            // =========================
+            List<DropdownDto> branches = new();
+
+            if (!string.IsNullOrEmpty(companyId))
+            {
+                branches = await _apiService
+                    .GetAsync<List<DropdownDto>>(
+                        $"dropdown/branch/{companyId}"
+                    );
+            }
+
+            ViewBag.BranchList = branches.Select(x => new SelectListItem
+            {
+                Value = x.Value,
+                Text = x.Text
+            }).ToList();
+
+            ViewBag.BranchNames = branches.ToDictionary(x => x.Value, x => x.Text);
         }
 
         #endregion
+
+        [HttpGet]
+        public async Task<JsonResult> GetBranchByCompanyId(string companyId)
+        {
+            var states = await _apiService
+                .GetAsync<List<DropdownDto>>(
+                    $"dropdown/branch/{companyId}"
+                );
+
+            var result = states.Select(x => new
+            {
+                value = x.Value,
+                text = x.Text
+            });
+
+            return Json(result);
+        }
     }
 
     #endregion

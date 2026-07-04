@@ -4,6 +4,7 @@ using APP.Models.DTOs;
 using APP.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace APP.Controllers
 {
@@ -41,14 +42,17 @@ namespace APP.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(DepartmentDto dto)
         {
-            if (!ModelState.IsValid)
+            if (dto!=null)
             {
                 dto.TenantId = _tenantId;
                 dto.CreatedBy= _userId;
                 await LoadDropdowns();
-                await _apiService.PostAsync<dynamic>("department", dto);
-                TempData["Success"] = "Record created successfully.";
-                return View(dto);
+
+                var data = await _apiService.PostAsync<dynamic>("department", dto);
+
+                TempData["Success"] = "Record saved successfully.";
+
+                return View("Create",dto);
             }
             return RedirectToAction(nameof(Index));
         }
@@ -58,7 +62,7 @@ namespace APP.Controllers
         {
             var data = await _apiService
                 .GetAsync<DepartmentDto>($"department/{id}");
-            await LoadDropdowns();
+            await LoadDropdowns(data.ParentDepartmentId, data.CompanyId);
             return View("Create",data);
         }
 
@@ -82,6 +86,15 @@ namespace APP.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        [HttpGet]
+        public async Task<IActionResult> Details(string id)
+        {
+            var data = await _apiService
+                .GetAsync<DepartmentDto>($"department/{id}");
+            await LoadDropdowns(data.ParentDepartmentId, data.CompanyId);
+            return View(data);
+        }
+
         public async Task<IActionResult> Delete(string id)
         {
             await _apiService.DeleteAsync($"department/{id}");
@@ -91,19 +104,8 @@ namespace APP.Controllers
 
         #region Load Dropdowns
 
-        private async Task LoadDropdowns(string?deptId=null)
+        private async Task LoadDropdowns(string? deptId = null, string? companyId = null)
         {
-            // Company
-            var companies = await _apiService
-                .GetAsync<List<DropdownDto>>($"dropdown/company");
-
-            ViewBag.CompanyList = new SelectList(
-                companies,
-                "Value",
-                "Text");
-
-            ViewBag.CompanyNames = companies.ToDictionary(x => x.Value, x => x.Text);
-
             // Department
             var departments = await _apiService
                 .GetAsync<List<DropdownDto>>($"dropdown/parent-department?tenantId={_tenantId}&departmentId={deptId}");
@@ -115,19 +117,61 @@ namespace APP.Controllers
 
             ViewBag.ParentDepartments = departments.ToDictionary(x => x.Value, x => x.Text);
 
-            // Branch
-            var branches = await _apiService
-                .GetAsync<List<DropdownDto>>($"dropdown/branch");
+            
+            // =========================
+            // Company Dropdown
+            // =========================
+            var companies = await _apiService
+                .GetAsync<List<DropdownDto>>($"dropdown/company");
 
-            ViewBag.BranchList = new SelectList(
-                branches,
+            ViewBag.CompanyList = new SelectList(
+                companies,
                 "Value",
                 "Text");
+
+            ViewBag.CompanyNames = companies.ToDictionary(x => x.Value, x => x.Text);
+
+            // =========================
+            // Brances Dropdown
+            // =========================
+            List<DropdownDto> branches = new();
+
+            if (!string.IsNullOrEmpty(companyId))
+            {
+                branches = await _apiService
+                    .GetAsync<List<DropdownDto>>(
+                        $"dropdown/branch/{companyId}"
+                    );
+            }
+
+            ViewBag.BranchList = branches.Select(x => new SelectListItem
+            {
+                Value = x.Value,
+                Text = x.Text
+            }).ToList();
 
             ViewBag.BranchNames = branches.ToDictionary(x => x.Value, x => x.Text);
         }
 
         #endregion
+
+        [HttpGet]
+        public async Task<JsonResult> GetBranchByCompanyId(string companyId)
+        {
+            var states = await _apiService
+                .GetAsync<List<DropdownDto>>(
+                    $"dropdown/branch/{companyId}"
+                );
+
+            var result = states.Select(x => new
+            {
+                value = x.Value,
+                text = x.Text
+            });
+
+            return Json(result);
+        }
+
     }
 
     #endregion

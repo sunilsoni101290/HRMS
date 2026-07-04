@@ -4,38 +4,116 @@
     ViewData["Title"] = "Location Details";
 }
 
-<div class="container-fluid py-4">
+<div class="panel panel-flat">
 
-    <div class="card shadow border-0 rounded-4 overflow-hidden">
+    <!-- Header -->
 
-        <!-- Header -->
-        <div class="card-header bg-warning py-4">
+    <div class="panel-heading">
 
-            <div class="d-flex align-items-center">
+        <h5 class="panel-title">
 
-                <div class="me-3">
+            <i class="icon-location4 position-left"></i>
 
-                    <div class="bg-white text-warning rounded-circle d-flex align-items-center justify-content-center"
-                         style="width:80px;height:80px;">
+            Location Details
 
-                        <i class="bi bi-geo-alt-fill fs-1"></i>
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Index"
+               class="btn btn-default">
+
+                <i class="icon-arrow-left13"></i>
+                Back
+
+            </a>
+
+            <a asp-action="Edit"
+               asp-route-id="@Model.Id"
+               class="btn bg-primary">
+
+                <i class="icon-pencil7"></i>
+                Edit
+
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <!-- Profile Header -->
+
+        <div class="row">
+
+            <div class="col-md-2 text-center">
+
+                <div class="content-group">
+
+                    <div class="icon-object border-warning text-warning"
+                         style="width:100px;height:100px;line-height:100px;font-size:42px;margin:auto;">
+
+                        <i class="icon-location4"></i>
 
                     </div>
 
                 </div>
 
-                <div>
+            </div>
 
-                    <h2 class="mb-1">@Model.LocationName</h2>
+            <div class="col-md-6">
 
-                    <p class="mb-0 opacity-75">
+                <h2 class="text-semibold no-margin">
 
-                        Location Code :
-                        @(string.IsNullOrEmpty(Model.LocationCode)
-                            ? "-"
-                            : Model.LocationCode)
+                    @Model.LocationName
 
-                    </p>
+                </h2>
+
+                <br />
+
+                <span class="label bg-primary">
+
+                    @Model.LocationCode
+
+                </span>
+
+                @if (Model.IsDefault)
+                {
+                    <span class="label bg-success">
+                        Default Location
+                    </span>
+                }
+                else
+                {
+                    <span class="label bg-grey">
+                        Secondary Location
+                    </span>
+                }
+
+                <br /><br />
+
+                <i class="icon-office"></i>
+
+                @Model.BranchName
+
+            </div>
+
+            <div class="col-md-4">
+
+                <div class="panel bg-warning-400">
+
+                    <div class="panel-body">
+
+                        <h3 class="no-margin">
+
+                            @(Model.ModifiedOn?.ToString("dd-MMM-yyyy") ?? "-")
+
+                        </h3>
+
+                        Last Modified
+
+                    </div>
 
                 </div>
 
@@ -43,245 +121,173 @@
 
         </div>
 
-        <!-- Body -->
-        <div class="card-body p-4">
+        <hr />
 
-            <div class="row g-4">
+        <div class="row">
 
-                <!-- Basic Information -->
-                <div class="col-lg-6">
+            <!-- Location Information -->
 
-                    <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="col-md-6">
 
-                        <div class="card-header bg-light">
+                <div class="panel panel-bordered">
 
-                            <h5 class="mb-0">
+                    <div class="panel-heading">
 
-                                <i class="bi bi-info-circle text-warning"></i>
-                                Location Information
-
-                            </h5>
-
-                        </div>
-
-                        <div class="card-body">
-
-                            <table class="table table-borderless">
-
-                                <tr>
-
-                                    <th width="180">
-                                        Location Name
-                                    </th>
-
-                                    <td>
-                                        @Model.LocationName
-                                    </td>
-
-                                </tr>
-
-                                <tr>
-
-                                    <th>
-                                        Location Code
-                                    </th>
-
-                                    <td>
-
-                                        @(string.IsNullOrEmpty(Model.LocationCode)
-                                            ? "-"
-                                            : Model.LocationCode)
-
-                                    </td>
-
-                                </tr>
-
-                                <tr>
-
-                                    <th>
-                                        Branch
-                                    </th>
-
-                                    <td>
-
-                                        <span class="badge bg-primary">
-                                            @Model.BranchName
-                                        </span>
-
-                                    </td>
-
-                                </tr>
-
-                                <tr>
-
-                                    <th>
-                                        Default Location
-                                    </th>
-
-                                    <td>
-
-                                        @if (Model.IsDefault)
-                                        {
-                                            <span class="badge bg-success">
-                                                Yes
-                                            </span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-secondary">
-                                                No
-                                            </span>
-                                        }
-
-                                    </td>
-
-                                </tr>
-
-                            </table>
-
-                        </div>
+                        <h6 class="panel-title">
+                            <i class="icon-info22 position-left"></i>
+                            Location Information
+                        </h6>
 
                     </div>
 
-                </div>
+                    <table class="table table-bordered">
 
-                <!-- Audit Information -->
-                <div class="col-lg-6">
+                        <tr>
+                            <th width="180">Location Name</th>
+                            <td>@Model.LocationName</td>
+                        </tr>
 
-                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <tr>
+                            <th>Location Code</th>
+                            <td>@Model.LocationCode</td>
+                        </tr>
 
-                        <div class="card-header bg-light">
+                        <tr>
+                            <th>Branch</th>
+                            <td>@Model.BranchName</td>
+                        </tr>
 
-                            <h5 class="mb-0">
+                        <tr>
+                            <th>Default Location</th>
+                            <td>
 
-                                <i class="bi bi-clock-history text-primary"></i>
-                                Audit Information
-
-                            </h5>
-
-                        </div>
-
-                        <div class="card-body">
-
-                            <table class="table table-borderless">
-
-                                <tr>
-
-                                    <th width="180">
-                                        Created By
-                                    </th>
-
-                                    <td>
-                                        @Model.CreatedBy
-                                    </td>
-
-                                </tr>
-
-                                <tr>
-
-                                    <th>
-                                        Modified By
-                                    </th>
-
-                                    <td>
-
-                                        @(string.IsNullOrEmpty(Model.ModifiedBy)
-                                            ? "-"
-                                            : Model.ModifiedBy)
-
-                                    </td>
-
-                                </tr>
-
-                                <tr>
-
-                                    <th>
-                                        Modified On
-                                    </th>
-
-                                    <td>
-
-                                        @(Model.ModifiedOn.HasValue
-                                            ? Model.ModifiedOn.Value.ToString("dd MMM yyyy")
-                                            : "-")
-
-                                    </td>
-
-                                </tr>
-
-                            </table>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                <!-- Address -->
-                <div class="col-lg-12">
-
-                    <div class="card border-0 shadow-sm rounded-4">
-
-                        <div class="card-header bg-light">
-
-                            <h5 class="mb-0">
-
-                                <i class="bi bi-geo-alt text-danger"></i>
-                                Address Information
-
-                            </h5>
-
-                        </div>
-
-                        <div class="card-body">
-
-                            <div class="border rounded-4 p-4 bg-light">
-
-                                @if (string.IsNullOrEmpty(Model.Address))
+                                @if (Model.IsDefault)
                                 {
-                                    <span class="text-muted">
-                                        No address available
+                                    <span class="label bg-success">
+                                        Yes
                                     </span>
                                 }
                                 else
                                 {
-                                    @Model.Address
+                                    <span class="label bg-grey">
+                                        No
+                                    </span>
                                 }
 
-                            </div>
+                            </td>
 
-                        </div>
+                        </tr>
 
-                    </div>
+                    </table>
 
                 </div>
 
             </div>
 
-            <!-- Footer -->
-            <div class="mt-4 text-end">
+            <!-- Audit Information -->
 
-                <a asp-action="Index"
-                   class="btn btn-light border rounded-3 px-4">
+            <div class="col-md-6">
 
-                    <i class="bi bi-arrow-left"></i>
-                    Back
+                <div class="panel panel-bordered">
 
-                </a>
+                    <div class="panel-heading">
 
-                <a asp-action="Edit"
-                   asp-route-id="@Model.Id"
-                   class="btn btn-warning rounded-3 px-4">
+                        <h6 class="panel-title">
+                            <i class="icon-history position-left"></i>
+                            Audit Information
+                        </h6>
 
-                    <i class="bi bi-pencil-square"></i>
-                    Edit Location
+                    </div>
 
-                </a>
+                    <table class="table table-bordered">
+
+                        <tr>
+                            <th width="180">Created By</th>
+                            <td>@Model.CreatedBy</td>
+                        </tr>
+
+                        <tr>
+                            <th>Modified By</th>
+                            <td>@(string.IsNullOrEmpty(Model.ModifiedBy) ? "-" : Model.ModifiedBy)</td>
+                        </tr>
+
+                        <tr>
+                            <th>Modified On</th>
+                            <td>@(Model.ModifiedOn?.ToString("dd-MMM-yyyy") ?? "-")</td>
+                        </tr>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Address -->
+
+        <div class="panel panel-bordered">
+
+            <div class="panel-heading">
+
+                <h6 class="panel-title">
+
+                    <i class="icon-home position-left"></i>
+
+                    Address Information
+
+                </h6>
+
+            </div>
+
+            <div class="panel-body">
+
+                @if (string.IsNullOrWhiteSpace(Model.Address))
+                {
+                    <div class="alert alert-warning">
+
+                        No address available.
+
+                    </div>
+                }
+                else
+                {
+                    <blockquote>
+
+                        @Model.Address
+
+                    </blockquote>
+                }
 
             </div>
 
         </div>
 
     </div>
-
+ 
 </div>
+
+<style>
+
+    .panel-bordered {
+        border: 1px solid #ddd;
+        margin-bottom: 20px;
+    }
+
+        .panel-bordered .panel-heading {
+            background: #fafafa;
+            border-bottom: 1px solid #ddd;
+        }
+
+    .table > tbody > tr > th {
+        width: 180px;
+        background: #fafafa;
+        font-weight: 600;
+    }
+
+    .icon-object {
+        border: 3px solid #ffb300;
+        border-radius: 50%;
+    }
+
+</style>

@@ -1,0 +1,38 @@
+@model JobOpeningDto
+
+@{
+    ViewData["Title"] = "Job Opening Details";
+
+    string StatusLabel(int s) => s switch
+    {
+        1 => "bg-success",
+        2 => "bg-grey",
+        3 => "bg-warning",
+        _ => "bg-info"
+    };
+}
+
+<div class="panel panel-flat">
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-briefcase position-left"></i> @Model.Title
+            <span class="label @StatusLabel(Model.Status)" style="margin-left:8px;">@Model.StatusText</span>
+        </h5>
+        <div class="heading-elements">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary btn-xs"><i class="icon-pencil7"></i> Edit</a>
+            <a asp-action="Index" class="btn btn-default btn-xs"><i class="icon-arrow-left13"></i> Back</a>
+        </div>
+    </div>
+    <div class="panel-body">
+        <table class="table table-striped">
+            <tr><th style="width:200px;">Department</th><td>@(Model.DepartmentName ?? "-")</td></tr>
+            <tr><th>Designation</th><td>@(Model.DesignationName ?? "-")</td></tr>
+            <tr><th>Vacancies</th><td>@Model.VacancyCount</td></tr>
+            <tr><th>Salary Range</th><td>@(Model.MinSalary.HasValue ? "₹ " + Model.MinSalary.Value.ToString("N2") : "-") &ndash; @(Model.MaxSalary.HasValue ? "₹ " + Model.MaxSalary.Value.ToString("N2") : "-")</td></tr>
+            <tr><th>Posted Date</th><td>@Model.PostedDate.ToString("dd MMM yyyy")</td></tr>
+            <tr><th>Closing Date</th><td>@(Model.ClosingDate?.ToString("dd MMM yyyy") ?? "-")</td></tr>
+            <tr><th>Required Skills</th><td>@(Model.RequiredSkills ?? "-")</td></tr>
+            <tr><th>Description</th><td>@(Model.JobDescription ?? "-")</td></tr>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,122 @@
+@model AssetAllocationDto
+
+@{
+    ViewData["Title"] = "Asset Allocation";
+    bool isEdit = !string.IsNullOrEmpty(Model?.Id);
+}
+
+<form asp-action="@(isEdit ? "Edit" : "Create")"
+      asp-controller="AssetAllocation" asp-route-id="@Model?.Id" method="post">
+
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="TenantId" type="hidden" />
+    <input asp-for="CreatedBy" type="hidden" />
+
+    <div class="panel panel-flat">
+
+        <div class="panel-heading">
+            <h5 class="panel-title">
+                <i class="icon-users position-left"></i>
+                @(isEdit ? "Edit Allocation" : "Allocate Asset")
+            </h5>
+            <div class="heading-elements">
+                <a asp-action="Index" class="btn btn-default">
+                    <i class="icon-arrow-left13"></i> Back
+                </a>
+            </div>
+        </div>
+
+        <div class="panel-body">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="AssetId"></label> <span class="text-danger">*</span>
+                        <select asp-for="AssetId" asp-items="ViewBag.AssetList" class="form-control">
+                            <option value="">Select Asset</option>
+                        </select>
+                        <span asp-validation-for="AssetId" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="EmployeeId"></label> <span class="text-danger">*</span>
+                        <select asp-for="EmployeeId" asp-items="ViewBag.EmployeeList" class="form-control">
+                            <option value="">Select Employee</option>
+                        </select>
+                        <span asp-validation-for="EmployeeId" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="AllocatedOn"></label> <span class="text-danger">*</span>
+                        <input asp-for="AllocatedOn" type="date" class="form-control"
+                               value="@Model?.AllocatedOn.ToString("yyyy-MM-dd")" />
+                        <span asp-validation-for="AllocatedOn" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="ConditionOnIssue"></label>
+                        <input asp-for="ConditionOnIssue" class="form-control"
+                               placeholder="e.g. New, Good, Minor scratches" />
+                    </div>
+                </div>
+            </div>
+
+            @if (isEdit)
+            {
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="ReturnedOn"></label>
+                            <input asp-for="ReturnedOn" type="date" class="form-control"
+                                   value="@(Model?.ReturnedOn?.ToString("yyyy-MM-dd"))" />
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="ConditionOnReturn"></label>
+                            <input asp-for="ConditionOnReturn" class="form-control"
+                                   placeholder="Condition when returned" />
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label asp-for="Remarks"></label>
+                        <textarea asp-for="Remarks" class="form-control" rows="2"
+                                  placeholder="Additional remarks..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-footer text-right">
+            <button type="reset" class="btn btn-default"><i class="icon-reset"></i> Reset</button>
+            <button type="submit" class="btn bg-primary">
+                <i class="icon-floppy-disk"></i>
+                @(isEdit ? "Update" : "Allocate")
+            </button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>
+            $(function () {
+                swal({ title: "Success", text: "@TempData["Success"]", type: "success" });
+            });
+        </script>
+    }
+    <partial name="_ValidationScriptsPartial" />
+}

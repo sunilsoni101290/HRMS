@@ -21,6 +21,8 @@ namespace Application.Services.ErrorLogs
 
         public async Task LogExceptionAsync(Exception ex, HttpContext context, string requestId = null)
         {
+            try
+            {
             string requestBody = "";
 
             try
@@ -110,6 +112,11 @@ namespace Application.Services.ErrorLogs
             _db.ErrorLogs.Add(log);
 
             await _db.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+                return;
+            }
         }
     }
 }

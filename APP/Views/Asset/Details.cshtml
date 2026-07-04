@@ -1,0 +1,118 @@
+@model AssetDto
+
+@{
+    ViewData["Title"] = "Asset Details";
+
+    string StatusLabel(string? s) => s switch
+    {
+        "Available" => "bg-success",
+        "Allocated" => "bg-primary",
+        "UnderMaintenance" => "bg-warning",
+        "Scrap" => "bg-danger",
+        _ => "bg-grey"
+    };
+}
+
+<div class="row">
+    <div class="col-md-7">
+        <div class="panel panel-flat">
+            <div class="panel-heading">
+                <h5 class="panel-title">
+                    <i class="icon-laptop position-left"></i> @Model.Name
+                    <span class="label @StatusLabel(Model.Status)" style="margin-left:8px;">@Model.Status</span>
+                </h5>
+                <div class="heading-elements">
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary btn-xs">
+                        <i class="icon-pencil7"></i> Edit
+                    </a>
+                    <a asp-action="Index" class="btn btn-default btn-xs">
+                        <i class="icon-arrow-left13"></i> Back
+                    </a>
+                </div>
+            </div>
+            <div class="panel-body">
+                <table class="table table-striped">
+                    <tr><th style="width:200px;">Asset Code</th><td>@(Model.AssetCode ?? "-")</td></tr>
+                    <tr><th>Serial Number</th><td>@(Model.SerialNumber ?? "-")</td></tr>
+                    <tr><th>Category</th><td>@(Model.AssetCategoryName ?? "-")</td></tr>
+                    <tr><th>Purchase Date</th><td>@(Model.PurchaseDate?.ToString("dd MMM yyyy") ?? "-")</td></tr>
+                    <tr><th>Purchase Cost</th><td>@(Model.PurchaseCost.HasValue ? "₹ " + Model.PurchaseCost.Value.ToString("N2") : "-")</td></tr>
+                    <tr><th>Vendor</th><td>@(Model.VendorName ?? "-")</td></tr>
+                    <tr><th>Warranty Expiry</th><td>@(Model.WarrantyExpiryDate?.ToString("dd MMM yyyy") ?? "-")</td></tr>
+                    <tr><th>Company</th><td>@(Model.CompanyName ?? "-")</td></tr>
+                    <tr><th>Branch</th><td>@(Model.BranchName ?? "-")</td></tr>
+                    <tr><th>Description</th><td>@(Model.Description ?? "-")</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel panel-flat">
+            <div class="panel-heading">
+                <h6 class="panel-title"><i class="icon-users position-left"></i> Allocation History</h6>
+            </div>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Allocated On</th>
+                        <th>Returned On</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Allocations != null && Model.Allocations.Any())
+                    {
+                        foreach (var a in Model.Allocations)
+                        {
+                            <tr>
+                                <td>@a.EmployeeName</td>
+                                <td>@a.AllocatedOn.ToString("dd MMM yyyy")</td>
+                                <td>@(a.ReturnedOn?.ToString("dd MMM yyyy") ?? "-")</td>
+                                <td><span class="label bg-info">@a.AllocationStatusText</span></td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="4" class="text-center text-muted">No allocations yet.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="col-md-5">
+        <div class="panel panel-flat">
+            <div class="panel-heading">
+                <h6 class="panel-title"><i class="icon-history position-left"></i> Timeline</h6>
+            </div>
+            <div class="panel-body">
+                <ul class="media-list">
+                    @if (Model.Histories != null && Model.Histories.Any())
+                    {
+                        foreach (var h in Model.Histories)
+                        {
+                            <li class="media">
+                                <div class="media-left">
+                                    <span class="label label-icon border-primary text-primary">
+                                        <i class="icon-check"></i>
+                                    </span>
+                                </div>
+                                <div class="media-body">
+                                    <strong>@h.Action</strong>
+                                    <div class="text-muted text-size-small">
+                                        @h.ActionDate.ToString("dd MMM yyyy HH:mm")
+                                    </div>
+                                </div>
+                            </li>
+                        }
+                    }
+                    else
+                    {
+                        <li class="text-muted">No history recorded.</li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

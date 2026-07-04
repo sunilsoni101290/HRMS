@@ -85,11 +85,32 @@ namespace Application.DTOs.Attendances
         #region Create
         public async Task<ShiftDto> CreateAsync(ShiftDto dto)
         {
+            // Duplicate Shift Name
+            if (await _context.Shifts.AnyAsync(x =>
+                x.TenantId == dto.TenantId &&
+                x.Name.ToLower() == dto.Name.Trim().ToLower()))
+            {
+                throw new Exception("Shift Name already exists.");
+            }
+
+            // Validation
+            if (dto.StartTime == dto.EndTime)
+                throw new Exception("Start Time and End Time cannot be the same.");
+
+            if (dto.MinimumWorkingMinutes > dto.MaximumWorkingMinutes)
+                throw new Exception("Minimum Working Minutes cannot be greater than Maximum Working Minutes.");
+
+            if (dto.HalfDayMinutes > dto.FullDayMinutes)
+                throw new Exception("Half Day Minutes cannot be greater than Full Day Minutes.");
+
+            if (dto.GraceInMinutes < 0 || dto.GraceOutMinutes < 0)
+                throw new Exception("Grace Minutes cannot be negative.");
+
             var entity = new Shift
             {
                 Id = IDManager.GetNewId(new Shift()),
 
-                Name = dto.Name,
+                Name = dto.Name.Trim(),
                 StartTime = dto.StartTime,
                 EndTime = dto.EndTime,
 

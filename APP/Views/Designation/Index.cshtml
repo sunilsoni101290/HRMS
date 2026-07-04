@@ -1,68 +1,86 @@
 ﻿@model IEnumerable<DesignationListDto>
 
 @{
-    ViewData["Title"] = "Designation List";
+    ViewData["Title"] = "Designation Management";
 }
 
-<div class="container-fluid py-4">
+<div class="panel panel-flat">
 
-    <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <!-- Header -->
 
-        <div>
-            <h3 class="fw-bold mb-1">
-                <i class="bi bi-person-workspace text-success"></i>
-                Designation Management
-            </h3>
+    <div class="panel-heading">
 
-            <p class="text-muted mb-0">
-                Manage all company designations
-            </p>
-        </div>
+        <h5 class="panel-title">
 
-        <div>
+            <i class="icon-user-tie position-left"></i>
+
+            Designation Management
+
+        </h5>
+
+        <div class="heading-elements">
+
             <a asp-action="Create"
-               class="btn btn-success rounded-3 px-4 shadow-sm">
+               class="btn bg-primary">
 
-                <i class="bi bi-plus-circle"></i>
+                <i class="icon-plus22"></i>
+
                 Add Designation
+
             </a>
+
         </div>
 
     </div>
 
-    <!-- Search & Filter -->
-    <div class="card border-0 shadow-sm rounded-4 mb-4">
+    <!-- Search Panel -->
 
-        <div class="card-body">
+    <div class="panel-body">
 
-            <div class="row g-3">
+        <div class="row">
 
-                <div class="col-md-4">
-                    <input type="text"
-                           id="searchInput"
-                           class="form-control"
-                           placeholder="Search designation..." />
-                </div>
+            <div class="col-md-4">
 
-                <div class="col-md-3">
-                    <select class="form-select">
-                        <option value="">All Companies</option>
-                    </select>
-                </div>
+                <input type="text"
+                       id="searchInput"
+                       class="form-control"
+                       placeholder="Search Designation..." />
 
-                <div class="col-md-3">
-                    <select class="form-select">
-                        <option value="">All Departments</option>
-                    </select>
-                </div>
+            </div>
 
-                <div class="col-md-2">
-                    <button class="btn btn-outline-success w-100">
-                        <i class="bi bi-funnel"></i>
-                        Filter
-                    </button>
-                </div>
+            <div class="col-md-3">
+
+                <select class="form-control">
+
+                    <option value="">
+                        All Companies
+                    </option>
+
+                </select>
+
+            </div>
+
+            <div class="col-md-3">
+
+                <select class="form-control">
+
+                    <option value="">
+                        All Departments
+                    </option>
+
+                </select>
+
+            </div>
+
+            <div class="col-md-2">
+
+                <button class="btn bg-primary btn-block">
+
+                    <i class="icon-search4"></i>
+
+                    Search
+
+                </button>
 
             </div>
 
@@ -70,131 +88,161 @@
 
     </div>
 
-    <!-- Grid -->
-    <div class="card border-0 shadow rounded-4">
+    <!-- Table -->
 
-        <div class="card-body p-0">
+    <table class="table table-hover table-striped datatable-basic">
 
-            <div class="table-responsive">
+        <thead>
 
-                <table class="table table-hover align-middle mb-0">
+            <tr>
 
-                    <thead class="table-light">
+                <th width="60">#</th>
 
-                        <tr>
-                            <th>#</th>
-                            <th>Designation</th>
-                            <th>Code</th>
-                            <th>Department</th>
-                            <th>Level</th>
-                            <th>Min Salary</th>
-                            <th>Max Salary</th>
-                            <th>Status</th>
-                            <th width="140">Action</th>
-                        </tr>
+                <th>Designation</th>
 
-                    </thead>
+                <th>Code</th>
 
-                    <tbody id="designationTable">
+                <th>Department</th>
 
-                        @{
-                            int sr = 1;
-                        }
+                <th>Level</th>
 
-                        @foreach (var item in Model)
-                        {
-                            <tr>
+                <th class="text-right">Min Salary</th>
 
-                                <td>
-                                    @sr
-                                </td>
+                <th class="text-right">Max Salary</th>
 
-                                <td>
-                                    <div class="fw-semibold">
-                                        @item.Name
-                                    </div>
-                                </td>
+                <th>Status</th>
 
-                                <td>
-                                    <span class="badge bg-light text-dark border">
-                                        @item.Code
-                                    </span>
-                                </td>
+                <th width="170">Action</th>
 
-                                <td>
-                                    @(ViewBag.DepartmentNames != null &&
-                                        ViewBag.DepartmentNames.ContainsKey(item.DepartmentId)
-                                            ? ViewBag.DepartmentNames[item.DepartmentId]
-                                            : "-")
-                                </td>
+            </tr>
 
-                                <td>
-                                    <span class="badge bg-info">
-                                        Level @item.Level
-                                    </span>
-                                </td>
+        </thead>
 
-                                <td>
-                                    ₹ @item.MinSalary
-                                </td>
+        <tbody id="designationTable">
 
-                                <td>
-                                    ₹ @item.MaxSalary
-                                </td>
+            @{
+                int sr = 1;
+            }
 
-                                <td>
-                                    <span class="badge bg-success">
-                                        Active
-                                    </span>
-                                </td>
+            @foreach (var item in Model)
+            {
 
-                                <td>
+                <tr>
 
-                                    <div class="d-flex gap-2">
+                    <td>@sr</td>
 
-                                        <!-- Edit -->
-                                        <a asp-action="Edit"
-                                           asp-route-id="@item.Id"
-                                           class="btn btn-sm btn-outline-primary rounded-3">
+                    <td>
 
-                                            <i class="bi bi-pencil-square"></i>
-                                        </a>
+                        <strong>
 
-                                        <!-- Details -->
-                                        <a asp-action="Details"
-                                           asp-route-id="@item.Id"
-                                           class="btn btn-sm btn-outline-info rounded-3">
+                            @item.Name
 
-                                            <i class="bi bi-eye"></i>
-                                        </a>
+                        </strong>
 
-                                        <!-- Delete -->
-                                        <a asp-action="Delete"
-                                           asp-route-id="@item.Id"
-                                           onclick="return confirm('Are you sure to delete this designation?')"
-                                           class="btn btn-sm btn-outline-danger rounded-3">
+                    </td>
 
-                                            <i class="bi bi-trash"></i>
-                                        </a>
+                    <td>
 
-                                    </div>
+                        <span class="label bg-primary">
 
-                                </td>
+                            @item.Code
 
-                            </tr>
+                        </span>
 
-                            sr++;
-                        }
+                    </td>
 
-                    </tbody>
+                    <td>
 
-                </table>
+                        @(ViewBag.DepartmentNames != null &&
+                          ViewBag.DepartmentNames.ContainsKey(item.DepartmentId)
+                            ? ViewBag.DepartmentNames[item.DepartmentId]
+                            : "-")
 
-            </div>
+                    </td>
 
-        </div>
+                    <td>
 
-    </div>
+                        <span class="label bg-info">
+
+                            Level @item.Level
+
+                        </span>
+
+                    </td>
+
+                    <td class="text-right">
+
+                        ₹ @item.MinSalary.ToString("N2")
+
+                    </td>
+
+                    <td class="text-right">
+
+                        ₹ @item.MaxSalary.ToString("N2")
+
+                    </td>
+
+                    <td>
+
+                        <span class="label bg-success">
+
+                            Active
+
+                        </span>
+
+                    </td>
+
+                    <td>
+
+                        <div class="btn-group">
+
+                            <!-- Details -->
+
+                            <a asp-action="Details"
+                               asp-route-id="@item.Id"
+                               class="btn btn-default btn-icon"
+                               title="View">
+
+                                <i class="icon-eye"></i>
+
+                            </a>
+
+                            <!-- Edit -->
+
+                            <a asp-action="Edit"
+                               asp-route-id="@item.Id"
+                               class="btn btn-primary btn-icon"
+                               title="Edit">
+
+                                <i class="icon-pencil7"></i>
+
+                            </a>
+
+                            <!-- Delete -->
+
+                            <a asp-action="Delete"
+                               asp-route-id="@item.Id"
+                               onclick="return confirm('Are you sure you want to delete this designation?');"
+                               class="btn btn-danger btn-icon"
+                               title="Delete">
+
+                                <i class="icon-trash"></i>
+
+                            </a>
+
+                        </div>
+
+                    </td>
+
+                </tr>
+
+                sr++;
+
+            }
+
+        </tbody>
+
+    </table>
 
 </div>
 
@@ -202,44 +250,46 @@
 
     <script>
 
-        // Designation Search
+        $(function () {
 
-        document.getElementById("searchInput")
-            .addEventListener("keyup", function () {
+            $("#searchInput").on("keyup", function () {
 
-                let designation_value =
-                    this.value.toLowerCase();
+                var value = $(this).val().toLowerCase();
 
-                let designation_rows =
-                    document.querySelectorAll("#designationTable tr");
+                $("#designationTable tr").filter(function () {
 
-                designation_rows.forEach(function (designation_row) {
+                    $(this).toggle(
 
-                    let designation_text =
-                        designation_row.innerText.toLowerCase();
+                        $(this).text().toLowerCase().indexOf(value) > -1
 
-                    designation_row.style.display =
-                        designation_text.includes(designation_value)
-                            ? ""
-                            : "none";
+                    );
 
                 });
 
             });
 
+        });
+
     </script>
+
     <style>
-        table th {
-            font-family: 'Inter', sans-serif;
-            font-size: 14px;
+
+        .table > thead > tr > th {
             font-weight: 600;
         }
 
-        table td {
-            font-family: 'Inter', sans-serif;
-            font-size: 13px;
-            font-weight: normal;
+        .table > tbody > tr > td {
+            vertical-align: middle;
         }
+
+        .label {
+            font-size: 11px;
+        }
+
+        .btn-icon {
+            width: 34px;
+        }
+
     </style>
 
 }

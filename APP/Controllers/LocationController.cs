@@ -63,7 +63,7 @@ namespace APP.Controllers
 
                     TempData["Success"] = "Branch created successfully.";
 
-                    return View(dto);
+                    return RedirectToAction(nameof(Index));
                 }
             }
             catch (Exception ex)
@@ -72,7 +72,7 @@ namespace APP.Controllers
 
                 await LoadDropdowns();
 
-                return View(dto);
+                return RedirectToAction(nameof(Index));
             }
             return RedirectToAction(nameof(Index));
         }
@@ -123,7 +123,8 @@ namespace APP.Controllers
                     await _apiService.PutAsync<dynamic>($"location/{dto.Id}", dto);
 
                     TempData["Success"] = "Branch updated successfully.";
-                    return View("Create", dto);
+
+                    return RedirectToAction(nameof(Index));
                 }
             }
             catch (Exception ex)
@@ -132,7 +133,7 @@ namespace APP.Controllers
 
                 await LoadDropdowns();
 
-                return View(dto);
+                return View("Create",dto);
             }
             return RedirectToAction(nameof(Index));
         }
@@ -166,8 +167,7 @@ namespace APP.Controllers
 
             return Json(result);
         }
-
-       
+   
         #region Private method
         private async Task LoadDropdowns(string? selectedCompanyId = null)
         {

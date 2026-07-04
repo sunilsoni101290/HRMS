@@ -1,0 +1,112 @@
+@model IEnumerable<AnnouncementListDto>
+
+@{
+    ViewData["Title"] = "Announcements";
+
+    string TypeLabel(int t) => t switch
+    {
+        1 => "bg-info",       // General
+        2 => "bg-primary",    // Policy
+        3 => "bg-success",    // Holiday
+        4 => "bg-danger",     // Urgent
+        5 => "bg-teal",       // Achievement
+        6 => "bg-warning",    // Important
+        _ => "bg-grey"
+    };
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title"><i class="icon-bullhorn position-left"></i> Announcements</h5>
+        <div class="heading-elements">
+            <a asp-action="Create" class="btn bg-primary"><i class="icon-plus22"></i> New Announcement</a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-4">
+                <input type="text" id="searchInput" class="form-control" placeholder="Search announcements..." />
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-striped">
+            <thead>
+                <tr>
+                    <th width="50">#</th>
+                    <th>Title</th>
+                    <th>Type</th>
+                    <th>Priority</th>
+                    <th>Audience</th>
+                    <th>Published</th>
+                    <th>Expires</th>
+                    <th width="170">Action</th>
+                </tr>
+            </thead>
+            <tbody id="dataTable">
+                @{ int sr = 1; }
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@sr</td>
+                            <td>
+                                <strong>@item.Title</strong>
+                                @if (!string.IsNullOrEmpty(item.Message))
+                                {
+                                    <br /><small class="text-muted">@item.Message</small>
+                                }
+                            </td>
+                            <td><span class="label @TypeLabel(item.AnnouncementType)">@item.TypeText</span></td>
+                            <td><span class="label @(item.Priority == 1 ? "bg-danger" : "bg-warning")">@item.PriorityText</span></td>
+                            <td>@(item.IsForAll ? "Everyone" : (item.DepartmentName ?? "Targeted"))</td>
+                            <td>@item.PublishDate.ToString("dd MMM yyyy")</td>
+                            <td>@(item.ExpiryDate?.ToString("dd MMM yyyy") ?? "-")</td>
+                            <td>
+                                <div class="btn-group">
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-default btn-icon" title="View"><i class="icon-eye"></i></a>
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary btn-icon" title="Edit"><i class="icon-pencil7"></i></a>
+                                    <a asp-action="Delete" asp-route-id="@item.Id"
+                                       onclick="return confirm('Delete this announcement?');"
+                                       class="btn btn-danger btn-icon" title="Delete"><i class="icon-trash"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                        sr++;
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="8" class="text-center text-muted" style="padding:30px;"><i class="icon-bullhorn" style="font-size:32px;"></i><br />No announcements found.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    <script>
+        $(function () {
+            $("#searchInput").on("keyup", function () {
+                var value = $(this).val().toLowerCase();
+                $("#dataTable tr").filter(function () {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+                });
+            });
+        });
+    </script>
+    <style>
+        .table > thead > tr > th { font-weight: 600; }
+        .table > tbody > tr > td { vertical-align: middle; }
+        .label { font-size: 11px; }
+        .btn-icon { width: 34px; }
+    </style>
+}

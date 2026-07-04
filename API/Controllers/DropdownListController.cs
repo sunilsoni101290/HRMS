@@ -227,5 +227,75 @@ namespace API.Controllers
             return Ok(data);
         }
         #endregion
+
+        #region Holiday Group Dropdown
+        [HttpGet("leave-type")]
+        public async Task<IActionResult> GetLeaveTypeDropdown()
+        {
+            var result = await _dropdownService.GetLeaveTypeDropdownAsync();
+
+            return Ok(result);
+        }
+        #endregion
+
+        #region Asset Category Dropdown
+        [HttpGet("asset-category")]
+        public async Task<IActionResult> GetAssetCategoryDropdown()
+        {
+            var result = await _dropdownService.GetAssetCategoryDropdownAsync();
+
+            return Ok(result);
+        }
+        #endregion
+
+        #region Available Asset Dropdown
+        [HttpGet("available-asset")]
+        public async Task<IActionResult> GetAvailableAssetDropdown(string? assetId = null)
+        {
+            var result = await _dropdownService.GetAvailableAssetDropdownAsync(assetId);
+
+            return Ok(result);
+        }
+        #endregion
+
+        #region Salary Component Dropdown
+        [HttpGet("salary-component")]
+        public async Task<IActionResult> GetSalaryComponentDropdown()
+        {
+            var result = await _dropdownService.GetSalaryComponentDropdownAsync();
+
+            return Ok(result);
+        }
+        #endregion
+
+        #region Job Opening Dropdown
+        [HttpGet("job-opening")]
+        public async Task<IActionResult> GetJobOpeningDropdown()
+        {
+            var result = await _dropdownService.GetJobOpeningDropdownAsync();
+
+            return Ok(result);
+        }
+        #endregion
+
+        #region Candidate Dropdown
+        [HttpGet("candidate")]
+        public async Task<IActionResult> GetCandidateDropdown()
+        {
+            var result = await _dropdownService.GetCandidateDropdownAsync();
+
+            return Ok(result);
+        }
+        #endregion
+
+        #region Candidate Application Dropdown
+        [HttpGet("application")]
+        public async Task<IActionResult> GetApplicationDropdown()
+        {
+            var result = await _dropdownService.GetApplicationDropdownAsync();
+
+            return Ok(result);
+        }
+        #endregion
     }
 }

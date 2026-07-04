@@ -1,0 +1,46 @@
+@model EmployeeDocumentDto
+
+@{
+    ViewData["Title"] = "Document Details";
+}
+
+<div class="panel panel-flat">
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-file-text2 position-left"></i> @(item_title())
+            @if (Model.IsVerified) { <span class="label bg-success" style="margin-left:8px;">Verified</span> }
+        </h5>
+        <div class="heading-elements">
+            @if (!string.IsNullOrEmpty(Model.FilePath))
+            {
+                <a href="@Model.FilePath" target="_blank" class="btn btn-info btn-xs"><i class="icon-eye"></i> View</a>
+                <a asp-action="Download" asp-route-id="@Model.Id" class="btn btn-default btn-xs"><i class="icon-download"></i> Download</a>
+            }
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary btn-xs"><i class="icon-pencil7"></i> Edit</a>
+            <a asp-action="Index" class="btn btn-default btn-xs"><i class="icon-arrow-left13"></i> Back</a>
+        </div>
+    </div>
+    <div class="panel-body">
+        <table class="table table-striped">
+            <tr><th style="width:220px;">Employee</th><td>@Model.EmployeeName</td></tr>
+            <tr><th>Document Type</th><td>@(Model.DocumentTypeText ?? Model.DocumentType.ToString())</td></tr>
+            <tr><th>Document Number</th><td>@(Model.DocumentNumber ?? "-")</td></tr>
+            <tr><th>Document Name</th><td>@(Model.DocumentName ?? "-")</td></tr>
+            <tr><th>File</th><td>@(Model.FileName ?? "-") @(Model.FileSize.HasValue ? $"({Model.FileSize.Value / 1024} KB)" : "")</td></tr>
+            <tr><th>Issue Date</th><td>@(Model.IssueDate?.ToString("dd MMM yyyy") ?? "-")</td></tr>
+            <tr><th>Expiry Date</th><td>@(Model.ExpiryDate?.ToString("dd MMM yyyy") ?? "-")</td></tr>
+            <tr><th>Issued By</th><td>@(Model.IssuedBy ?? "-")</td></tr>
+            <tr><th>Verified</th><td>@(Model.IsVerified ? $"Yes — {Model.VerifiedBy} on {Model.VerifiedOn:dd MMM yyyy}" : "No")</td></tr>
+            <tr><th>Remarks</th><td>@(Model.Remarks ?? "-")</td></tr>
+        </table>
+    </div>
+</div>
+
+@functions {
+    string item_title()
+    {
+        return string.IsNullOrEmpty(Model.DocumentName)
+            ? (Model.DocumentTypeText ?? Model.DocumentType.ToString())
+            : Model.DocumentName;
+    }
+}

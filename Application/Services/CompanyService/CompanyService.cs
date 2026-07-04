@@ -21,6 +21,8 @@ namespace Application.Services.CompanyService
 
         public async Task<List<CompanyDto>> GetAllAsync()
         {
+            try
+            {
             return await _context.Companies
                 .Include(x => x.Country)
                 .Include(x => x.State)
@@ -61,10 +63,17 @@ namespace Application.Services.CompanyService
                     ModifiedBy = x.ModifiedBy
                 })
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<CompanyDto>();
+            }
         }
 
         public async Task<CompanyDto?> GetByIdAsync(string id)
         {
+            try
+            {
             return await _context.Companies
                 .Where(x => x.Id == id)
                 .Select(x => new CompanyDto
@@ -97,10 +106,17 @@ namespace Application.Services.CompanyService
                     ModifiedBy = x.ModifiedBy
                 })
                 .FirstOrDefaultAsync();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<CompanyDto> CreateAsync(CompanyDto dto)
         {
+            try
+            {
             var entity = new Company
             {
                 Id=IDManager.GetNewId(new Company()),
@@ -137,10 +153,17 @@ namespace Application.Services.CompanyService
             dto.Id = entity.Id;
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<CompanyDto?> UpdateAsync(string id, CompanyDto dto)
         {
+            try
+            {
             var entity = await _context.Companies
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -174,10 +197,17 @@ namespace Application.Services.CompanyService
             await _context.SaveChangesAsync();
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<bool> DeleteAsync(string id)
         {
+            try
+            {
             var entity = await _context.Companies
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -189,6 +219,11 @@ namespace Application.Services.CompanyService
             await _context.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
     }
 }

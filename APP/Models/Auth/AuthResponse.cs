@@ -13,6 +13,9 @@
         public string Email { get; set; }
         public string RoleName { get; set; }
         public string Designation { get; set; }
+        public string CompanyName { get; set; }
+        public string CompanyId { get; set; }
+        public string BranchId { get; set; }
     }
 
     public class RefreshTokenRequestDto

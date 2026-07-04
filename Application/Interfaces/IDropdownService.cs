@@ -26,5 +26,11 @@ namespace Application.Interfaces
         Task<List<DropdownDto>> GetParentFeatureDropdownAsync();
         Task<List<DropdownDto>> GetHolidayGroupDropdownAsync();
         Task<List<DropdownDto>> GetLeaveTypeDropdownAsync();
+        Task<List<DropdownDto>> GetAssetCategoryDropdownAsync();
+        Task<List<DropdownDto>> GetAvailableAssetDropdownAsync(string? assetId = null);
+        Task<List<DropdownDto>> GetSalaryComponentDropdownAsync();
+        Task<List<DropdownDto>> GetJobOpeningDropdownAsync();
+        Task<List<DropdownDto>> GetCandidateDropdownAsync();
+        Task<List<DropdownDto>> GetApplicationDropdownAsync();
     }
 }

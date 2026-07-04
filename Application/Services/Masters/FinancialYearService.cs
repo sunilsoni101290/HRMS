@@ -28,6 +28,8 @@ namespace Application.Services.Masters
 
         public async Task<List<FinancialYearDto>> GetAllAsync()
         {
+            try
+            {
             return await _context.FinancialYears
                 .Include(x => x.Company)
                 .Select(x => new FinancialYearDto
@@ -51,6 +53,11 @@ namespace Application.Services.Masters
                 })
                 .OrderByDescending(x => x.StartDate)
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<FinancialYearDto>();
+            }
         }
 
         // ======================================================
@@ -59,6 +66,8 @@ namespace Application.Services.Masters
 
         public async Task<FinancialYearDto?> GetByIdAsync(string id)
         {
+            try
+            {
             return await _context.FinancialYears
                 .Include(x => x.Company)
                 .Where(x => x.Id == id)
@@ -82,6 +91,11 @@ namespace Application.Services.Masters
                     IsCurrent = x.IsCurrent
                 })
                 .FirstOrDefaultAsync();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         // ======================================================
@@ -90,6 +104,8 @@ namespace Application.Services.Masters
 
         public async Task<FinancialYearDto> CreateAsync(FinancialYearDto dto)
         {
+            try
+            {
             // Duplicate Check
             var exists = await _context.FinancialYears.AnyAsync(x =>
                 x.Name == dto.Name &&
@@ -140,6 +156,11 @@ namespace Application.Services.Masters
             dto.Id = entity.Id;
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         // ======================================================
@@ -148,6 +169,8 @@ namespace Application.Services.Masters
 
         public async Task<FinancialYearDto?> UpdateAsync(string id, FinancialYearDto dto)
         {
+            try
+            {
             var entity = await _context.FinancialYears
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -190,6 +213,11 @@ namespace Application.Services.Masters
             await _context.SaveChangesAsync();
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         // ======================================================
@@ -198,6 +226,8 @@ namespace Application.Services.Masters
 
         public async Task<bool> DeleteAsync(string id)
         {
+            try
+            {
             var entity = await _context.FinancialYears
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -209,6 +239,11 @@ namespace Application.Services.Masters
             await _context.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         // ======================================================
@@ -217,6 +252,8 @@ namespace Application.Services.Masters
 
         public async Task<FinancialYearDto?> GetCurrentFinancialYearAsync()
         {
+            try
+            {
             return await _context.FinancialYears
                 .Include(x => x.Company)
                 .Where(x => x.IsCurrent)
@@ -237,6 +274,11 @@ namespace Application.Services.Masters
                     IsCurrent = x.IsCurrent
                 })
                 .FirstOrDefaultAsync();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
     }
 }

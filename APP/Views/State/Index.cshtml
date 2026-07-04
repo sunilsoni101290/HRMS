@@ -1,35 +1,30 @@
 ﻿@model IEnumerable<StateDto>
 
 @{
-    ViewData["Title"] = "State List";
+    ViewData["Title"] = "State Management";
 }
 
-<div class="container-fluid py-4">
+<div class="panel panel-flat">
 
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <!-- Page Header -->
 
-        <div>
+    <div class="panel-heading">
 
-            <h3 class="fw-bold mb-1">
+        <h5 class="panel-title">
 
-                <i class="bi bi-geo-alt-fill text-primary"></i>
-                State Management
+            <i class="icon-location4 position-left"></i>
 
-            </h3>
+            State Management
 
-            <p class="text-muted mb-0">
-                Manage state and GST information
-            </p>
+        </h5>
 
-        </div>
-
-        <div>
+        <div class="heading-elements">
 
             <a asp-action="Create"
-               class="btn btn-primary rounded-3 px-4">
+               class="btn bg-primary">
 
-                <i class="bi bi-plus-circle"></i>
+                <i class="icon-plus22 position-left"></i>
+
                 Add State
 
             </a>
@@ -38,14 +33,146 @@
 
     </div>
 
-    <!-- Search -->
-    <div class="card border-0 shadow-sm rounded-4 mb-4">
+    <!-- KPI Cards -->
 
-        <div class="card-body">
+    <div class="panel-body">
 
-            <div class="row g-3">
+        <div class="row">
 
-                <div class="col-md-5">
+            <!-- Total States -->
+
+            <div class="col-md-4">
+
+                <div class="panel bg-primary-400">
+
+                    <div class="panel-body">
+
+                        <div class="media">
+
+                            <div class="media-left">
+
+                                <i class="icon-location4 icon-3x"></i>
+
+                            </div>
+
+                            <div class="media-body text-right">
+
+                                <h3 class="no-margin">
+
+                                    @Model.Count()
+
+                                </h3>
+
+                                <span>
+
+                                    Total States
+
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            
+            <!-- GST Configured -->
+
+            <div class="col-md-4">
+
+                <div class="panel bg-info-400">
+
+                    <div class="panel-body">
+
+                        <div class="media">
+
+                            <div class="media-left">
+
+                                <i class="icon-price-tag3 icon-3x"></i>
+
+                            </div>
+
+                            <div class="media-body text-right">
+
+                                <h3 class="no-margin">
+
+                                    @Model.Count(x=>!string.IsNullOrEmpty(x.GSTStateCode))
+
+                                </h3>
+
+                                <span>
+
+                                    GST Configured
+
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Modified -->
+
+            <div class="col-md-4">
+
+                <div class="panel bg-warning-400">
+
+                    <div class="panel-body">
+
+                        <div class="media">
+
+                            <div class="media-left">
+
+                                <i class="icon-history icon-3x"></i>
+
+                            </div>
+
+                            <div class="media-body text-right">
+
+                                <h3 class="no-margin">
+
+                                    @Model.Count(x=>x.ModifiedOn!=null)
+
+                                </h3>
+
+                                <span>
+
+                                    Updated
+
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <hr />
+
+        <!-- Search Area -->
+
+        <div class="row">
+
+            <!-- Search -->
+
+            <div class="col-md-4">
+
+                <div class="form-group">
 
                     <input type="text"
                            id="searchInput"
@@ -54,178 +181,74 @@
 
                 </div>
 
-                <div class="col-md-5">
+            </div>
 
-                    <select class="form-select">
+            <!-- Country -->
+
+            <div class="col-md-3">
+
+                <div class="form-group">
+
+                    <select id="CountryFilter"
+                            class="form-control select-search">
 
                         <option value="">
+
                             All Countries
+
                         </option>
 
                     </select>
 
                 </div>
 
-                <div class="col-md-2">
+            </div>
 
-                    <button class="btn btn-outline-primary w-100">
+            <!-- GST -->
 
-                        <i class="bi bi-search"></i>
-                        Search
+            <div class="col-md-3">
 
-                    </button>
+                <div class="form-group">
+
+                    <select id="GSTFilter"
+                            class="form-control select-search">
+
+                        <option value="">
+
+                            GST Status
+
+                        </option>
+
+                        <option value="Configured">
+
+                            Configured
+
+                        </option>
+
+                        <option value="Not Configured">
+
+                            Not Configured
+
+                        </option>
+
+                    </select>
 
                 </div>
 
             </div>
 
-        </div>
+            <!-- Button -->
 
-    </div>
+            <div class="col-md-2">
 
-    <!-- Table -->
-    <div class="card border-0 shadow rounded-4">
+                <button type="button"
+                        class="btn bg-primary btn-block">
 
-        <div class="card-body p-0">
+                    <i class="icon-search4 position-left"></i>
 
-            <div class="table-responsive">
+                    Filter
 
-                <table class="table table-hover align-middle mb-0">
-
-                    <thead class="table-light">
-
-                        <tr>
-
-                            <th>#</th>
-                            <th>State</th>
-                            <th>Code</th>
-                            <th>Country</th>
-                            <th>GST Code</th>
-                            <th>Modified On</th>
-                            <th>Status</th>
-                            <th width="160">Action</th>
-
-                        </tr>
-
-                    </thead>
-
-                    <tbody id="stateTable">
-
-                        @{
-                            int sr = 1;
-                        }
-
-                        @foreach (var item in Model)
-                        {
-                            <tr>
-
-                                <!-- Sr -->
-                                <td>
-                                    @sr
-                                </td>
-
-                                <!-- State -->
-                                <td>
-
-                                    <div class="fw-semibold">
-
-                                        <i class="bi bi-geo-alt text-primary"></i>
-                                        @item.Name
-
-                                    </div>
-
-                                </td>
-
-                                <!-- Code -->
-                                <td>
-
-                                    <span class="badge bg-dark">
-                                        @item.Code
-                                    </span>
-
-                                </td>
-
-                                <!-- Country -->
-                                <td>
-
-                                    <span class="badge bg-primary">
-                                        @item.CountryName
-                                    </span>
-
-                                </td>
-
-                                <!-- GST -->
-                                <td>
-
-                                    <span class="badge bg-success">
-                                        @item.GSTStateCode
-                                    </span>
-
-                                </td>
-
-                                <!-- Modified -->
-                                <td>
-
-                                    @(item.ModifiedOn.HasValue
-                                        ? item.ModifiedOn.Value.ToString("dd MMM yyyy")
-                                        : "-")
-
-                                </td>
-
-                                <!-- Status -->
-                                <td>
-
-                                    <span class="badge bg-success">
-                                        Active
-                                    </span>
-
-                                </td>
-
-                                <!-- Action -->
-                                <td>
-
-                                    <div class="d-flex gap-2">
-
-                                        <!-- Details -->
-                                        <a asp-action="Details"
-                                           asp-route-id="@item.Id"
-                                           class="btn btn-sm btn-outline-info rounded-3">
-
-                                            <i class="bi bi-eye"></i>
-
-                                        </a>
-
-                                        <!-- Edit -->
-                                        <a asp-action="Edit"
-                                           asp-route-id="@item.Id"
-                                           class="btn btn-sm btn-outline-primary rounded-3">
-
-                                            <i class="bi bi-pencil-square"></i>
-
-                                        </a>
-
-                                        <!-- Delete -->
-                                        <a asp-action="Delete"
-                                           asp-route-id="@item.Id"
-                                           onclick="return confirm('Delete this state?')"
-                                           class="btn btn-sm btn-outline-danger rounded-3">
-
-                                            <i class="bi bi-trash"></i>
-
-                                        </a>
-
-                                    </div>
-
-                                </td>
-
-                            </tr>
-
-                            sr++;
-                        }
-
-                    </tbody>
-
-                </table>
+                </button>
 
             </div>
 
@@ -233,9 +256,257 @@
 
     </div>
 
+    <!-- Grid -->
+
+    <table class="table table-hover table-striped datatable-basic">
+
+        <thead>
+
+            <tr>
+
+                <th width="60">
+
+                    #
+
+                </th>
+
+                <th>
+
+                    State
+
+                </th>
+
+                <th>
+
+                    Code
+
+                </th>
+
+                <th>
+
+                    Country
+
+                </th>
+
+                <th>
+
+                    GST Code
+
+                </th>
+
+                <th>
+
+                    Modified On
+
+                </th>
+
+                <th>
+
+                    Status
+
+                </th>
+
+                <th width="170"
+                    class="text-center">
+
+                    Action
+
+                </th>
+
+            </tr>
+
+        </thead>
+
+        <tbody id="stateTable">
+
+            @{
+                int sr = 1;
+            }
+
+            @foreach (var item in Model)
+            {
+                <tr>
+
+                    <!-- Sr No -->
+
+                    <td>
+
+                        @sr
+
+                    </td>
+
+                    <!-- State -->
+
+                    <td>
+
+                        <div class="text-semibold">
+
+                            <i class="icon-location4 text-primary position-left"></i>
+
+                            @item.Name
+
+                        </div>
+
+                    </td>
+
+                    <!-- Code -->
+
+                    <td>
+
+                        <span class="label bg-primary">
+
+                            @item.Code
+
+                        </span>
+
+                    </td>
+
+                    <!-- Country -->
+
+                    <td>
+
+                        <span class="label bg-info">
+
+                            <i class="icon-earth position-left"></i>
+
+                            @item.CountryName
+
+                        </span>
+
+                    </td>
+
+                    <!-- GST -->
+
+                    <td>
+
+                        @if (!string.IsNullOrWhiteSpace(item.GSTStateCode))
+                        {
+                            <span class="label bg-success">
+
+                                @item.GSTStateCode
+
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="label bg-warning">
+
+                                N/A
+
+                            </span>
+                        }
+
+                    </td>
+
+                    <!-- Modified -->
+
+                    <td>
+
+                        @if (item.ModifiedOn.HasValue)
+                        {
+                            @item.ModifiedOn.Value.ToString("dd-MMM-yyyy")
+                        }
+                        else
+                        {
+                            <span>-</span>
+                        }
+
+                    </td>
+
+                    <!-- Status -->
+
+                    <td>
+
+                        <span class="label bg-success">
+
+                            Active
+
+                        </span>
+
+                    </td>
+
+                    <!-- Action -->
+
+                    <td class="text-center">
+
+                        <div class="btn-group">
+
+                            <!-- Details -->
+
+                            <a asp-action="Details"
+                               asp-route-id="@item.Id"
+                               class="btn btn-default btn-icon"
+                               data-popup="tooltip"
+                               title="Details">
+
+                                <i class="icon-eye"></i>
+
+                            </a>
+
+                            <!-- Edit -->
+
+                            <a asp-action="Edit"
+                               asp-route-id="@item.Id"
+                               class="btn bg-primary btn-icon"
+                               data-popup="tooltip"
+                               title="Edit">
+
+                                <i class="icon-pencil7"></i>
+
+                            </a>
+
+                            <!-- Delete -->
+
+                            <a asp-action="Delete"
+                               asp-route-id="@item.Id"
+                               onclick="return confirm('Are you sure you want to delete this state?');"
+                               class="btn btn-danger btn-icon"
+                               data-popup="tooltip"
+                               title="Delete">
+
+                                <i class="icon-trash"></i>
+
+                            </a>
+
+                        </div>
+
+                    </td>
+
+                </tr>
+
+                sr++;
+            }
+
+        </tbody>
+
+    </table>
+
 </div>
 
 @section Scripts {
+    <script>
+
+        // Search Table
+
+        document.getElementById("searchInput")
+            .addEventListener("keyup", function () {
+
+                let value = this.value.toLowerCase();
+
+                let rows = document.querySelectorAll("#stateTable tr");
+
+                rows.forEach(function (row) {
+
+                    let text = row.innerText.toLowerCase();
+
+                    row.style.display =
+                        text.includes(value) ? "" : "none";
+
+                });
+
+            });
+
+    </script>
 
     <script>
 
@@ -260,5 +531,256 @@
             });
 
     </script>
+
+   @*  <script>
+
+        $(document).ready(function () {
+
+            //=========================================
+            // Tooltip
+            //=========================================
+
+            $('[data-popup="tooltip"]').tooltip();
+
+            //=========================================
+            // Chosen Dropdown
+            //=========================================
+
+            if ($(".select-search").length) {
+
+                $(".select-search").chosen({
+
+                    width: "100%",
+                    search_contains: true
+
+                });
+
+            }
+
+            //=========================================
+            // Search
+            //=========================================
+
+            $("#searchInput").keyup(function () {
+
+                filterTable();
+
+            });
+
+            //=========================================
+            // Country Filter
+            //=========================================
+
+            $("#CountryFilter").change(function () {
+
+                filterTable();
+
+            });
+
+            //=========================================
+            // GST Filter
+            //=========================================
+
+            $("#GSTFilter").change(function () {
+
+                filterTable();
+
+            });
+
+            //=========================================
+            // Filter Table
+            //=========================================
+
+            function filterTable() {
+
+                var keyword =
+                    $("#searchInput").val().toLowerCase();
+
+                var country =
+                    $("#CountryFilter").val().toLowerCase();
+
+                var gst =
+                    $("#GSTFilter").val().toLowerCase();
+
+                $("#stateTable tr").each(function () {
+
+                    var row = $(this);
+
+                    var stateName =
+                        row.find("td:eq(1)").text().toLowerCase();
+
+                    var countryName =
+                        row.find("td:eq(3)").text().toLowerCase();
+
+                    var gstCode =
+                        row.find("td:eq(4)").text().trim();
+
+                    var searchMatch =
+                        keyword == "" ||
+                        stateName.indexOf(keyword) > -1;
+
+                    var countryMatch =
+                        country == "" ||
+                        countryName.indexOf(country) > -1;
+
+                    var gstMatch = true;
+
+                    if (gst == "configured") {
+
+                        gstMatch =
+                            gstCode != "" &&
+                            gstCode != "N/A";
+
+                    }
+
+                    if (gst == "not configured") {
+
+                        gstMatch =
+                            gstCode == "" ||
+                            gstCode == "N/A";
+
+                    }
+
+                    row.toggle(
+
+                        searchMatch &&
+                        countryMatch &&
+                        gstMatch
+
+                    );
+
+                });
+
+            }
+
+            //=========================================
+            // DataTable
+            //=========================================
+
+            if ($.fn.DataTable) {
+
+                $(".datatable-basic").DataTable({
+
+                    autoWidth: false,
+
+                    paging: true,
+
+                    ordering: true,
+
+                    info: true,
+
+                    searching: false,
+
+                    pageLength: 10,
+
+                    lengthMenu: [
+
+                        [10,25,50,100],
+
+                        [10,25,50,100]
+
+                    ],
+
+                    language: {
+
+                        search: "_INPUT_",
+
+                        searchPlaceholder: "Search..."
+
+                    }
+
+                });
+
+            }
+
+        });
+
+    </script> *@
+
+    <style>
+
+        .panel-heading {
+            padding: 18px 20px;
+        }
+
+        .panel-title {
+            font-weight: 600;
+        }
+
+        .panel-body {
+            padding: 20px;
+        }
+
+        .table > thead > tr > th {
+            background: #fafafa;
+            font-size: 13px;
+            font-weight: 600;
+            vertical-align: middle;
+        }
+
+        .table > tbody > tr > td {
+            font-size: 13px;
+            vertical-align: middle;
+        }
+
+        .table-hover tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .text-semibold {
+            font-weight: 600;
+        }
+
+        .btn-group .btn {
+            margin-right: 2px;
+        }
+
+        .btn-icon {
+            width: 34px;
+            height: 34px;
+            padding: 7px;
+        }
+
+        .label {
+            font-size: 11px;
+            padding: 5px 10px;
+        }
+
+        .panel.bg-primary-400,
+        .panel.bg-success-400,
+        .panel.bg-info-400,
+        .panel.bg-warning-400 {
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .media {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .media-left i {
+            opacity: .85;
+        }
+
+        .datatable-basic tbody tr:hover {
+            background: #f5f5f5;
+        }
+
+        .chosen-container {
+            width: 100% !important;
+        }
+
+        .chosen-single {
+            height: 36px !important;
+            line-height: 34px !important;
+        }
+
+        .panel {
+            box-shadow: 0 1px 3px rgba(0,0,0,.08);
+        }
+
+    </style>
 
 }

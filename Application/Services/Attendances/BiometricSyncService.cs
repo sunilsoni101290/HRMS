@@ -78,6 +78,8 @@ namespace Application.Services.Attendances
         public async Task<bool>
             SyncAllDevicesAsync()
         {
+            try
+            {
             var devices =
                 await _db.BiometricDevices
                 .Where(x => x.IsActive)
@@ -89,6 +91,11 @@ namespace Application.Services.Attendances
             }
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         public async Task<List

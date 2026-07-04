@@ -1,0 +1,354 @@
+﻿@model List<LeaveBalanceTransactionDto>
+
+@{
+    ViewData["Title"] = "Employee Leave Ledger";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+
+            <i class="icon-history position-left"></i>
+
+            Employee Leave Ledger
+
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Index"
+               class="btn btn-default">
+
+                <i class="icon-arrow-left13"></i>
+                Back
+
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        @if (Model != null && Model.Any())
+        {
+            <div class="alert bg-info alert-styled-left">
+
+                <span class="text-semibold">
+
+                    Employee :
+
+                </span>
+
+                @Model.First().EmployeeName
+
+            </div>
+
+            <div class="row">
+
+                <div class="col-md-3">
+
+                    <div class="panel bg-primary">
+
+                        <div class="panel-body text-center">
+
+                            <h3 class="no-margin">
+
+                                @Model.Count
+
+                            </h3>
+
+                            <span>
+
+                                Transactions
+
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-3">
+
+                    <div class="panel bg-success">
+
+                        <div class="panel-body text-center">
+
+                            <h3 class="no-margin">
+
+                                @Model
+                                    .Where(x =>
+                                        x.TransactionType ==
+                                            EnumExtensions.LeaveTransactionType.Credit ||
+                                        x.TransactionType ==
+                                            EnumExtensions.LeaveTransactionType.Allocate ||
+                                        x.TransactionType ==
+                                            EnumExtensions.LeaveTransactionType.CarryForward)
+                                    .Sum(x => x.Quantity)
+
+                            </h3>
+
+                            <span>
+
+                                Total Credit
+
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-3">
+
+                    <div class="panel bg-danger">
+
+                        <div class="panel-body text-center">
+
+                            <h3 class="no-margin">
+
+                                @Model
+                                    .Where(x =>
+                                        x.TransactionType ==
+                                        EnumExtensions.LeaveTransactionType.Deduct)
+                                    .Sum(x => x.Quantity)
+
+                            </h3>
+
+                            <span>
+
+                                Total Debit
+
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-3">
+
+                    <div class="panel bg-teal">
+
+                        <div class="panel-body text-center">
+
+                            <h3 class="no-margin">
+
+                                @Model
+                                    .OrderByDescending(x => x.TransactionDate)
+                                    .FirstOrDefault()?.BalanceAfter
+
+                            </h3>
+
+                            <span>
+
+                                Current Balance
+
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+        }
+
+    </div>
+
+    <table class="table table-bordered table-striped table-hover datatable-scroll-y">
+
+        <thead>
+
+            <tr>
+
+                <th style="width:120px;">
+                    Date
+                </th>
+
+                <th>
+                    Leave Type
+                </th>
+
+                <th style="width:150px;">
+                    Transaction
+                </th>
+
+                <th style="width:100px;"
+                    class="text-right">
+
+                    Credit
+
+                </th>
+
+                <th style="width:100px;"
+                    class="text-right">
+
+                    Debit
+
+                </th>
+
+                <th style="width:150px;"
+                    class="text-right">
+
+                    Running Balance
+
+                </th>
+
+                <th>
+                    Remarks
+                </th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            @foreach (var item in Model.OrderByDescending(x => x.TransactionDate))
+            {
+                <tr>
+
+                    <td>
+
+                        @item.TransactionDate
+                            .ToString("dd-MMM-yyyy")
+
+                    </td>
+
+                    <td>
+
+                        @item.LeaveTypeName
+
+                    </td>
+
+                    <td>
+
+                        @switch (item.TransactionType)
+                        {
+                            case EnumExtensions.LeaveTransactionType.Allocate:
+
+                                <span class="label bg-primary">
+                                    Allocate
+                                </span>
+
+                                break;
+
+                            case EnumExtensions.LeaveTransactionType.Credit:
+
+                                <span class="label bg-success">
+                                    Credit
+                                </span>
+
+                                break;
+
+                            case EnumExtensions.LeaveTransactionType.Deduct:
+
+                                <span class="label bg-danger">
+                                    Deduct
+                                </span>
+
+                                break;
+
+                            case EnumExtensions.LeaveTransactionType.CarryForward:
+
+                                <span class="label bg-info">
+                                    Carry Forward
+                                </span>
+
+                                break;
+
+                            default:
+
+                                <span class="label bg-grey">
+                                    @item.TransactionType
+                                </span>
+
+                                break;
+                        }
+
+                    </td>
+
+                    <td class="text-right">
+
+                        @(item.TransactionType ==
+                            EnumExtensions.LeaveTransactionType.Credit ||
+                          item.TransactionType ==
+                            EnumExtensions.LeaveTransactionType.Allocate ||
+                          item.TransactionType ==
+                            EnumExtensions.LeaveTransactionType.CarryForward
+                            ? item.Quantity
+                            : 0)
+
+                    </td>
+
+                    <td class="text-right">
+
+                        @(item.TransactionType ==
+                            EnumExtensions.LeaveTransactionType.Deduct
+                            ? item.Quantity
+                            : 0)
+
+                    </td>
+
+                    <td class="text-right">
+
+                        <span class="text-semibold text-primary">
+
+                            @item.BalanceAfter
+
+                        </span>
+
+                    </td>
+
+                    <td>
+
+                        @item.Remarks
+
+                    </td>
+
+                </tr>
+            }
+
+        </tbody>
+
+        <tfoot>
+
+            <tr class="active">
+
+                <th colspan="5"
+                    class="text-right">
+
+                    Current Balance
+
+                </th>
+
+                <th class="text-right">
+
+                    <span class="label bg-success">
+
+                        @(Model.Any()
+                            ? Model.OrderByDescending(x => x.TransactionDate)
+                                   .First().BalanceAfter
+                            : 0)
+
+                    </span>
+
+                </th>
+
+                <th></th>
+
+            </tr>
+
+        </tfoot>
+
+    </table>
+
+</div>

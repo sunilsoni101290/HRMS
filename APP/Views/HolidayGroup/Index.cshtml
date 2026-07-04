@@ -1,35 +1,30 @@
 ﻿@model IEnumerable<HolidayGroupDto>
 
 @{
-    ViewData["Title"] = "Holiday Group List";
+    ViewData["Title"] = "Holiday Group Management";
 }
 
-<div class="container-fluid py-4">
+<div class="panel panel-flat">
 
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
 
-        <div>
+    <div class="panel-heading">
 
-            <h3 class="fw-bold mb-1">
+        <h5 class="panel-title">
 
-                <i class="bi bi-calendar2-event-fill text-danger"></i>
-                Holiday Group Management
+            <i class="icon-calendar3 position-left"></i>
 
-            </h3>
+            Holiday Group Management
 
-            <p class="text-muted mb-0">
-                Manage holiday groups and calendars
-            </p>
+        </h5>
 
-        </div>
-
-        <div>
+        <div class="heading-elements">
 
             <a asp-action="Create"
-               class="btn btn-danger rounded-3 px-4">
+               class="btn bg-primary">
 
-                <i class="bi bi-plus-circle"></i>
+                <i class="icon-plus22 position-left"></i>
+
                 Add Holiday Group
 
             </a>
@@ -38,14 +33,145 @@
 
     </div>
 
-    <!-- Search -->
-    <div class="card border-0 shadow-sm rounded-4 mb-4">
+    <!-- KPI Cards -->
 
-        <div class="card-body">
+    <div class="panel-body">
 
-            <div class="row g-3">
+        <div class="row">
 
-                <div class="col-md-10">
+            <!-- Total Groups -->
+
+            <div class="col-md-4">
+
+                <div class="panel bg-primary-400">
+
+                    <div class="panel-body">
+
+                        <div class="media">
+
+                            <div class="media-left">
+
+                                <i class="icon-calendar3 icon-3x"></i>
+
+                            </div>
+
+                            <div class="media-body text-right">
+
+                                <h3 class="no-margin">
+
+                                    @Model.Count()
+
+                                </h3>
+
+                                <span>
+
+                                    Total Holiday Groups
+
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Active -->
+
+            <div class="col-md-4">
+
+                <div class="panel bg-success-400">
+
+                    <div class="panel-body">
+
+                        <div class="media">
+
+                            <div class="media-left">
+
+                                <i class="icon-checkmark-circle icon-3x"></i>
+
+                            </div>
+
+                            <div class="media-body text-right">
+
+                                <h3 class="no-margin">
+
+                                    @Model.Count()
+
+                                </h3>
+
+                                <span>
+
+                                    Active Groups
+
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Holidays -->
+
+            <div class="col-md-4">
+
+                <div class="panel bg-warning-400">
+
+                    <div class="panel-body">
+
+                        <div class="media">
+
+                            <div class="media-left">
+
+                                <i class="icon-calendar52 icon-3x"></i>
+
+                            </div>
+
+                            <div class="media-body text-right">
+
+                                <h3 class="no-margin">
+
+                                    @Model.Count()
+
+                                </h3>
+
+                                <span>
+
+                                    Holiday Calendars
+
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <hr />
+
+        <!-- Search & Filter -->
+
+        <div class="row">
+
+            <!-- Search -->
+
+            <div class="col-md-6">
+
+                <div class="form-group">
 
                     <input type="text"
                            id="searchInput"
@@ -54,146 +180,52 @@
 
                 </div>
 
-                <div class="col-md-2">
+            </div>
 
-                    <button class="btn btn-outline-danger w-100">
+            <!-- Status -->
 
-                        <i class="bi bi-search"></i>
-                        Search
+            <div class="col-md-4">
 
-                    </button>
+                <div class="form-group">
+
+                    <select id="StatusFilter"
+                            class="form-control select-search">
+
+                        <option value="">
+
+                            All Status
+
+                        </option>
+
+                        <option>
+
+                            Active
+
+                        </option>
+
+                        <option>
+
+                            Inactive
+
+                        </option>
+
+                    </select>
 
                 </div>
 
             </div>
 
-        </div>
+            <!-- Search -->
 
-    </div>
+            <div class="col-md-2">
 
-    <!-- Table -->
-    <div class="card border-0 shadow rounded-4">
+                <button class="btn bg-primary btn-block">
 
-        <div class="card-body p-0">
+                    <i class="icon-search4 position-left"></i>
 
-            <div class="table-responsive">
+                    Search
 
-                <table class="table table-hover align-middle mb-0">
-
-                    <thead class="table-light">
-
-                        <tr>
-
-                            <th>#</th>
-                            <th>Holiday Group</th>
-                            <th>Description</th>
-                            <th>Status</th>
-                            <th width="160">Action</th>
-
-                        </tr>
-
-                    </thead>
-
-                    <tbody id="holidayGroupTable">
-
-                        @{
-                            int sr = 1;
-                        }
-
-                        @foreach (var item in Model)
-                        {
-                            <tr>
-
-                                <!-- Sr -->
-                                <td>
-                                    @sr
-                                </td>
-
-                                <!-- Name -->
-                                <td>
-
-                                    <div class="fw-semibold">
-
-                                        <i class="bi bi-calendar-event text-danger"></i>
-                                        @item.Name
-
-                                    </div>
-
-                                </td>
-
-                                <!-- Description -->
-                                <td>
-
-                                    @(string.IsNullOrEmpty(item.Description)
-                                        ? "-"
-                                        : item.Description)
-
-                                </td>
-
-                                <!-- Status -->
-                                <td>
-
-                                    <span class="badge bg-success">
-                                        Active
-                                    </span>
-
-                                </td>
-
-                                <!-- Action -->
-                                <td>
-
-                                    <div class="d-flex gap-2">
-                                        <!-- Manage Holidays -->
-                                        <a asp-controller="HolidayGroup"
-                                           asp-action="HolidayList"
-                                           asp-route-holidayGroupId="@item.Id"
-                                           title="Manage Holiday"
-                                           class="btn btn-sm btn-outline-primary rounded-3">
-
-                                            <i class="bi bi-calendar-event"></i>
-
-                                        </a>
-
-                                        <!-- Details -->
-                                        <a asp-action="Details"
-                                           asp-route-id="@item.Id"
-                                           class="btn btn-sm btn-outline-info rounded-3">
-
-                                            <i class="bi bi-eye"></i>
-
-                                        </a>
-
-                                        <!-- Edit -->
-                                        <a asp-action="Edit"
-                                           asp-route-id="@item.Id"
-                                           class="btn btn-sm btn-outline-danger rounded-3">
-
-                                            <i class="bi bi-pencil-square"></i>
-
-                                        </a>
-
-                                        <!-- Delete -->
-                                        <a asp-action="Delete"
-                                           asp-route-id="@item.Id"
-                                           onclick="return confirm('Delete this holiday group?')"
-                                           class="btn btn-sm btn-outline-dark rounded-3">
-
-                                            <i class="bi bi-trash"></i>
-
-                                        </a>
-
-                                    </div>
-
-                                </td>
-
-                            </tr>
-
-                            sr++;
-                        }
-
-                    </tbody>
-
-                </table>
+                </button>
 
             </div>
 
@@ -201,8 +233,181 @@
 
     </div>
 
-</div>
+    <!-- Holiday Group Table -->
 
+    <table class="table table-hover table-striped datatable-basic">
+
+        <thead>
+
+            <tr>
+
+                <th width="60">
+
+                    #
+
+                </th>
+
+                <th>
+
+                    Holiday Group
+
+                </th>
+
+                <th>
+
+                    Description
+
+                </th>
+
+                <th width="120">
+
+                    Status
+
+                </th>
+
+                <th width="220"
+                    class="text-center">
+
+                    Actions
+
+                </th>
+
+            </tr>
+
+        </thead>
+
+        <tbody id="holidayGroupTable">
+            @{
+                int sr = 1;
+            }
+
+            @foreach (var item in Model)
+            {
+                <tr>
+
+                    <!-- Sr No -->
+
+                    <td>
+
+                        @sr
+
+                    </td>
+
+                    <!-- Holiday Group -->
+
+                    <td>
+
+                        <div class="text-semibold">
+
+                            <i class="icon-calendar3 text-primary position-left"></i>
+
+                            @item.Name
+
+                        </div>
+
+                    </td>
+
+                    <!-- Description -->
+
+                    <td>
+
+                        @if (string.IsNullOrWhiteSpace(item.Description))
+                        {
+                            <span class="text-muted">
+
+                                No Description
+
+                            </span>
+                        }
+                        else
+                        {
+                            @item.Description
+                        }
+
+                    </td>
+
+                    <!-- Status -->
+
+                    <td>
+
+                        <span class="label bg-success">
+
+                            Active
+
+                        </span>
+
+                    </td>
+
+                    <!-- Actions -->
+
+                    <td class="text-center">
+
+                        <div class="btn-group">
+
+                            <!-- Manage Holidays -->
+
+                            <a asp-controller="HolidayGroup"
+                               asp-action="HolidayList"
+                               asp-route-holidayGroupId="@item.Id"
+                               class="btn bg-primary btn-icon"
+                               data-popup="tooltip"
+                               title="Manage Holidays">
+
+                                <i class="icon-calendar52"></i>
+
+                            </a>
+
+                            <!-- Details -->
+
+                            <a asp-action="Details"
+                               asp-route-id="@item.Id"
+                               class="btn btn-default btn-icon"
+                               data-popup="tooltip"
+                               title="View Details">
+
+                                <i class="icon-eye"></i>
+
+                            </a>
+
+                            <!-- Edit -->
+
+                            <a asp-action="Edit"
+                               asp-route-id="@item.Id"
+                               class="btn bg-success btn-icon"
+                               data-popup="tooltip"
+                               title="Edit">
+
+                                <i class="icon-pencil7"></i>
+
+                            </a>
+
+                            <!-- Delete -->
+
+                            <a asp-action="Delete"
+                               asp-route-id="@item.Id"
+                               onclick="return confirm('Are you sure you want to delete this Holiday Group?');"
+                               class="btn btn-danger btn-icon"
+                               data-popup="tooltip"
+                               title="Delete">
+
+                                <i class="icon-trash"></i>
+
+                            </a>
+
+                        </div>
+
+                    </td>
+
+                </tr>
+
+                sr++;
+            }
+
+        </tbody>
+
+    </table>
+
+</div>
 @section Scripts {
 
     <script>
@@ -228,5 +433,97 @@
             });
 
     </script>
+
+    <style>
+
+        .panel-heading {
+            padding: 18px 20px;
+        }
+
+        .panel-title {
+            font-weight: 600;
+        }
+
+        .panel-body {
+            padding: 20px;
+        }
+
+        .table > thead > tr > th {
+            background: #fafafa;
+            font-size: 13px;
+            font-weight: 600;
+            vertical-align: middle;
+        }
+
+        .table > tbody > tr > td {
+            font-size: 13px;
+            vertical-align: middle;
+        }
+
+        .table-hover tbody tr:hover {
+            background: #f8f8f8;
+        }
+
+        .text-semibold {
+            font-weight: 600;
+        }
+
+        .label {
+            font-size: 11px;
+            padding: 5px 10px;
+        }
+
+        .btn-group .btn {
+            margin-right: 2px;
+        }
+
+        .btn-icon {
+            width: 34px;
+            height: 34px;
+            padding: 7px;
+        }
+
+        .media {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .media-left i {
+            opacity: .9;
+        }
+
+        .panel.bg-primary-400,
+        .panel.bg-success-400,
+        .panel.bg-warning-400 {
+            margin-bottom: 20px;
+            border-radius: 3px;
+        }
+
+            .panel.bg-primary-400 h3,
+            .panel.bg-success-400 h3,
+            .panel.bg-warning-400 h3 {
+                color: #fff;
+                font-weight: 600;
+            }
+
+        .datatable-basic tbody tr:hover {
+            background: #f5f5f5;
+        }
+
+        .chosen-container {
+            width: 100% !important;
+        }
+
+        .chosen-single {
+            height: 36px !important;
+            line-height: 34px !important;
+        }
+
+        .text-muted {
+            color: #999;
+        }
+
+    </style>
 
 }

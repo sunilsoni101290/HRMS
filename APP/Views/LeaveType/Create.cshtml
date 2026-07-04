@@ -1,0 +1,168 @@
+﻿@model LeaveTypeDto
+
+@{
+    ViewData["Title"] = "Add Leave Type";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+
+            <i class="icon-calendar52 position-left"></i>
+
+            @(string.IsNullOrEmpty(Model.Id)
+                ? "Create Leave Type"
+                : "Edit Leave Type")
+
+        </h5>
+
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="@(Model.Id == null ? "Create" : "Edit")" method="post">
+
+            <input asp-for="Id" type="hidden" />
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    Leave Information
+
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="Name"></label>
+
+                            <input asp-for="Name"
+                                   class="form-control" />
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="MaxDaysPerYear"></label>
+
+                            <input asp-for="MaxDaysPerYear"
+                                   class="form-control"
+                                   type="number" />
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    Leave Rules
+
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-4">
+
+                        <div class="checkbox">
+
+                            <label>
+                                <input asp-for="IsPaid" />
+                                Paid Leave
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-4">
+
+                        <div class="checkbox">
+
+                            <label>
+                                <input asp-for="AllowCarryForward"
+                                       id="AllowCarryForward" />
+                                Allow Carry Forward
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-4">
+
+                        <div class="checkbox">
+
+                            <label>
+                                <input asp-for="AllowHalfDay" />
+                                Allow Half Day
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="row"
+                     id="carryForwardPanel">
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="MaxCarryForwardDays"></label>
+
+                            <input asp-for="MaxCarryForwardDays"
+                                   type="number"
+                                   class="form-control" />
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <div class="text-right">
+
+                <a asp-action="Index"
+                   class="btn btn-default">
+
+                    Back
+
+                </a>
+
+                <button type="submit"
+                        class="btn bg-primary">
+
+                    @(string.IsNullOrEmpty(Model?.Id)
+                                    ? "Save"
+                                    : "Update")
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+

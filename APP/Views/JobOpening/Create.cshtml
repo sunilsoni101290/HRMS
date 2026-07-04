@@ -1,0 +1,160 @@
+@model JobOpeningDto
+
+@{
+    ViewData["Title"] = "Job Opening";
+    bool isEdit = !string.IsNullOrEmpty(Model?.Id);
+}
+
+<form asp-action="@(isEdit ? "Edit" : "Create")" asp-controller="JobOpening" asp-route-id="@Model?.Id" method="post">
+
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="TenantId" type="hidden" />
+    <input asp-for="CreatedBy" type="hidden" />
+
+    <div class="panel panel-flat">
+
+        <div class="panel-heading">
+            <h5 class="panel-title">
+                <i class="icon-briefcase position-left"></i>
+                @(isEdit ? "Edit Job Opening" : "Post Job Opening")
+            </h5>
+            <div class="heading-elements">
+                <a asp-action="Index" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
+            </div>
+        </div>
+
+        <div class="panel-body">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <fieldset>
+                <legend class="text-semibold"><i class="icon-info22 position-left"></i> Job Details</legend>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="Title"></label> <span class="text-danger">*</span>
+                            <input asp-for="Title" class="form-control" placeholder="e.g. Senior .NET Developer" />
+                            <span asp-validation-for="Title" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label asp-for="VacancyCount"></label>
+                            <input asp-for="VacancyCount" type="number" min="1" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label asp-for="Status"></label>
+                            <select asp-for="Status" class="form-control">
+                                <option value="1">Open</option>
+                                <option value="2">Closed</option>
+                                <option value="3">On Hold</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="DepartmentId"></label> <span class="text-danger">*</span>
+                            <select asp-for="DepartmentId" asp-items="ViewBag.DepartmentList" class="form-control" id="DepartmentId">
+                                <option value="">Select Department</option>
+                            </select>
+                            <span asp-validation-for="DepartmentId" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="DesignationId"></label> <span class="text-danger">*</span>
+                            <select asp-for="DesignationId" asp-items="ViewBag.DesignationList" class="form-control" id="DesignationId">
+                                <option value="">Select Designation</option>
+                            </select>
+                            <span asp-validation-for="DesignationId" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend class="text-semibold"><i class="icon-coins position-left"></i> Salary &amp; Dates</legend>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label asp-for="MinSalary"></label>
+                            <input asp-for="MinSalary" type="number" step="0.01" class="form-control" placeholder="0.00" />
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label asp-for="MaxSalary"></label>
+                            <input asp-for="MaxSalary" type="number" step="0.01" class="form-control" placeholder="0.00" />
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label asp-for="PostedDate"></label>
+                            <input asp-for="PostedDate" type="date" class="form-control" value="@Model?.PostedDate.ToString("yyyy-MM-dd")" />
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label asp-for="ClosingDate"></label>
+                            <input asp-for="ClosingDate" type="date" class="form-control" value="@(Model?.ClosingDate?.ToString("yyyy-MM-dd"))" />
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend class="text-semibold"><i class="icon-file-text position-left"></i> Description</legend>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="JobDescription"></label>
+                            <textarea asp-for="JobDescription" class="form-control" rows="4" placeholder="Roles and responsibilities..."></textarea>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="RequiredSkills"></label>
+                            <textarea asp-for="RequiredSkills" class="form-control" rows="4" placeholder="e.g. C#, EF Core, SQL Server"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+
+        <div class="panel-footer text-right">
+            <button type="reset" class="btn btn-default"><i class="icon-reset"></i> Reset</button>
+            <button type="submit" class="btn bg-primary"><i class="icon-floppy-disk"></i> @(isEdit ? "Update" : "Save")</button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    <script>
+        $(document).ready(function () {
+            $(document).on("change", "#DepartmentId", function () {
+                var deptId = $(this).val();
+                if (!deptId) { $("#DesignationId").html('<option value="">Select Designation</option>'); return; }
+                $.ajax({
+                    url: '@Url.Action("GetDesignationByDepartment")',
+                    type: 'GET',
+                    data: { departmentId: deptId },
+                    success: function (response) {
+                        var html = '<option value="">Select Designation</option>';
+                        $.each(response, function (i, item) {
+                            html += '<option value="' + item.value + '">' + item.text + '</option>';
+                        });
+                        $("#DesignationId").html(html);
+                    }
+                });
+            });
+        });
+    </script>
+    <partial name="_ValidationScriptsPartial" />
+}

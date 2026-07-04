@@ -30,6 +30,14 @@ namespace Domain.Helper
         public const string DASHBOARD_CONTROLLER = "Dashboard";
         public const string DASHBOARD_ACTION = ACTION_INDEX;
 
+        public const string EMPLOYEE_DASHBOARD = "EMPLOYEE_DASHBOARD";
+        public const string EMPLOYEE_DASHBOARD_CONTROLLER = "EmployeeDashboard";
+        public const string EMPLOYEE_DASHBOARD_ACTION = ACTION_INDEX;
+
+        public const string EMPLOYEE_TASK = "EMPLOYEE_TASK";
+        public const string EMPLOYEE_TASK_CONTROLLER = "EmployeeTask";
+        public const string EMPLOYEE_TASK_ACTION = ACTION_INDEX;
+
         // =====================================================
         // MASTER DATA
         // =====================================================
@@ -182,17 +190,31 @@ namespace Domain.Helper
         public const string PAYROLL_CONTROLLER = "Payroll";
         public const string PAYROLL_ACTION = ACTION_INDEX;
 
+        public const string SALARY_COMPONENT = "SALARY_COMPONENT";
+        public const string SALARY_COMPONENT_CONTROLLER = "SalaryComponent";
+        public const string SALARY_COMPONENT_ACTION = ACTION_INDEX;
+
         public const string SALARY_STRUCTURE = "SALARY_STRUCTURE";
         public const string SALARY_STRUCTURE_CONTROLLER = "SalaryStructure";
         public const string SALARY_STRUCTURE_ACTION = ACTION_INDEX;
 
+        // NOTE: rectified — payroll processing/list lives on the "Payroll" controller.
         public const string PAYROLL_PROCESS = "PAYROLL_PROCESS";
-        public const string PAYROLL_PROCESS_CONTROLLER = "PayrollProcess";
+        public const string PAYROLL_PROCESS_CONTROLLER = "Payroll";
         public const string PAYROLL_PROCESS_ACTION = ACTION_INDEX;
 
+        public const string PAYROLL_DASHBOARD = "PAYROLL_DASHBOARD";
+        public const string PAYROLL_DASHBOARD_CONTROLLER = "Payroll";
+        public const string PAYROLL_DASHBOARD_ACTION = "Dashboard";
+
+        public const string PAYROLL_REGISTER = "PAYROLL_REGISTER";
+        public const string PAYROLL_REGISTER_CONTROLLER = "Payroll";
+        public const string PAYROLL_REGISTER_ACTION = "Report";
+
+        // Payslip is opened per-payroll (Payroll/Payslip), not a top-level menu.
         public const string PAYSLIP = "PAYSLIP";
-        public const string PAYSLIP_CONTROLLER = "Payslip";
-        public const string PAYSLIP_ACTION = ACTION_INDEX;
+        public const string PAYSLIP_CONTROLLER = "Payroll";
+        public const string PAYSLIP_ACTION = "Payslip";
 
         // =====================================================
         // RECRUITMENT
@@ -208,15 +230,28 @@ namespace Domain.Helper
         public const string CANDIDATE_CONTROLLER = "Candidate";
         public const string CANDIDATE_ACTION = ACTION_INDEX;
 
+        public const string CANDIDATE_APPLICATION = "CANDIDATE_APPLICATION";
+        public const string CANDIDATE_APPLICATION_CONTROLLER = "CandidateApplication";
+        public const string CANDIDATE_APPLICATION_ACTION = ACTION_INDEX;
+
+        // NOTE: rectified — the MVC controller is "InterviewSchedule".
         public const string INTERVIEW = "INTERVIEW";
-        public const string INTERVIEW_CONTROLLER = "Interview";
+        public const string INTERVIEW_CONTROLLER = "InterviewSchedule";
         public const string INTERVIEW_ACTION = ACTION_INDEX;
+
+        public const string RECRUITMENT_DASHBOARD = "RECRUITMENT_DASHBOARD";
+        public const string RECRUITMENT_DASHBOARD_CONTROLLER = "RecruitmentDashboard";
+        public const string RECRUITMENT_DASHBOARD_ACTION = ACTION_INDEX;
 
         // =====================================================
         // ASSET MANAGEMENT
         // =====================================================
 
         public const string ASSET_MANAGEMENT = "ASSET_MANAGEMENT";
+
+        public const string ASSET_CATEGORY = "ASSET_CATEGORY";
+        public const string ASSET_CATEGORY_CONTROLLER = "AssetCategory";
+        public const string ASSET_CATEGORY_ACTION = ACTION_INDEX;
 
         public const string ASSET = "ASSET";
         public const string ASSET_CONTROLLER = "Asset";
@@ -253,6 +288,8 @@ namespace Domain.Helper
         // =====================================================
 
         public const string NOTIFICATION = "NOTIFICATION";
+        public const string NOTIFICATION_CONTROLLER = "Notification";
+        public const string NOTIFICATION_ACTION = ACTION_INDEX;
 
         public const string NOTIFICATION_GROUP = "NOTIFICATION_GROUP";
         public const string NOTIFICATION_GROUP_CONTROLLER = "NotificationGroup";

@@ -23,6 +23,8 @@ namespace Application.Services.EmployeeServices
 
         public async Task<List<DesignationListDto>> GetAllAsync()
         {
+            try
+            {
             return await _context.Designations
                 .Select(x => new DesignationListDto
                 {
@@ -55,6 +57,11 @@ namespace Application.Services.EmployeeServices
                     MaxSalary = x.MaxSalary
                 })
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<DesignationListDto>();
+            }
         }
 
         #endregion
@@ -63,6 +70,8 @@ namespace Application.Services.EmployeeServices
 
         public async Task<DesignationDto> GetByIdAsync(string id)
         {
+            try
+            {
             var entity = await _context.Designations
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -96,6 +105,11 @@ namespace Application.Services.EmployeeServices
                 MinSalary = entity.MinSalary,
                 MaxSalary = entity.MaxSalary
             };
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         #endregion
@@ -104,6 +118,8 @@ namespace Application.Services.EmployeeServices
 
         public async Task<string> CreateAsync(DesignationDto dto)
         {
+            try
+            {
             var entity = new Designation
             {
                 Id = IDManager.GetNewId(new Designation()),
@@ -138,6 +154,11 @@ namespace Application.Services.EmployeeServices
             await _context.SaveChangesAsync();
 
             return entity.Id;
+            }
+            catch (Exception ex)
+            {
+                return ex.ToString();
+            }
         }
 
         #endregion
@@ -146,6 +167,8 @@ namespace Application.Services.EmployeeServices
 
         public async Task<string> UpdateAsync(string id, DesignationDto dto)
         {
+            try
+            {
             var entity = await _context.Designations
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -183,6 +206,11 @@ namespace Application.Services.EmployeeServices
             await _context.SaveChangesAsync();
 
             return entity.Id;
+            }
+            catch (Exception ex)
+            {
+                return ex.ToString();
+            }
         }
 
         #endregion
@@ -191,6 +219,8 @@ namespace Application.Services.EmployeeServices
 
         public async Task<bool> DeleteAsync(string id)
         {
+            try
+            {
             var entity = await _context.Designations
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -201,6 +231,11 @@ namespace Application.Services.EmployeeServices
             await _context.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         #endregion

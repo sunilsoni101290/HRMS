@@ -23,6 +23,8 @@ namespace Application.Services
 
         public async Task<List<EmployeeShiftMappingDto>> GetAllAsync()
         {
+            try
+            {
             return await _context.EmployeeShiftMappings
                 .Include(x => x.Employee)
                 .Include(x => x.Shift)
@@ -44,6 +46,11 @@ namespace Application.Services
                 })
                 .OrderByDescending(x => x.EffectiveFrom)
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<EmployeeShiftMappingDto>();
+            }
         }
 
         #endregion
@@ -52,6 +59,8 @@ namespace Application.Services
 
         public async Task<EmployeeShiftMappingDto?> GetByIdAsync(string id)
         {
+            try
+            {
             return await _context.EmployeeShiftMappings
                 .AsNoTracking()
                 .Include(x => x.Employee)
@@ -74,6 +83,11 @@ namespace Application.Services
                     IsActive = x.IsActive
                 })
                 .FirstOrDefaultAsync();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         #endregion
@@ -82,6 +96,8 @@ namespace Application.Services
 
         public async Task<EmployeeShiftMappingDto> CreateAsync(EmployeeShiftMappingDto dto)
         {
+            try
+            {
             var entity = new EmployeeShiftMapping
             {
                 Id = IDManager.GetNewId(new EmployeeShiftMapping()),
@@ -102,6 +118,11 @@ namespace Application.Services
             dto.Id = entity.Id;
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         #endregion
@@ -110,6 +131,8 @@ namespace Application.Services
 
         public async Task<EmployeeShiftMappingDto> UpdateAsync(EmployeeShiftMappingDto dto)
         {
+            try
+            {
             var entity = await _context.EmployeeShiftMappings
                 .FirstOrDefaultAsync(x => x.Id == dto.Id);
 
@@ -129,6 +152,11 @@ namespace Application.Services
             await _context.SaveChangesAsync();
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         #endregion
@@ -137,6 +165,8 @@ namespace Application.Services
 
         public async Task<bool> DeleteAsync(string id)
         {
+            try
+            {
             var entity = await _context.EmployeeShiftMappings
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -148,6 +178,11 @@ namespace Application.Services
             await _context.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         #endregion

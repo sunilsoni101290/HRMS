@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Application.Interfaces.Attendances;
 using Infrastructure.Data;
 
+
 namespace Application.Services.Attendances
 {
     public class BiometricDeviceService : IBiometricDeviceService
@@ -23,6 +24,8 @@ namespace Application.Services.Attendances
         public async Task<List<BiometricDeviceDto>>
             GetAllAsync()
         {
+            try
+            {
             return await _db.BiometricDevices
                 .Select(x => new BiometricDeviceDto
                 {
@@ -39,11 +42,18 @@ namespace Application.Services.Attendances
                     ApiUrl = x.ApiUrl,
                     IsActive = x.IsActive
                 }).ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<BiometricDeviceDto>();
+            }
         }
 
         public async Task<BiometricDeviceDto?>
             GetByIdAsync(string id)
         {
+            try
+            {
             return await _db.BiometricDevices
                 .Where(x => x.Id == id)
                 .Select(x => new BiometricDeviceDto
@@ -54,11 +64,18 @@ namespace Application.Services.Attendances
                     IPAddress = x.IPAddress,
                     Port = x.Port
                 }).FirstOrDefaultAsync();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<BiometricDeviceDto>
             CreateAsync(BiometricDeviceDto dto)
         {
+            try
+            {
             var entity = new BiometricDevice
             {
                 Id=IDManager.GetNewId(new BiometricDevice()),
@@ -84,11 +101,18 @@ namespace Application.Services.Attendances
             dto.Id = entity.Id;
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<bool>
             UpdateAsync(BiometricDeviceDto dto)
         {
+            try
+            {
             var entity = await _db.BiometricDevices
                 .FirstOrDefaultAsync(x => x.Id == dto.Id);
 
@@ -110,11 +134,18 @@ namespace Application.Services.Attendances
             await _db.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         public async Task<bool>
             DeleteAsync(string id)
         {
+            try
+            {
             var entity = await _db.BiometricDevices
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -126,11 +157,33 @@ namespace Application.Services.Attendances
             await _db.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
+
+        //public bool TestConnection(string ipAddress, int port)
+        //{
+        //    CZKEM device = new CZKEM();
+
+        //    bool isConnected = device.Connect_Net(ipAddress, port);
+
+        //    if (isConnected)
+        //    {
+        //        device.Disconnect();
+        //        return true;
+        //    }
+
+        //    return false;
+        //}
 
         public async Task<bool>
             TestConnectionAsync(string id)
         {
+            try
+            {
             var device = await _db.BiometricDevices
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -151,6 +204,11 @@ namespace Application.Services.Attendances
                        .IPStatus.Success;
             }
             catch
+            {
+                return false;
+            }
+            }
+            catch (Exception)
             {
                 return false;
             }

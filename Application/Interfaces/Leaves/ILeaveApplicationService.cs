@@ -7,41 +7,44 @@ namespace Application.Interfaces.Leaves
 {
     public interface ILeaveApplicationService
     {
+        #region CRUD
+        Task<LeaveApplicationDto> CreateAsync(ApplyLeaveRequestDto request);
+        Task<LeaveApplicationDto> UpdateAsync(string id,ApplyLeaveRequestDto request);
+        Task<bool> DeleteAsync(string id);
+        Task<LeaveApplicationDto> GetByIdAsync(string id);
         Task<List<LeaveApplicationDto>> GetAllAsync();
 
-        Task<LeaveApplicationDto?> GetByIdAsync(string id);
+        #endregion
 
-        Task<List<LeaveApplicationDto>> GetByEmployeeAsync(string employeeId);
+        #region Workflow
+        Task<bool> ApplyLeaveAsync(ApplyLeaveRequestDto request);
+        Task<bool> ApproveLeaveAsync(ApproveLeaveRequestDto request);
+        Task<bool> RejectLeaveAsync(RejectLeaveRequestDto request);
+        Task<bool> CancelLeaveAsync(CancelLeaveRequestDto request);
 
-        Task<LeaveApplicationDto> ApplyLeaveAsync(LeaveApplicationDto dto);
+        #endregion
 
-        Task<bool> ApproveLeaveAsync(
-            string leaveApplicationId,
-            string approvedBy);
+        #region Queries
+        Task<List<LeaveApplicationDto>>GetEmployeeLeavesAsync(string employeeId);
+        Task<List<LeaveApplicationDto>>GetPendingLeavesAsync();
+        Task<List<LeaveApplicationDto>>GetApprovedLeavesAsync();
+        Task<List<LeaveApplicationDto>>GetRejectedLeavesAsync();
+        Task<List<LeaveApplicationDto>>GetCancelledLeavesAsync();
+        Task<List<LeaveApplicationDto>>GetFilteredAsync(LeaveApplicationFilterRequestDto request);
+        #endregion
 
-        Task<bool> RejectLeaveAsync(
-            string leaveApplicationId,
-            string approvedBy,
-            string rejectionReason);
-
-        Task<bool> CancelLeaveAsync(string leaveApplicationId);
-
-        Task<bool> DeleteAsync(string id);
-
-        Task<List<LeaveApplicationDto>> GetPendingApprovalsAsync();
-
-        Task<List<LeaveApplicationDto>> GetApprovedLeavesAsync();
-
-        Task<List<LeaveApplicationDto>> GetRejectedLeavesAsync();
-
-        Task<List<LeaveApplicationDto>> GetByDateRangeAsync(
-            DateTime fromDate,
-            DateTime toDate);
-
+        #region Count
         Task<int> GetPendingLeaveCountAsync();
-
         Task<int> GetApprovedLeaveCountAsync();
-
         Task<int> GetTodayLeaveCountAsync();
+        #endregion
+
+        #region Leave Approval History
+
+        Task<List<LeaveApprovalHistoryDetailDto>>GetApprovalHistoryAsync(string leaveApplicationId);
+        Task<List<LeaveApprovalHistoryDetailDto>>GetAllApprovalHistoryAsync();
+        Task<LeaveApprovalHistoryDetailDto>GetApprovalHistoryByIdAsync(string id);
+
+        #endregion
     }
 }

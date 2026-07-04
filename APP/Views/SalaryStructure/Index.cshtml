@@ -1,0 +1,104 @@
+@model IEnumerable<SalaryStructureListDto>
+
+@{
+    ViewData["Title"] = "Salary Structures";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-list-numbered position-left"></i> Salary Structures
+        </h5>
+        <div class="heading-elements">
+            <a asp-action="Create" class="btn bg-primary">
+                <i class="icon-plus22"></i> Add Structure
+            </a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-4">
+                <input type="text" id="searchInput" class="form-control" placeholder="Search employee..." />
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-striped">
+            <thead>
+                <tr>
+                    <th width="60">#</th>
+                    <th>Employee</th>
+                    <th>Effective From</th>
+                    <th class="text-center">Components</th>
+                    <th class="text-right">Earnings</th>
+                    <th class="text-right">Deductions</th>
+                    <th class="text-right">Net</th>
+                    <th width="170">Action</th>
+                </tr>
+            </thead>
+            <tbody id="dataTable">
+                @{ int sr = 1; }
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@sr</td>
+                            <td><strong>@item.EmployeeName</strong></td>
+                            <td>@item.EffectiveFrom.ToString("dd MMM yyyy")</td>
+                            <td class="text-center"><span class="label bg-info">@item.ComponentCount</span></td>
+                            <td class="text-right text-success">₹ @item.TotalEarnings.ToString("N2")</td>
+                            <td class="text-right text-danger">₹ @item.TotalDeductions.ToString("N2")</td>
+                            <td class="text-right"><strong>₹ @item.NetSalary.ToString("N2")</strong></td>
+                            <td>
+                                <div class="btn-group">
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-default btn-icon" title="View"><i class="icon-eye"></i></a>
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary btn-icon" title="Edit"><i class="icon-pencil7"></i></a>
+                                    <a asp-action="Delete" asp-route-id="@item.Id"
+                                       onclick="return confirm('Delete this structure?');"
+                                       class="btn btn-danger btn-icon" title="Delete"><i class="icon-trash"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                        sr++;
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" class="text-center text-muted" style="padding:30px;">
+                            <i class="icon-list-numbered" style="font-size:32px;"></i><br />
+                            No salary structures found.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    <script>
+        $(function () {
+            $("#searchInput").on("keyup", function () {
+                var value = $(this).val().toLowerCase();
+                $("#dataTable tr").filter(function () {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+                });
+            });
+        });
+    </script>
+    <style>
+        .table > thead > tr > th { font-weight: 600; }
+        .table > tbody > tr > td { vertical-align: middle; }
+        .label { font-size: 11px; }
+        .btn-icon { width: 34px; }
+    </style>
+}

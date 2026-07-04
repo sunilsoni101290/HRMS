@@ -20,7 +20,7 @@ namespace Domain.Entities
         public AllocationStatus AllocationStatus { get; set; } // Allocated / Returned / Lost / Damaged
 
         public string ConditionOnIssue { get; set; }
-        public string ConditionOnReturn { get; set; }
+        public string? ConditionOnReturn { get; set; }
 
         public string Remarks { get; set; }
         public override string GetSequencePrefix() => "AA";

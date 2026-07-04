@@ -1,39 +1,22 @@
 ﻿@model IEnumerable<EmployeeListDto>
 
-<style>
-    table th {
-        font-family: 'Inter', sans-serif;
-        font-size: 14px;
-        font-weight:600;
-    }
+<div class="panel panel-flat">
+    <div class="panel-heading">
 
-    table td {
-        font-family: 'Inter', sans-serif;
-        font-size: 13px;
-        font-weight: normal;
-    }
-</style>
+        <h5 class="panel-title">
 
-<div class="container-fluid py-4">
+            <i class="icon-users position-left"></i>
 
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+            Employee Management
 
-        <div>
+        </h5>
 
-            <h3 class="fw-bold">
-                <i class="bi bi-people-fill text-primary"></i>
-                Employee Management
-            </h3>
-
-        </div>
-
-        <div>
+        <div class="heading-elements">
 
             <a asp-action="Create"
-               class="btn btn-primary rounded-3 px-4">
+               class="btn bg-primary">
 
-                <i class="bi bi-plus-circle"></i>
+                <i class="icon-plus22"></i>
                 Add Employee
 
             </a>
@@ -42,132 +25,16 @@
 
     </div>
 
-    <!-- Search -->
-    <div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="panel-body">
 
-        <div class="card-body">
+        <div class="row">
 
-            <input type="text"
-                   id="searchInput"
-                   class="form-control"
-                   placeholder="Search Employee..." />
+            <div class="col-md-4">
 
-        </div>
-
-    </div>
-
-    <!-- Grid -->
-    <div class="card border-0 shadow rounded-4">
-
-        <div class="card-body p-0">
-
-            <div class="table-responsive">
-
-                <table class="table table-hover align-middle mb-0">
-
-                    <thead class="table-light">
-
-                        <tr>
-
-                            <th>#</th>
-                            <th>Emp Code</th>
-                            <th>Name</th>
-                            <th>Company</th>
-                            <th>Department</th>
-                            <th>Designation</th>
-                            <th>Phone</th>
-                            <th>Email</th>
-                            <th>DOJ</th>
-                            <th width="160">Action</th>
-
-                        </tr>
-
-                    </thead>
-
-                    <tbody id="employeeTable">
-
-                        @{
-                            int sr = 1;
-                        }
-
-                        @foreach (var item in Model)
-                        {
-                            <tr>
-
-                                <td>@sr</td>
-
-                                <td>
-                                    <span class="badge bg-dark">
-                                        @item.EmployeeCode
-                                    </span>
-                                </td>
-
-                                <td>
-
-                                    <div class="fw-semibold">
-                                        @item.FirstName @item.LastName
-                                    </div>
-
-                                </td>
-
-                                <td>@item.CompanyName</td>
-
-                                <td>@item.DepartmentName</td>
-
-                                <td>@item.DesignationName</td>
-
-                                <td>@item.Phone</td>
-
-                                <td>@item.Email</td>
-
-                                <td>
-                                    @(item.JoiningDate?.ToString("dd MMM yyyy"))
-                                </td>
-
-                                <td>
-
-                                    <div class="d-flex gap-2">
-
-                                        <!-- Details -->
-                                        <a asp-action="Details"
-                                           asp-route-id="@item.Id"
-                                           class="btn btn-sm btn-outline-info rounded-3">
-
-                                            <i class="bi bi-eye"></i>
-
-                                        </a>
-
-                                        <!-- Edit -->
-                                        <a asp-action="Edit"
-                                           asp-route-id="@item.Id"
-                                           class="btn btn-sm btn-outline-primary rounded-3">
-
-                                            <i class="bi bi-pencil-square"></i>
-
-                                        </a>
-
-                                        <!-- Delete -->
-                                        <a asp-action="Delete"
-                                           asp-route-id="@item.Id"
-                                           onclick="return confirm('Delete Employee?')"
-                                           class="btn btn-sm btn-outline-danger rounded-3">
-
-                                            <i class="bi bi-trash"></i>
-
-                                        </a>
-
-                                    </div>
-
-                                </td>
-
-                            </tr>
-
-                            sr++;
-                        }
-
-                    </tbody>
-
-                </table>
+                <input type="text"
+                       id="searchInput"
+                       class="form-control"
+                       placeholder="Search Employee..." />
 
             </div>
 
@@ -175,6 +42,134 @@
 
     </div>
 
+    <table
+           class="table table-bordered table-striped table-hover datatable-basic">
+
+        <thead>
+
+            <tr>
+
+                <th width="50">#</th>
+                <th>Photo</th>
+                <th>Employee Code</th>
+                <th>Employee Name</th>
+                <th>Company</th>
+                <th>Department</th>
+                <th>Designation</th>
+                <th>Phone</th>
+                <th>Email</th>
+                <th>Joining Date</th>
+                <th width="180">Action</th>
+
+            </tr>
+
+        </thead>
+
+        <tbody id="employeeTable">
+
+            @{
+                int sr = 1;
+            }
+
+            @foreach (var item in Model)
+            {
+                <tr>
+
+                    <td>@sr</td>
+
+                    <td>
+
+                        @if (!string.IsNullOrEmpty(item.FilePath))
+                        {
+                            <img src="@item.FilePath"
+                                 class="img-circle"
+                                 style="width:40px;height:40px;object-fit:cover;" />
+                        }
+                        else
+                        {
+                            <img src="~/images/no-image.png"
+                                 class="img-circle"
+                                 style="width:40px;height:40px;" />
+                        }
+
+                    </td>
+
+                    <td>
+
+                        <span class="label bg-primary">
+                            @item.EmployeeCode
+                        </span>
+
+                    </td>
+
+                    <td>
+
+                        <strong>
+                            @item.FirstName @item.LastName
+                        </strong>
+
+                    </td>
+
+                    <td>@item.CompanyName</td>
+
+                    <td>@item.DepartmentName</td>
+
+                    <td>@item.DesignationName</td>
+
+                    <td>@item.Phone</td>
+
+                    <td>@item.Email</td>
+
+                    <td>
+                        @(item.JoiningDate?.ToString("dd-MMM-yyyy"))
+                    </td>
+
+                    <td>
+
+                        <div class="btn-group">
+
+                            <a asp-action="Details"
+                               asp-route-id="@item.Id"
+                               class="btn btn-default btn-icon"
+                               data-popup="tooltip"
+                               title="Details">
+
+                                <i class="icon-eye"></i>
+
+                            </a>
+
+                            <a asp-action="Edit"
+                               asp-route-id="@item.Id"
+                               class="btn btn-primary btn-icon"
+                               data-popup="tooltip"
+                               title="Edit">
+
+                                <i class="icon-pencil7"></i>
+
+                            </a>
+
+                            <a asp-action="Delete"
+                               asp-route-id="@item.Id"
+                               class="btn btn-danger btn-icon btnDelete"
+                               data-popup="tooltip"
+                               title="Delete">
+
+                                <i class="icon-trash"></i>
+
+                            </a>
+
+                        </div>
+
+                    </td>
+
+                </tr>
+
+                sr++;
+            }
+
+        </tbody>
+
+    </table>
 </div>
 
 @section Scripts {

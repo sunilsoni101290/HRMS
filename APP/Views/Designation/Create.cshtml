@@ -4,254 +4,396 @@
     ViewData["Title"] = "Designation";
 }
 
-<div class="container-fluid py-4">
+<form asp-action="@(string.IsNullOrEmpty(Model?.Id) ? "Create" : "Edit")"
+      asp-controller="Designation"
+      method="post">
 
-    <div class="row justify-content-center">
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="TenantId" type="hidden" />
+    <input asp-for="CreatedBy" type="hidden" />
+    <input asp-for="ModifiedBy" type="hidden" />
+    <input asp-for="ModifiedOn" type="hidden" />
 
-        <div class="col-lg-10">
+    <div class="panel panel-flat">
 
-            <div class="card shadow border-0 rounded-4">
+        <div class="panel-heading">
 
-                <!-- Header -->
-                <div class="card-header bg-success text-white py-3 rounded-top-4">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-person-workspace fs-4 me-2"></i>
+            <h5 class="panel-title">
 
-                        <h4 class="mb-0">
-                            @(string.IsNullOrEmpty(Model?.Id)
-                                ? "Create Designation"
-                                : "Edit Designation")
-                        </h4>
-                    </div>
-                </div>
+                <i class="icon-user-tie position-left"></i>
 
-                <!-- Body -->
-                <div class="card-body p-4">
+                @(string.IsNullOrEmpty(Model?.Id)
+                    ? "Create Designation"
+                    : "Edit Designation")
 
-                    <form asp-action="@(Model.Id == null ? "Create" : "Edit")"
-                          asp-controller="Designation" method="post">
+            </h5>
 
-                        <!-- Hidden Fields -->
-                        <input asp-for="Id" type="hidden" />
-                        <input asp-for="TenantId" type="hidden" />
-                        <input asp-for="CreatedBy" type="hidden" />
-                        <input asp-for="ModifiedBy" type="hidden" />
-                        <input asp-for="ModifiedOn" type="hidden" />
+            <div class="heading-elements">
 
-                        <div class="row g-4">
+                <a asp-action="Index"
+                   class="btn btn-default">
 
-                            <!-- Name -->
-                            <div class="col-md-6">
-                                <label asp-for="Name" class="form-label fw-semibold">
-                                    Designation Name
-                                </label>
+                    <i class="icon-arrow-left13"></i>
 
-                                <div class="input-group">
-                                    <span class="input-group-text">
-                                        <i class="bi bi-person-badge"></i>
-                                    </span>
+                    Back
 
-                                    <input asp-for="Name"
-                                           class="form-control"
-                                           placeholder="Enter Designation Name" />
-                                </div>
-
-                                <span asp-validation-for="Name" class="text-danger"></span>
-                            </div>
-
-                            <!-- Code -->
-                            <div class="col-md-6">
-                                <label asp-for="Code" class="form-label fw-semibold">
-                                    Designation Code
-                                </label>
-
-                                <div class="input-group">
-                                    <span class="input-group-text">
-                                        <i class="bi bi-upc-scan"></i>
-                                    </span>
-
-                                    <input asp-for="Code"
-                                           class="form-control"
-                                           placeholder="Enter Designation Code" />
-                                </div>
-
-                                <span asp-validation-for="Code" class="text-danger"></span>
-                            </div>
-
-                            <!-- Company -->
-                            <div class="col-md-6">
-                                <label asp-for="CompanyId" class="form-label fw-semibold">
-                                    Company
-                                </label>
-
-                                <select asp-for="CompanyId"
-                                        class="form-select"
-                                        asp-items="ViewBag.CompanyList">
-                                    <option value="">-- Select Company --</option>
-                                </select>
-
-                                <span asp-validation-for="CompanyId" class="text-danger"></span>
-                            </div>
-
-                            <!-- Branch -->
-                            <div class="col-md-6">
-                                <label asp-for="BranchId" class="form-label fw-semibold">
-                                    Branch
-                                </label>
-
-                                <select asp-for="BranchId"
-                                        class="form-select"
-                                        asp-items="ViewBag.BranchList">
-                                    <option value="">-- Select Branch --</option>
-                                </select>
-
-                                <span asp-validation-for="BranchId" class="text-danger"></span>
-                            </div>
-
-                            <!-- Department -->
-                            <div class="col-md-6">
-                                <label asp-for="DepartmentId" class="form-label fw-semibold">
-                                    Department
-                                </label>
-
-                                <select asp-for="DepartmentId"
-                                        class="form-select"
-                                        asp-items="ViewBag.DepartmentList">
-                                    <option value="">-- Select Department --</option>
-                                </select>
-
-                                <span asp-validation-for="DepartmentId" class="text-danger"></span>
-                            </div>
-
-                            <!-- Parent Designation -->
-                            <div class="col-md-6">
-                                <label asp-for="ParentDesignationId" class="form-label fw-semibold">
-                                    Parent Designation
-                                </label>
-
-                                <select asp-for="ParentDesignationId"
-                                        class="form-select"
-                                        asp-items="ViewBag.ParentDesignationList">
-                                    <option value="">-- Select Parent Designation --</option>
-                                </select>
-
-                                <span asp-validation-for="ParentDesignationId" class="text-danger"></span>
-                            </div>
-
-                            <!-- Level -->
-                            <div class="col-md-4">
-                                <label asp-for="Level" class="form-label fw-semibold">
-                                    Designation Level
-                                </label>
-
-                                <div class="input-group">
-                                    <span class="input-group-text">
-                                        <i class="bi bi-bar-chart-steps"></i>
-                                    </span>
-
-                                    <input asp-for="Level"
-                                           type="number"
-                                           class="form-control"
-                                           placeholder="Enter Level" />
-                                </div>
-
-                                <span asp-validation-for="Level" class="text-danger"></span>
-                            </div>
-
-                            <!-- Minimum Salary -->
-                            <div class="col-md-4">
-                                <label asp-for="MinSalary" class="form-label fw-semibold">
-                                    Minimum Salary
-                                </label>
-
-                                <div class="input-group">
-                                    <span class="input-group-text">
-                                        ₹
-                                    </span>
-
-                                    <input asp-for="MinSalary"
-                                           type="number"
-                                           step="0.01"
-                                           class="form-control"
-                                           placeholder="Enter Minimum Salary" />
-                                </div>
-
-                                <span asp-validation-for="MinSalary" class="text-danger"></span>
-                            </div>
-
-                            <!-- Maximum Salary -->
-                            <div class="col-md-4">
-                                <label asp-for="MaxSalary" class="form-label fw-semibold">
-                                    Maximum Salary
-                                </label>
-
-                                <div class="input-group">
-                                    <span class="input-group-text">
-                                        ₹
-                                    </span>
-
-                                    <input asp-for="MaxSalary"
-                                           type="number"
-                                           step="0.01"
-                                           class="form-control"
-                                           placeholder="Enter Maximum Salary" />
-                                </div>
-
-                                <span asp-validation-for="MaxSalary" class="text-danger"></span>
-                            </div>
-
-                        </div>
-
-                        <!-- Footer Buttons -->
-                        <div class="mt-5 d-flex justify-content-end gap-2">
-
-                            <a asp-action="Index"
-                               class="btn btn-light border rounded-3 px-4">
-                                <i class="bi bi-arrow-left"></i>
-                                Back
-                            </a>
-
-                            <button type="submit"
-                                    class="btn btn-success rounded-3 px-4">
-
-                                <i class="bi bi-check-circle"></i>
-
-                                @(string.IsNullOrEmpty(Model?.Id)
-                                    ? "Save"
-                                    : "Update")
-                            </button>
-                        </div>
-                        <div class="col-md-6">
-                            @if (TempData["Success"] != null)
-                            {
-                                <div class="alert alert-success alert-dismissible fade show"
-                                     role="alert">
-
-                                    <i class="bi bi-check-circle-fill"></i>
-
-                                    @TempData["Success"]
-
-                                    <button type="button"
-                                            class="btn-close"
-                                            data-bs-dismiss="alert">
-                                    </button>
-                                </div>
-                            }
-                        </div>
-                    </form>
-
-                </div>
+                </a>
 
             </div>
 
         </div>
 
+        <div class="panel-body">
+
+            <div asp-validation-summary="ModelOnly"
+                 class="alert alert-danger">
+            </div>
+
+            <!-- Basic Information -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-info22 position-left"></i>
+
+                    Basic Information
+
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="Name"></label>
+
+                            <input asp-for="Name"
+                                   class="form-control"
+                                   placeholder="Enter Designation Name" />
+
+                            <span asp-validation-for="Name"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="Code"></label>
+
+                            <input asp-for="Code"
+                                   class="form-control"
+                                   placeholder="Enter Designation Code" />
+
+                            <span asp-validation-for="Code"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- Organization -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-office position-left"></i>
+
+                    Organization Information
+
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="CompanyId"></label>
+
+                            <select asp-for="CompanyId"
+                                    asp-items="ViewBag.CompanyList"
+                                    class="form-control"
+                                    id="CompanyId">
+
+                                <option value="">Select Company</option>
+
+                            </select>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="BranchId"></label>
+
+                            <select asp-for="BranchId"
+                                    asp-items="ViewBag.BranchList"
+                                    class="form-control" id="BranchId">
+
+                                <option value="">Select Branch</option>
+
+                            </select>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="row">
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="DepartmentId"></label>
+
+                            <select asp-for="DepartmentId"
+                                    asp-items="ViewBag.DepartmentList"
+                                    class="form-control">
+
+                                <option value="">Select Department</option>
+
+                            </select>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="ParentDesignationId"></label>
+
+                            <select asp-for="ParentDesignationId"
+                                    asp-items="ViewBag.ParentDesignationList"
+                                    class="form-control">
+
+                                <option value="">Select Parent Designation</option>
+
+                            </select>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- Salary Information -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-coins position-left"></i>
+
+                    Salary & Level
+
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-4">
+
+                        <div class="form-group">
+
+                            <label asp-for="Level"></label>
+
+                            <input asp-for="Level"
+                                   type="number"
+                                   class="form-control"
+                                   placeholder="Level" />
+
+                            <span asp-validation-for="Level"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-4">
+
+                        <div class="form-group">
+
+                            <label asp-for="MinSalary"></label>
+
+                            <div class="input-group">
+
+                                <span class="input-group-addon">
+                                    ₹
+                                </span>
+
+                                <input asp-for="MinSalary"
+                                       type="number"
+                                       step="0.01"
+                                       class="form-control"
+                                       placeholder="Minimum Salary" />
+
+                            </div>
+
+                            <span asp-validation-for="MinSalary"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-4">
+
+                        <div class="form-group">
+
+                            <label asp-for="MaxSalary"></label>
+
+                            <div class="input-group">
+
+                                <span class="input-group-addon">
+                                    ₹
+                                </span>
+
+                                <input asp-for="MaxSalary"
+                                       type="number"
+                                       step="0.01"
+                                       class="form-control"
+                                       placeholder="Maximum Salary" />
+
+                            </div>
+
+                            <span asp-validation-for="MaxSalary"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+        </div>
+
+        <div class="panel-footer text-right">
+
+            <button type="reset"
+                    class="btn btn-default">
+
+                <i class="icon-reset"></i>
+
+                Reset
+
+            </button>
+
+            <button type="submit"
+                    class="btn bg-primary">
+
+                <i class="icon-floppy-disk"></i>
+
+                @(string.IsNullOrEmpty(Model?.Id)
+                    ? "Save"
+                    : "Update")
+
+            </button>
+
+        </div>
+
     </div>
 
-</div>
+</form>
+
 
 @section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+
+    @if (TempData["Success"] != null)
+    {
+        <script>
+
+            $(function () {
+
+                swal({
+                    title: "Success",
+                    text: "@TempData["Success"]",
+                    type: "success"
+                });
+
+            });
+
+        </script>
     }
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    <script>
+
+        $(document).ready(function () {
+
+        $(document).on("change", "#CompanyId", function () {
+
+        debugger;
+
+        let companyId = $(this).val();
+
+        console.log(companyId);
+
+        if (companyId == null || companyId === "") {
+
+        $("#BranchId").html(
+        '<option value="">-- Select Branch --</option>'
+        );
+
+        return;
+        }
+
+        $.ajax({
+
+        url: '@Url.Action("GetBranchByCompanyId")',
+
+        type: 'GET',
+
+        data: { companyId: companyId },
+
+        success: function (response) {
+
+        let html = '<option value="">-- Select Branch --</option>';
+
+        $.each(response, function (i, item) {
+
+        html += `<option value="${item.value}">
+        ${item.text}
+        </option>`;
+        });
+
+        $("#BranchId").html(html);
+        },
+
+        error: function (xhr) {
+
+        console.log(xhr);
+
+        alert("Error loading branches");
+        }
+        });
+
+        });
+
+        });
+
+    </script>
+    <partial name="_ValidationScriptsPartial" />
+   
 }

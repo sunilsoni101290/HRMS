@@ -21,6 +21,8 @@ namespace Application.Services.CompanyService
 
         public async Task<List<BranchDto>> GetAllAsync()
         {
+            try
+            {
             return await _context.Branches
                 .Include(x => x.Company)
                 .Include(x => x.Country)
@@ -63,10 +65,17 @@ namespace Application.Services.CompanyService
                     ModifiedBy = x.ModifiedBy
                 })
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<BranchDto>();
+            }
         }
 
         public async Task<List<BranchDto>> GetByCompanyAsync(string companyId)
         {
+            try
+            {
             return await _context.Branches
                 .Where(x => x.CompanyId == companyId)
                 .Select(x => new BranchDto
@@ -80,10 +89,17 @@ namespace Application.Services.CompanyService
                     IsHeadOffice = x.IsHeadOffice
                 })
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<BranchDto>();
+            }
         }
 
         public async Task<BranchDto?> GetByIdAsync(string id)
         {
+            try
+            {
             var branch = await _context.Branches
                 .AsNoTracking()
                 .Where(x => x.Id == id)
@@ -147,10 +163,17 @@ namespace Application.Services.CompanyService
             }
 
             return branch;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<BranchDto> CreateAsync(BranchDto dto)
         {
+            try
+            {
             if (dto.IsHeadOffice)
             {
                 var headOffice = await _context.Branches
@@ -199,10 +222,17 @@ namespace Application.Services.CompanyService
             dto.Id = entity.Id;
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<BranchDto?> UpdateAsync(string id, BranchDto dto)
         {
+            try
+            {
             var entity = await _context.Branches
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -234,10 +264,17 @@ namespace Application.Services.CompanyService
             await _context.SaveChangesAsync();
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<bool> DeleteAsync(string id)
         {
+            try
+            {
             var entity = await _context.Branches
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -249,6 +286,11 @@ namespace Application.Services.CompanyService
             await _context.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
     }
 }

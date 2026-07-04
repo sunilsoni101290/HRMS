@@ -1,4 +1,8 @@
-﻿namespace APP.Models.DTOs
+﻿using Domain.Enums;
+using System.ComponentModel.DataAnnotations;
+using static APP.Helpers.EnumExtensions;
+
+namespace APP.Models.DTOs
 {
     public class EmployeeListDto
     {
@@ -75,6 +79,29 @@
 
         public string? EmploymentType { get; set; }
         public string? FilePath { get; set; }
+
+        #region Passport Details 
+        public string PassportNumber { get; set; }
+        public DateTime IssueDate { get; set; }
+        public DateTime ExpiryDate { get; set; }
+        public string PlaceOfIssue { get; set; }
+
+        [Display(Name = "Nationality")]
+        public Nationality Nationality { get; set; } = Nationality.Indian;
+
+        [Display(Name = "Passport Status")]
+        public PassportStatus PassportStatus { get; set; } = PassportStatus.NotAvailable;
+
+        [Display(Name = "Passport Issuing Country")]
+        public string? CountryId { get; set; }
+        public string? CountryName { get; set; }
+
+        [Display(Name = "Upload Passport Document")]
+        public IFormFile? UploadPassport { get; set; }
+
+        [Display(Name = "Passport Document")]
+        public string? PassportFilePath { get; set; }
+        #endregion
     }
 
     public class EmployeeDropdownDto

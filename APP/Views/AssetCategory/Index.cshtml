@@ -1,0 +1,102 @@
+@model IEnumerable<AssetCategoryListDto>
+
+@{
+    ViewData["Title"] = "Asset Category Management";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-grid3 position-left"></i>
+            Asset Categories
+        </h5>
+        <div class="heading-elements">
+            <a asp-action="Create" class="btn bg-primary">
+                <i class="icon-plus22"></i> Add Category
+            </a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-4">
+                <input type="text" id="searchInput" class="form-control"
+                       placeholder="Search Category..." />
+            </div>
+        </div>
+    </div>
+
+    <table class="table table-hover table-striped">
+        <thead>
+            <tr>
+                <th width="60">#</th>
+                <th>Category</th>
+                <th class="text-center">Assets</th>
+                <th>Status</th>
+                <th width="170">Action</th>
+            </tr>
+        </thead>
+        <tbody id="dataTable">
+            @{ int sr = 1; }
+            @if (Model != null && Model.Any())
+            {
+                foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@sr</td>
+                        <td><strong>@item.Name</strong></td>
+                        <td class="text-center">
+                            <span class="label bg-info">@item.AssetCount</span>
+                        </td>
+                        <td>
+                            <span class="label @(item.IsActive ? "bg-success" : "bg-grey")">
+                                @(item.IsActive ? "Active" : "Inactive")
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <a asp-action="Details" asp-route-id="@item.Id"
+                                   class="btn btn-default btn-icon" title="View"><i class="icon-eye"></i></a>
+                                <a asp-action="Edit" asp-route-id="@item.Id"
+                                   class="btn btn-primary btn-icon" title="Edit"><i class="icon-pencil7"></i></a>
+                                <a asp-action="Delete" asp-route-id="@item.Id"
+                                   onclick="return confirm('Are you sure you want to delete this category?');"
+                                   class="btn btn-danger btn-icon" title="Delete"><i class="icon-trash"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                    sr++;
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="5" class="text-center text-muted" style="padding:30px;">
+                        <i class="icon-grid3" style="font-size:32px;"></i><br />
+                        No categories found.
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $("#searchInput").on("keyup", function () {
+                var value = $(this).val().toLowerCase();
+                $("#dataTable tr").filter(function () {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+                });
+            });
+        });
+    </script>
+    <style>
+        .table > thead > tr > th { font-weight: 600; }
+        .table > tbody > tr > td { vertical-align: middle; }
+        .label { font-size: 11px; }
+        .btn-icon { width: 34px; }
+    </style>
+}

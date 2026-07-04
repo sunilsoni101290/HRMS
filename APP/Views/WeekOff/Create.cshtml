@@ -1,46 +1,98 @@
-﻿@model WeekOffDto
+﻿
+@model WeekOffDto
 
 @{
     ViewData["Title"] = "Week Off";
 }
 
-<div class="container-fluid py-4">
+<form asp-action="@(string.IsNullOrEmpty(Model?.Id) ? "Create" : "Edit")"
+      method="post">
 
-    <div class="row justify-content-center">
+    <!-- Hidden Fields -->
 
-        <div class="col-lg-6">
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="TenantId" type="hidden" />
+    <input asp-for="CreatedBy" type="hidden" />
+    <input asp-for="ModifiedBy" type="hidden" />
+    <input asp-for="ModifiedOn" type="hidden" />
 
-            <div class="card shadow border-0 rounded-4 overflow-hidden">
+    <div class="panel panel-flat">
 
-                <!-- Header -->
-                <div class="card-header bg-info text-white py-4">
+        <!-- Header -->
 
-                    <div class="d-flex align-items-center">
+        <div class="panel-heading">
 
-                        <div class="me-3">
+            <h5 class="panel-title">
 
-                            <div class="bg-white text-info rounded-circle d-flex align-items-center justify-content-center"
-                                 style="width:70px;height:70px;">
+                <i class="icon-calendar52 position-left"></i>
 
-                                <i class="bi bi-calendar-week-fill fs-2"></i>
+                @(string.IsNullOrEmpty(Model?.Id)
+                    ? "Create Week Off"
+                    : "Edit Week Off")
 
-                            </div>
+            </h5>
 
-                        </div>
+            <div class="heading-elements">
 
-                        <div>
+                <a asp-action="Index"
+                   class="btn btn-default">
 
-                            <h3 class="mb-1">
+                    <i class="icon-arrow-left13 position-left"></i>
 
-                                @(string.IsNullOrEmpty(Model?.Id)
-                                    ? "Create Week Off"
-                                    : "Edit Week Off")
+                    Back
 
-                            </h3>
+                </a>
 
-                            <p class="mb-0 opacity-75">
-                                Manage weekly off days
-                            </p>
+            </div>
+
+        </div>
+
+        <!-- Body -->
+
+        <div class="panel-body">
+
+            <div asp-validation-summary="ModelOnly"
+                 class="alert alert-danger">
+            </div>
+
+            <!-- ===================================== -->
+            <!-- Week Off Information -->
+            <!-- ===================================== -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-calendar3 position-left"></i>
+
+                    Week Off Information
+
+                </legend>
+
+                <div class="row">
+
+                    <!-- Week Off Day -->
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="Day"></label>
+
+                            <select asp-for="Day"
+                                    asp-items="ViewBag.DayList"
+                                    class="form-control select-search">
+
+                                <option value="">
+
+                                    -- Select Week Off Day --
+
+                                </option>
+
+                            </select>
+
+                            <span asp-validation-for="Day"
+                                  class="text-danger"></span>
 
                         </div>
 
@@ -48,94 +100,362 @@
 
                 </div>
 
-                <!-- Body -->
-                <div class="card-body p-4">
+            </fieldset>
 
-                    <form asp-action="@(Model.Id == null ? "Create" : "Edit")" method="post">
+            <!-- ===================================== -->
+            <!-- Preview -->
+            <!-- ===================================== -->
 
-                        <!-- Hidden -->
-                        <input asp-for="Id" type="hidden" />
-                        <input asp-for="TenantId" type="hidden" />
-                        <input asp-for="CreatedBy" type="hidden" />
-                        <input asp-for="ModifiedBy" type="hidden" />
-                        <input asp-for="ModifiedOn" type="hidden" />
+            <fieldset>
 
-                        <div class="row g-4">
+                <legend class="text-semibold">
 
-                            <!-- Week Off Day -->
-                            <div class="col-md-12">
+                    <i class="icon-display4 position-left"></i>
 
-                                <label asp-for="Day"
-                                       class="form-label fw-semibold">
-                                </label>
+                    Week Off Preview
 
-                                <div class="input-group">
+                </legend>
 
-                                    <span class="input-group-text">
+                <div class="row">
 
-                                        <i class="bi bi-calendar-day"></i>
+                    <!-- Selected Day -->
+
+                    <div class="col-md-6">
+
+                        <div class="panel bg-info-400">
+
+                            <div class="panel-body">
+
+                                <h4 class="no-margin">
+
+                                    <span id="WeekOffPreview">
+
+                                        @(Model?.Day.ToString() ?? "-")
 
                                     </span>
 
-                                    <select asp-for="Day"
-                                            asp-items="ViewBag.DayList"
-                                            class="form-select">
+                                </h4>
 
-                                        <option value="">
-                                            -- Select Week Off Day --
-                                        </option>
-
-                                    </select>
-
-                                </div>
-
-                                <span asp-validation-for="Day"
-                                      class="text-danger"></span>
+                                Selected Week Off
 
                             </div>
 
                         </div>
 
-                        <!-- Footer -->
-                        <div class="mt-5 d-flex justify-content-end gap-2">
+                    </div>
 
-                            <a asp-action="Index"
-                               class="btn btn-light border rounded-3 px-4">
+                    <!-- Status -->
 
-                                <i class="bi bi-arrow-left"></i>
-                                Back
+                    <div class="col-md-6">
 
-                            </a>
+                        <div class="panel bg-success-400">
 
-                            <button type="submit"
-                                    class="btn btn-info text-white rounded-3 px-4">
+                            <div class="panel-body">
 
-                                <i class="bi bi-check-circle"></i>
+                                <h4 class="no-margin">
 
-                                @(string.IsNullOrEmpty(Model?.Id)
-                                    ? "Save Week Off"
-                                    : "Update Week Off")
+                                    Active
 
-                            </button>
+                                </h4>
+
+                                Default Status
+
+                            </div>
 
                         </div>
 
-                    </form>
+                    </div>
 
                 </div>
 
-            </div>
+            </fieldset>
+            <!-- ===================================== -->
+            <!-- Information -->
+            <!-- ===================================== -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-info22 position-left"></i>
+
+                    Information
+
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-12">
+
+                        <div class="alert alert-info no-margin">
+
+                            <i class="icon-info22 position-left"></i>
+
+                            Select the weekly off day that will be applicable for employees.
+                            This configuration will be used while calculating attendance,
+                            leave and payroll.
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+        </div>
+
+        <!-- Footer -->
+
+        <div class="panel-footer text-right">
+
+            <a asp-action="Index"
+               class="btn btn-default">
+
+                <i class="icon-arrow-left13 position-left"></i>
+
+                Back
+
+            </a>
+
+            <button type="reset"
+                    class="btn btn-warning">
+
+                <i class="icon-reset position-left"></i>
+
+                Reset
+
+            </button>
+
+            <button type="submit"
+                    class="btn bg-primary">
+
+                <i class="icon-floppy-disk position-left"></i>
+
+                @(string.IsNullOrEmpty(Model?.Id)
+                    ? "Save Week Off"
+                    : "Update Week Off")
+
+            </button>
 
         </div>
 
     </div>
 
-</div>
-
+</form>
 @section Scripts {
 
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+
+    <script>
+
+        $(document).ready(function () {
+
+            //=========================================
+            // Chosen Dropdown
+            //=========================================
+
+            if ($(".select-search").length) {
+
+                $(".select-search").chosen({
+
+                    width: "100%",
+                    search_contains: true,
+                    allow_single_deselect: true
+
+                });
+
+            }
+
+            //=========================================
+            // Preview Selected Day
+            //=========================================
+
+            $("#Day").change(function () {
+
+                var day = $("#Day option:selected").text();
+
+                if ($(this).val() == "") {
+
+                    $("#WeekOffPreview").text("-");
+
+                }
+                else {
+
+                    $("#WeekOffPreview").text(day);
+
+                }
+
+            });
+
+            //=========================================
+            // Client Validation
+            //=========================================
+
+            $("form").submit(function () {
+
+                if ($("#Day").val() == "") {
+
+                    alert("Please select Week Off Day.");
+
+                    $("#Day").focus();
+
+                    return false;
+
+                }
+
+                return true;
+
+            });
+
+        });
+
+    </script>
+
+    <style>
+
+        /*=========================================
+                    Panel
+                =========================================*/
+
+        .panel-heading {
+            padding: 18px 20px;
+        }
+
+        .panel-title {
+            font-weight: 600;
+        }
+
+        .panel-body {
+            padding: 20px;
+        }
+
+        .panel-footer {
+            background: #fafafa;
+            padding: 15px 20px;
+        }
+
+        /*=========================================
+                    Fieldset
+                =========================================*/
+
+        fieldset {
+            border: 1px solid #e5e5e5;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        legend {
+            width: auto;
+            border: none;
+            padding: 0 10px;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        /*=========================================
+                    Form Controls
+                =========================================*/
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-control {
+            border-radius: 3px;
+        }
+
+        label {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        /*=========================================
+                    Dashboard Cards
+                =========================================*/
+
+        .panel.bg-info-400,
+        .panel.bg-success-400 {
+            margin-bottom: 15px;
+            border-radius: 3px;
+            color: #fff;
+        }
+
+            .panel.bg-info-400 h4,
+            .panel.bg-success-400 h4 {
+                color: #fff;
+                font-weight: 600;
+                margin-bottom: 5px;
+            }
+
+        /*=========================================
+                    Validation
+                =========================================*/
+
+        .text-danger {
+            font-size: 12px;
+        }
+
+        .validation-summary-errors ul {
+            margin-bottom: 0;
+        }
+
+        /*=========================================
+                    Buttons
+                =========================================*/
+
+        .btn {
+            min-width: 110px;
+        }
+
+        /*=========================================
+                    Chosen
+                =========================================*/
+
+        .chosen-container {
+            width: 100% !important;
+        }
+
+        .chosen-container-single .chosen-single {
+            height: 36px !important;
+            line-height: 34px !important;
+        }
+
+            .chosen-container-single .chosen-single span {
+                line-height: 34px !important;
+            }
+
+        /*=========================================
+                    Alert
+                =========================================*/
+
+        .alert {
+            margin-bottom: 20px;
+        }
+
+        /*=========================================
+                    Responsive
+                =========================================*/
+
+        @@media (max-width:768px) {
+
+            .panel-footer {
+                text-align: center !important;
+            }
+
+                .panel-footer .btn {
+                    width: 100%;
+                    margin-bottom: 10px;
+                }
+
+            .panel-heading .heading-elements {
+                float: none;
+                margin-top: 15px;
+            }
+        }
+
+    </style>
 
 }

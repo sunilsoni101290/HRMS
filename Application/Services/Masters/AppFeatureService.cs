@@ -23,6 +23,8 @@ namespace Application.Services.Masters
 
         public async Task<List<AppFeatureDto>> GetAllAsync()
         {
+            try
+            {
             var data = await _context.AppFeatures
                 .Include(x => x.ParentFeature)
                 .OrderBy(x => x.DisplayOrder)
@@ -67,6 +69,11 @@ namespace Application.Services.Masters
                 IsHRMSFeature = x.IsHRMSFeature
 
             }).ToList();
+            }
+            catch (Exception)
+            {
+                return new List<AppFeatureDto>();
+            }
         }
 
         // ======================================================
@@ -75,6 +82,8 @@ namespace Application.Services.Masters
 
         public async Task<AppFeatureDto?> GetByIdAsync(string id)
         {
+            try
+            {
             var x = await _context.AppFeatures
                 .Include(a => a.ParentFeature)
                 .FirstOrDefaultAsync(a => a.Id == id);
@@ -122,6 +131,11 @@ namespace Application.Services.Masters
                 ModifiedBy = x.ModifiedBy,
                 ModifiedOn = x.ModifiedOn,
             };
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         // ======================================================
@@ -130,6 +144,8 @@ namespace Application.Services.Masters
 
         public async Task<AppFeatureDto> CreateAsync(AppFeatureDto dto)
         {
+            try
+            {
             var entity = new AppFeature
             {
                 Id=IDManager.GetNewId(new AppFeature()),
@@ -172,6 +188,11 @@ namespace Application.Services.Masters
             dto.Id = entity.Id;
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         // ======================================================
@@ -180,6 +201,8 @@ namespace Application.Services.Masters
 
         public async Task<AppFeatureDto?> UpdateAsync(AppFeatureDto dto)
         {
+            try
+            {
             var entity = await _context.AppFeatures
                 .FirstOrDefaultAsync(x => x.Id == dto.Id);
 
@@ -224,6 +247,11 @@ namespace Application.Services.Masters
             await _context.SaveChangesAsync();
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         // ======================================================
@@ -232,6 +260,8 @@ namespace Application.Services.Masters
 
         public async Task<bool> DeleteAsync(string id)
         {
+            try
+            {
             var entity = await _context.AppFeatures
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -243,6 +273,11 @@ namespace Application.Services.Masters
             await _context.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         // =========================================================
@@ -251,6 +286,8 @@ namespace Application.Services.Masters
 
         public async Task<List<AppFeatureDto>> GetMenuAsync()
         {
+            try
+            {
             return await _context.AppFeatures
                 .AsNoTracking()
                 .Where(x => x.IsActive && x.IsMenu)
@@ -259,6 +296,7 @@ namespace Application.Services.Masters
                 {
                     Id = x.Id,
                     Name = x.Name,
+                    Code = x.Code,
                     ParentFeatureId = x.ParentFeatureId,
                     Icon = x.Icon,
 
@@ -273,6 +311,87 @@ namespace Application.Services.Masters
                     DisplayOrder = x.DisplayOrder
                 })
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<AppFeatureDto>();
+            }
+        }
+
+        // ======================================================
+        // GET MENU (role-based)
+        //   - Super Admin  → full menu
+        //   - No roles     → full menu (avoids lock-out during rollout)
+        //   - Otherwise    → only features the role can View, plus the
+        //                    parent groups that still have a visible child
+        // ======================================================
+        public async Task<List<AppFeatureDto>> GetMenuByUserAsync(string? userId)
+        {
+            try
+            {
+            var all = await GetMenuAsync();
+
+            if (string.IsNullOrEmpty(userId))
+                return all;
+
+            var roleIds = await _context.UserRoles
+                .AsNoTracking()
+                .Where(ur => ur.UserId == userId && !ur.IsDeleted)
+                .Select(ur => ur.RoleId)
+                .ToListAsync();
+
+            // No role mapping → don't hide anything.
+            if (roleIds.Count == 0)
+                return all;
+
+            var roleCodes = await _context.Roles
+                .AsNoTracking()
+                .Where(r => roleIds.Contains(r.Id))
+                .Select(r => r.Code)
+                .ToListAsync();
+
+            if (roleCodes.Contains("SUPER_ADMIN") || roleCodes.Contains("HR_MANAGER"))
+                return all;
+
+            // Feature codes this user is allowed to view
+            var allowedFeatureCodes = await (
+                from rp in _context.RolePermissions.AsNoTracking()
+                join p in _context.Permissions.AsNoTracking() on rp.PermissionId equals p.Id
+                where roleIds.Contains(rp.RoleId)
+                      && rp.IsAllowed
+                      && !rp.IsDeleted
+                      && (p.Action == "View" || p.Action == "Index")
+                select p.FeatureId
+            ).Distinct().ToListAsync();
+
+            var allowedSet = allowedFeatureCodes.ToHashSet();
+
+            // Visible leaves (features that point to a screen)
+            var visibleLeaves = all
+                .Where(f => !string.IsNullOrEmpty(f.ControllerName)
+                         && allowedSet.Contains(f.Code))
+                .ToList();
+
+            var visibleLeafIds = visibleLeaves
+                .Select(f => f.Id)
+                .ToHashSet();
+
+            // Parent groups (no controller) with at least one visible child
+            var visibleParents = all
+                .Where(f => string.IsNullOrEmpty(f.ControllerName)
+                         && all.Any(c => c.ParentFeatureId == f.Id
+                                      && visibleLeafIds.Contains(c.Id)))
+                .ToList();
+
+            return visibleParents
+                .Concat(visibleLeaves)
+                .OrderBy(f => f.DisplayOrder)
+                .ToList();
+            }
+            catch (Exception)
+            {
+                return new List<AppFeatureDto>();
+            }
         }
     }
 }

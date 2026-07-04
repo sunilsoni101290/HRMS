@@ -24,6 +24,8 @@ namespace Application.Services.Attendances
         public async Task<bool>
             ProcessAttendanceAsync()
         {
+            try
+            {
             var rawLogs =
                 await _db.BiometricAttendanceLogs
                 .Where(x => !x.IsProcessed)
@@ -114,6 +116,11 @@ namespace Application.Services.Attendances
             await _db.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         public async Task<AttendanceProcessDto>
@@ -121,6 +128,8 @@ namespace Application.Services.Attendances
                 string employeeId,
                 DateTime date)
         {
+            try
+            {
             var attendance =
                 await _db.Attendances
                 .FirstOrDefaultAsync(x =>
@@ -144,6 +153,11 @@ namespace Application.Services.Attendances
                     attendance.OvertimeHours,
                 Status = attendance.Status
             };
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
     }
 }

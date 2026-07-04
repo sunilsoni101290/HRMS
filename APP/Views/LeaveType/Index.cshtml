@@ -1,0 +1,199 @@
+﻿@model IEnumerable<LeaveTypeDto>
+
+@{
+    ViewData["Title"] = "Leave Type List";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-calendar52 position-left"></i>
+            Leave Type Management
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Create"
+               class="btn bg-primary btn-sm">
+
+                <i class="icon-plus22"></i>
+                Add Leave Type
+
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <div class="row mb-15">
+
+            <div class="col-md-4">
+
+                <input type="text" id="searchInput"
+                       class="form-control"
+                       placeholder="Search Leave Type..." />
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <table id="leaveTypeTable" class="table datatable-scroll-y">
+
+        <thead>
+
+            <tr>
+
+                <th>#</th>
+                <th>Leave Type</th>
+                <th>Days/Year</th>
+                <th>Paid</th>
+                <th>Carry Forward</th>
+                <th>Half Day</th>
+                <th class="text-center">Actions</th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            @{
+                int sr = 1;
+            }
+
+            @foreach (var item in Model)
+            {
+                <tr>
+
+                    <td>@sr</td>
+
+                    <td>
+                        <strong>@item.Name</strong>
+                    </td>
+
+                    <td>
+                        <span class="label bg-primary">
+                            @item.MaxDaysPerYear Days
+                        </span>
+                    </td>
+
+                    <td>
+
+                        @if (item.IsPaid)
+                        {
+                            <span class="label label-success">
+                                Paid
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="label label-danger">
+                                Unpaid
+                            </span>
+                        }
+
+                    </td>
+
+                    <td>
+
+                        @if (item.AllowCarryForward)
+                        {
+                            <span class="label bg-info">
+                                @item.MaxCarryForwardDays Days
+                            </span>
+                        }
+                        else
+                        {
+                            <span>-</span>
+                        }
+
+                    </td>
+
+                    <td>
+
+                        @if (item.AllowHalfDay)
+                        {
+                            <span class="label label-success">
+                                Yes
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="label label-default">
+                                No
+                            </span>
+                        }
+
+                    </td>
+
+                    <td class="text-center">
+
+                        <ul class="icons-list">
+
+                            <li>
+                                <a asp-action="Details"
+                                   asp-route-id="@item.Id">
+                                    <i class="icon-eye"></i>
+                                </a>
+                            </li>
+
+                            <li>
+                                <a asp-action="Edit"
+                                   asp-route-id="@item.Id">
+                                    <i class="icon-pencil7"></i>
+                                </a>
+                            </li>
+
+                            <li>
+                                <a asp-action="Delete"
+                                   asp-route-id="@item.Id">
+                                    <i class="icon-trash"></i>
+                                </a>
+                            </li>
+
+                        </ul>
+
+                    </td>
+
+                </tr>
+
+                sr++;
+            }
+
+        </tbody>
+
+    </table>
+
+</div>
+
+@section Scripts {
+
+    <script>
+
+        document.getElementById("searchInput")
+            .addEventListener("keyup", function () {
+
+                let value = this.value.toLowerCase();
+
+                let rows = document.querySelectorAll("#leaveTypeTable tr");
+
+                rows.forEach(function (row) {
+
+                    let text = row.innerText.toLowerCase();
+
+                    row.style.display =
+                        text.includes(value) ? "" : "none";
+
+                });
+
+            });
+
+    </script>
+
+}

@@ -1,0 +1,228 @@
+﻿
+@model LeaveBalanceDto
+
+@{
+    ViewData["Title"] = "Leave Balance Details";
+}
+
+<div class="row mb-4">
+
+    <div class="col-md-2">
+
+        <div class="card border-primary">
+
+            <div class="card-body text-center">
+
+                <h6>Opening</h6>
+
+                <h2 class="text-primary">
+
+                    @Model.OpeningBalance
+
+                </h2>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-md-2">
+
+        <div class="card border-info">
+
+            <div class="card-body text-center">
+
+                <h6>Allocated</h6>
+
+                <h2 class="text-info">
+
+                    @Model.Allocated
+
+                </h2>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-md-2">
+
+        <div class="card border-success">
+
+            <div class="card-body text-center">
+
+                <h6>Credited</h6>
+
+                <h2 class="text-success">
+
+                    @Model.Credited
+
+                </h2>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-md-2">
+
+        <div class="card border-warning">
+
+            <div class="card-body text-center">
+
+                <h6>Carry Forward</h6>
+
+                <h2 class="text-warning">
+
+                    @Model.CarryForward
+
+                </h2>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-md-2">
+
+        <div class="card border-danger">
+
+            <div class="card-body text-center">
+
+                <h6>Used</h6>
+
+                <h2 class="text-danger">
+
+                    @Model.Used
+
+                </h2>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-md-2">
+
+        <div class="card border-success">
+
+            <div class="card-body text-center">
+
+                <h6>Balance</h6>
+
+                <h2 class="text-success">
+
+                    @Model.Balance
+
+                </h2>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h4 class="panel-title">
+
+            Leave Balance Details
+
+        </h4>
+
+    </div>
+
+    <div class="panel-body">
+
+        <table class="table table-striped">
+
+            <tbody>
+
+                <tr>
+                    <th>Employee</th>
+                    <td>@Model.EmployeeName</td>
+                </tr>
+
+                <tr>
+                    <th>Leave Type</th>
+                    <td>@Model.LeaveTypeName</td>
+                </tr>
+
+                <tr>
+                    <th>Year</th>
+                    <td>@Model.Year</td>
+                </tr>
+
+                <tr>
+                    <th>Opening Balance</th>
+                    <td>@Model.OpeningBalance</td>
+                </tr>
+
+                <tr>
+                    <th>Allocated</th>
+                    <td>@Model.Allocated</td>
+                </tr>
+
+                <tr>
+                    <th>Credited</th>
+                    <td>@Model.Credited</td>
+                </tr>
+
+                <tr>
+                    <th>Used</th>
+                    <td>@Model.Used</td>
+                </tr>
+
+                <tr>
+                    <th>Carry Forward</th>
+                    <td>@Model.CarryForward</td>
+                </tr>
+
+                <tr>
+                    <th>Available Balance</th>
+                    <td>
+
+                        <span class="label bg-success">
+
+                            @Model.Balance
+
+                        </span>
+
+                    </td>
+                </tr>
+
+            </tbody>
+
+        </table>
+        <div class="text-right">
+
+            <a asp-action="Index"
+               class="btn btn-default">
+
+                <i class="icon-arrow-left13"></i>
+                Back
+
+            </a>
+
+            <a asp-action="Edit"
+               asp-route-id="@Model.Id"
+               class="btn bg-primary">
+
+                <i class="icon-pencil7"></i>
+                Edit
+
+            </a>
+
+        </div>
+    </div>
+
+</div>

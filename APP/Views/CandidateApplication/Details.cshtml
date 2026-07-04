@@ -1,0 +1,39 @@
+@model CandidateApplicationListDto
+
+@{
+    ViewData["Title"] = "Application Details";
+
+    string StatusLabel(int s) => s switch
+    {
+        1 => "bg-info",
+        2 => "bg-primary",
+        3 => "bg-warning",
+        4 => "bg-success",
+        5 => "bg-danger",
+        _ => "bg-grey"
+    };
+}
+
+<div class="panel panel-flat">
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-clipboard3 position-left"></i> @Model.CandidateName — @Model.JobTitle
+            <span class="label @StatusLabel(Model.Status)" style="margin-left:8px;">@Model.StatusText</span>
+        </h5>
+        <div class="heading-elements">
+            <a asp-controller="InterviewSchedule" asp-action="Create" class="btn btn-info btn-xs"><i class="icon-calendar"></i> Schedule Interview</a>
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary btn-xs"><i class="icon-pencil7"></i> Edit</a>
+            <a asp-action="Index" class="btn btn-default btn-xs"><i class="icon-arrow-left13"></i> Back</a>
+        </div>
+    </div>
+    <div class="panel-body">
+        <table class="table table-striped">
+            <tr><th style="width:200px;">Candidate</th><td>@Model.CandidateName</td></tr>
+            <tr><th>Job</th><td>@Model.JobTitle</td></tr>
+            <tr><th>Applied Date</th><td>@Model.AppliedDate.ToString("dd MMM yyyy")</td></tr>
+            <tr><th>Stage</th><td>@Model.StatusText</td></tr>
+            <tr><th>Interviews</th><td>@Model.InterviewCount</td></tr>
+            <tr><th>Remarks</th><td>@(Model.Remarks ?? "-")</td></tr>
+        </table>
+    </div>
+</div>

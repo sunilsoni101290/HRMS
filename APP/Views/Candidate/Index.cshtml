@@ -1,0 +1,118 @@
+@model IEnumerable<CandidateListDto>
+
+@{
+    ViewData["Title"] = "Candidates";
+
+    string StatusLabel(int s) => s switch
+    {
+        1 => "bg-info",      // Applied
+        2 => "bg-primary",   // Shortlisted
+        3 => "bg-warning",   // Interview
+        4 => "bg-success",   // Selected
+        5 => "bg-danger",    // Rejected
+        _ => "bg-grey"
+    };
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title"><i class="icon-users4 position-left"></i> Candidates</h5>
+        <div class="heading-elements">
+            <a asp-action="Create" class="btn bg-primary"><i class="icon-plus22"></i> Add Candidate</a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-4">
+                <input type="text" id="searchInput" class="form-control" placeholder="Search name, email, skills..." />
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-striped">
+            <thead>
+                <tr>
+                    <th width="60">#</th>
+                    <th>Name</th>
+                    <th>Contact</th>
+                    <th>Experience</th>
+                    <th>Source</th>
+                    <th class="text-center">Applications</th>
+                    <th>Status</th>
+                    <th width="200">Action</th>
+                </tr>
+            </thead>
+            <tbody id="dataTable">
+                @{ int sr = 1; }
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@sr</td>
+                            <td>
+                                <strong>@item.Name</strong>
+                                @if (!string.IsNullOrEmpty(item.Skills))
+                                {
+                                    <br /><small class="text-muted">@item.Skills</small>
+                                }
+                            </td>
+                            <td>
+                                @item.Email
+                                @if (!string.IsNullOrEmpty(item.Phone)) { <br /><small class="text-muted">@item.Phone</small> }
+                            </td>
+                            <td>@(item.TotalExperience.HasValue ? (item.TotalExperience.Value / 12.0).ToString("0.#") + " yrs" : "-")</td>
+                            <td>@(item.Source ?? "-")</td>
+                            <td class="text-center"><span class="label bg-primary">@item.ApplicationCount</span></td>
+                            <td><span class="label @StatusLabel(item.Status)">@item.StatusText</span></td>
+                            <td>
+                                <div class="btn-group">
+                                    @if (!string.IsNullOrEmpty(item.ResumeUrl))
+                                    {
+                                        <a href="@item.ResumeUrl" target="_blank" class="btn btn-info btn-icon" title="Resume"><i class="icon-file-pdf"></i></a>
+                                    }
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-default btn-icon" title="View"><i class="icon-eye"></i></a>
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary btn-icon" title="Edit"><i class="icon-pencil7"></i></a>
+                                    <a asp-action="Delete" asp-route-id="@item.Id"
+                                       onclick="return confirm('Delete this candidate?');"
+                                       class="btn btn-danger btn-icon" title="Delete"><i class="icon-trash"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                        sr++;
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="8" class="text-center text-muted" style="padding:30px;"><i class="icon-users4" style="font-size:32px;"></i><br />No candidates found.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    <script>
+        $(function () {
+            $("#searchInput").on("keyup", function () {
+                var value = $(this).val().toLowerCase();
+                $("#dataTable tr").filter(function () {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+                });
+            });
+        });
+    </script>
+    <style>
+        .table > thead > tr > th { font-weight: 600; }
+        .table > tbody > tr > td { vertical-align: middle; }
+        .label { font-size: 11px; }
+        .btn-icon { width: 34px; }
+    </style>
+}

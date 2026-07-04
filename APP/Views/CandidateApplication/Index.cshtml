@@ -1,0 +1,112 @@
+@model IEnumerable<CandidateApplicationListDto>
+
+@{
+    ViewData["Title"] = "Applications";
+
+    string StatusLabel(int s) => s switch
+    {
+        1 => "bg-info",      // Applied
+        2 => "bg-primary",   // Shortlisted
+        3 => "bg-warning",   // Interview
+        4 => "bg-success",   // Selected
+        5 => "bg-danger",    // Rejected
+        _ => "bg-grey"
+    };
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title"><i class="icon-clipboard3 position-left"></i> Applications Pipeline</h5>
+        <div class="heading-elements">
+            <a asp-action="Create" class="btn bg-primary"><i class="icon-plus22"></i> New Application</a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-4">
+                <input type="text" id="searchInput" class="form-control" placeholder="Search candidate or job..." />
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-striped">
+            <thead>
+                <tr>
+                    <th width="50">#</th>
+                    <th>Candidate</th>
+                    <th>Job</th>
+                    <th>Applied</th>
+                    <th class="text-center">Interviews</th>
+                    <th>Stage</th>
+                    <th width="320">Action</th>
+                </tr>
+            </thead>
+            <tbody id="dataTable">
+                @{ int sr = 1; }
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@sr</td>
+                            <td><strong>@item.CandidateName</strong></td>
+                            <td>@item.JobTitle</td>
+                            <td>@item.AppliedDate.ToString("dd MMM yyyy")</td>
+                            <td class="text-center"><span class="label bg-info">@item.InterviewCount</span></td>
+                            <td><span class="label @StatusLabel(item.Status)">@item.StatusText</span></td>
+                            <td>
+                                <form asp-action="ChangeStage" asp-route-id="@item.Id" method="post" class="form-inline" style="display:inline-block;">
+                                    <select name="status" class="form-control input-xs" style="width:120px;display:inline-block;">
+                                        <option value="1" selected="@(item.Status == 1)">Applied</option>
+                                        <option value="2" selected="@(item.Status == 2)">Shortlisted</option>
+                                        <option value="3" selected="@(item.Status == 3)">Interview</option>
+                                        <option value="4" selected="@(item.Status == 4)">Selected</option>
+                                        <option value="5" selected="@(item.Status == 5)">Rejected</option>
+                                    </select>
+                                    <button type="submit" class="btn btn-primary btn-icon" title="Update Stage"><i class="icon-checkmark3"></i></button>
+                                </form>
+                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-default btn-icon" title="View"><i class="icon-eye"></i></a>
+                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary btn-icon" title="Edit"><i class="icon-pencil7"></i></a>
+                                <a asp-action="Delete" asp-route-id="@item.Id"
+                                   onclick="return confirm('Delete this application?');"
+                                   class="btn btn-danger btn-icon" title="Delete"><i class="icon-trash"></i></a>
+                            </td>
+                        </tr>
+                        sr++;
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="7" class="text-center text-muted" style="padding:30px;"><i class="icon-clipboard3" style="font-size:32px;"></i><br />No applications found.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    <script>
+        $(function () {
+            $("#searchInput").on("keyup", function () {
+                var value = $(this).val().toLowerCase();
+                $("#dataTable tr").filter(function () {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+                });
+            });
+        });
+    </script>
+    <style>
+        .table > thead > tr > th { font-weight: 600; }
+        .table > tbody > tr > td { vertical-align: middle; }
+        .label { font-size: 11px; }
+        .btn-icon { width: 34px; }
+        .input-xs { height: 30px; padding: 4px 8px; font-size: 12px; }
+    </style>
+}

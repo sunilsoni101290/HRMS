@@ -1,0 +1,185 @@
+﻿@model LeaveTypeDto
+
+@{
+    ViewData["Title"] = "Leave Type Details";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading bg-primary">
+
+        <h4 class="panel-title text-white">
+
+            @Model.Name
+
+        </h4>
+
+    </div>
+
+    <div class="panel-body">
+
+        <div class="row">
+
+            <div class="col-md-4">
+
+                <div class="panel bg-primary-400">
+
+                    <div class="panel-body text-center">
+
+                        <i class="icon-calendar3 icon-2x"></i>
+
+                        <h3>
+                            @Model.MaxDaysPerYear
+                        </h3>
+
+                        <span>Days Per Year</span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="col-md-4">
+
+                <div class="panel bg-success-400">
+
+                    <div class="panel-body text-center">
+
+                        <i class="icon-cash3 icon-2x"></i>
+
+                        <h3>
+
+                            @(Model.IsPaid
+                                ? "Paid"
+                                : "Unpaid")
+
+                        </h3>
+
+                        <span>Leave Type</span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="col-md-4">
+
+                <div class="panel bg-info-400">
+
+                    <div class="panel-body text-center">
+
+                        <i class="icon-forward3 icon-2x"></i>
+
+                        <h3>
+
+                            @(Model.AllowCarryForward
+                                ? "Yes"
+                                : "No")
+
+                        </h3>
+
+                        <span>Carry Forward</span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <table class="table table-striped">
+
+            <tbody>
+
+                <tr>
+                    <th width="250">Leave Type</th>
+                    <td>@Model.Name</td>
+                </tr>
+
+                <tr>
+                    <th>Maximum Days Per Year</th>
+                    <td>@Model.MaxDaysPerYear</td>
+                </tr>
+
+                <tr>
+                    <th>Paid Leave</th>
+                    <td>
+
+                        @(Model.IsPaid
+                            ? "Yes"
+                            : "No")
+
+                    </td>
+                </tr>
+
+                <tr>
+                    <th>Allow Carry Forward</th>
+                    <td>
+
+                        @(Model.AllowCarryForward
+                            ? "Yes"
+                            : "No")
+
+                    </td>
+                </tr>
+
+                <tr>
+                    <th>Max Carry Forward Days</th>
+                    <td>
+
+                        @(Model.MaxCarryForwardDays ?? 0)
+
+                    </td>
+                </tr>
+
+                <tr>
+                    <th>Allow Half Day</th>
+                    <td>
+
+                        @(Model.AllowHalfDay
+                            ? "Yes"
+                            : "No")
+
+                    </td>
+                </tr>
+
+                <tr>
+                    <th>Modified On</th>
+                    <td>
+
+                        @(Model.ModifiedOn?.ToString("dd-MMM-yyyy") ?? "-")
+
+                    </td>
+                </tr>
+
+            </tbody>
+
+        </table>
+
+        <div class="text-right">
+
+            <a asp-action="Index"
+               class="btn btn-default">
+
+                <i class="icon-arrow-left13"></i>
+                Back
+
+            </a>
+
+            <a asp-action="Edit"
+               asp-route-id="@Model.Id"
+               class="btn bg-primary">
+
+                <i class="icon-pencil7"></i>
+                Edit
+
+            </a>
+
+        </div>
+
+    </div>
+
+</div>

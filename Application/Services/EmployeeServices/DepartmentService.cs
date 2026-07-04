@@ -23,6 +23,8 @@ namespace Application.Services.EmployeeServices
 
         public async Task<List<DepartmentListDto>> GetAllAsync()
         {
+            try
+            {
             return await _context.Departments
                 .Select(x => new DepartmentListDto
                 {
@@ -45,6 +47,11 @@ namespace Application.Services.EmployeeServices
                         : ""
                 })
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<DepartmentListDto>();
+            }
         }
 
         #endregion
@@ -53,6 +60,8 @@ namespace Application.Services.EmployeeServices
 
         public async Task<DepartmentDto> GetByIdAsync(string id)
         {
+            try
+            {
             var entity = await _context.Departments
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -75,6 +84,11 @@ namespace Application.Services.EmployeeServices
                 // Hierarchy
                 ParentDepartmentId = entity.ParentDepartmentId
             };
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         #endregion
@@ -83,12 +97,30 @@ namespace Application.Services.EmployeeServices
 
         public async Task<string> CreateAsync(DepartmentDto dto)
         {
+            try
+            {
+            // Check duplicate Name
+            bool isNameExists = await _context.Departments.AnyAsync(x =>
+                x.TenantId == dto.TenantId &&
+                x.Name.ToLower() == dto.Name.Trim().ToLower());
+
+            if (isNameExists)
+                throw new Exception("Department Name already exists.");
+
+            // Check duplicate Code
+            bool isCodeExists = await _context.Departments.AnyAsync(x =>
+                x.TenantId == dto.TenantId &&
+                x.Code.ToLower() == dto.Code.Trim().ToLower());
+
+            if (isCodeExists)
+                throw new Exception("Department Code already exists.");
+
             var entity = new Department
             {
                 Id = IDManager.GetNewId(new Department()),
 
-                Name = dto.Name,
-                Code = dto.Code,
+                Name = dto.Name.Trim(),
+                Code = dto.Code.Trim(),
 
                 // Multi Tenant
                 TenantId = dto.TenantId,
@@ -97,9 +129,9 @@ namespace Application.Services.EmployeeServices
                 CompanyId = dto.CompanyId,
                 BranchId = dto.BranchId,
 
-                CreatedBy=dto.CreatedBy,
-                ModifiedBy=dto.ModifiedBy,
-                ModifiedOn=dto.ModifiedOn,
+                CreatedBy = dto.CreatedBy,
+                ModifiedBy = dto.ModifiedBy,
+                ModifiedOn = dto.ModifiedOn,
 
                 // Hierarchy
                 ParentDepartmentId = dto.ParentDepartmentId
@@ -109,14 +141,20 @@ namespace Application.Services.EmployeeServices
             await _context.SaveChangesAsync();
 
             return entity.Id;
+            }
+            catch (Exception ex)
+            {
+                return ex.ToString();
+            }
         }
-
         #endregion
 
         #region Update
 
         public async Task<string> UpdateAsync(string id, DepartmentDto dto)
         {
+            try
+            {
             var entity = await _context.Departments
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -144,6 +182,11 @@ namespace Application.Services.EmployeeServices
             await _context.SaveChangesAsync();
 
             return entity.Id;
+            }
+            catch (Exception ex)
+            {
+                return ex.ToString();
+            }
         }
 
         #endregion
@@ -152,6 +195,8 @@ namespace Application.Services.EmployeeServices
 
         public async Task<bool> DeleteAsync(string id)
         {
+            try
+            {
             var entity = await _context.Departments
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -162,6 +207,11 @@ namespace Application.Services.EmployeeServices
             await _context.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         #endregion

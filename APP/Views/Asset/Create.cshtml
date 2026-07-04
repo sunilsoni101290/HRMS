@@ -1,0 +1,191 @@
+@model AssetDto
+
+@{
+    ViewData["Title"] = "Asset";
+}
+
+<form asp-action="@(string.IsNullOrEmpty(Model?.Id) ? "Create" : "Edit")"
+      asp-controller="Asset" asp-route-id="@Model?.Id" method="post">
+
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="TenantId" type="hidden" />
+    <input asp-for="CreatedBy" type="hidden" />
+
+    <div class="panel panel-flat">
+
+        <div class="panel-heading">
+            <h5 class="panel-title">
+                <i class="icon-laptop position-left"></i>
+                @(string.IsNullOrEmpty(Model?.Id) ? "Create Asset" : "Edit Asset")
+            </h5>
+            <div class="heading-elements">
+                <a asp-action="Index" class="btn btn-default">
+                    <i class="icon-arrow-left13"></i> Back
+                </a>
+            </div>
+        </div>
+
+        <div class="panel-body">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <fieldset>
+                <legend class="text-semibold">
+                    <i class="icon-info22 position-left"></i> Basic Information
+                </legend>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="Name"></label> <span class="text-danger">*</span>
+                            <input asp-for="Name" class="form-control" placeholder="Enter Asset Name" />
+                            <span asp-validation-for="Name" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="AssetCode"></label>
+                            <input asp-for="AssetCode" class="form-control" placeholder="Enter Asset Code" />
+                            <span asp-validation-for="AssetCode" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="SerialNumber"></label>
+                            <input asp-for="SerialNumber" class="form-control" placeholder="Enter Serial Number" />
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="AssetCategoryId"></label> <span class="text-danger">*</span>
+                            <select asp-for="AssetCategoryId" asp-items="ViewBag.CategoryList" class="form-control">
+                                <option value="">Select Category</option>
+                            </select>
+                            <span asp-validation-for="AssetCategoryId" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="Status"></label>
+                            <select asp-for="Status" asp-items="ViewBag.StatusList" class="form-control">
+                                <option value="">Select Status</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend class="text-semibold">
+                    <i class="icon-cart2 position-left"></i> Purchase &amp; Warranty
+                </legend>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label asp-for="PurchaseDate"></label>
+                            <input asp-for="PurchaseDate" type="date" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label asp-for="PurchaseCost"></label>
+                            <div class="input-group">
+                                <span class="input-group-addon">₹</span>
+                                <input asp-for="PurchaseCost" type="number" step="0.01" class="form-control" placeholder="0.00" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label asp-for="VendorName"></label>
+                            <input asp-for="VendorName" class="form-control" placeholder="Vendor Name" />
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label asp-for="WarrantyExpiryDate"></label>
+                            <input asp-for="WarrantyExpiryDate" type="date" class="form-control" />
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend class="text-semibold">
+                    <i class="icon-office position-left"></i> Location
+                </legend>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="CompanyId"></label>
+                            <select asp-for="CompanyId" asp-items="ViewBag.CompanyList" class="form-control" id="CompanyId">
+                                <option value="">Select Company</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="BranchId"></label>
+                            <select asp-for="BranchId" asp-items="ViewBag.BranchList" class="form-control" id="BranchId">
+                                <option value="">Select Branch</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label asp-for="Description"></label>
+                            <textarea asp-for="Description" class="form-control" rows="2"
+                                      placeholder="Additional notes..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+
+        <div class="panel-footer text-right">
+            <button type="reset" class="btn btn-default"><i class="icon-reset"></i> Reset</button>
+            <button type="submit" class="btn bg-primary">
+                <i class="icon-floppy-disk"></i>
+                @(string.IsNullOrEmpty(Model?.Id) ? "Save" : "Update")
+            </button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>
+            $(function () {
+                swal({ title: "Success", text: "@TempData["Success"]", type: "success" });
+            });
+        </script>
+    }
+    <script>
+        $(document).ready(function () {
+            $(document).on("change", "#CompanyId", function () {
+                var companyId = $(this).val();
+                if (!companyId) {
+                    $("#BranchId").html('<option value="">Select Branch</option>');
+                    return;
+                }
+                $.ajax({
+                    url: '@Url.Action("GetBranchByCompanyId")',
+                    type: 'GET',
+                    data: { companyId: companyId },
+                    success: function (response) {
+                        var html = '<option value="">Select Branch</option>';
+                        $.each(response, function (i, item) {
+                            html += '<option value="' + item.value + '">' + item.text + '</option>';
+                        });
+                        $("#BranchId").html(html);
+                    },
+                    error: function () { alert("Error loading branches"); }
+                });
+            });
+        });
+    </script>
+    <partial name="_ValidationScriptsPartial" />
+}

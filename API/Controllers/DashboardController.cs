@@ -17,14 +17,16 @@ namespace API.Controllers
             _service = service;
         }
 
-        [HttpGet]
-        public async Task<IActionResult> Get()
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(string id)
         {
-            var tenantId = User.FindFirst("TenantId")?.Value;
+            var data = await _service.GetDashboardAsync(id);
 
-            var data = await _service.GetDashboardAsync(tenantId);
+            if (data == null)
+                return NotFound();
 
             return Ok(data);
         }
+
     }
 }

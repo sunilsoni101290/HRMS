@@ -1,0 +1,367 @@
+﻿@model DesignationDto
+
+<div class="panel panel-flat">
+
+    <!-- Header -->
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+
+            <i class="icon-user-tie position-left"></i>
+
+            Designation Details
+
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Index"
+               class="btn btn-default">
+
+                <i class="icon-arrow-left13"></i>
+
+                Back
+
+            </a>
+
+            <a asp-action="Edit"
+               asp-route-id="@Model.Id"
+               class="btn bg-primary">
+
+                <i class="icon-pencil7"></i>
+
+                Edit
+
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <!-- Profile Header -->
+
+        <div class="row">
+
+            <div class="col-md-2 text-center">
+
+                <div class="content-group">
+
+                    <div class="icon-object border-primary text-primary"
+                         style="width:100px;height:100px;line-height:100px;font-size:42px;margin:auto;">
+
+                        <i class="icon-user-tie"></i>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="col-md-6">
+
+                <h2 class="text-semibold no-margin">
+
+                    @Model.Name
+
+                </h2>
+
+                <br />
+
+                <span class="label bg-primary">
+
+                    @Model.Code
+
+                </span>
+
+                
+
+                <br /><br />
+
+                <strong>Level :</strong>
+
+                <span class="label bg-info">
+
+                    @Model.Level
+
+                </span>
+
+            </div>
+
+            <div class="col-md-4">
+
+                <div class="panel bg-success-400">
+
+                    <div class="panel-body">
+
+                        <h3 class="no-margin">
+
+                            ₹ @Model.MaxSalary.ToString("N2")
+
+                        </h3>
+
+                        Maximum Salary
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <hr />
+
+        <div class="row">
+
+            <!-- Organization -->
+
+            <div class="col-md-6">
+
+                <div class="panel panel-bordered">
+
+                    <div class="panel-heading">
+
+                        <h6 class="panel-title">
+
+                            <i class="icon-office position-left"></i>
+
+                            Organization Information
+
+                        </h6>
+
+                    </div>
+
+                    <table class="table table-bordered">
+
+                        <tr>
+
+                            <th width="180">
+                                Company
+                            </th>
+
+                            <td>
+                                @(ViewBag.CompanyNames != null &&
+                               ViewBag.CompanyNames.ContainsKey(Model.CompanyId)
+                               ? ViewBag.CompanyNames[Model.CompanyId]
+                               : "-")
+                            </td>
+
+                        </tr>
+
+                        <tr>
+
+                            <th>
+                                Branch
+                            </th>
+
+                            <td>
+                                @(ViewBag.BranchNames != null &&
+                                ViewBag.BranchNames.ContainsKey(Model.BranchId)
+                                ? ViewBag.BranchNames[Model.BranchId]
+                                : "-")
+                            </td>
+
+                        </tr>
+
+                        <tr>
+
+                            <th>
+                                Department
+                            </th>
+
+                            <td>
+                                @(ViewBag.ParentDepartments != null &&
+                                ViewBag.ParentDepartments.ContainsKey(Model.DepartmentId)
+                            ? ViewBag.ParentDepartments[Model.DepartmentId]
+                            : "-")
+                            </td>
+
+                        </tr>
+
+                        <tr>
+
+                            <th>
+                                Parent Designation
+                            </th>
+
+                            <td>
+
+                                @(ViewBag.ParentDesignations != null &&
+                               ViewBag.ParentDesignations.ContainsKey(Model.ParentDesignationId)
+                               ? ViewBag.ParentDesignations[Model.ParentDesignationId]
+                               : "-")
+                            </td>
+
+                        </tr>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+            <!-- Salary -->
+
+            <div class="col-md-6">
+
+                <div class="panel panel-bordered">
+
+                    <div class="panel-heading">
+
+                        <h6 class="panel-title">
+
+                            <i class="icon-coins position-left"></i>
+
+                            Salary Information
+
+                        </h6>
+
+                    </div>
+
+                    <table class="table table-bordered">
+
+                        <tr>
+
+                            <th width="180">
+                                Level
+                            </th>
+
+                            <td>
+                                @Model.Level
+                            </td>
+
+                        </tr>
+
+                        <tr>
+
+                            <th>
+                                Minimum Salary
+                            </th>
+
+                            <td>
+
+                                ₹ @Model.MinSalary.ToString("N2")
+
+                            </td>
+
+                        </tr>
+
+                        <tr>
+
+                            <th>
+                                Maximum Salary
+                            </th>
+
+                            <td>
+
+                                ₹ @Model.MaxSalary.ToString("N2")
+
+                            </td>
+
+                        </tr>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Audit -->
+
+        <div class="panel panel-bordered">
+
+            <div class="panel-heading">
+
+                <h6 class="panel-title">
+
+                    <i class="icon-history position-left"></i>
+
+                    Audit Information
+
+                </h6>
+
+            </div>
+
+            <table class="table table-bordered">
+
+                <tr>
+
+                    <th>
+                        Created By
+                    </th>
+
+                    <td>
+
+                        @Model.CreatedBy
+
+                    </td>
+
+                </tr>
+
+                <tr>
+
+                    <th>
+                        Modified On
+                    </th>
+
+                    <td>
+
+                        @(Model.ModifiedOn?.ToString("dd-MMM-yyyy") ?? "-")
+
+                    </td>
+
+                </tr>
+
+                <tr>
+
+                    <th>
+                        Modified By
+                    </th>
+
+                    <td>
+
+                        @(string.IsNullOrEmpty(Model.ModifiedBy)
+                            ? "-"
+                            : Model.ModifiedBy)
+
+                    </td>
+
+                </tr>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+<style>
+
+    .panel-bordered {
+        border: 1px solid #ddd;
+        margin-bottom: 20px;
+    }
+
+        .panel-bordered .panel-heading {
+            background: #fafafa;
+            border-bottom: 1px solid #ddd;
+        }
+
+    .table > tbody > tr > th {
+        width: 180px;
+        background: #fafafa;
+        font-weight: 600;
+    }
+
+    .icon-object {
+        border: 3px solid #2196F3;
+        border-radius: 50%;
+    }
+
+</style>

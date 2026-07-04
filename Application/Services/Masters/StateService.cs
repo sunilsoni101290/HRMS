@@ -25,6 +25,8 @@ namespace Application.Services.Masters
 
         public async Task<List<StateDto>> GetAllAsync()
         {
+            try
+            {
             return await _context.States
                 .Include(x => x.Country)
                 .Select(x => new StateDto
@@ -41,6 +43,11 @@ namespace Application.Services.Masters
                     ModifiedBy = x.ModifiedBy
                 })
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<StateDto>();
+            }
         }
 
         // ======================================================
@@ -49,6 +56,8 @@ namespace Application.Services.Masters
 
         public async Task<StateDto?> GetByIdAsync(string id)
         {
+            try
+            {
             return await _context.States
                 .Include(x => x.Country)
                 .Where(x => x.Id == id)
@@ -66,6 +75,11 @@ namespace Application.Services.Masters
                     ModifiedBy = x.ModifiedBy
                 })
                 .FirstOrDefaultAsync();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         // ======================================================
@@ -74,6 +88,8 @@ namespace Application.Services.Masters
 
         public async Task<StateDto> CreateAsync(StateDto dto)
         {
+            try
+            {
             // Duplicate Check
             var exists = await _context.States.AnyAsync(x =>
                 x.Name == dto.Name &&
@@ -101,6 +117,11 @@ namespace Application.Services.Masters
             dto.Id = entity.Id;
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         // ======================================================
@@ -109,6 +130,8 @@ namespace Application.Services.Masters
 
         public async Task<StateDto?> UpdateAsync(string id, StateDto dto)
         {
+            try
+            {
             var entity = await _context.States
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -127,6 +150,11 @@ namespace Application.Services.Masters
             await _context.SaveChangesAsync();
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         // ======================================================
@@ -135,6 +163,8 @@ namespace Application.Services.Masters
 
         public async Task<bool> DeleteAsync(string id)
         {
+            try
+            {
             var entity = await _context.States
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -146,6 +176,11 @@ namespace Application.Services.Masters
             await _context.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
     }
 }

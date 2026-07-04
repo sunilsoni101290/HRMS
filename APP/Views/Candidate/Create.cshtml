@@ -1,0 +1,140 @@
+@model CandidateDto
+
+@{
+    ViewData["Title"] = "Candidate";
+    bool isEdit = !string.IsNullOrEmpty(Model?.Id);
+}
+
+<form asp-action="@(isEdit ? "Edit" : "Create")" asp-controller="Candidate" asp-route-id="@Model?.Id"
+      method="post" enctype="multipart/form-data">
+
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="TenantId" type="hidden" />
+    <input asp-for="CreatedBy" type="hidden" />
+    <input asp-for="ResumeUrl" type="hidden" />
+
+    <div class="panel panel-flat">
+
+        <div class="panel-heading">
+            <h5 class="panel-title">
+                <i class="icon-user-plus position-left"></i>
+                @(isEdit ? "Edit Candidate" : "Add Candidate")
+            </h5>
+            <div class="heading-elements">
+                <a asp-action="Index" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
+            </div>
+        </div>
+
+        <div class="panel-body">
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-warning">@TempData["Error"]</div>
+            }
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <fieldset>
+                <legend class="text-semibold"><i class="icon-user position-left"></i> Profile</legend>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="Name"></label> <span class="text-danger">*</span>
+                            <input asp-for="Name" class="form-control" placeholder="Full name" />
+                            <span asp-validation-for="Name" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="Email"></label>
+                            <input asp-for="Email" class="form-control" placeholder="email@example.com" />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="Phone"></label>
+                            <input asp-for="Phone" class="form-control" placeholder="Phone" />
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="TotalExperience"></label>
+                            <input asp-for="TotalExperience" type="number" class="form-control" placeholder="Months of experience" />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="Source"></label>
+                            <input asp-for="Source" class="form-control" placeholder="LinkedIn, Referral, Portal..." />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="Status"></label>
+                            <select asp-for="Status" asp-items="ViewBag.StatusList" class="form-control"></select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label asp-for="Skills"></label>
+                            <textarea asp-for="Skills" class="form-control" rows="2" placeholder="e.g. C#, ASP.NET Core, SQL"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend class="text-semibold"><i class="icon-office position-left"></i> Current &amp; Expected</legend>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="CurrentCompany"></label>
+                            <input asp-for="CurrentCompany" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="CurrentSalary"></label>
+                            <input asp-for="CurrentSalary" type="number" step="0.01" class="form-control" placeholder="0.00" />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="ExpectedSalary"></label>
+                            <input asp-for="ExpectedSalary" type="number" step="0.01" class="form-control" placeholder="0.00" />
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Resume (PDF / Word)</label>
+                            <input type="file" name="resumeFile" class="form-control" accept=".pdf,.doc,.docx" />
+                            @if (!string.IsNullOrEmpty(Model?.ResumeUrl))
+                            {
+                                <span class="help-block">
+                                    Current: <a href="@Model.ResumeUrl" target="_blank">View resume</a>
+                                </span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+
+        <div class="panel-footer text-right">
+            <button type="reset" class="btn btn-default"><i class="icon-reset"></i> Reset</button>
+            <button type="submit" class="btn bg-primary"><i class="icon-floppy-disk"></i> @(isEdit ? "Update" : "Save")</button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    <partial name="_ValidationScriptsPartial" />
+}

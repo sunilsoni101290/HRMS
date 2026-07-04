@@ -6,39 +6,31 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
 {
-    [ApiController]
     [Route("api/[controller]")]
+    [ApiController]
     [Authorize]
     public class LeaveApplicationController : ControllerBase
     {
-        private readonly ILeaveApplicationService _service;
+        private readonly ILeaveApplicationService _leaveApplicationService;
 
-        public LeaveApplicationController(
-            ILeaveApplicationService service)
+        public LeaveApplicationController(ILeaveApplicationService leaveApplicationService)
         {
-            _service = service;
+            _leaveApplicationService = leaveApplicationService;
         }
 
-        // =====================================================
-        // GET ALL
-        // =====================================================
+        #region CRUD
 
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var data = await _service.GetAllAsync();
-
+            var data = await _leaveApplicationService.GetAllAsync();
             return Ok(data);
         }
-
-        // =====================================================
-        // GET BY ID
-        // =====================================================
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
-            var data = await _service.GetByIdAsync(id);
+            var data = await _leaveApplicationService.GetByIdAsync(id);
 
             if (data == null)
                 return NotFound();
@@ -46,206 +38,200 @@ namespace API.Controllers
             return Ok(data);
         }
 
-        // =====================================================
-        // GET BY EMPLOYEE
-        // =====================================================
-
-        [HttpGet("employee/{employeeId}")]
-        public async Task<IActionResult> GetByEmployee(string employeeId)
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] ApplyLeaveRequestDto request)
         {
-            var data = await _service.GetByEmployeeAsync(employeeId);
-
-            return Ok(data);
-        }
-
-        // =====================================================
-        // APPLY LEAVE
-        // =====================================================
-
-        [HttpPost("apply")]
-        public async Task<IActionResult> ApplyLeave(
-            [FromBody] LeaveApplicationDto dto)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var result = await _service.ApplyLeaveAsync(dto);
+            var result = await _leaveApplicationService.CreateAsync(request);
 
             return Ok(result);
         }
 
-        // =====================================================
-        // APPROVE LEAVE
-        // =====================================================
-
-        [HttpPost("approve")]
-        public async Task<IActionResult> ApproveLeave(
-            string leaveApplicationId,
-            string approvedBy)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(string id, [FromBody] ApplyLeaveRequestDto request)
         {
-            var result = await _service
-                .ApproveLeaveAsync(
-                    leaveApplicationId,
-                    approvedBy);
+            var result =
+                await _leaveApplicationService.UpdateAsync(
+                    id,
+                    request);
 
-            return Ok(new
-            {
-                Success = result,
-                Message = "Leave approved successfully."
-            });
+            return Ok(result);
         }
-
-        // =====================================================
-        // REJECT LEAVE
-        // =====================================================
-
-        [HttpPost("reject")]
-        public async Task<IActionResult> RejectLeave(
-            string leaveApplicationId,
-            string approvedBy,
-            string rejectionReason)
-        {
-            var result = await _service
-                .RejectLeaveAsync(
-                    leaveApplicationId,
-                    approvedBy,
-                    rejectionReason);
-
-            return Ok(new
-            {
-                Success = result,
-                Message = "Leave rejected successfully."
-            });
-        }
-
-        // =====================================================
-        // CANCEL LEAVE
-        // =====================================================
-
-        [HttpPost("cancel")]
-        public async Task<IActionResult> CancelLeave(
-            string leaveApplicationId)
-        {
-            var result = await _service
-                .CancelLeaveAsync(
-                    leaveApplicationId);
-
-            return Ok(new
-            {
-                Success = result,
-                Message = "Leave cancelled successfully."
-            });
-        }
-
-        // =====================================================
-        // DELETE
-        // =====================================================
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
-            var result = await _service.DeleteAsync(id);
+            var result =
+                await _leaveApplicationService.DeleteAsync(id);
 
-            if (!result)
-                return NotFound();
-
-            return Ok(new
-            {
-                Success = true,
-                Message = "Leave application deleted successfully."
-            });
+            return Ok(result);
         }
 
-        // =====================================================
-        // PENDING APPROVALS
-        // =====================================================
+        #endregion
 
-        [HttpGet("pending")]
-        public async Task<IActionResult> GetPendingApprovals()
+        #region Workflow
+
+        [HttpPost("apply")]
+        public async Task<IActionResult> ApplyLeave([FromBody] ApplyLeaveRequestDto request)
         {
-            var data = await _service.GetPendingApprovalsAsync();
+            var result =
+                await _leaveApplicationService
+                    .ApplyLeaveAsync(request);
+
+            return Ok(result);
+        }
+
+        [HttpPost("approve")]
+        public async Task<IActionResult> ApproveLeave([FromBody] ApproveLeaveRequestDto request)
+        {
+            var result =
+                await _leaveApplicationService
+                    .ApproveLeaveAsync(request);
+
+            return Ok(result);
+        }
+
+        [HttpPost("reject")]
+        public async Task<IActionResult> RejectLeave([FromBody] RejectLeaveRequestDto request)
+        {
+            var result =
+                await _leaveApplicationService
+                    .RejectLeaveAsync(request);
+
+            return Ok(result);
+        }
+
+        [HttpPost("cancel")]
+        public async Task<IActionResult> CancelLeave([FromBody] CancelLeaveRequestDto request)
+        {
+            var result =
+                await _leaveApplicationService
+                    .CancelLeaveAsync(request);
+
+            return Ok(result);
+        }
+
+        #endregion
+
+        #region Queries
+
+        [HttpGet("employee/{employeeId}")]
+        public async Task<IActionResult> GetEmployeeLeaves(string employeeId)
+        {
+            var data =
+                await _leaveApplicationService
+                    .GetEmployeeLeavesAsync(employeeId);
 
             return Ok(data);
         }
 
-        // =====================================================
-        // APPROVED LEAVES
-        // =====================================================
+        [HttpGet("pending")]
+        public async Task<IActionResult> GetPendingLeaves()
+        {
+            var data =
+                await _leaveApplicationService
+                    .GetPendingLeavesAsync();
+
+            return Ok(data);
+        }
 
         [HttpGet("approved")]
         public async Task<IActionResult> GetApprovedLeaves()
         {
-            var data = await _service.GetApprovedLeavesAsync();
+            var data =
+                await _leaveApplicationService
+                    .GetApprovedLeavesAsync();
 
             return Ok(data);
         }
-
-        // =====================================================
-        // REJECTED LEAVES
-        // =====================================================
 
         [HttpGet("rejected")]
         public async Task<IActionResult> GetRejectedLeaves()
         {
-            var data = await _service.GetRejectedLeavesAsync();
+            var data =
+                await _leaveApplicationService
+                    .GetRejectedLeavesAsync();
 
             return Ok(data);
         }
 
-        // =====================================================
-        // DATE RANGE REPORT
-        // =====================================================
-
-        [HttpGet("date-range")]
-        public async Task<IActionResult> GetByDateRange(
-            DateTime fromDate,
-            DateTime toDate)
+        [HttpGet("cancelled")]
+        public async Task<IActionResult> GetCancelledLeaves()
         {
-            var data = await _service
-                .GetByDateRangeAsync(
-                    fromDate,
-                    toDate);
+            var data =
+                await _leaveApplicationService
+                    .GetCancelledLeavesAsync();
 
             return Ok(data);
         }
 
-        // =====================================================
-        // PENDING COUNT
-        // =====================================================
+        [HttpPost("filter")]
+        public async Task<IActionResult> Filter([FromBody] LeaveApplicationFilterRequestDto request)
+        {
+            var data =
+                await _leaveApplicationService
+                    .GetFilteredAsync(request);
+
+            return Ok(data);
+        }
+
+        #endregion
+
+        #region Dashboard Counts
 
         [HttpGet("count/pending")]
         public async Task<IActionResult> GetPendingCount()
         {
             var count =
-                await _service.GetPendingLeaveCountAsync();
+                await _leaveApplicationService
+                    .GetPendingLeaveCountAsync();
 
             return Ok(count);
         }
-
-        // =====================================================
-        // APPROVED COUNT
-        // =====================================================
 
         [HttpGet("count/approved")]
         public async Task<IActionResult> GetApprovedCount()
         {
             var count =
-                await _service.GetApprovedLeaveCountAsync();
+                await _leaveApplicationService
+                    .GetApprovedLeaveCountAsync();
 
             return Ok(count);
         }
-
-        // =====================================================
-        // TODAY LEAVE COUNT
-        // =====================================================
 
         [HttpGet("count/today")]
         public async Task<IActionResult> GetTodayLeaveCount()
         {
             var count =
-                await _service.GetTodayLeaveCountAsync();
+                await _leaveApplicationService
+                    .GetTodayLeaveCountAsync();
 
             return Ok(count);
         }
+
+        #endregion
+
+        #region Approval History Details
+        [HttpGet("approval-history")]
+        public async Task<IActionResult>GetAllApprovalHistory()
+        {
+            return Ok(
+                await _leaveApplicationService
+                    .GetAllApprovalHistoryAsync());
+        }
+
+        [HttpGet("approval-history/{id}")]
+        public async Task<IActionResult>GetApprovalHistoryById(string id)
+        {
+            return Ok(
+                await _leaveApplicationService
+                    .GetApprovalHistoryByIdAsync(id));
+        }
+
+        [HttpGet("{leaveApplicationId}/approval-history")]
+        public async Task<IActionResult>GetApprovalHistory(string leaveApplicationId)
+        {
+            return Ok(await _leaveApplicationService.GetApprovalHistoryAsync(leaveApplicationId));
+        }
+        #endregion
     }
 }

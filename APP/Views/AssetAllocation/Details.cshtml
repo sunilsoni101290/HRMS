@@ -1,0 +1,51 @@
+@model AssetAllocationDto
+
+@{
+    ViewData["Title"] = "Allocation Details";
+}
+
+<div class="panel panel-flat">
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-users position-left"></i> Allocation Details
+        </h5>
+        <div class="heading-elements">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary btn-xs">
+                <i class="icon-pencil7"></i> Edit
+            </a>
+            <a asp-action="Index" class="btn btn-default btn-xs">
+                <i class="icon-arrow-left13"></i> Back
+            </a>
+        </div>
+    </div>
+    <div class="panel-body">
+        <table class="table table-striped">
+            <tr><th style="width:220px;">Asset</th><td><strong>@Model.AssetName</strong></td></tr>
+            <tr><th>Employee</th><td>@Model.EmployeeName</td></tr>
+            <tr><th>Allocated On</th><td>@Model.AllocatedOn.ToString("dd MMM yyyy")</td></tr>
+            <tr><th>Returned On</th><td>@(Model.ReturnedOn?.ToString("dd MMM yyyy") ?? "-")</td></tr>
+            <tr>
+                <th>Status</th>
+                <td>
+                    <span class="label @(Model.ReturnedOn == null ? "bg-primary" : "bg-success")">
+                        @Model.AllocationStatusText
+                    </span>
+                </td>
+            </tr>
+            <tr><th>Condition On Issue</th><td>@(Model.ConditionOnIssue ?? "-")</td></tr>
+            <tr><th>Condition On Return</th><td>@(Model.ConditionOnReturn ?? "-")</td></tr>
+            <tr><th>Remarks</th><td>@(Model.Remarks ?? "-")</td></tr>
+        </table>
+    </div>
+    @if (Model.ReturnedOn == null)
+    {
+        <div class="panel-footer text-right">
+            <form asp-action="Return" asp-route-id="@Model.Id" method="post"
+                  onsubmit="return confirm('Mark this asset as returned?');">
+                <button type="submit" class="btn btn-warning">
+                    <i class="icon-undo2"></i> Mark as Returned
+                </button>
+            </form>
+        </div>
+    }
+</div>
