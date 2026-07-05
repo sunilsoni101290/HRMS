@@ -27,45 +27,45 @@ namespace Application.Services.Auth
             _config= config;
         }
 
-        //public async Task<AuthResponse> RegisterAsync(RegisterDto dto)
-        //{
-        //    if (_db.Users.Any(x => x.Username == dto.Username))
-        //        throw new Exception("User already exists");
+        public async Task<AuthResponse> RegisterAsync(RegisterDto dto)
+        {
+            if (_db.Users.Any(x => x.Username == dto.Username))
+                throw new Exception("User already exists");
 
-        //    var user = new User
-        //    {
-        //        Id = IDManager.GetNewId(new User()),
-        //        Username = dto.Username,
-        //        Email = dto.Email,
-        //        TenantId = dto.TenantId,
-        //        CompanyId = dto.CompanyId,
-        //        PhoneNumber = dto.PhoneNumber,
-        //        BranchId = dto.BranchId,
-        //        EmployeeId = dto.EmployeeId,
-        //        PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-        //        CreatedBy = string.IsNullOrEmpty(dto.CreatedBy) ? "System" : dto.CreatedBy
-        //    };
+            var user = new User
+            {
+                Id = IDManager.GetNewId(new User()),
+                Username = dto.Username,
+                Email = dto.Email,
+                TenantId = dto.TenantId,
+                CompanyId = dto.CompanyId,
+                PhoneNumber = dto.PhoneNumber,
+                BranchId = dto.BranchId,
+                EmployeeId = dto.EmployeeId,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+                CreatedBy = string.IsNullOrEmpty(dto.CreatedBy) ? "System" : dto.CreatedBy
+            };
 
-        //    _db.Users.Add(user);
+            _db.Users.Add(user);
 
-        //    // Default Role Assign
-        //    var role =  _db.Roles.FirstOrDefault(x => x.Code == ConstantHelper.EMPLOYEE);
+            // Default Role Assign
+            var role = _db.Roles.FirstOrDefault(x => x.Code == ConstantHelper.EMPLOYEE);
 
-        //    if (role != null)
-        //    {
-        //        _db.UserRoles.Add(new UserRole
-        //        {
-        //            Id = IDManager.GetNewId(new UserRole()),
-        //            UserId = user.Id,
-        //            RoleId = string.IsNullOrEmpty(dto.RoleId) ? role.Id :dto.RoleId,
-        //            CreatedBy = string.IsNullOrEmpty(dto.CreatedBy) ? "System" : dto.CreatedBy
-        //        });
-        //    }
+            if (role != null)
+            {
+                _db.UserRoles.Add(new UserRole
+                {
+                    Id = IDManager.GetNewId(new UserRole()),
+                    UserId = user.Id,
+                    RoleId = string.IsNullOrEmpty(dto.RoleId) ? role.Id : dto.RoleId,
+                    CreatedBy = string.IsNullOrEmpty(dto.CreatedBy) ? "System" : dto.CreatedBy
+                });
+            }
 
-        //    await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync();
 
-        //    return await GenerateAuthResponse(user);
-        //}
+            return await GenerateAuthResponse(user);
+        }
 
 
         // ==============================
@@ -74,6 +74,8 @@ namespace Application.Services.Auth
 
         public async Task<AuthResponse> LoginAsync(LoginDto dto)
         {
+            try
+            {
             // Get User
             var user = await _db.Users
                 .Include(x => x.Employee)
@@ -164,6 +166,11 @@ namespace Application.Services.Auth
 
             // Generate Token Response
             return await GenerateAuthResponse(user);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         // ==============================
@@ -171,6 +178,8 @@ namespace Application.Services.Auth
         // ==============================
         public async Task<AuthResponse> RefreshTokenAsync(string refreshToken)
         {
+            try
+            {
             var token = _db.RefreshTokens
                 .Include(x => x.User)
                 .FirstOrDefault(x => x.Token == refreshToken && !x.IsRevoked);
@@ -179,6 +188,11 @@ namespace Application.Services.Auth
                 throw new Exception("Invalid refresh token");
 
             return await GenerateAuthResponse(token.User, refreshToken);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         // ==============================
@@ -186,6 +200,8 @@ namespace Application.Services.Auth
         // ==============================
         public async Task<bool> LogoutAsync(string refreshToken)
         {
+            try
+            {
             var token = _db.RefreshTokens
                 .FirstOrDefault(x => x.Token == refreshToken);
 
@@ -196,14 +212,17 @@ namespace Application.Services.Auth
             await _db.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         // ==============================
         // 🔥 COMMON METHOD
         // ==============================
-        private async Task<AuthResponse> GenerateAuthResponse(
-    User user,
-    string existingRefreshToken = null)
+        private async Task<AuthResponse> GenerateAuthResponse(User user,string existingRefreshToken = null)
         {
             // ================================
             // ROLES
@@ -283,6 +302,10 @@ namespace Application.Services.Auth
                     ? await GetDesignationName(user.EmployeeId)
                     : "UNKNOWN",
 
+                CompanyId = user.CompanyId,
+                CompanyName = user.Company.Name,
+                BranchId = !string.IsNullOrEmpty(user.BranchId)?user.BranchId:"",
+
                 RoleName = roleName,
 
                 Email = user.Email
@@ -314,6 +337,8 @@ namespace Application.Services.Auth
 
         public async Task<List<UserListDto>> GetAllAsync()
         {
+            try
+            {
             return await _db.Users
                 .Include(x=>x.Employee)
                 .ThenInclude(x => x.Designation)
@@ -368,10 +393,17 @@ namespace Application.Services.Auth
                 })
                 .OrderByDescending(x => x.CreatedDate)
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<UserListDto>();
+            }
         }
 
         public async Task<UserListDto?> GetByIdAsync(string id)
         {
+            try
+            {
             return await _db.Users
                 .AsNoTracking()
 
@@ -447,10 +479,17 @@ namespace Application.Services.Auth
                 })
 
                 .FirstOrDefaultAsync();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<UserListDto?> GetUserDetailsByEmpIdAsync(string empId)
         {
+            try
+            {
             return await _db.Users
                 .AsNoTracking()
                 .Include(x => x.UserRoles)
@@ -475,24 +514,45 @@ namespace Application.Services.Auth
                 })
 
                 .FirstOrDefaultAsync();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<User> GetUserDetailByIdAsync(string id)
         {
+            try
+            {
             return await _db.Users.AsNoTracking()
             .Include(x => x.UserRoles)
             .FirstOrDefaultAsync(x => x.Id == id);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<User> GettUserDetailByUsernameAsync(string username)
         {
+            try
+            {
             return await _db.Users
                 .Include(x => x.UserRoles)
                 .FirstOrDefaultAsync(x => x.Username == username);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<bool> UpdateUserAsync(User user)
         {
+            try
+            {
             var existingUser = await _db.Users
             .FirstOrDefaultAsync(x => x.Id == user.Id);
 
@@ -516,10 +576,17 @@ namespace Application.Services.Auth
             await _db.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         public async Task<bool> ChangePasswordAsync(string userId, string oldPassword, string newPassword)
         {
+            try
+            {
             var user = await _db.Users
             .FirstOrDefaultAsync(x => x.Id == userId);
 
@@ -547,6 +614,11 @@ namespace Application.Services.Auth
             await _db.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
     }
 }

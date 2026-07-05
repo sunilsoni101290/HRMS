@@ -21,6 +21,8 @@ namespace Application.Services.Leaves
 
         public async Task<List<LeaveTypeDto>> GetAllAsync()
         {
+            try
+            {
             return await _context.LeaveTypes
                 .Select(x => new LeaveTypeDto
                 {
@@ -37,10 +39,17 @@ namespace Application.Services.Leaves
                     ModifiedBy = x.ModifiedBy
                 })
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<LeaveTypeDto>();
+            }
         }
 
         public async Task<LeaveTypeDto?> GetByIdAsync(string id)
         {
+            try
+            {
             return await _context.LeaveTypes
                 .Where(x => x.Id == id)
                 .Select(x => new LeaveTypeDto
@@ -58,10 +67,17 @@ namespace Application.Services.Leaves
                     ModifiedBy = x.ModifiedBy
                 })
                 .FirstOrDefaultAsync();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<LeaveTypeDto> CreateAsync(LeaveTypeDto dto)
         {
+            try
+            {
             var exists = await _context.LeaveTypes
                 .AnyAsync(x => x.Name == dto.Name);
 
@@ -70,14 +86,14 @@ namespace Application.Services.Leaves
 
             var entity = new LeaveType
             {
-                Id = IDManager.GetNewId(new LeaveBalance()),
+                Id = IDManager.GetNewId(new LeaveType()),
                 Name = dto.Name,
                 MaxDaysPerYear = dto.MaxDaysPerYear,
                 IsPaid = dto.IsPaid,
                 AllowCarryForward = dto.AllowCarryForward,
                 MaxCarryForwardDays = dto.MaxCarryForwardDays,
                 AllowHalfDay = dto.AllowHalfDay,
-
+                TenantId=dto.TenantId,
                 CreatedBy = dto.CreatedBy,
                 CreatedOn = DateTime.UtcNow
             };
@@ -89,10 +105,17 @@ namespace Application.Services.Leaves
             dto.Id = entity.Id;
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<LeaveTypeDto?> UpdateAsync(string id, LeaveTypeDto dto)
         {
+            try
+            {
             var entity = await _context.LeaveTypes
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -112,10 +135,17 @@ namespace Application.Services.Leaves
             await _context.SaveChangesAsync();
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<bool> DeleteAsync(string id)
         {
+            try
+            {
             var entity = await _context.LeaveTypes
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -127,6 +157,11 @@ namespace Application.Services.Leaves
             await _context.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
     }
 }

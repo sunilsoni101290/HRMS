@@ -25,6 +25,12 @@ namespace Domain.Enums
             Female=2,
             Other=3
         }
+        public enum BankAccountType
+        {
+            Savings = 1,
+            Current = 2,
+            Salary = 3
+        }
         public enum MaritalStatus
         {
             Married=1,
@@ -61,8 +67,16 @@ namespace Domain.Enums
             General = 1,
             Policy = 2,
             Holiday = 3,
-            Urgent = 4
+            Urgent = 4,
+            Achievement= 5,
+            Important=6,
         } 
+
+        public enum AnnouncementPriority
+        {
+            High=1, 
+            Medium = 2,
+        }
         public enum EventType
         {
             Meeting = 1,
@@ -376,6 +390,139 @@ namespace Domain.Enums
 
             [Display(Name = "Other")]
             Other = 30
+        }
+
+        public enum LeaveTransactionType
+        {
+            Allocate = 1,
+            Credit = 2,
+            Deduct = 3,
+            CarryForward = 4
+        }
+
+        public enum Nationality
+        {
+            [Display(Name = "Indian")]
+            Indian = 1,
+
+            [Display(Name = "American")]
+            American = 2,
+
+            [Display(Name = "British")]
+            British = 3,
+
+            [Display(Name = "Canadian")]
+            Canadian = 4,
+
+            [Display(Name = "Australian")]
+            Australian = 5,
+
+            [Display(Name = "German")]
+            German = 6,
+
+            [Display(Name = "French")]
+            French = 7,
+
+            [Display(Name = "Japanese")]
+            Japanese = 8,
+
+            [Display(Name = "Chinese")]
+            Chinese = 9,
+
+            [Display(Name = "Singaporean")]
+            Singaporean = 10,
+
+            [Display(Name = "UAE")]
+            UAE = 11,
+
+            [Display(Name = "Saudi Arabian")]
+            SaudiArabian = 12,
+
+            [Display(Name = "Nepalese")]
+            Nepalese = 13,
+
+            [Display(Name = "Bangladeshi")]
+            Bangladeshi = 14,
+
+            [Display(Name = "Sri Lankan")]
+            SriLankan = 15,
+
+            [Display(Name = "Pakistani")]
+            Pakistani = 16,
+
+            [Display(Name = "Other")]
+            Other = 99
+        }
+
+        public enum PassportStatus
+        {
+            [Display(Name = "Not Available")]
+            NotAvailable = 0,
+
+            [Display(Name = "Applied")]
+            Applied = 1,
+
+            [Display(Name = "Active")]
+            Active = 2,
+
+            [Display(Name = "Expired")]
+            Expired = 3,
+
+            [Display(Name = "Renewal in Progress")]
+            RenewalInProgress = 4,
+
+            [Display(Name = "Cancelled")]
+            Cancelled = 5,
+
+            [Display(Name = "Lost")]
+            Lost = 6,
+
+            [Display(Name = "Damaged")]
+            Damaged = 7,
+
+            [Display(Name = "Surrendered")]
+            Surrendered = 8
+        }
+
+        public enum EmployeeDocumentType
+        {
+            Aadhaar = 1,
+            PAN = 2,
+            Passport = 3,
+            DrivingLicense = 4,
+            VoterId = 5,
+
+            Resume = 6,
+            ProfilePhoto = 7,
+            Signature = 8,
+
+            OfferLetter = 9,
+            AppointmentLetter = 10,
+            JoiningLetter = 11,
+            RelievingLetter = 12,
+            ExperienceLetter = 13,
+
+            DegreeCertificate = 14,
+            DiplomaCertificate = 15,
+            Marksheet = 16,
+
+            SalarySlip = 17,
+            BankPassbook = 18,
+            CancelledCheque = 19,
+
+            BirthCertificate = 20,
+            MarriageCertificate = 21,
+
+            MedicalCertificate = 22,
+            FitnessCertificate = 23,
+
+            PoliceVerification = 24,
+            BackgroundVerification = 25,
+
+            PFDocument = 26,
+            ESICDocument = 27,
+
+            Other = 99
         }
     }
 

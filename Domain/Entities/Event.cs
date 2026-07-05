@@ -44,7 +44,7 @@ namespace Domain.Entities
 
         // Multi-Tenant
         public string CompanyId { get; set; }
-        public string BranchId { get; set; }
+        public string? BranchId { get; set; }
         public ICollection<EventParticipant> Participants { get; set; }
         public override string GetSequencePrefix() => "EVT";
     }

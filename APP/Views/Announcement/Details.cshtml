@@ -1,0 +1,33 @@
+@model APP.Models.DTOs.AnnouncementDto
+
+@{
+    ViewData["Title"] = "Announcement";
+}
+
+<div class="panel panel-flat">
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-bullhorn position-left"></i> @Model.Title
+            <span class="label bg-primary" style="margin-left:8px;">@Model.TypeText</span>
+            <span class="label @(Model.Priority == 1 ? "bg-danger" : "bg-warning")">@Model.PriorityText</span>
+        </h5>
+        <div class="heading-elements">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary btn-xs"><i class="icon-pencil7"></i> Edit</a>
+            <a asp-action="Index" class="btn btn-default btn-xs"><i class="icon-arrow-left13"></i> Back</a>
+        </div>
+    </div>
+    <div class="panel-body">
+        <p class="text-muted">
+            Published @Model.PublishDate.ToString("dd MMM yyyy")
+            @if (Model.ExpiryDate.HasValue) { <text> · Expires @Model.ExpiryDate.Value.ToString("dd MMM yyyy")</text> }
+            · Audience: @(Model.IsForAll ? "Everyone" : ((Model.DepartmentName ?? "") + " " + (Model.RoleName ?? "")).Trim())
+        </p>
+        <hr />
+        <div style="white-space:pre-wrap;">@Model.Message</div>
+        @if (!string.IsNullOrEmpty(Model.AttachmentUrl))
+        {
+            <hr />
+            <a href="@Model.AttachmentUrl" target="_blank" class="btn btn-default btn-sm"><i class="icon-paperclip"></i> View Attachment</a>
+        }
+    </div>
+</div>

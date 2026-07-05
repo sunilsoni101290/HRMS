@@ -21,6 +21,8 @@ namespace Application.Services.CompanyService
 
         public async Task<List<LocationDto>> GetAllAsync()
         {
+            try
+            {
             var data = await _context.Locations
             .AsNoTracking()
             .Join(
@@ -55,10 +57,17 @@ namespace Application.Services.CompanyService
             .ToListAsync();
 
             return data;
+            }
+            catch (Exception)
+            {
+                return new List<LocationDto>();
+            }
         }
 
         public async Task<List<LocationDto>> GetByBranchAsync(string branchId)
         {
+            try
+            {
             return await _context.Locations
                 .Include(x => x.Branch)
                 .ThenInclude(c => c.Company)
@@ -76,10 +85,17 @@ namespace Application.Services.CompanyService
                     IsDefault = x.IsDefault
                 })
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<LocationDto>();
+            }
         }
 
         public async Task<LocationDto?> GetByIdAsync(string id)
         {
+            try
+            {
             return await _context.Locations
                 .Where(x => x.Id == id)
                 .Select(x => new LocationDto
@@ -99,10 +115,17 @@ namespace Application.Services.CompanyService
                     IsDefault = x.IsDefault
                 })
                 .FirstOrDefaultAsync();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<LocationDto> CreateAsync(LocationDto dto)
         {
+            try
+            {
             if (dto.IsDefault)
             {
                 var defaults = await _context.Locations
@@ -137,10 +160,17 @@ namespace Application.Services.CompanyService
             dto.Id = entity.Id;
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<LocationDto?> UpdateAsync(string id, LocationDto dto)
         {
+            try
+            {
             var entity = await _context.Locations
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -159,10 +189,17 @@ namespace Application.Services.CompanyService
             await _context.SaveChangesAsync();
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<bool> DeleteAsync(string id)
         {
+            try
+            {
             var entity = await _context.Locations
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -174,6 +211,11 @@ namespace Application.Services.CompanyService
             await _context.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
     }
 }

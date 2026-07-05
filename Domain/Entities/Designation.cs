@@ -38,8 +38,8 @@ namespace Domain.Entities
         public int Level { get; set; }
 
         // Salary Range
-        public decimal? MinSalary { get; set; }
-        public decimal? MaxSalary { get; set; }
+        public decimal MinSalary { get; set; } = 0.00m;
+        public decimal MaxSalary { get; set; } = 0.00m;
         public override string GetSequencePrefix() => "DSG";
     }
 

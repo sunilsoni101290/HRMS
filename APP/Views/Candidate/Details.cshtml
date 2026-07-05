@@ -1,0 +1,44 @@
+@model CandidateDto
+
+@{
+    ViewData["Title"] = "Candidate Details";
+
+    string StatusLabel(int s) => s switch
+    {
+        1 => "bg-info",
+        2 => "bg-primary",
+        3 => "bg-warning",
+        4 => "bg-success",
+        5 => "bg-danger",
+        _ => "bg-grey"
+    };
+}
+
+<div class="panel panel-flat">
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-user position-left"></i> @Model.Name
+            <span class="label @StatusLabel(Model.Status)" style="margin-left:8px;">@Model.StatusText</span>
+        </h5>
+        <div class="heading-elements">
+            @if (!string.IsNullOrEmpty(Model.ResumeUrl))
+            {
+                <a href="@Model.ResumeUrl" target="_blank" class="btn btn-info btn-xs"><i class="icon-file-pdf"></i> Resume</a>
+            }
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary btn-xs"><i class="icon-pencil7"></i> Edit</a>
+            <a asp-action="Index" class="btn btn-default btn-xs"><i class="icon-arrow-left13"></i> Back</a>
+        </div>
+    </div>
+    <div class="panel-body">
+        <table class="table table-striped">
+            <tr><th style="width:200px;">Email</th><td>@(Model.Email ?? "-")</td></tr>
+            <tr><th>Phone</th><td>@(Model.Phone ?? "-")</td></tr>
+            <tr><th>Experience</th><td>@(Model.TotalExperience.HasValue ? (Model.TotalExperience.Value / 12.0).ToString("0.#") + " years" : "-")</td></tr>
+            <tr><th>Skills</th><td>@(Model.Skills ?? "-")</td></tr>
+            <tr><th>Current Company</th><td>@(Model.CurrentCompany ?? "-")</td></tr>
+            <tr><th>Current Salary</th><td>@(Model.CurrentSalary.HasValue ? "₹ " + Model.CurrentSalary.Value.ToString("N2") : "-")</td></tr>
+            <tr><th>Expected Salary</th><td>@(Model.ExpectedSalary.HasValue ? "₹ " + Model.ExpectedSalary.Value.ToString("N2") : "-")</td></tr>
+            <tr><th>Source</th><td>@(Model.Source ?? "-")</td></tr>
+        </table>
+    </div>
+</div>

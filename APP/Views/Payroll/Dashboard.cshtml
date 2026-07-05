@@ -1,0 +1,185 @@
+@model PayrollDashboardDto
+
+@{
+    ViewData["Title"] = "Payroll Dashboard";
+    var trendMonths = string.Join(",", Model.MonthlyTrend.Select(x => "'" + (x.MonthName ?? "").Substring(0, Math.Min(3, (x.MonthName ?? "").Length)) + "'"));
+    var trendValues = string.Join(",", Model.MonthlyTrend.Select(x => x.TotalNet.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+}
+
+<!-- Filter -->
+<div class="panel panel-flat">
+    <div class="panel-body">
+        <form asp-action="Dashboard" method="get" class="form-inline">
+            <div class="form-group">
+                <label>Year</label>
+                <select name="year" class="form-control" style="margin:0 8px;">
+                    @for (int y = DateTime.UtcNow.Year; y >= DateTime.UtcNow.Year - 5; y--)
+                    {
+                        if (y == Model.Year) { <option value="@y" selected>@y</option> }
+                        else { <option value="@y">@y</option> }
+                    }
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Month</label>
+                <select name="month" class="form-control" style="margin:0 8px;">
+                    @for (int m = 1; m <= 12; m++)
+                    {
+                        var name = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m);
+                        if (m == Model.Month) { <option value="@m" selected>@name</option> }
+                        else { <option value="@m">@name</option> }
+                    }
+                </select>
+            </div>
+            <button type="submit" class="btn bg-primary"><i class="icon-search4"></i> Apply</button>
+            <a asp-action="Report" asp-route-year="@Model.Year" asp-route-month="@Model.Month" class="btn btn-default">
+                <i class="icon-file-text2"></i> Register Report
+            </a>
+        </form>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row">
+    <div class="col-lg-3 col-sm-6">
+        <div class="panel bg-teal-400">
+            <div class="panel-body">
+                <h3 class="no-margin">₹ @Model.TotalNet.ToString("N0")</h3>
+                Net Payout — @Model.MonthName @Model.Year
+                <div class="pull-right"><i class="icon-cash3" style="font-size:34px;opacity:.75;"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-sm-6">
+        <div class="panel bg-blue-400">
+            <div class="panel-body">
+                <h3 class="no-margin">₹ @Model.TotalGross.ToString("N0")</h3>
+                Gross Earnings
+                <div class="pull-right"><i class="icon-coins" style="font-size:34px;opacity:.75;"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-sm-6">
+        <div class="panel bg-pink-400">
+            <div class="panel-body">
+                <h3 class="no-margin">₹ @Model.TotalDeductions.ToString("N0")</h3>
+                Total Deductions
+                <div class="pull-right"><i class="icon-minus3" style="font-size:34px;opacity:.75;"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-sm-6">
+        <div class="panel bg-indigo-400">
+            <div class="panel-body">
+                <h3 class="no-margin">@Model.EmployeesPaid</h3>
+                Payrolls (Avg ₹ @Model.AverageNet.ToString("N0"))
+                <div class="pull-right"><i class="icon-users" style="font-size:34px;opacity:.75;"></i></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Trend chart -->
+    <div class="col-md-8">
+        <div class="panel panel-flat">
+            <div class="panel-heading">
+                <h6 class="panel-title"><i class="icon-stats-bars position-left"></i> Monthly Net Payout — @Model.Year</h6>
+            </div>
+            <div class="panel-body">
+                <div id="trendChart" style="height:300px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status breakdown -->
+    <div class="col-md-4">
+        <div class="panel panel-flat">
+            <div class="panel-heading">
+                <h6 class="panel-title"><i class="icon-pie-chart3 position-left"></i> Status — @Model.MonthName</h6>
+            </div>
+            <div class="panel-body">
+                @{
+                    int totalStatus = Model.DraftCount + Model.ProcessedCount + Model.PaidCount;
+                    int Pct(int v) => totalStatus > 0 ? (int)Math.Round(v * 100.0 / totalStatus) : 0;
+                }
+                <div style="margin-bottom:15px;">
+                    <span>Draft</span> <span class="pull-right">@Model.DraftCount</span>
+                    <div class="progress" style="height:8px;"><div class="progress-bar bg-grey" style="width:@Pct(Model.DraftCount)%"></div></div>
+                </div>
+                <div style="margin-bottom:15px;">
+                    <span>Processed</span> <span class="pull-right">@Model.ProcessedCount</span>
+                    <div class="progress" style="height:8px;"><div class="progress-bar bg-blue" style="width:@Pct(Model.ProcessedCount)%"></div></div>
+                </div>
+                <div style="margin-bottom:15px;">
+                    <span>Paid</span> <span class="pull-right">@Model.PaidCount</span>
+                    <div class="progress" style="height:8px;"><div class="progress-bar bg-success" style="width:@Pct(Model.PaidCount)%"></div></div>
+                </div>
+
+                <hr />
+                <div class="text-muted">
+                    <i class="icon-list-numbered"></i> @Model.SalaryStructureCount salary structures &nbsp;·&nbsp;
+                    <i class="icon-calculator"></i> @Model.SalaryComponentCount components
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top earners -->
+<div class="panel panel-flat">
+    <div class="panel-heading">
+        <h6 class="panel-title"><i class="icon-trophy2 position-left"></i> Top Earners — @Model.MonthName @Model.Year</h6>
+    </div>
+    <table class="table table-striped">
+        <thead>
+            <tr><th width="60">#</th><th>Employee</th><th>Code</th><th class="text-right">Net Salary</th></tr>
+        </thead>
+        <tbody>
+            @if (Model.TopEarners != null && Model.TopEarners.Any())
+            {
+                int rank = 1;
+                foreach (var e in Model.TopEarners)
+                {
+                    <tr>
+                        <td><span class="label bg-primary">@rank</span></td>
+                        <td><strong>@e.EmployeeName</strong></td>
+                        <td>@e.EmployeeCode</td>
+                        <td class="text-right">₹ @e.NetSalary.ToString("N2")</td>
+                    </tr>
+                    rank++;
+                }
+            }
+            else
+            {
+                <tr><td colspan="4" class="text-center text-muted" style="padding:20px;">No payroll data for this month.</td></tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script src="~/global_assets/js/plugins/visualization/echarts/echarts.min.js"></script>
+    <script>
+        $(function () {
+            var el = document.getElementById('trendChart');
+            if (el && typeof echarts !== 'undefined') {
+                var chart = echarts.init(el);
+                chart.setOption({
+                    tooltip: { trigger: 'axis' },
+                    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+                    xAxis: { type: 'category', data: [@Html.Raw(trendMonths)] },
+                    yAxis: { type: 'value' },
+                    series: [{
+                        name: 'Net Payout',
+                        type: 'bar',
+                        barWidth: '55%',
+                        itemStyle: { color: '#26A69A' },
+                        data: [@Html.Raw(trendValues)]
+                    }]
+                });
+                window.addEventListener('resize', function () { chart.resize(); });
+            }
+        });
+    </script>
+}

@@ -55,6 +55,26 @@ namespace APP.Services.Implementations
 
             return await HandleResponse<TResponse>(response);
         }
+        public async Task<TResponse> GetAsync<TRequest, TResponse>(string url,TRequest data)
+        {
+            AddAuthorizationHeader();
+
+            if (data != null)
+            {
+                var queryString = string.Join("&",
+                    typeof(TRequest)
+                        .GetProperties()
+                        .Where(p => p.GetValue(data) != null)
+                        .Select(p =>
+                            $"{p.Name}={Uri.EscapeDataString(p.GetValue(data)?.ToString() ?? string.Empty)}"));
+
+                url = $"{url}?{queryString}";
+            }
+
+            var response = await _httpClient.GetAsync(url);
+
+            return await HandleResponse<TResponse>(response);
+        }
         #endregion
 
         #region POST
@@ -87,45 +107,45 @@ namespace APP.Services.Implementations
         }
         
         public async Task<T> PostAsync<T>(string url,object data)
-           {
-               AddAuthorizationHeader();
+        {
+            AddAuthorizationHeader();
 
-               var jsonData =
-                   JsonConvert.SerializeObject(data);
+            var jsonData =
+                JsonConvert.SerializeObject(data);
 
-               var content = new StringContent(
-                   jsonData,
-                   Encoding.UTF8,
-                   "application/json");
+            var content = new StringContent(
+                jsonData,
+                Encoding.UTF8,
+                "application/json");
 
-               var response =
-                   await _httpClient.PostAsync(
-                       url,
-                       content);
+            var response =
+                await _httpClient.PostAsync(
+                    url,
+                    content);
 
-                //Read Response
-               var responseContent =
-                   await response.Content.ReadAsStringAsync();
+            //Read Response
+            var responseContent =
+                await response.Content.ReadAsStringAsync();
 
-                //====================================
-                //SUCCESS
-                //====================================
+            //====================================
+            //SUCCESS
+            //====================================
 
-               if (response.IsSuccessStatusCode)
-               {
-                   return await HandleResponse<T>(response);
-               }
+            if (response.IsSuccessStatusCode)
+            {
+                return await HandleResponse<T>(response);
+            }
 
-                //====================================
-                //ERROR
-                //====================================
+            //====================================
+            //ERROR
+            //====================================
 
-               var errorResponse =
-                   JsonConvert.DeserializeObject<
-                       ApiResponse<object>>(responseContent);
+            var errorResponse =
+                JsonConvert.DeserializeObject<
+                    ApiResponse<object>>(responseContent);
 
-               throw new Exception(errorResponse.Message);
-           }
+            throw new Exception(errorResponse.Message);
+        }
         #endregion
 
         #region PUT

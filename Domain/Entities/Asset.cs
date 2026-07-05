@@ -35,7 +35,7 @@ namespace Domain.Entities
 
         // Location
         public string CompanyId { get; set; }
-        public string BranchId { get; set; }
+        public string? BranchId { get; set; }
        
         // Extra
         public string Description { get; set; }

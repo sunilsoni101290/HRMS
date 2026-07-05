@@ -1,0 +1,275 @@
+﻿@model TenantDto
+
+<div class="panel panel-flat">
+
+    <!-- Header -->
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-office position-left"></i>
+            Tenant Details
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Index"
+               class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+
+            <a asp-action="Edit"
+               asp-route-id="@Model.Id"
+               class="btn bg-primary">
+                <i class="icon-pencil7"></i>
+                Edit
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <!-- Profile -->
+
+        <div class="row">
+
+            <div class="col-md-2 text-center">
+
+                @if (!string.IsNullOrEmpty(Model.Logo))
+                {
+                    <img src="@Model.Logo"
+                         class="img-circle img-responsive"
+                         style="width:120px;height:120px;object-fit:cover;margin:auto;" />
+                }
+                else
+                {
+                    <img src="~/images/no-image.png"
+                         class="img-circle img-responsive"
+                         style="width:120px;height:120px;margin:auto;" />
+                }
+
+            </div>
+
+            <div class="col-md-6">
+
+                <h2 class="text-semibold no-margin">
+                    @Model.Name
+                </h2>
+
+                <br />
+
+                <span class="label bg-primary">
+                    @Model.Code
+                </span>
+
+                &nbsp;
+
+                @if (Model.IsActive)
+                {
+                    <span class="label bg-success">
+                        Active
+                    </span>
+                }
+                else
+                {
+                    <span class="label bg-danger">
+                        Inactive
+                    </span>
+                }
+
+                <br /><br />
+
+                <i class="icon-earth"></i>
+                @Model.Domain
+
+                @if (!string.IsNullOrEmpty(Model.SubDomain))
+                {
+                    <br />
+                    <i class="icon-link"></i>
+                    @Model.SubDomain
+                }
+
+            </div>
+
+            <div class="col-md-4">
+
+                <div class="panel bg-primary-400">
+
+                    <div class="panel-body">
+
+                        <h3 class="no-margin">
+                            @Model.SubscriptionEndDate?.ToString("dd-MMM-yyyy")
+                        </h3>
+
+                        Subscription Expiry
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <hr />
+
+        <div class="row">
+
+            <!-- Contact -->
+
+            <div class="col-md-6">
+
+                <div class="panel panel-bordered">
+
+                    <div class="panel-heading">
+                        <h6 class="panel-title">
+                            Contact Information
+                        </h6>
+                    </div>
+
+                    <table class="table">
+
+                        <tr>
+                            <th width="180">Email</th>
+                            <td>@Model.Email</td>
+                        </tr>
+
+                        <tr>
+                            <th>Phone</th>
+                            <td>@Model.Phone</td>
+                        </tr>
+
+                        <tr>
+                            <th>Website</th>
+                            <td>@Model.WebsiteUrl</td>
+                        </tr>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+            <!-- Address -->
+
+            <div class="col-md-6">
+
+                <div class="panel panel-bordered">
+
+                    <div class="panel-heading">
+                        <h6 class="panel-title">
+                            Address
+                        </h6>
+                    </div>
+
+                    <table class="table">
+
+                        <tr>
+                            <th width="180">Country</th>
+                            <td>@Model.CountryName</td>
+                        </tr>
+
+                        <tr>
+                            <th>State</th>
+                            <td>@Model.StateName</td>
+                        </tr>
+
+                        <tr>
+                            <th>City</th>
+                            <td>@Model.CityName</td>
+                        </tr>
+
+                        <tr>
+                            <th>Pincode</th>
+                            <td>@Model.Pincode</td>
+                        </tr>
+
+                        <tr>
+                            <th>Address</th>
+                            <td>@Model.Address</td>
+                        </tr>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="row">
+
+            <!-- Subscription -->
+
+            <div class="col-md-6">
+
+                <div class="panel panel-bordered">
+
+                    <div class="panel-heading">
+                        <h6 class="panel-title">
+                            Subscription Details
+                        </h6>
+                    </div>
+
+                    <table class="table">
+
+                        <tr>
+                            <th width="180">Start Date</th>
+                            <td>@Model.SubscriptionStartDate?.ToString("dd-MMM-yyyy")</td>
+                        </tr>
+
+                        <tr>
+                            <th>End Date</th>
+                            <td>@Model.SubscriptionEndDate?.ToString("dd-MMM-yyyy")</td>
+                        </tr>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+            <!-- Security -->
+
+            <div class="col-md-6">
+
+                <div class="panel panel-bordered">
+
+                    <div class="panel-heading">
+                        <h6 class="panel-title">
+                            Security
+                        </h6>
+                    </div>
+
+                    <table class="table">
+
+                        <tr>
+                            <th width="180">Connection String</th>
+                            <td style="word-break:break-all;">
+                                @Model.ConnectionString
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th>Created On</th>
+                            <td>@Model.CreatedOn.ToString("dd-MMM-yyyy")</td>
+                        </tr>
+
+                        <tr>
+                            <th>Created By</th>
+                            <td>@Model.CreatedBy</td>
+                        </tr>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+</div>

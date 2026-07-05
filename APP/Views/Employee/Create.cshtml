@@ -5,87 +5,161 @@
     ViewData["Title"] = "Employee";
 }
 
-<div class="container-fluid py-4">
+<div class="panel panel-flat">
+    <div class="panel-heading">
 
-    <div class="card shadow border-0 rounded-4">
+        <h5 class="panel-title">
 
-        <!-- Header -->
-        <div class="card-header bg-primary text-white py-3 rounded-top-4">
+            <i class="icon-user position-left"></i>
 
-            <div class="d-flex align-items-center">
+            @(string.IsNullOrEmpty(Model?.Id)
+                    ? "Create Employee"
+                    : "Edit Employee")
 
-                <i class="bi bi-people-fill fs-3 me-2"></i>
+        </h5>
 
-                <h4 class="mb-0">
-                    @(string.IsNullOrEmpty(Model?.Id)
-                        ? "Create Employee"
-                        : "Edit Employee")
-                </h4>
+        <div class="heading-elements">
+
+            <a asp-action="Index"
+               class="btn btn-default">
+
+                <i class="icon-arrow-left13"></i>
+                Back
+
+            </a>
+        </div>
+
+    </div>
+    <div class="panel-body">
+        <form asp-action="@(Model.Id == null ? "Create" : "Edit")"
+              asp-controller="Employee"
+              method="post" enctype="multipart/form-data">
+            <div class="row">
+
+                <div class="col-md-4">
+
+                    <div class="form-group">
+
+                        <label class="text-semibold">
+
+                            Profile Image
+
+                        </label>
+
+                        <input type="file"
+                               name="UploadImage"
+                               class="form-control"
+                               accept="image/*" />
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-4">
+
+                    @if (!string.IsNullOrEmpty(Model?.FilePath))
+                    {
+                        <img src="@Model.FilePath"
+                             id="profilePreview"
+                             class="img-responsive"
+                             style="width:150px;height:150px;object-fit:cover;margin:auto;" />
+
+                        <input asp-for="FilePath"
+                               type="hidden" />
+                    }
+                    else
+                    {
+                        <img id="profilePreview"
+                             src="~/images/no-image.png"
+                             class="img-responsive"
+                             style="width:150px;height:150px;margin:auto;" />
+                    }
+
+                </div>
 
             </div>
 
-        </div>
+            <div class="panel panel-flat">
 
-        <!-- Body -->
-        <div class="card-body p-4">
+                <div class="panel-heading">
+                    <h6 class="panel-title">
+                        <i class="icon-user position-left"></i>
+                        Personal Information
+                    </h6>
+                </div>
 
-            <form asp-action="@(Model.Id == null ? "Create" : "Edit")"
-                  asp-controller="Employee"
-                  method="post" enctype="multipart/form-data">
+                <div class="panel-body">
 
-                <input asp-for="Id" type="hidden" />
-                <input asp-for="TenantId" type="hidden" />
+                    <div class="row">
 
-                <!-- Personal Information -->
-                <div class="card border-0 shadow-sm rounded-4 mb-4">
+                        <div class="col-md-4">
 
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0">
-                            Personal Information
-                        </h5>
-                    </div>
+                            <div class="form-group">
 
-                    <div class="card-body">
-
-                        <div class="row g-4">
-
-                            <div class="col-md-4">
-
-                                <label asp-for="EmployeeCode" class="form-label"></label>
+                                <label asp-for="EmployeeCode"
+                                       class="text-semibold">
+                                </label>
 
                                 <input asp-for="EmployeeCode"
                                        class="form-control"
                                        placeholder="Enter Employee Code" />
 
-                                <span asp-validation-for="EmployeeCode" class="text-danger"></span>
+                                <span asp-validation-for="EmployeeCode"
+                                      class="text-danger"></span>
 
                             </div>
 
-                            <div class="col-md-4">
+                        </div>
 
-                                <label asp-for="FirstName" class="form-label"></label>
+                        <div class="col-md-4">
+
+                            <div class="form-group">
+
+                                <label asp-for="FirstName"
+                                       class="text-semibold">
+                                </label>
 
                                 <input asp-for="FirstName"
                                        class="form-control"
                                        placeholder="Enter First Name" />
 
-                                <span asp-validation-for="FirstName" class="text-danger"></span>
+                                <span asp-validation-for="FirstName"
+                                      class="text-danger"></span>
 
                             </div>
 
-                            <div class="col-md-4">
+                        </div>
 
-                                <label asp-for="LastName" class="form-label"></label>
+                        <div class="col-md-4">
+
+                            <div class="form-group">
+
+                                <label asp-for="LastName"
+                                       class="text-semibold">
+                                </label>
 
                                 <input asp-for="LastName"
                                        class="form-control"
                                        placeholder="Enter Last Name" />
 
+                                <span asp-validation-for="LastName"
+                                      class="text-danger"></span>
+
                             </div>
 
-                            <div class="col-md-4">
+                        </div>
 
-                                <label asp-for="DateOfBirth" class="form-label"></label>
+                    </div>
+
+                    <div class="row">
+
+                        <div class="col-md-4">
+
+                            <div class="form-group">
+
+                                <label asp-for="DateOfBirth"
+                                       class="text-semibold">
+                                </label>
 
                                 <input asp-for="DateOfBirth"
                                        type="date"
@@ -93,85 +167,278 @@
 
                             </div>
 
-                            <div class="col-md-4">
+                        </div>
 
-                                <label asp-for="Gender" class="form-label"></label>
+                        <div class="col-md-4">
+
+                            <div class="form-group">
+
+                                <label asp-for="Gender"
+                                       class="text-semibold">
+                                </label>
 
                                 <select asp-for="Gender"
                                         asp-items="Html.GetEnumSelectList<EnumExtensions.Gender>()"
-                                        class="form-select">
+                                        class="form-control">
 
                                     <option value="">
-                                        -- Select Gender --
+                                        Select Gender
                                     </option>
 
                                 </select>
 
                             </div>
 
-                            <div class="col-md-4">
+                        </div>
 
-                                <label asp-for="MaritalStatus" class="form-label"></label>
+                        <div class="col-md-4">
+
+                            <div class="form-group">
+
+                                <label asp-for="MaritalStatus"
+                                       class="text-semibold">
+                                </label>
 
                                 <select asp-for="MaritalStatus"
                                         asp-items="Html.GetEnumSelectList<EnumExtensions.MaritalStatus>()"
-                                        class="form-select">
+                                        class="form-control">
 
                                     <option value="">
-                                        -- Select Marital Status --
+                                        Select Marital Status
                                     </option>
 
                                 </select>
 
                             </div>
-                           
+
                         </div>
 
                     </div>
 
                 </div>
 
-                <!-- Organization Details -->
-                <div class="card border-0 shadow-sm rounded-4 mb-4">
+            </div>
+            <div class="panel panel-flat">
+                <div class="panel-heading">
 
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0">
-                            Organization Details
-                        </h5>
+                    <h6 class="panel-title">
+                        <i class="icon-phone position-left"></i>
+                        Contact Details
+                    </h6>
+
+                </div>
+
+                <div class="panel-body">
+
+                    <!-- Contact Information -->
+
+                    <div class="row">
+
+                        <div class="col-md-4">
+
+                            <div class="form-group">
+
+                                <label asp-for="Email"
+                                       class="text-semibold">
+                                </label>
+
+                                <input asp-for="Email"
+                                       class="form-control"
+                                       placeholder="Enter Email Address" />
+
+                                <span asp-validation-for="Email"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                        </div>
+
+                        <div class="col-md-4">
+
+                            <div class="form-group">
+
+                                <label asp-for="Phone"
+                                       class="text-semibold">
+                                </label>
+
+                                <input asp-for="Phone"
+                                       class="form-control"
+                                       placeholder="Enter Mobile Number" />
+
+                                <span asp-validation-for="Phone"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                        </div>
+
+                        <div class="col-md-4">
+
+                            <div class="form-group">
+
+                                <label asp-for="EmergencyContact"
+                                       class="text-semibold">
+                                </label>
+
+                                <input asp-for="EmergencyContact"
+                                       class="form-control"
+                                       placeholder="Enter Emergency Contact" />
+
+                                <span asp-validation-for="EmergencyContact"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                        </div>
+
                     </div>
 
-                    <div class="card-body">
+                    <!-- Verification -->
 
-                        <div class="row g-4">
-                            <div class="col-md-4">
+                    <div class="row">
 
-                                <label asp-for="RoleId" class="form-label"></label>
+                        <div class="col-md-3">
+
+                            <div class="checkbox">
+
+                                <label>
+
+                                    <input asp-for="EmailConfirmed"
+                                           type="checkbox" />
+
+                                    Email Verified
+
+                                </label>
+
+                            </div>
+
+                        </div>
+
+                        <div class="col-md-3">
+
+                            <div class="checkbox">
+
+                                <label>
+
+                                    <input asp-for="PhoneConfirmed"
+                                           type="checkbox" />
+
+                                    Mobile Verified
+
+                                </label>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <hr />
+
+                    <!-- Address -->
+
+                    <div class="row">
+
+                        <div class="col-md-8">
+
+                            <div class="form-group">
+
+                                <label asp-for="Address"
+                                       class="text-semibold">
+                                </label>
+
+                                <textarea asp-for="Address"
+                                          rows="4"
+                                          class="form-control"
+                                          placeholder="Enter Complete Address">
+                                        </textarea>
+
+                                <span asp-validation-for="Address"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                        </div>
+
+                        <div class="col-md-4">
+
+                            <div class="form-group">
+
+                                <label asp-for="Pincode"
+                                       class="text-semibold">
+                                </label>
+
+                                <input asp-for="Pincode"
+                                       class="form-control"
+                                       placeholder="Enter Pincode" />
+
+                                <span asp-validation-for="Pincode"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+            <div class="panel panel-flat">
+                <div class="panel-heading">
+
+                    <h6 class="panel-title">
+                        <i class="icon-office position-left"></i>
+                        Organization Details
+                    </h6>
+
+                </div>
+
+                <div class="panel-body">
+
+                    <!-- Row 1 -->
+
+                    <div class="row">
+
+                        <div class="col-md-4">
+
+                            <div class="form-group">
+
+                                <label asp-for="RoleId"
+                                       class="text-semibold">
+                                </label>
 
                                 <select asp-for="RoleId"
                                         asp-items="ViewBag.RoleList"
-                                        class="form-select">
+                                        class="form-control">
 
                                     <option value="">
-                                        -- Select Role --
+                                        Select Role
                                     </option>
 
                                 </select>
 
+                                <span asp-validation-for="RoleId"
+                                      class="text-danger"></span>
+
                             </div>
-                            <!-- Company -->
-                            <div class="col-md-4">
+
+                        </div>
+
+                        <div class="col-md-4">
+
+                            <div class="form-group">
 
                                 <label asp-for="CompanyId"
-                                       class="form-label fw-semibold">
+                                       class="text-semibold">
                                 </label>
 
                                 <select asp-for="CompanyId"
                                         asp-items="ViewBag.CompanyList"
-                                        class="form-select"
+                                        class="form-control"
                                         id="CompanyId">
 
                                     <option value="">
-                                        -- Select Company --
+                                        Select Company
                                     </option>
 
                                 </select>
@@ -180,20 +447,24 @@
                                       class="text-danger"></span>
 
                             </div>
-                            <!-- Branch -->
-                            <div class="col-md-4">
+
+                        </div>
+
+                        <div class="col-md-4">
+
+                            <div class="form-group">
 
                                 <label asp-for="BranchId"
-                                       class="form-label fw-semibold">
+                                       class="text-semibold">
                                 </label>
 
                                 <select asp-for="BranchId"
                                         asp-items="ViewBag.BranchList"
-                                        class="form-select"
+                                        class="form-control"
                                         id="BranchId">
 
                                     <option value="">
-                                        -- Select Branch --
+                                        Select Branch
                                     </option>
 
                                 </select>
@@ -203,65 +474,118 @@
 
                             </div>
 
-                            <div class="col-md-4">
+                        </div>
 
-                                <label asp-for="DepartmentId" class="form-label"></label>
+                    </div>
+
+                    <!-- Row 2 -->
+
+                    <div class="row">
+
+                        <div class="col-md-4">
+
+                            <div class="form-group">
+
+                                <label asp-for="DepartmentId"
+                                       class="text-semibold">
+                                </label>
 
                                 <select asp-for="DepartmentId"
                                         asp-items="ViewBag.DepartmentList"
-                                        class="form-select"
+                                        class="form-control"
                                         id="DepartmentId">
 
                                     <option value="">
-                                        -- Select Department --
+                                        Select Department
                                     </option>
 
                                 </select>
 
+                                <span asp-validation-for="DepartmentId"
+                                      class="text-danger"></span>
+
                             </div>
 
-                            <div class="col-md-4">
+                        </div>
 
-                                <label asp-for="DesignationId" class="form-label"></label>
+                        <div class="col-md-4">
+
+                            <div class="form-group">
+
+                                <label asp-for="DesignationId"
+                                       class="text-semibold">
+                                </label>
 
                                 <select asp-for="DesignationId"
                                         asp-items="ViewBag.DesignationList"
-                                        class="form-select"
+                                        class="form-control"
                                         id="DesignationId">
 
                                     <option value="">
-                                        -- Select Designation --
+                                        Select Designation
                                     </option>
 
                                 </select>
 
+                                <span asp-validation-for="DesignationId"
+                                      class="text-danger"></span>
+
                             </div>
 
-                            <div class="col-md-4">
+                        </div>
 
-                                <label asp-for="ReportingManagerId" class="form-label"></label>
+                        <div class="col-md-4">
+
+                            <div class="form-group">
+
+                                <label asp-for="ReportingManagerId"
+                                       class="text-semibold">
+                                </label>
 
                                 <select asp-for="ReportingManagerId"
                                         asp-items="ViewBag.ReportingManagerList"
-                                        class="form-select">
+                                        class="form-control">
 
                                     <option value="">
-                                        -- Select Reporting Manager --
+                                        Select Reporting Manager
                                     </option>
 
                                 </select>
 
+                                <span asp-validation-for="ReportingManagerId"
+                                      class="text-danger"></span>
+
                             </div>
 
-                            <div class="col-md-4">
+                        </div>
 
-                                <label asp-for="ShiftId" class="form-label"></label>
+                    </div>
+
+                    <!-- Row 3 -->
+
+                    <div class="row">
+
+                        <div class="col-md-4">
+
+                            <div class="form-group">
+
+                                <label asp-for="ShiftId"
+                                       class="text-semibold">
+                                </label>
 
                                 <select asp-for="ShiftId"
                                         asp-items="ViewBag.ShiftList"
-                                        class="form-select">
+                                        class="form-control">
+
+                                    <option value="">
+                                        Select Shift
+                                    </option>
+
                                 </select>
 
+                                <span asp-validation-for="ShiftId"
+                                      class="text-danger"></span>
+
                             </div>
 
                         </div>
@@ -270,151 +594,154 @@
 
                 </div>
 
-                <!-- Contact Details -->
-                <div class="card border-0 shadow-sm rounded-4 mb-4">
+            </div>
+            <div class="panel panel-flat">
+                <div class="panel-heading">
 
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0">
-                            Contact Details
-                        </h5>
-                    </div>
+                    <h6 class="panel-title">
+                        <i class="icon-vcard position-left"></i>
+                        KYC & Identity Verification
+                    </h6>
 
-                    <div class="card-body">
+                </div>
 
-                        <div class="row g-4">
+                <div class="panel-body">
 
-                            <div class="col-md-4">
+                    <div class="row">
 
-                                <label asp-for="Email" class="form-label"></label>
+                        <!-- PAN Number -->
 
-                                <input asp-for="Email"
-                                       class="form-control"
-                                       placeholder="Enter Email" />
+                        <div class="col-md-6">
 
-                            </div>
+                            <div class="form-group">
 
-                            <div class="col-md-4">
-
-                                <label asp-for="Phone" class="form-label"></label>
-
-                                <input asp-for="Phone"
-                                       class="form-control"
-                                       placeholder="Enter Phone Number" />
-
-                            </div>
-
-                            <div class="col-md-4">
-
-                                <label asp-for="EmergencyContact" class="form-label"></label>
-
-                                <input asp-for="EmergencyContact"
-                                       class="form-control"
-                                       placeholder="Enter Emergency Contact" />
-
-                            </div>
-                            <!-- Email Confirmed -->
-                            <div class="col-md-4">
-
-                                <div class="form-check form-switch mt-2">
-
-                                    <input asp-for="EmailConfirmed"
-                                           class="form-check-input"
-                                           type="checkbox" />
-
-                                    <label asp-for="EmailConfirmed"
-                                           class="form-check-label fw-semibold">
-                                    </label>
-
-                                </div>
-
-                            </div>
-                            <!-- Phone Confirmed -->
-                            <div class="col-md-4">
-
-                                <div class="form-check form-switch mt-2">
-
-                                    <input asp-for="PhoneConfirmed"
-                                           class="form-check-input"
-                                           type="checkbox" />
-
-                                    <label asp-for="PhoneConfirmed"
-                                           class="form-check-label fw-semibold">
-                                    </label>
-
-                                </div>
-
-                            </div>
-
-                            <div class="col-md-8">
-
-                                <label asp-for="Address" class="form-label"></label>
-
-                                <textarea asp-for="Address"
-                                          class="form-control"
-                                          rows="3"></textarea>
-
-                            </div>
-
-                            <div class="col-md-4">
-
-                                <label asp-for="Pincode" class="form-label"></label>
-
-                                <input asp-for="Pincode"
-                                       class="form-control"
-                                       placeholder="Enter Pin Code" />
-
-                            </div>
-                            <!-- Logo -->
-                            <div class="col-md-4">
-
-                                <label class="form-label fw-semibold">
-                                   Upload Profile Image
+                                <label asp-for="PANNumber"
+                                       class="text-semibold">
                                 </label>
 
-                                <input type="file" name="UploadImage"
-                                       class="form-control" />
-
-                            </div>
-                            @if (Model?.Id != null)
-                            {
-                                <img src="@Model.FilePath" style="width:100px;height:100px;" />
-                                <input asp-for="FilePath" type="hidden" />
-                            }
-                        </div>
-                    </div>
-
-                </div>
-
-                <!-- KYC Details -->
-                <div class="card border-0 shadow-sm rounded-4 mb-4">
-
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0">
-                            KYC Details
-                        </h5>
-                    </div>
-
-                    <div class="card-body">
-
-                        <div class="row g-4">
-
-                            <div class="col-md-6">
-
-                                <label asp-for="PANNumber" class="form-label"></label>
-
                                 <input asp-for="PANNumber"
-                                       class="form-control"
-                                       placeholder="Enter PAN Number" />
+                                       class="form-control text-uppercase"
+                                       placeholder="ABCDE1234F"
+                                       maxlength="10" />
+
+                                <span asp-validation-for="PANNumber"
+                                      class="text-danger"></span>
+
+                                <small class="text-muted">
+                                    Example: ABCDE1234F
+                                </small>
 
                             </div>
 
-                            <div class="col-md-6">
+                        </div>
 
-                                <label asp-for="AadharNumber" class="form-label"></label>
+                        <!-- Aadhar Number -->
+
+                        <div class="col-md-6">
+
+                            <div class="form-group">
+
+                                <label asp-for="AadharNumber"
+                                       class="text-semibold">
+                                </label>
 
                                 <input asp-for="AadharNumber"
                                        class="form-control"
-                                       placeholder="Enter Aadhar Number" />
+                                       maxlength="12"
+                                       placeholder="123412341234" />
+
+                                <span asp-validation-for="AadharNumber"
+                                      class="text-danger"></span>
+
+                                <small class="text-muted">
+                                    Enter 12 digit Aadhaar Number
+                                </small>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            <!-- Passport Information -->
+
+            <div class="panel panel-flat">
+
+                <div class="panel-heading">
+
+                    <h6 class="panel-title">
+
+                        <i class="icon-airplane3 position-left"></i>
+                        Passport Information
+
+                    </h6>
+
+                </div>
+
+                <div class="panel-body">
+
+                    <!-- Row 1 -->
+
+                    <div class="row">
+
+                        <!-- Passport Number -->
+
+                        <div class="col-md-4">
+
+                            <div class="form-group">
+
+                                <label asp-for="PassportNumber"
+                                       class="text-semibold"></label>
+
+                                <input asp-for="PassportNumber"
+                                       class="form-control text-uppercase"
+                                       placeholder="Enter Passport Number" />
+
+                                <span asp-validation-for="PassportNumber"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Nationality -->
+
+                        <div class="col-md-4">
+
+                            <div class="form-group">
+
+                                <label asp-for="Nationality"
+                                       class="text-semibold"></label>
+
+                                <select asp-for="Nationality"
+                                        asp-items="Html.GetEnumSelectList<EnumExtensions.Nationality>()"
+                                        class="form-control">
+                                </select>
+
+                                <span asp-validation-for="Nationality"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Passport Status -->
+
+                        <div class="col-md-4">
+
+                            <div class="form-group">
+
+                                <label asp-for="PassportStatus"
+                                       class="text-semibold"></label>
+
+                                <select asp-for="PassportStatus"
+                                        asp-items="Html.GetEnumSelectList<EnumExtensions.PassportStatus>()"
+                                        class="form-control">
+                                </select>
+
+                                <span asp-validation-for="PassportStatus"
+                                      class="text-danger"></span>
 
                             </div>
 
@@ -422,123 +749,373 @@
 
                     </div>
 
-                </div>
+                    <!-- Row 2 -->
 
-                <!-- Employment Details -->
-                <div class="card border-0 shadow-sm rounded-4 mb-4">
+                    <div class="row">
 
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0">
-                            Employment Details
-                        </h5>
+                        <!-- Issue Date -->
+
+                        <div class="col-md-4">
+
+                            <div class="form-group">
+
+                                <label asp-for="IssueDate"
+                                       class="text-semibold"></label>
+
+                                <input asp-for="IssueDate"
+                                       type="date"
+                                       class="form-control" />
+
+                                <span asp-validation-for="IssueDate"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Expiry Date -->
+
+                        <div class="col-md-4">
+
+                            <div class="form-group">
+
+                                <label asp-for="ExpiryDate"
+                                       class="text-semibold"></label>
+
+                                <input asp-for="ExpiryDate"
+                                       type="date"
+                                       class="form-control" />
+
+                                <span asp-validation-for="ExpiryDate"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Place Of Issue -->
+
+                        <div class="col-md-4">
+
+                            <div class="form-group">
+
+                                <label asp-for="PlaceOfIssue"
+                                       class="text-semibold"></label>
+
+                                <input asp-for="PlaceOfIssue"
+                                       class="form-control"
+                                       placeholder="Enter Place Of Issue" />
+
+                                <span asp-validation-for="PlaceOfIssue"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                        </div>
+
                     </div>
 
-                    <div class="card-body">
+                    <!-- Row 3 -->
 
-                        <div class="row g-4">
+                    <div class="row">
 
-                            <div class="col-md-3">
+                        <!-- Passport Issuing Country -->
 
-                                <label asp-for="JoiningDate" class="form-label"></label>
+                        <div class="col-md-6">
+
+                            <div class="form-group">
+
+                                <label asp-for="CountryId"
+                                       class="text-semibold"></label>
+
+                                <select asp-for="CountryId"
+                                        asp-items="ViewBag.CountryList"
+                                        class="form-control">
+
+                                    <option value="">
+                                        Select Country
+                                    </option>
+
+                                </select>
+
+                                <span asp-validation-for="CountryId"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Upload Passport -->
+
+                        <div class="col-md-6">
+
+                            <div class="form-group">
+
+                                <label asp-for="UploadPassport"
+                                       class="text-semibold"></label>
+
+                                <input asp-for="UploadPassport"
+                                       type="file"
+                                       class="form-control"
+                                       accept=".pdf,.jpg,.jpeg,.png" />
+
+                                <span asp-validation-for="UploadPassport"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Existing Passport Document -->
+                    @if (!string.IsNullOrWhiteSpace(Model.PassportFilePath))
+                    {
+                        <hr />
+
+                        <div class="row">
+
+                            <div class="col-md-12">
+
+                                <label class="text-semibold">
+                                    Existing Passport Document
+                                </label>
+
+                                <br />
+
+                                <a href="@Model.PassportFilePath"
+                                   target="_blank"
+                                   class="btn btn-primary">
+
+                                    <i class="icon-file-eye"></i>
+
+                                    View Passport
+
+                                </a>
+
+                                <input asp-for="PassportFilePath"
+                                       type="hidden" />
+
+                            </div>
+
+                        </div>
+                    }
+
+                </div>
+
+            </div>
+            <div class="panel panel-flat">
+                <div class="panel-heading">
+
+                    <h6 class="panel-title">
+                        <i class="icon-briefcase position-left"></i>
+                        Employment Details
+                    </h6>
+
+                </div>
+
+                <div class="panel-body">
+
+                    <!-- Employment Dates -->
+
+                    <div class="row">
+
+                        <div class="col-md-4">
+
+                            <div class="form-group">
+
+                                <label asp-for="JoiningDate"
+                                       class="text-semibold">
+                                </label>
 
                                 <input asp-for="JoiningDate"
                                        type="date"
                                        class="form-control" />
 
+                                <span asp-validation-for="JoiningDate"
+                                      class="text-danger"></span>
+
                             </div>
 
-                            <div class="col-md-3">
+                        </div>
 
-                                <label asp-for="ConfirmationDate" class="form-label"></label>
+                        <div class="col-md-4">
+
+                            <div class="form-group">
+
+                                <label asp-for="ConfirmationDate"
+                                       class="text-semibold">
+                                </label>
 
                                 <input asp-for="ConfirmationDate"
                                        type="date"
                                        class="form-control" />
 
+                                <span asp-validation-for="ConfirmationDate"
+                                      class="text-danger"></span>
+
                             </div>
 
-                            <div class="col-md-3">
+                        </div>
 
-                                <label asp-for="RelievingDate" class="form-label"></label>
+                        <div class="col-md-4">
+
+                            <div class="form-group">
+
+                                <label asp-for="RelievingDate"
+                                       class="text-semibold">
+                                </label>
 
                                 <input asp-for="RelievingDate"
                                        type="date"
                                        class="form-control" />
 
+                                <span asp-validation-for="RelievingDate"
+                                      class="text-danger"></span>
+
                             </div>
 
-                            <div class="col-md-3">
+                        </div>
 
-                                <label asp-for="EmploymentType" class="form-label"></label>
+                      
+
+                    </div>
+
+                    <hr />
+
+                    <!-- Additional Employment Information -->
+
+                    <div class="row">
+                        <div class="col-md-4">
+
+                            <div class="form-group">
+
+                                <label asp-for="EmploymentType"
+                                       class="text-semibold">
+                                </label>
 
                                 <select asp-for="EmploymentType"
                                         asp-items="Html.GetEnumSelectList<EnumExtensions.EmploymentType>()"
-                                        class="form-select">
+                                        class="form-control">
 
                                     <option value="">
-                                        -- Select Employment Type --
+                                        Select Employment Type
                                     </option>
+
+                                </select>
+
+                                <span asp-validation-for="EmploymentType"
+                                      class="text-danger"></span>
+
+                            </div>
+
+                        </div>
+                        <div class="col-md-4">
+
+                            <div class="form-group">
+
+                                <label class="text-semibold">
+                                    Employee Status
+                                </label>
+
+                                <select name="EmployeeStatus"
+                                        class="form-control">
+
+                                    <option value="Active">Active</option>
+                                    <option value="Inactive">Inactive</option>
+                                    <option value="Resigned">Resigned</option>
+                                    <option value="Terminated">Terminated</option>
 
                                 </select>
 
                             </div>
 
                         </div>
-
                     </div>
 
                 </div>
 
-                <!-- Buttons -->
-                <div class="text-end">
+            </div><!-- Buttons -->
+            <div class="text-end fa-align-right">
 
-                    <a asp-action="Index"
-                       class="btn btn-light border rounded-3 px-4">
+                <a asp-action="Index"
+                   class="btn btn-light border rounded-3 px-4">
 
-                        <i class="bi bi-arrow-left"></i>
-                        Back
+                    <i class="bi bi-arrow-left"></i>
+                    Back
 
-                    </a>
+                </a>
 
-                    <button type="submit"
-                            class="btn btn-primary rounded-3 px-4">
+                <button type="submit"
+                        class="btn btn-primary rounded-3 px-4">
 
-                        <i class="bi bi-check-circle"></i>
+                    <i class="bi bi-check-circle"></i>
 
-                        @(string.IsNullOrEmpty(Model?.Id)
-                            ? "Save"
-                            : "Update")
+                    @(string.IsNullOrEmpty(Model?.Id)
+                        ? "Save"
+                        : "Update")
 
-                    </button>
+                </button>
 
-                </div>
-                <div class="col-md-6">
-                    @if (TempData["Success"] != null)
-                    {
-                        <div class="alert alert-success alert-dismissible fade show"
-                             role="alert">
-
-                            <i class="bi bi-check-circle-fill"></i>
-
-                            @TempData["Success"]
-
-                            <button type="button"
-                                    class="btn-close"
-                                    data-bs-dismiss="alert">
-                            </button>
-                        </div>
-                    }
-                </div>
-            </form>
-
-        </div>
-
+            </div>
+        </form>
     </div>
-
 </div>
-
 @section Scripts {
+    <script>
 
+        @if (TempData["Success"] != null)
+        {
+                    <text>
+                            swal({
+                                title: 'Success',
+                                text: '@Html.Raw(TempData["Success"])',
+                                type: 'success',
+                                confirmButtonColor: '#66BB6A'
+                            });
+                    </text>
+        }
+
+        @if (TempData["Error"] != null)
+        {
+                    <text>
+                            swal({
+                                title: 'Error',
+                                text: '@Html.Raw(TempData["Error"])',
+                                type: 'error',
+                                confirmButtonColor: '#EF5350'
+                            });
+                    </text>
+        }
+
+    </script>
+    <script>
+
+        $(document).ready(function () {
+
+            $("input[name='UploadImage']").change(function () {
+
+                var file = this.files[0];
+
+                if (file) {
+
+                    var reader = new FileReader();
+
+                    reader.onload = function (e) {
+
+                        $("#profilePreview")
+                            .attr("src", e.target.result);
+
+                    };
+
+                    reader.readAsDataURL(file);
+                }
+
+            });
+
+        });
+
+    </script>
         <script>
 
         $(document).ready(function () {

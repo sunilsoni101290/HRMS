@@ -1,39 +1,41 @@
 ﻿@model IEnumerable<HolidayGroupDetailDto>
 
-<div class="container-fluid py-4">
+@{
+    ViewData["Title"] = "Holiday Management";
+}
+
+<div class="panel panel-flat">
 
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
 
-        <div>
+    <div class="panel-heading">
 
-            <h3 class="fw-bold mb-1">
+        <h5 class="panel-title">
 
-                <i class="bi bi-calendar-date-fill text-warning"></i>
-                Holiday Management
+            <i class="icon-calendar52 position-left"></i>
 
-            </h3>
+            Holiday Management
 
-            <p class="text-muted mb-0">
-                Manage holiday dates and events
-            </p>
+        </h5>
 
-        </div>
+        <div class="heading-elements">
 
-        <div>
             <a asp-controller="HolidayGroup"
                asp-action="Index"
-               class="btn btn-light border rounded-3 px-4">
+               class="btn btn-default">
 
-                <i class="bi bi-arrow-left"></i>
-                Back to Group
+                <i class="icon-arrow-left13 position-left"></i>
+
+                Back
 
             </a>
+
             <a asp-action="CreateHoliday"
                asp-route-holidayGroupId="@ViewBag.HolidayGroupId"
-               class="btn btn-warning rounded-3 px-4">
+               class="btn bg-primary">
 
-                <i class="bi bi-plus-circle"></i>
+                <i class="icon-plus22 position-left"></i>
+
                 Add Holiday
 
             </a>
@@ -42,114 +44,205 @@
 
     </div>
 
-    <!-- Table -->
-    <div class="card border-0 shadow rounded-4">
+    <!-- Dashboard -->
 
-        <div class="card-body p-0">
+    <div class="panel-body">
 
-            <div class="table-responsive">
+        <div class="row">
 
-                <table class="table table-hover align-middle mb-0">
+            <!-- Total Holidays -->
 
-                    <thead class="table-light">
+            <div class="col-md-4">
 
-                        <tr>
+                <div class="panel bg-primary-400">
 
-                            <th>#</th>
-                            <th>Holiday Group</th>
-                            <th>Holiday Date</th>
-                            <th>Holiday Name</th>
-                            <th>Optional</th>
-                            <th width="160">Action</th>
+                    <div class="panel-body">
 
-                        </tr>
+                        <div class="media">
 
-                    </thead>
+                            <div class="media-left">
 
-                    <tbody>
+                                <i class="icon-calendar3 icon-3x"></i>
 
-                        @{
-                            int sr = 1;
-                        }
+                            </div>
 
-                        @foreach (var item in Model)
-                        {
-                            <tr>
+                            <div class="media-body text-right">
 
-                                <td>@sr</td>
+                                <h3 class="no-margin">
 
-                                <td>
+                                    @Model.Count()
 
-                                    <span class="badge bg-danger">
-                                        @item.HolidayGroupName
-                                    </span>
+                                </h3>
 
-                                </td>
+                                <span>
 
-                                <td>
+                                    Total Holidays
 
-                                    @item.HolidayDate.ToString("dd MMM yyyy")
+                                </span>
 
-                                </td>
+                            </div>
 
-                                <td>
+                        </div>
 
-                                    <div class="fw-semibold">
-                                        @item.HolidayName
-                                    </div>
+                    </div>
 
-                                </td>
+                </div>
 
-                                <td>
+            </div>
 
-                                    @if (item.IsOptional)
-                                    {
-                                        <span class="badge bg-warning text-dark">
-                                            Optional
-                                        </span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-success">
-                                            Mandatory
-                                        </span>
-                                    }
+            <!-- Mandatory -->
 
-                                </td>
+            <div class="col-md-4">
 
-                                <td>
+                <div class="panel bg-success-400">
 
-                                    <div class="d-flex gap-2">
+                    <div class="panel-body">
 
-                                        <a asp-action="EditHoliday"
-                                           asp-route-id="@item.Id"
-                                           class="btn btn-sm btn-outline-warning rounded-3">
+                        <div class="media">
 
-                                            <i class="bi bi-pencil-square"></i>
+                            <div class="media-left">
 
-                                        </a>
+                                <i class="icon-checkmark-circle icon-3x"></i>
 
-                                        <a asp-action="DeleteHoliday"
-                                           asp-route-id="@item.Id"
-                                           onclick="return confirm('Delete this holiday?')"
-                                           class="btn btn-sm btn-outline-danger rounded-3">
+                            </div>
 
-                                            <i class="bi bi-trash"></i>
+                            <div class="media-body text-right">
 
-                                        </a>
+                                <h3 class="no-margin">
 
-                                    </div>
+                                    @Model.Count(x => !x.IsOptional)
 
-                                </td>
+                                </h3>
 
-                            </tr>
+                                <span>
 
-                            sr++;
-                        }
+                                    Mandatory Holidays
 
-                    </tbody>
+                                </span>
 
-                </table>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Optional -->
+
+            <div class="col-md-4">
+
+                <div class="panel bg-warning-400">
+
+                    <div class="panel-body">
+
+                        <div class="media">
+
+                            <div class="media-left">
+
+                                <i class="icon-star-full2 icon-3x"></i>
+
+                            </div>
+
+                            <div class="media-body text-right">
+
+                                <h3 class="no-margin">
+
+                                    @Model.Count(x => x.IsOptional)
+
+                                </h3>
+
+                                <span>
+
+                                    Optional Holidays
+
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <hr />
+
+        <!-- Search -->
+
+        <div class="row">
+
+            <div class="col-md-5">
+
+                <div class="form-group">
+
+                    <input type="text"
+                           id="searchInput"
+                           class="form-control"
+                           placeholder="Search Holiday..." />
+
+                </div>
+
+            </div>
+
+            <div class="col-md-3">
+
+                <div class="form-group">
+
+                    <select id="HolidayType"
+                            class="form-control select-search">
+
+                        <option value="">
+
+                            All Holidays
+
+                        </option>
+
+                        <option>
+
+                            Mandatory
+
+                        </option>
+
+                        <option>
+
+                            Optional
+
+                        </option>
+
+                    </select>
+
+                </div>
+
+            </div>
+
+            <div class="col-md-2">
+
+                <div class="form-group">
+
+                    <input type="date"
+                           id="HolidayDate"
+                           class="form-control" />
+
+                </div>
+
+            </div>
+
+            <div class="col-md-2">
+
+                <button class="btn bg-primary btn-block">
+
+                    <i class="icon-search4 position-left"></i>
+
+                    Search
+
+                </button>
 
             </div>
 
@@ -157,4 +250,450 @@
 
     </div>
 
+    <!-- Holiday Table -->
+
+    <table class="table table-hover table-striped datatable-basic">
+
+        <thead>
+
+            <tr>
+
+                <th width="60">
+
+                    #
+
+                </th>
+
+                <th>
+
+                    Holiday Group
+
+                </th>
+
+                <th>
+
+                    Holiday Date
+
+                </th>
+
+                <th>
+
+                    Holiday Name
+
+                </th>
+
+                <th width="130">
+
+                    Type
+
+                </th>
+
+                <th width="170"
+                    class="text-center">
+
+                    Action
+
+                </th>
+
+            </tr>
+
+        </thead>
+
+        <tbody id="holidayTable">
+            @{
+                int sr = 1;
+            }
+
+            @foreach (var item in Model)
+            {
+                <tr>
+
+                    <!-- Sr No -->
+
+                    <td>
+
+                        @sr
+
+                    </td>
+
+                    <!-- Holiday Group -->
+
+                    <td>
+
+                        <div class="text-semibold">
+
+                            <i class="icon-calendar3 text-primary position-left"></i>
+
+                            @item.HolidayGroupName
+
+                        </div>
+
+                    </td>
+
+                    <!-- Holiday Date -->
+
+                    <td>
+
+                        <span class="text-semibold">
+
+                            @item.HolidayDate.ToString("dd-MMM-yyyy")
+
+                        </span>
+
+                        <br />
+
+                        <small class="text-muted">
+
+                            @item.HolidayDate.ToString("dddd")
+
+                        </small>
+
+                    </td>
+
+                    <!-- Holiday Name -->
+
+                    <td>
+
+                        <div class="text-semibold">
+
+                            @item.HolidayName
+
+                        </div>
+
+                    </td>
+
+                    <!-- Holiday Type -->
+
+                    <td>
+
+                        @if (item.IsOptional)
+                        {
+                            <span class="label bg-warning">
+
+                                Optional
+
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="label bg-success">
+
+                                Mandatory
+
+                            </span>
+                        }
+
+                    </td>
+
+                    <!-- Action -->
+
+                    <td class="text-center">
+
+                        <div class="btn-group">
+
+                           
+                            <!-- Edit -->
+
+                            <a asp-action="EditHoliday"
+                               asp-route-id="@item.Id"
+                               class="btn bg-primary btn-icon"
+                               data-popup="tooltip"
+                               title="Edit">
+
+                                <i class="icon-pencil7"></i>
+
+                            </a>
+
+                            <!-- Delete -->
+
+                            <a asp-action="DeleteHoliday"
+                               asp-route-id="@item.Id"
+                               onclick="return confirm('Are you sure you want to delete this Holiday?');"
+                               class="btn btn-danger btn-icon"
+                               data-popup="tooltip"
+                               title="Delete">
+
+                                <i class="icon-trash"></i>
+
+                            </a>
+
+                        </div>
+
+                    </td>
+
+                </tr>
+
+                sr++;
+            }
+
+        </tbody>
+
+    </table>
+
 </div>
+@section Scripts {
+
+    <script>
+
+        $(document).ready(function () {
+
+            //=========================================
+            // Bootstrap Tooltip
+            //=========================================
+
+            $('[data-popup="tooltip"]').tooltip();
+
+            //=========================================
+            // Chosen Dropdown
+            //=========================================
+
+            if ($(".select-search").length) {
+
+                $(".select-search").chosen({
+
+                    width: "100%",
+                    search_contains: true,
+                    allow_single_deselect: true
+
+                });
+
+            }
+
+            //=========================================
+            // Search
+            //=========================================
+
+            $("#searchInput").keyup(function () {
+
+                filterTable();
+
+            });
+
+            //=========================================
+            // Holiday Type Filter
+            //=========================================
+
+            $("#HolidayType").change(function () {
+
+                filterTable();
+
+            });
+
+            //=========================================
+            // Holiday Date Filter
+            //=========================================
+
+            $("#HolidayDate").change(function () {
+
+                filterTable();
+
+            });
+
+            //=========================================
+            // Filter Function
+            //=========================================
+
+            function filterTable() {
+
+                var keyword =
+                    $("#searchInput").val().toLowerCase();
+
+                var holidayType =
+                    $("#HolidayType").val().toLowerCase();
+
+                var holidayDate =
+                    $("#HolidayDate").val();
+
+                $("#holidayTable tr").each(function () {
+
+                    var row = $(this);
+
+                    var group =
+                        row.find("td:eq(1)").text().toLowerCase();
+
+                    var date =
+                        row.find("td:eq(2)").text().toLowerCase();
+
+                    var holiday =
+                        row.find("td:eq(3)").text().toLowerCase();
+
+                    var type =
+                        row.find("td:eq(4)").text().toLowerCase();
+
+                    var searchMatch =
+                        keyword == "" ||
+                        group.indexOf(keyword) > -1 ||
+                        holiday.indexOf(keyword) > -1;
+
+                    var typeMatch =
+                        holidayType == "" ||
+                        type.indexOf(holidayType) > -1;
+
+                    var dateMatch = true;
+
+                    if (holidayDate != "") {
+
+                        var displayDate =
+                            new Date(holidayDate)
+                            .toLocaleDateString("en-GB", {
+
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric"
+
+                            }).replace(/ /g, "-").toLowerCase();
+
+                        dateMatch =
+                            date.indexOf(displayDate) > -1;
+
+                    }
+
+                    row.toggle(
+
+                        searchMatch &&
+                        typeMatch &&
+                        dateMatch
+
+                    );
+
+                });
+
+            }
+
+            //=========================================
+            // DataTable
+            //=========================================
+
+            if ($.fn.DataTable) {
+
+                $(".datatable-basic").DataTable({
+
+                    autoWidth: false,
+
+                    ordering: true,
+
+                    paging: true,
+
+                    searching: false,
+
+                    info: true,
+
+                    pageLength: 10,
+
+                    lengthMenu: [
+
+                        [10, 25, 50, 100],
+
+                        [10, 25, 50, 100]
+
+                    ],
+
+                    language: {
+
+                        search: "_INPUT_",
+
+                        searchPlaceholder: "Search..."
+
+                    }
+
+                });
+
+            }
+
+        });
+
+    </script>
+
+    <style>
+
+        .panel-heading {
+            padding: 18px 20px;
+        }
+
+        .panel-title {
+            font-weight: 600;
+        }
+
+        .panel-body {
+            padding: 20px;
+        }
+
+        .table > thead > tr > th {
+            background: #fafafa;
+            font-size: 13px;
+            font-weight: 600;
+            vertical-align: middle;
+        }
+
+        .table > tbody > tr > td {
+            font-size: 13px;
+            vertical-align: middle;
+        }
+
+        .table-hover tbody tr:hover {
+            background: #f8f8f8;
+        }
+
+        .text-semibold {
+            font-weight: 600;
+        }
+
+        .label {
+            font-size: 11px;
+            padding: 5px 10px;
+        }
+
+        .btn-group .btn {
+            margin-right: 2px;
+        }
+
+        .btn-icon {
+            width: 34px;
+            height: 34px;
+            padding: 7px;
+        }
+
+        .media {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .media-left i {
+            opacity: .9;
+        }
+
+        .panel.bg-primary-400,
+        .panel.bg-success-400,
+        .panel.bg-warning-400 {
+            margin-bottom: 20px;
+            border-radius: 3px;
+        }
+
+            .panel.bg-primary-400 h3,
+            .panel.bg-success-400 h3,
+            .panel.bg-warning-400 h3 {
+                color: #fff;
+                font-weight: 600;
+            }
+
+        .datatable-basic tbody tr:hover {
+            background: #f5f5f5;
+        }
+
+        .chosen-container {
+            width: 100% !important;
+        }
+
+        .chosen-single {
+            height: 36px !important;
+            line-height: 34px !important;
+        }
+
+        .text-muted {
+            color: #999;
+        }
+
+    </style>
+
+}

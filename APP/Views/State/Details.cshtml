@@ -4,320 +4,107 @@
     ViewData["Title"] = "State Details";
 }
 
-<div class="container-fluid py-4">
+<div class="panel panel-flat">
 
-    <div class="row justify-content-center">
+    <!-- Header -->
 
-        <div class="col-lg-8">
+    <div class="panel-heading">
 
-            <div class="card shadow border-0 rounded-4 overflow-hidden">
+        <h5 class="panel-title">
 
-                <!-- Header -->
-                <div class="card-header bg-primary text-white py-4">
+            <i class="icon-location4 position-left"></i>
 
-                    <div class="d-flex align-items-center">
+            State Details
 
-                        <div class="me-3">
+        </h5>
 
-                            <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center"
-                                 style="width:70px;height:70px;">
+        <div class="heading-elements">
 
-                                <i class="bi bi-geo-alt-fill fs-2"></i>
+            <a asp-action="Index"
+               class="btn btn-default">
 
-                            </div>
+                <i class="icon-arrow-left13 position-left"></i>
 
-                        </div>
+                Back
 
-                        <div>
+            </a>
 
-                            <h3 class="mb-1">
-                                @Model.Name
-                            </h3>
+            <a asp-action="Edit"
+               asp-route-id="@Model.Id"
+               class="btn bg-primary">
 
-                            <p class="mb-0 opacity-75">
+                <i class="icon-pencil7 position-left"></i>
 
-                                State Code :
-                                @Model.Code
+                Edit
 
-                            </p>
+            </a>
 
-                        </div>
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <!-- Header Card -->
+
+        <div class="row">
+
+            <div class="col-md-2 text-center">
+
+                <div class="content-group">
+
+                    <div class="icon-object border-primary text-primary"
+                         style="width:100px;
+                        height:100px;
+                        line-height:100px;
+                        font-size:42px;
+                        margin:auto;">
+
+                        <i class="icon-location4"></i>
 
                     </div>
 
                 </div>
 
-                <!-- Body -->
-                <div class="card-body p-4">
+            </div>
 
-                    <div class="row g-4">
+            <div class="col-md-6">
 
-                        <!-- State Information -->
-                        <div class="col-md-6">
+                <h2 class="text-semibold no-margin">
 
-                            <div class="card border-0 shadow-sm rounded-4 h-100">
+                    @Model.Name
 
-                                <div class="card-header bg-light">
+                </h2>
 
-                                    <h5 class="mb-0">
+                <br />
 
-                                        <i class="bi bi-info-circle text-primary"></i>
-                                        State Information
+                <span class="label bg-primary">
 
-                                    </h5>
+                    @Model.Code
 
-                                </div>
+                </span>
 
-                                <div class="card-body">
+                <span class="label bg-success">
 
-                                    <table class="table table-borderless mb-0">
+                    Active
 
-                                        <tr>
+                </span>
 
-                                            <th width="180">
-                                                State Name
-                                            </th>
+            </div>
 
-                                            <td>
-                                                @Model.Name
-                                            </td>
+            <div class="col-md-4">
 
-                                        </tr>
+                <div class="panel bg-primary-400">
 
-                                        <tr>
+                    <div class="panel-body">
 
-                                            <th>
-                                                State Code
-                                            </th>
+                        <h3 class="no-margin">
 
-                                            <td>
+                            @Model.CountryName
 
-                                                <span class="badge bg-dark">
-                                                    @Model.Code
-                                                </span>
+                        </h3>
 
-                                            </td>
-
-                                        </tr>
-
-                                        <tr>
-
-                                            <th>
-                                                Country
-                                            </th>
-
-                                            <td>
-
-                                                <span class="badge bg-primary">
-                                                    @Model.CountryName
-                                                </span>
-
-                                            </td>
-
-                                        </tr>
-
-                                        <tr>
-
-                                            <th>
-                                                GST State Code
-                                            </th>
-
-                                            <td>
-
-                                                <span class="badge bg-success">
-                                                    @Model.GSTStateCode
-                                                </span>
-
-                                            </td>
-
-                                        </tr>
-
-                                    </table>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                        <!-- Audit Information -->
-                        <div class="col-md-6">
-
-                            <div class="card border-0 shadow-sm rounded-4 h-100">
-
-                                <div class="card-header bg-light">
-
-                                    <h5 class="mb-0">
-
-                                        <i class="bi bi-clock-history text-primary"></i>
-                                        Audit Information
-
-                                    </h5>
-
-                                </div>
-
-                                <div class="card-body">
-
-                                    <table class="table table-borderless mb-0">
-
-                                        <tr>
-
-                                            <th width="180">
-                                                Created By
-                                            </th>
-
-                                            <td>
-                                                @Model.CreatedBy
-                                            </td>
-
-                                        </tr>
-
-                                        <tr>
-
-                                            <th>
-                                                Modified By
-                                            </th>
-
-                                            <td>
-
-                                                @(string.IsNullOrEmpty(Model.ModifiedBy)
-                                                    ? "-"
-                                                    : Model.ModifiedBy)
-
-                                            </td>
-
-                                        </tr>
-
-                                        <tr>
-
-                                            <th>
-                                                Modified On
-                                            </th>
-
-                                            <td>
-
-                                                @(Model.ModifiedOn.HasValue
-                                                    ? Model.ModifiedOn.Value.ToString("dd MMM yyyy")
-                                                    : "-")
-
-                                            </td>
-
-                                        </tr>
-
-                                    </table>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                        <!-- Status -->
-                        <div class="col-md-12">
-
-                            <div class="card border-0 shadow-sm rounded-4">
-
-                                <div class="card-header bg-light">
-
-                                    <h5 class="mb-0">
-
-                                        <i class="bi bi-check-circle text-primary"></i>
-                                        State Status
-
-                                    </h5>
-
-                                </div>
-
-                                <div class="card-body">
-
-                                    <div class="row text-center">
-
-                                        <!-- Active -->
-                                        <div class="col-md-4">
-
-                                            <div class="border rounded-4 p-4">
-
-                                                <i class="bi bi-check-circle-fill text-success fs-1"></i>
-
-                                                <h6 class="mt-3">
-                                                    Current Status
-                                                </h6>
-
-                                                <span class="badge bg-success">
-                                                    Active
-                                                </span>
-
-                                            </div>
-
-                                        </div>
-
-                                        <!-- Country -->
-                                        <div class="col-md-4">
-
-                                            <div class="border rounded-4 p-4">
-
-                                                <i class="bi bi-globe2 text-primary fs-1"></i>
-
-                                                <h6 class="mt-3">
-                                                    Country
-                                                </h6>
-
-                                                <span class="badge bg-primary">
-                                                    @Model.CountryName
-                                                </span>
-
-                                            </div>
-
-                                        </div>
-
-                                        <!-- GST -->
-                                        <div class="col-md-4">
-
-                                            <div class="border rounded-4 p-4">
-
-                                                <i class="bi bi-receipt text-success fs-1"></i>
-
-                                                <h6 class="mt-3">
-                                                    GST Code
-                                                </h6>
-
-                                                <span class="badge bg-success">
-                                                    @Model.GSTStateCode
-                                                </span>
-
-                                            </div>
-
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    <!-- Footer -->
-                    <div class="mt-4 text-end">
-
-                        <a asp-action="Index"
-                           class="btn btn-light border rounded-3 px-4">
-
-                            <i class="bi bi-arrow-left"></i>
-                            Back
-
-                        </a>
-
-                        <a asp-action="Edit"
-                           asp-route-id="@Model.Id"
-                           class="btn btn-primary rounded-3 px-4">
-
-                            <i class="bi bi-pencil-square"></i>
-                            Edit State
-
-                        </a>
+                        Country
 
                     </div>
 
@@ -327,6 +114,267 @@
 
         </div>
 
+        <hr />
+
+        <div class="row">
+
+            <!-- Basic Information -->
+
+            <div class="col-md-6">
+
+                <div class="panel panel-bordered">
+
+                    <div class="panel-heading">
+
+                        <h6 class="panel-title">
+
+                            <i class="icon-info22 position-left"></i>
+
+                            Basic Information
+
+                        </h6>
+
+                    </div>
+
+                    <table class="table table-bordered">
+
+                        <tr>
+
+                            <th width="220">
+
+                                State Name
+
+                            </th>
+
+                            <td>
+
+                                @Model.Name
+
+                            </td>
+
+                        </tr>
+
+                        <tr>
+
+                            <th>
+
+                                State Code
+
+                            </th>
+
+                            <td>
+
+                                @Model.Code
+
+                            </td>
+
+                        </tr>
+
+                        <tr>
+
+                            <th>
+
+                                GST State Code
+
+                            </th>
+
+                            <td>
+
+                                @if (!string.IsNullOrWhiteSpace(Model.GSTStateCode))
+                                {
+                                    <span class="label bg-success">
+
+                                        @Model.GSTStateCode
+
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="label bg-warning">
+
+                                        N/A
+
+                                    </span>
+                                }
+
+                            </td>
+
+                        </tr>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+            <!-- Country -->
+
+            <div class="col-md-6">
+
+                <div class="panel panel-bordered">
+
+                    <div class="panel-heading">
+
+                        <h6 class="panel-title">
+
+                            <i class="icon-earth position-left"></i>
+
+                            Country Information
+
+                        </h6>
+
+                    </div>
+
+                    <table class="table table-bordered">
+
+                        <tr>
+
+                            <th width="220">
+
+                                Country
+
+                            </th>
+
+                            <td>
+
+                                @Model.CountryName
+
+                            </td>
+
+                        </tr>
+
+                        <tr>
+
+                            <th>
+
+                                Country Id
+
+                            </th>
+
+                            <td>
+
+                                @Model.CountryId
+
+                            </td>
+
+                        </tr>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Audit Information -->
+
+        <div class="panel panel-bordered">
+
+            <div class="panel-heading">
+
+                <h6 class="panel-title">
+
+                    <i class="icon-history position-left"></i>
+
+                    Audit Information
+
+                </h6>
+
+            </div>
+
+            <table class="table table-bordered">
+
+                <tr>
+
+                    <th>
+
+                        Created By
+
+                    </th>
+
+                    <td>
+
+                        @(string.IsNullOrEmpty(Model.CreatedBy)
+                            ? "-"
+                            : Model.CreatedBy)
+
+                    </td>
+
+                </tr>
+
+                <tr>
+
+                    <th>
+
+                        Modified On
+
+                    </th>
+
+                    <td>
+
+                        @(Model.ModifiedOn?.ToString("dd-MMM-yyyy HH:mm") ?? "-")
+
+                    </td>
+
+                </tr>
+
+                <tr>
+
+                    <th>
+
+                        Modified By
+
+                    </th>
+
+                    <td>
+
+                        @(string.IsNullOrEmpty(Model.ModifiedBy)
+                            ? "-"
+                            : Model.ModifiedBy)
+
+                    </td>
+
+                </tr>
+
+            </table>
+
+        </div>
+
     </div>
 
 </div>
+
+<style>
+
+    .panel-bordered {
+        border: 1px solid #ddd;
+        margin-bottom: 20px;
+    }
+
+        .panel-bordered .panel-heading {
+            background: #fafafa;
+            border-bottom: 1px solid #ddd;
+        }
+
+    .table > tbody > tr > th {
+        width: 220px;
+        background: #fafafa;
+        font-weight: 600;
+    }
+
+    .icon-object {
+        border: 3px solid #2196F3;
+        border-radius: 50%;
+    }
+
+    .label {
+        font-size: 11px;
+        margin-right: 5px;
+    }
+
+    .text-semibold {
+        font-weight: 600;
+    }
+
+</style>

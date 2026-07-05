@@ -1,6 +1,7 @@
 ﻿using Application.DTOs.Employee;
 using Domain.Entities;
 using Domain.Enums;
+using Domain.Interfaces;
 using Infrastructure.Data;
 using System;
 using System.Collections.Generic;
@@ -48,6 +49,15 @@ namespace Application.Mappings
                 ConfirmationDate = dto.ConfirmationDate,
                 RelievingDate = dto.RelievingDate,
 
+                PassportNumber = dto.PassportNumber,
+                PlaceOfIssue = dto.PlaceOfIssue,
+                ExpiryDate = dto.ExpiryDate,
+                IssueDate = dto.IssueDate,
+                PassportFilePath = dto.PassportFilePath,
+                PassportStatus = dto.PassportStatus,
+                Nationality = dto.Nationality,
+                CountryId = dto.CountryId,
+
                 EmploymentType = dto.EmploymentType,
                 FilePath = dto.FilePath,
 
@@ -93,6 +103,16 @@ namespace Application.Mappings
             entity.EmploymentType = dto.EmploymentType;
             entity.ModifiedBy = string.IsNullOrEmpty(dto.CreatedBy) ? "System" : dto.CreatedBy;
             entity.ModifiedOn = DateTime.UtcNow;
+
+            entity.PassportNumber = entity.PassportNumber;
+            entity.PlaceOfIssue = entity.PlaceOfIssue;
+            entity.ExpiryDate = entity.ExpiryDate;
+            entity.IssueDate = entity.IssueDate;
+            entity.PassportStatus = dto.PassportStatus;
+            entity.PassportFilePath = dto.PassportFilePath;
+            entity.Nationality = dto.Nationality;
+            entity.CountryId = dto.CountryId;
+
         }
 
         // ==============================
@@ -162,6 +182,18 @@ namespace Application.Mappings
                 RelievingDate = entity.RelievingDate,
 
                 FilePath = entity.FilePath,
+
+                PassportNumber= entity.PassportNumber,
+                PlaceOfIssue= entity.PlaceOfIssue,
+                ExpiryDate= entity.ExpiryDate,
+                IssueDate= entity.IssueDate,
+                Nationality= entity.Nationality,
+                CountryId = entity.CountryId,
+                CountryName = entity.Country != null
+                    ? entity.Country.Name
+                    : null,
+                PassportStatus= entity.PassportStatus,
+                PassportFilePath= entity.PassportFilePath,
 
                 EmploymentType = EnumHelper.GetEnumName<EmploymentType>((int)entity.EmploymentType),
             };

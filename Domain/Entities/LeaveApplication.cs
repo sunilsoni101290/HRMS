@@ -9,7 +9,7 @@ namespace Domain.Entities
     {
         // Org Mapping
         public string CompanyId { get; set; }
-        public string BranchId { get; set; }
+        public string? BranchId { get; set; }
 
         // Employee
         public string EmployeeId { get; set; }

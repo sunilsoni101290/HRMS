@@ -1,16 +1,20 @@
 ﻿@model IEnumerable<DepartmentListDto>
 
 @{
-    ViewData["Title"] = "Department List";
+    ViewData["Title"] = "Department Management";
 }
 
 <div class="panel panel-flat">
+
+    ```
+    <!-- Page Header -->
 
     <div class="panel-heading">
 
         <h5 class="panel-title">
 
             <i class="icon-tree6 position-left"></i>
+
             Department Management
 
         </h5>
@@ -18,9 +22,10 @@
         <div class="heading-elements">
 
             <a asp-action="Create"
-               class="btn bg-primary btn-sm">
+               class="btn bg-primary">
 
                 <i class="icon-plus22 position-left"></i>
+
                 Add Department
 
             </a>
@@ -29,120 +34,78 @@
 
     </div>
 
-    <!-- KPI Cards -->
+    <!-- Dashboard Cards -->
 
     <div class="panel-body">
-
-        <div class="row">
-
-            <div class="col-md-3">
-
-                <div class="panel bg-primary-400">
-                    <div class="panel-body text-center">
-
-                        <h3 class="no-margin">
-                            @Model.Count()
-                        </h3>
-
-                        <span>Total Departments</span>
-
-                    </div>
-                </div>
-
-            </div>
-
-            <div class="col-md-3">
-
-                <div class="panel bg-success-400">
-                    <div class="panel-body text-center">
-
-                        <h3 class="no-margin">
-                            @Model.Select(x => x.CompanyId).Distinct().Count()
-                        </h3>
-
-                        <span>Companies</span>
-
-                    </div>
-                </div>
-
-            </div>
-
-            <div class="col-md-3">
-
-                <div class="panel bg-info-400">
-                    <div class="panel-body text-center">
-
-                        <h3 class="no-margin">
-                            @Model.Select(x => x.BranchId).Distinct().Count()
-                        </h3>
-
-                        <span>Branches</span>
-
-                    </div>
-                </div>
-
-            </div>
-
-            <div class="col-md-3">
-
-                <div class="panel bg-warning-400">
-                    <div class="panel-body text-center">
-
-                        <h3 class="no-margin">
-                            @Model.Count(x => x.ParentDepartmentId != null)
-                        </h3>
-
-                        <span>Sub Departments</span>
-
-                    </div>
-                </div>
-
-            </div>
-
-        </div>
 
         <!-- Filters -->
 
         <div class="row">
 
+            <!-- Search -->
+
             <div class="col-md-4">
 
-                <input type="text"
-                       id="searchInput"
-                       class="form-control"
-                       placeholder="Search Department..." />
+                <div class="form-group">
+
+                    <input type="text"
+                           id="searchInput"
+                           class="form-control"
+                           placeholder="Search Department..." />
+
+                </div>
 
             </div>
+
+            <!-- Company -->
 
             <div class="col-md-3">
 
-                <select class="form-control select-search">
+                <div class="form-group">
 
-                    <option value="">
-                        All Companies
-                    </option>
+                    <select class="form-control select-search">
 
-                </select>
+                        <option value="">
+
+                            All Companies
+
+                        </option>
+
+                    </select>
+
+                </div>
 
             </div>
+
+            <!-- Branch -->
 
             <div class="col-md-3">
 
-                <select class="form-control select-search">
+                <div class="form-group">
 
-                    <option value="">
-                        All Branches
-                    </option>
+                    <select class="form-control select-search">
 
-                </select>
+                        <option value="">
+
+                            All Branches
+
+                        </option>
+
+                    </select>
+
+                </div>
 
             </div>
+
+            <!-- Filter -->
 
             <div class="col-md-2">
 
-                <button class="btn bg-primary btn-block">
+                <button type="button"
+                        class="btn bg-primary btn-block">
 
                     <i class="icon-search4 position-left"></i>
+
                     Filter
 
                 </button>
@@ -153,28 +116,37 @@
 
     </div>
 
-    <!-- Department Grid -->
+    <!-- Department Table -->
 
-    <table class="table datatable-scroll-y table-hover">
+    <table class="table table-hover table-striped datatable-basic">
 
         <thead>
 
             <tr>
 
-                <th>#</th>
+                <th width="60">#</th>
+
                 <th>Department</th>
+
                 <th>Code</th>
+
                 <th>Company</th>
+
                 <th>Branch</th>
+
                 <th>Parent Department</th>
-                <th class="text-center">Actions</th>
+
+                <th width="170" class="text-center">
+
+                    Actions
+
+                </th>
 
             </tr>
 
         </thead>
 
-        <tbody>
-
+        <tbody id="departmentTable">
             @{
                 int sr = 1;
             }
@@ -183,147 +155,373 @@
             {
                 <tr>
 
-                    <td>@sr</td>
+                    <!-- Serial -->
 
                     <td>
 
-                        <div class="text-semibold">
+                        @sr
 
-                            <i class="icon-tree6 text-primary"></i>
-                            @item.Name
+                    </td>
+
+                    <!-- Department -->
+
+                    <td>
+
+                        <div>
+
+                            <div class="text-semibold">
+
+                                <i class="icon-tree6 text-primary position-left"></i>
+
+                                @item.Name
+
+                            </div>
+
+                            <small class="text-muted">
+
+                                Department Code :
+                                @item.Code
+
+                            </small>
 
                         </div>
 
                     </td>
 
+                    <!-- Code -->
+
                     <td>
 
                         <span class="label bg-primary">
+
                             @item.Code
+
                         </span>
 
                     </td>
 
-                    <td>
-
-                        @(item.CompanyId != null &&
-                          ViewBag.CompanyNames != null &&
-                          ViewBag.CompanyNames.ContainsKey(item.CompanyId)
-                            ? ViewBag.CompanyNames[item.CompanyId]
-                            : "-")
-
-                    </td>
+                    <!-- Company -->
 
                     <td>
 
-                        @(item.BranchId != null &&
-                          ViewBag.BranchNames != null &&
-                          ViewBag.BranchNames.ContainsKey(item.BranchId)
-                            ? ViewBag.BranchNames[item.BranchId]
-                            : "-")
+                        @if (item.CompanyId != null &&
+                             ViewBag.CompanyNames != null &&
+                             ViewBag.CompanyNames.ContainsKey(item.CompanyId))
+                        {
+                            <span class="label bg-success">
+
+                                @ViewBag.CompanyNames[item.CompanyId]
+
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">
+
+                                -
+
+                            </span>
+                        }
 
                     </td>
+
+                    <!-- Branch -->
 
                     <td>
 
-                        @(item.ParentDepartmentId != null &&
-                          ViewBag.ParentDepartments != null &&
-                          ViewBag.ParentDepartments.ContainsKey(item.ParentDepartmentId)
-                            ? ViewBag.ParentDepartments[item.ParentDepartmentId]
-                            : "-")
+                        @if (item.BranchId != null &&
+                             ViewBag.BranchNames != null &&
+                             ViewBag.BranchNames.ContainsKey(item.BranchId))
+                        {
+                            <span class="label bg-info">
+
+                                @ViewBag.BranchNames[item.BranchId]
+
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">
+
+                                -
+
+                            </span>
+                        }
 
                     </td>
+
+                    <!-- Parent Department -->
+
+                    <td>
+
+                        @if (item.ParentDepartmentId != null &&
+                             ViewBag.ParentDepartments != null &&
+                             ViewBag.ParentDepartments.ContainsKey(item.ParentDepartmentId))
+                        {
+                            <span class="label bg-warning">
+
+                                @ViewBag.ParentDepartments[item.ParentDepartmentId]
+
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="label bg-grey">
+
+                                Root Department
+
+                            </span>
+                        }
+
+                    </td>
+
+                    <!-- Actions -->
 
                     <td class="text-center">
 
-                        <ul class="icons-list">
+                        <div class="btn-group">
 
-                            <li>
-                                <a asp-action="Details"
-                                   asp-route-id="@item.Id"
-                                   title="View">
+                            <!-- Details -->
 
-                                    <i class="icon-eye"></i>
+                            <a asp-action="Details"
+                               asp-route-id="@item.Id"
+                               class="btn btn-default btn-icon"
+                               data-popup="tooltip"
+                               title="View">
 
-                                </a>
-                            </li>
+                                <i class="icon-eye"></i>
 
-                            <li>
-                                <a asp-action="Edit"
-                                   asp-route-id="@item.Id"
-                                   title="Edit">
+                            </a>
 
-                                    <i class="icon-pencil7"></i>
+                            <!-- Edit -->
 
-                                </a>
-                            </li>
+                            <a asp-action="Edit"
+                               asp-route-id="@item.Id"
+                               class="btn btn-primary btn-icon"
+                               data-popup="tooltip"
+                               title="Edit">
 
-                            <li>
-                                <a asp-action="Delete"
-                                   asp-route-id="@item.Id"
-                                   onclick="return confirm('Delete this department?')"
-                                   title="Delete">
+                                <i class="icon-pencil7"></i>
 
-                                    <i class="icon-trash"></i>
+                            </a>
 
-                                </a>
-                            </li>
+                            <!-- Delete -->
 
-                        </ul>
+                            <a asp-action="Delete"
+                               asp-route-id="@item.Id"
+                               class="btn btn-danger btn-icon"
+                               data-popup="tooltip"
+                               title="Delete"
+                               onclick="return confirm('Are you sure you want to delete this department?');">
+
+                                <i class="icon-trash"></i>
+
+                            </a>
+
+                        </div>
 
                     </td>
 
                 </tr>
 
                 sr++;
-            }
 
+            }
         </tbody>
 
     </table>
 
 </div>
-@section Scripts {
 
+@section Scripts {
     <script>
 
-        // Department Search
+        $(document).ready(function () {
 
-        document.getElementById("searchInput")
-            .addEventListener("keyup", function () {
+            // -----------------------------
+            // Tooltips
+            // -----------------------------
 
-                let dept_value = this.value.toLowerCase();
+            $('[data-popup="tooltip"]').tooltip();
 
-                let dept_rows =
-                    document.querySelectorAll("#departmentTable tr");
+            // -----------------------------
+            // Search
+            // -----------------------------
 
-                dept_rows.forEach(function (dept_row) {
+            $("#searchInput").on("keyup", function () {
 
-                    let dept_text =
-                        dept_row.innerText.toLowerCase();
+                var value = $(this).val().toLowerCase();
 
-                    dept_row.style.display =
-                        dept_text.includes(dept_value)
-                            ? ""
-                            : "none";
+                $("#departmentTable tr").filter(function () {
+
+                    $(this).toggle(
+
+                        $(this).text().toLowerCase().indexOf(value) > -1
+
+                    );
 
                 });
 
             });
 
+            // -----------------------------
+            // Company Filter
+            // -----------------------------
+
+            $("#CompanyFilter").change(function () {
+
+                filterTable();
+
+            });
+
+            // -----------------------------
+            // Branch Filter
+            // -----------------------------
+
+            $("#BranchFilter").change(function () {
+
+                filterTable();
+
+            });
+
+            function filterTable() {
+
+                var company = $("#CompanyFilter option:selected").text().toLowerCase();
+
+                var branch = $("#BranchFilter option:selected").text().toLowerCase();
+
+                $("#departmentTable tr").each(function () {
+
+                    var row = $(this);
+
+                    var rowText = row.text().toLowerCase();
+
+                    var companyMatch = company == "" ||
+                                       company == "all companies" ||
+                                       rowText.indexOf(company) > -1;
+
+                    var branchMatch = branch == "" ||
+                                      branch == "all branches" ||
+                                      rowText.indexOf(branch) > -1;
+
+                    row.toggle(companyMatch && branchMatch);
+
+                });
+
+            }
+
+            // -----------------------------
+            // Initialize Chosen
+            // -----------------------------
+
+            if ($(".select-search").length) {
+
+                $(".select-search").chosen({
+
+                    width: "100%",
+                    search_contains: true
+
+                });
+
+            }
+
+            // -----------------------------
+            // DataTable
+            // -----------------------------
+
+            if ($.fn.DataTable) {
+
+                $('.datatable-basic').DataTable({
+
+                    autoWidth: false,
+
+                    paging: true,
+
+                    ordering: true,
+
+                    searching: false,
+
+                    pageLength: 10,
+
+                    lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+
+                    language: {
+
+                        search: "_INPUT_",
+                        searchPlaceholder: "Search..."
+
+                    }
+
+                });
+
+            }
+
+        });
+
     </script>
+
     <style>
-        table th {
-            font-family: 'Inter', sans-serif;
-            font-size: 14px;
+
+        .panel-heading {
+            padding: 18px 20px;
+        }
+
+        .panel-title {
             font-weight: 600;
         }
 
-        table td {
-            font-family: 'Inter', sans-serif;
+        .table > thead > tr > th {
+            background: #fafafa;
             font-size: 13px;
-            font-weight: normal;
+            font-weight: 600;
+            vertical-align: middle;
         }
-    </style>
 
+        .table > tbody > tr > td {
+            vertical-align: middle;
+            font-size: 13px;
+        }
+
+        .btn-icon {
+            width: 34px;
+            height: 34px;
+            padding: 8px;
+        }
+
+        .label {
+            font-size: 11px;
+            padding: 4px 8px;
+        }
+
+        .panel.bg-primary-400,
+        .panel.bg-success-400,
+        .panel.bg-info-400,
+        .panel.bg-warning-400 {
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .panel-body .media {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .media-left i {
+            opacity: .8;
+        }
+
+        .text-semibold {
+            font-weight: 600;
+        }
+
+        .datatable-basic tbody tr:hover {
+            background: #f5f5f5;
+        }
+
+        .chosen-container {
+            width: 100% !important;
+        }
+
+    </style>
 }

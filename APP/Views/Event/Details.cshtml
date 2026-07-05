@@ -1,0 +1,31 @@
+@model EventDto
+
+@{
+    ViewData["Title"] = "Event Details";
+    string TimeVal(TimeSpan? t) => t.HasValue ? t.Value.ToString(@"hh\:mm") : "-";
+}
+
+<div class="panel panel-flat">
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-calendar3 position-left"></i> @Model.Title
+            <span class="label bg-primary" style="margin-left:8px;">@Model.TypeText</span>
+        </h5>
+        <div class="heading-elements">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary btn-xs"><i class="icon-pencil7"></i> Edit</a>
+            <a asp-action="Index" class="btn btn-default btn-xs"><i class="icon-arrow-left13"></i> Back</a>
+        </div>
+    </div>
+    <div class="panel-body">
+        <table class="table table-striped">
+            <tr><th style="width:200px;">Description</th><td>@(Model.Description ?? "-")</td></tr>
+            <tr><th>Start</th><td>@Model.StartDate.ToString("dd MMM yyyy") @TimeVal(Model.StartTime)</td></tr>
+            <tr><th>End</th><td>@Model.EndDate.ToString("dd MMM yyyy") @TimeVal(Model.EndTime)</td></tr>
+            <tr><th>Location</th><td>@(Model.Location ?? "-")</td></tr>
+            <tr><th>Organized By</th><td>@(Model.OrganizedBy ?? "-")</td></tr>
+            <tr><th>Audience</th><td>@(Model.IsForAll ? "Everyone" : ((Model.DepartmentName ?? "") + " " + (Model.RoleName ?? "")).Trim())</td></tr>
+            <tr><th>Reminder</th><td>@(Model.SendReminder ? $"Yes ({Model.ReminderBeforeMinutes ?? 0} min before)" : "No")</td></tr>
+            <tr><th>Participants</th><td>@Model.ParticipantCount</td></tr>
+        </table>
+    </div>
+</div>

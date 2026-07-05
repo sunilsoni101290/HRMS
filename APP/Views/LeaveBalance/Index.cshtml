@@ -1,0 +1,447 @@
+﻿
+@model IEnumerable<LeaveBalanceDto>
+
+@{
+    ViewData["Title"] = "Leave Balance";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+
+            <i class="icon-stack-check position-left"></i>
+
+            Leave Balance Management
+
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Create"
+               class="btn bg-primary">
+
+                <i class="icon-plus22"></i>
+                Add Balance
+
+            </a>
+
+            <button type="button"
+                    class="btn bg-success"
+                    data-toggle="modal"
+                    data-target="#allocateModal">
+                <i class="icon-stack-plus"></i>
+                Allocate Leave
+            </button>
+
+      </div>
+
+    </div>
+    <div class="panel-body">
+
+        <div class="row">
+
+            <div class="col-md-4">
+                <input type="text"
+                       id="searchInput"
+                       class="form-control"
+                       placeholder="Search Feature..." />
+            </div>
+
+            <div class="col-md-3">
+                <select id="EmployeeId" class="form-control">
+                    <option value="">All Employees</option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <select id="LeaveTypeId" class="form-control">
+                    <option value="">All Leave Types</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <button class="btn bg-primary btn-block">
+                    <i class="icon-filter4 position-left"></i>
+                    Filter
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+    <table id="leaveBalanceTable" class="table datatable-scroll-y">
+
+        <thead>
+
+            <tr>
+
+                <th>Employee</th>
+                <th>Leave Type</th>
+                <th>Year</th>
+                <th>Opening</th>
+                <th>Allocated</th>
+                <th>Credited</th>
+                <th>Used</th>
+                <th>Carry Forward</th>
+                <th>Balance</th>
+                <th>Action</th>
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            @foreach (var item in Model)
+            {
+                <tr>
+
+                    <td>@item.EmployeeName</td>
+
+                    <td>
+
+                        <span class="badge bg-primary">
+                            @item.LeaveTypeName
+                        </span>
+
+                    </td>
+
+                    <td>@item.Year</td>
+
+                    <td>@item.OpeningBalance</td>
+
+                    <td class="text-info fw-bold">
+                        @item.Allocated
+                    </td>
+
+                    <td class="text-success fw-bold">
+                        @item.Credited
+                    </td>
+
+                    <td class="text-danger fw-bold">
+                        @item.Used
+                    </td>
+
+                    <td>
+                        @item.CarryForward
+                    </td>
+
+                    <td>
+
+                        <span class="badge bg-success fs-6">
+
+                            @item.Balance
+
+                        </span>
+
+                    </td>
+
+                    <td>
+
+                        <div class="btn-group">
+
+                            <a asp-action="Details"
+                               asp-route-id="@item.Id"
+                               class="btn btn-default btn-icon"
+                               title="Details">
+
+                                <i class="icon-eye"></i>
+
+                            </a>
+
+                            <a asp-action="Edit"
+                               asp-route-id="@item.Id"
+                               class="btn btn-default btn-icon"
+                               title="Edit">
+
+                                <i class="icon-pencil7"></i>
+
+                            </a>
+                            <button type="button"
+                                    class="btn btn-success btn-icon btn-credit"
+                                    data-employee="@item.EmployeeId"
+                                    data-leavetype="@item.LeaveTypeId"
+                                    title="Credit Leave">
+
+                                <i class="icon-plus-circle2"></i>
+
+                            </button>
+
+                            <button type="button"
+                                    class="btn btn-warning btn-icon btn-deduct"
+                                    data-employee="@item.EmployeeId"
+                                    data-leavetype="@item.LeaveTypeId"
+                                    title="Deduct Leave">
+
+                                <i class="icon-minus-circle2"></i>
+
+                            </button>
+
+                            <button type="button"
+                                    class="btn bg-purple btn-icon btn-carry"
+                                    data-employee="@item.EmployeeId"
+                                    title="Carry Forward">
+
+                                <i class="icon-forward"></i>
+
+                            </button>
+
+                            <a asp-action="Transactions"
+                               asp-route-employeeId="@item.EmployeeId"
+                               asp-route-leaveTypeId="@item.LeaveTypeId"
+                               asp-route-year="@item.Year"
+                               class="btn btn-default btn-icon"
+                               title="Transactions">
+
+                                <i class="icon-history"></i>
+
+                            </a>
+                            <a asp-action="EmployeeTransactions"
+                               asp-route-employeeId="@item.EmployeeId"
+                               class="btn btn-default btn-icon"
+                               title="Ledger">
+
+                                <i class="icon-book"></i>
+
+                            </a>
+
+                        </div>
+
+                    </td>
+
+                </tr>
+            }
+
+        </tbody>
+
+    </table>
+
+</div>
+
+<partial name="_AllocateLeaveModal"
+         model="new AllocateLeaveRequestDto()" />
+<partial name="_CreditLeaveModal"
+         model="new LeaveAdjustmentRequestDto()" />
+<partial name="_DeductLeaveModal"
+         model="new LeaveAdjustmentRequestDto()" />
+<partial name="_CarryForwardModal"
+         model="new CarryForwardLeaveRequestDto()" />
+
+@section Scripts {
+
+    <script>
+
+        // Search Table
+
+        document.getElementById("searchInput")
+            .addEventListener("keyup", function () {
+
+                let value = this.value.toLowerCase();
+
+                let rows = document.querySelectorAll("#leaveBalanceTable tr");
+
+                rows.forEach(function (row) {
+
+                    let text = row.innerText.toLowerCase();
+
+                    row.style.display =
+                        text.includes(value) ? "" : "none";
+
+                });
+
+            });
+
+    </script>
+
+    <script>
+
+        $(function () {
+
+            $(".btn-credit").click(function () {
+
+                $("#CreditEmployeeId").val(
+                    $(this).data("employee"));
+
+                $("#CreditLeaveTypeId").val(
+                    $(this).data("leavetype"));
+
+                $("#creditModal").modal("show");
+            });
+
+            $(".btn-deduct").click(function () {
+
+                $("#DeductEmployeeId").val(
+                    $(this).data("employee"));
+
+                $("#DeductLeaveTypeId").val(
+                    $(this).data("leavetype"));
+
+                $("#deductModal").modal("show");
+            });
+
+            $("#btnAllocate").click(function () {
+
+                $.post('/LeaveBalance/AllocateLeave',
+                {
+                    employeeId:
+                        $("#AllocateEmployeeId").val(),
+
+                    year:
+                        $("#AllocateYear").val()
+                },
+                function (response) {
+
+                    alert("Leave Allocated");
+
+                    location.reload();
+                });
+            });
+
+            $("#btnCredit").click(function () {
+
+                $.post('/LeaveBalance/CreditLeave',
+                {
+                    employeeId:
+                        $("#CreditEmployeeId").val(),
+
+                    leaveTypeId:
+                        $("#CreditLeaveTypeId").val(),
+
+                    days:
+                        $("#CreditDays").val()
+                },
+                function () {
+
+                    alert("Leave Credited");
+
+                    location.reload();
+                });
+            });
+
+            $("#btnDeduct").click(function () {
+
+                $.post('/LeaveBalance/DeductLeave',
+                {
+                    employeeId:
+                        $("#DeductEmployeeId").val(),
+
+                    leaveTypeId:
+                        $("#DeductLeaveTypeId").val(),
+
+                    days:
+                        $("#DeductDays").val()
+                },
+                function () {
+
+                    alert("Leave Deducted");
+
+                    location.reload();
+                });
+            });
+
+            $("#btnCarryForward").click(function () {
+
+                $.post('/LeaveBalance/CarryForward',
+                {
+                    employeeId:
+                        $("#CarryEmployeeId").val(),
+
+                    fromYear:
+                        $("#FromYear").val(),
+
+                    toYear:
+                        $("#ToYear").val()
+                },
+                function () {
+
+                    alert("Carry Forward Success");
+
+                    location.reload();
+                });
+            });
+
+        });
+
+                $(document).ready(function () {
+
+            LoadEmployees();
+
+            LoadLeaveTypes();
+
+        });
+
+        function LoadEmployees() {
+
+            $.ajax({
+                url: '/LeaveBalance/GetEmployees',
+                type: 'GET',
+                success: function (response) {
+
+                    $('#EmployeeId').empty();
+                    $('#AllocateEmployeeId').empty();
+
+                    $('#EmployeeId').append(
+                        '<option value="">All Employees</option>');
+                    $('#AllocateEmployeeId').append(
+                        '<option value="">Select Employee</option>');
+
+                    $.each(response, function (i, item) {
+
+                        $('#EmployeeId').append(
+                            $('<option></option>')
+                                .val(item.Value)
+                                .text(item.Text)
+                        );
+
+                        $('#AllocateEmployeeId').append(
+                            $('<option></option>')
+                                .val(item.Value)
+                                .text(item.Text)
+                        );
+
+                    });
+
+                },
+                error: function () {
+
+                    alert('Unable to load employees.');
+
+                }
+            });
+
+        }
+
+        function LoadLeaveTypes() {
+
+            $.ajax({
+                url: '/LeaveBalance/GetLeaveTypes',
+                type: 'GET',
+                success: function (response) {
+
+                    $('#LeaveTypeId').empty();
+
+                    $('#LeaveTypeId').append(
+                        '<option value="">All Leave Types</option>');
+
+                    $.each(response, function (i, item) {
+
+                        $('#LeaveTypeId').append(
+                            $('<option></option>')
+                                .val(item.Value)
+                                .text(item.Text)
+                        );
+
+                    });
+
+                },
+                error: function () {
+
+                    alert('Unable to load leave types.');
+
+                }
+            });
+
+        }
+    </script>
+}

@@ -17,6 +17,7 @@ namespace Application.Interfaces.Masters
 
         Task<bool> DeleteAsync(string id);
         Task<List<AppFeatureDto>> GetMenuAsync();
+        Task<List<AppFeatureDto>> GetMenuByUserAsync(string? userId);
 
     }
 }

@@ -19,6 +19,41 @@
     <Compile Remove="Migrations\20260426193519_InitialCreateModification1.Designer.cs" />
     <Compile Remove="Migrations\20260427004746_TenantIdIsNULLToBaseEntity.cs" />
     <Compile Remove="Migrations\20260427004746_TenantIdIsNULLToBaseEntity.Designer.cs" />
+    <Compile Remove="Migrations\20260515151628_InitialCreation.cs" />
+    <Compile Remove="Migrations\20260515151628_InitialCreation.Designer.cs" />
+    <Compile Remove="Migrations\20260516032331_AddHolidayGroupandDetailTable.cs" />
+    <Compile Remove="Migrations\20260516032331_AddHolidayGroupandDetailTable.Designer.cs" />
+    <Compile Remove="Migrations\20260522122211_AddNewDeviceInfoColumnInAttendancelogstable.cs" />
+    <Compile Remove="Migrations\20260522122211_AddNewDeviceInfoColumnInAttendancelogstable.Designer.cs" />
+    <Compile Remove="Migrations\20260523100906_AddNewColumnToAttendanceLog.cs" />
+    <Compile Remove="Migrations\20260523100906_AddNewColumnToAttendanceLog.Designer.cs" />
+    <Compile Remove="Migrations\20260530073224_BiometricDeviceIntegrationTables.cs" />
+    <Compile Remove="Migrations\20260530073224_BiometricDeviceIntegrationTables.Designer.cs" />
+    <Compile Remove="Migrations\20260617180216_PendingMigration.cs" />
+    <Compile Remove="Migrations\20260617180216_PendingMigration.Designer.cs" />
+    <Compile Remove="Migrations\20260620065946_ModificationInLeaveBalanceTable.cs" />
+    <Compile Remove="Migrations\20260620065946_ModificationInLeaveBalanceTable.Designer.cs" />
+    <Compile Remove="Migrations\20260625093126_ModificationLeaveApprovalHistoryTable.cs" />
+    <Compile Remove="Migrations\20260625093126_ModificationLeaveApprovalHistoryTable.Designer.cs" />
+    <Compile Remove="Migrations\20260626164130_ModificationTenantChanges.cs" />
+    <Compile Remove="Migrations\20260626164130_ModificationTenantChanges.Designer.cs" />
+    <Compile Remove="Migrations\20260627075828_ModficationDesignationTable.cs" />
+    <Compile Remove="Migrations\20260627075828_ModficationDesignationTable.Designer.cs" />
+    <Compile Remove="Migrations\20260627184230_ModficationEmployeeTable.cs" />
+    <Compile Remove="Migrations\20260627184230_ModficationEmployeeTable.Designer.cs" />
+    <Compile Remove="Migrations\20260628073621_ModifyEmployeeTableWithPasspoprtField.cs" />
+    <Compile Remove="Migrations\20260628073621_ModifyEmployeeTableWithPasspoprtField.Designer.cs" />
+    <Compile Remove="Migrations\20260629153357_ModifyAnnoucmentTable.cs" />
+    <Compile Remove="Migrations\20260629153357_ModifyAnnoucmentTable.Designer.cs" />
+    <Compile Remove="Migrations\20260630051006_AddEmployeeBankEducationDetails.cs" />
+    <Compile Remove="Migrations\20260630051006_AddEmployeeBankEducationDetails.Designer.cs" />
+    <Compile Remove="Migrations\20260702170916_AssetTable.cs" />
+    <Compile Remove="Migrations\20260702170916_AssetTable.Designer.cs" />
+    <Compile Remove="Migrations\20260703055127__InitialMigration.cs" />
+    <Compile Remove="Migrations\20260703055127__InitialMigration.Designer.cs" />
+    <Compile Remove="Migrations\20260704105958_ModifyAnnoucmentTableAttachmentUrl.cs" />
+    <Compile Remove="Migrations\20260704105958_ModifyAnnoucmentTableAttachmentUrl.Designer.cs" />
+    <Compile Remove="Migrations\ApplicationDbContextModelSnapshot.cs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,0 +1,271 @@
+﻿@model LeaveBalanceDto
+
+@{
+    ViewData["Title"] = "Add Leave Balance";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+
+            @(string.IsNullOrEmpty(Model.Id)
+                ? "Allocate Leave Balance"
+                : "Edit Leave Balance")
+
+        </h5>
+
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="@(string.IsNullOrEmpty(Model.Id) ? "Create" : "Edit")" method="post">
+
+            <input asp-for="Id" type="hidden" />
+
+            <div class="row">
+
+                <div class="col-md-4">
+
+                    <div class="form-group">
+
+                        <label>Employee</label>
+
+                        <select asp-for="EmployeeId"
+                                asp-items="ViewBag.EmployeeList"
+                                class="form-control">
+
+                            <option value="">
+                                Select Employee
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-4">
+
+                    <div class="form-group">
+
+                        <label>Leave Type</label>
+
+                        <select asp-for="LeaveTypeId"
+                                asp-items="ViewBag.LeaveTypeList"
+                                class="form-control">
+
+                            <option value="">
+                                Select Leave Type
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-4">
+
+                    <div class="form-group">
+
+                        <label>Year</label>
+
+                        <input asp-for="Year"
+                               class="form-control" />
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <hr />
+
+            <div class="row">
+
+                <div class="col-md-2">
+
+                    <label>Opening</label>
+
+                    <input asp-for="OpeningBalance"
+                           class="form-control calc" />
+
+                </div>
+
+                <div class="col-md-2">
+
+                    <label>Allocated</label>
+
+                    <input asp-for="Allocated"
+                           class="form-control calc" />
+
+                </div>
+
+                <div class="col-md-2">
+
+                    <label>Credited</label>
+
+                    <input asp-for="Credited"
+                           class="form-control calc" />
+
+                </div>
+
+                <div class="col-md-2">
+
+                    <label>Used</label>
+
+                    <input asp-for="Used"
+                           class="form-control calc" />
+
+                </div>
+
+                <div class="col-md-2">
+
+                    <label>Carry Forward</label>
+
+                    <input asp-for="CarryForward"
+                           class="form-control calc" />
+
+                </div>
+
+                <div class="col-md-2">
+
+                    <label>Balance</label>
+
+                    <input asp-for="Balance"
+                           readonly
+                           class="form-control" />
+
+                </div>
+
+            </div>
+
+            <br />
+
+            <button type="submit"
+                    class="btn bg-primary">
+
+                Save
+
+            </button>
+
+            <a asp-action="Index"
+               class="btn btn-default">
+
+                Back
+
+            </a>
+
+        </form>
+
+    </div>
+
+</div>
+
+@section Scripts
+{
+    <script>
+
+    $(document).on("keyup change", ".calc", function () {
+
+        var opening = parseFloat($("#OpeningBalance").val()) || 0;
+        var allocated = parseFloat($("#Allocated").val()) || 0;
+        var credited = parseFloat($("#Credited").val()) || 0;
+        var used = parseFloat($("#Used").val()) || 0;
+        var carry = parseFloat($("#CarryForward").val()) || 0;
+
+        var balance =
+            opening +
+            allocated +
+            credited +
+            carry -
+            used;
+
+        $("#Balance").val(balance.toFixed(2));
+
+    });
+
+    </script>
+}
+
+@* @section Scripts
+{
+    <script>
+
+        function calculateBalance() {
+
+            var opening = parseFloat($("#OpeningBalance").val()) || 0;
+            var earned = parseFloat($("#Earned").val()) || 0;
+            var used = parseFloat($("#Used").val()) || 0;
+
+            var available = opening + earned - used;
+
+            $("#Balance").val(available.toFixed(2));
+            $("#balancePreview").text(available.toFixed(2));
+        }
+
+        $(document).ready(function () {
+
+            calculateBalance();
+
+            $("#EmployeeId,#LeaveTypeId,#Year").on("change", function () {
+                debugger;
+                var employeeId = $("#EmployeeId").val();
+                var leaveTypeId = $("#LeaveTypeId").val();
+                var year = $("#Year").val();
+
+                if (!employeeId || !leaveTypeId || !year) {
+                    return;
+                }
+
+                $.ajax({
+                    url: '/LeaveBalance/GetEmployeeBalance',
+                    type: 'GET',
+                    data: {
+                        employeeId: employeeId,
+                        leaveTypeId: leaveTypeId,
+                        year: year
+                    },
+                    success: function (data) {
+                        debugger;
+                        console.log("Response:", data);
+
+                        if (data) {
+
+                            $("#OpeningBalance").val(data.OpeningBalance || 0);
+                            $("#Earned").val(data.Earned || 0);
+                            $("#Used").val(data.Used || 0);
+                            $("#Balance").val(data.Balance || 0);
+
+                            $("#balancePreview").text(data.Balance || 0);
+
+                            calculateBalance();
+                        }
+                    },
+                    error: function (xhr) {
+
+                        console.log(xhr);
+
+                        $("#OpeningBalance").val(0);
+                        $("#Earned").val(0);
+                        $("#Used").val(0);
+                        $("#Balance").val(0);
+
+                        $("#balancePreview").text("0.00");
+                    }
+                });
+            });
+
+            $(document).on(
+                "keyup change",
+                "#OpeningBalance,#Earned,#Used",
+                function () {
+
+                    calculateBalance();
+                });
+        });
+
+    </script>
+} *@

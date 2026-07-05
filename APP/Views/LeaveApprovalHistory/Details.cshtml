@@ -1,0 +1,191 @@
+﻿
+@model LeaveApprovalHistoryDetailDto
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+
+            <i class="icon-file-text2 position-left"></i>
+
+            Leave Approval History Details
+
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Index"
+               class="btn btn-default">
+
+                <i class="icon-arrow-left13"></i>
+                Back
+
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <div class="row">
+
+            <div class="col-md-4">
+
+                <label class="text-semibold">
+                    Application No
+                </label>
+
+                <h6>@Model.LeaveApplicationNo</h6>
+
+            </div>
+
+            <div class="col-md-4">
+
+                <label class="text-semibold">
+                    Employee
+                </label>
+
+                <h6>@Model.EmployeeName</h6>
+
+            </div>
+
+            <div class="col-md-4">
+
+                <label class="text-semibold">
+                    Leave Type
+                </label>
+
+                <h6>@Model.LeaveTypeName</h6>
+
+            </div>
+
+        </div>
+
+        <hr />
+
+        <div class="row">
+
+            <div class="col-md-3">
+
+                <label class="text-semibold">
+                    From Date
+                </label>
+
+                <h6>
+                    @Model.FromDate.ToString("dd-MMM-yyyy")
+                </h6>
+
+            </div>
+
+            <div class="col-md-3">
+
+                <label class="text-semibold">
+                    To Date
+                </label>
+
+                <h6>
+                    @Model.ToDate.ToString("dd-MMM-yyyy")
+                </h6>
+
+            </div>
+
+            <div class="col-md-3">
+
+                <label class="text-semibold">
+                    Total Days
+                </label>
+
+                <h6>@Model.TotalDays</h6>
+
+            </div>
+
+            <div class="col-md-3">
+
+                <label class="text-semibold">
+                    Action Date
+                </label>
+
+                <h6>
+                    @Model.ActionDate.ToString("dd-MMM-yyyy HH:mm")
+                </h6>
+
+            </div>
+
+        </div>
+
+        <hr />
+
+        <div class="row">
+
+            <div class="col-md-4">
+
+                <label class="text-semibold">
+                    Action By
+                </label>
+
+                <h6>@Model.ActionByName</h6>
+
+            </div>
+
+            <div class="col-md-4">
+
+                <label class="text-semibold">
+                    Action
+                </label>
+
+                <h6>
+
+                    @if (Model.Action == EnumExtensions.ApprovalStatus.Approved)
+                    {
+                        <span class="label bg-success">
+                            Approved
+                        </span>
+                    }
+                    else if (Model.Action == EnumExtensions.ApprovalStatus.Rejected)
+                    {
+                        <span class="label bg-danger">
+                            Rejected
+                        </span>
+                    }
+                    else if (Model.Action == EnumExtensions.ApprovalStatus.Cancelled)
+                    {
+                        <span class="label bg-danger">
+                            Cancelled
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="label bg-danger">
+                            Pending
+                        </span>
+                    }
+
+                </h6>
+
+            </div>
+
+        </div>
+
+        <hr />
+
+        <div class="form-group">
+
+            <label class="text-semibold">
+
+                Remarks
+
+            </label>
+
+            <div class="well">
+
+                @Model.Remarks
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

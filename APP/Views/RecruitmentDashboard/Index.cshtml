@@ -1,0 +1,160 @@
+@model RecruitmentDashboardDto
+
+@{
+    ViewData["Title"] = "Recruitment Dashboard";
+}
+
+<!-- KPI Cards -->
+<div class="row">
+    <div class="col-lg-3 col-sm-6">
+        <div class="panel bg-blue-400">
+            <div class="panel-body">
+                <h3 class="no-margin">@Model.OpenPositions</h3>
+                Open Positions (@Model.TotalVacancies vacancies)
+                <div class="pull-right"><i class="icon-briefcase" style="font-size:34px;opacity:.75;"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-sm-6">
+        <div class="panel bg-teal-400">
+            <div class="panel-body">
+                <h3 class="no-margin">@Model.TotalCandidates</h3>
+                Candidates
+                <div class="pull-right"><i class="icon-users4" style="font-size:34px;opacity:.75;"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-sm-6">
+        <div class="panel bg-indigo-400">
+            <div class="panel-body">
+                <h3 class="no-margin">@Model.TotalApplications</h3>
+                Applications
+                <div class="pull-right"><i class="icon-clipboard3" style="font-size:34px;opacity:.75;"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-sm-6">
+        <div class="panel bg-success-400">
+            <div class="panel-body">
+                <h3 class="no-margin">@Model.Hires</h3>
+                Hires
+                <div class="pull-right"><i class="icon-user-check" style="font-size:34px;opacity:.75;"></i></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Funnel -->
+    <div class="col-md-7">
+        <div class="panel panel-flat">
+            <div class="panel-heading">
+                <h6 class="panel-title"><i class="icon-stats-bars position-left"></i> Hiring Funnel</h6>
+            </div>
+            <div class="panel-body">
+                <div id="funnelChart" style="height:300px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interviews summary -->
+    <div class="col-md-5">
+        <div class="panel panel-flat">
+            <div class="panel-heading">
+                <h6 class="panel-title"><i class="icon-calendar position-left"></i> Interviews</h6>
+            </div>
+            <div class="panel-body">
+                <div class="row text-center">
+                    <div class="col-xs-6">
+                        <h3 class="text-primary no-margin">@Model.InterviewsScheduled</h3>
+                        <span class="text-muted">Scheduled</span>
+                    </div>
+                    <div class="col-xs-6">
+                        <h3 class="text-success no-margin">@Model.InterviewsCompleted</h3>
+                        <span class="text-muted">Completed</span>
+                    </div>
+                </div>
+                <hr />
+                <h6 class="text-semibold">Upcoming</h6>
+                <ul class="media-list">
+                    @if (Model.UpcomingInterviews != null && Model.UpcomingInterviews.Any())
+                    {
+                        foreach (var i in Model.UpcomingInterviews)
+                        {
+                            <li class="media" style="padding:6px 0;">
+                                <div class="media-body">
+                                    <strong>@i.CandidateName</strong> — @i.JobTitle
+                                    <div class="text-muted text-size-small">
+                                        @i.InterviewDate.ToString("dd MMM yyyy HH:mm") · @i.InterviewerName
+                                    </div>
+                                </div>
+                            </li>
+                        }
+                    }
+                    else
+                    {
+                        <li class="text-muted">No upcoming interviews.</li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent applications -->
+<div class="panel panel-flat">
+    <div class="panel-heading">
+        <h6 class="panel-title"><i class="icon-clipboard3 position-left"></i> Recent Applications</h6>
+    </div>
+    <table class="table table-striped">
+        <thead>
+            <tr><th>Candidate</th><th>Job</th><th>Applied</th><th>Stage</th></tr>
+        </thead>
+        <tbody>
+            @if (Model.RecentApplications != null && Model.RecentApplications.Any())
+            {
+                foreach (var a in Model.RecentApplications)
+                {
+                    <tr>
+                        <td><strong>@a.CandidateName</strong></td>
+                        <td>@a.JobTitle</td>
+                        <td>@a.AppliedDate.ToString("dd MMM yyyy")</td>
+                        <td><span class="label bg-info">@a.StatusText</span></td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr><td colspan="4" class="text-center text-muted" style="padding:20px;">No applications yet.</td></tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script src="~/global_assets/js/plugins/visualization/echarts/echarts.min.js"></script>
+    <script>
+        $(function () {
+            var el = document.getElementById('funnelChart');
+            if (el && typeof echarts !== 'undefined') {
+                var chart = echarts.init(el);
+                chart.setOption({
+                    tooltip: { trigger: 'item' },
+                    series: [{
+                        type: 'funnel',
+                        left: '10%', width: '80%',
+                        label: { show: true, position: 'inside' },
+                        data: [
+                            { value: @Model.AppliedCount, name: 'Applied' },
+                            { value: @Model.ShortlistedCount, name: 'Shortlisted' },
+                            { value: @Model.InterviewCount, name: 'Interview' },
+                            { value: @Model.SelectedCount, name: 'Selected' },
+                            { value: @Model.RejectedCount, name: 'Rejected' }
+                        ]
+                    }]
+                });
+                window.addEventListener('resize', function () { chart.resize(); });
+            }
+        });
+    </script>
+}

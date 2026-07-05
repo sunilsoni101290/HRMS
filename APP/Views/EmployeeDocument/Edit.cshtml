@@ -1,0 +1,12 @@
+﻿@model EmployeeDocumentDto
+@{
+    ViewData["Title"] = "Edit Employee Document";
+}
+
+<form id="employeeDocumentForm" asp-action="Edit" method="post">
+    @await Html.PartialAsync("_CreateEdit", Model)
+</form>
+
+@section Scripts {
+    @await Html.PartialAsync("_DocumentScripts")
+}

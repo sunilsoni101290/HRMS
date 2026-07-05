@@ -1,280 +1,842 @@
 ﻿@model EmployeeListDto
 
-<div class="container-fluid py-4">
+<div class="panel panel-flat">
+    <div class="panel-heading">
 
-    <div class="card shadow border-0 rounded-4">
+        <h5 class="panel-title">
 
-        <!-- Header -->
-        <div class="card-header bg-primary text-white py-4">
+            <i class="icon-user position-left"></i>
 
-            <div class="d-flex align-items-center">
+            Employee Details
 
-                <div class="me-4">
+        </h5>
 
-                    @if (!string.IsNullOrEmpty(Model.FilePath))
-                    {
-                        <img src="@Model.FilePath"
-                             alt="Employee Photo"
-                             class="rounded-circle border border-3 border-white shadow"
-                             style="width:80px;height:80px;object-fit:cover;" />
-                    }
-                    else
-                    {
-                        <div class="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center"
-                             style="width:80px;height:80px;font-size:28px;font-weight:bold;">
+        <div class="heading-elements">
 
-                            @NameHelper.GetNamePrefix(Model.FirstName, Model.LastName)
+            <a asp-action="Index"
+               class="btn btn-default">
 
-                        </div>
-                    }
-                </div>
+                <i class="icon-arrow-left13"></i>
+                Back
 
-                <div>
+            </a>
 
-                    <h3 class="mb-1">
-                        @Model.FirstName @Model.LastName
-                    </h3>
+            <a asp-action="Edit"
+               asp-route-id="@Model.Id"
+               class="btn bg-primary">
 
-                    <div>
-                        @Model.DesignationName
-                    </div>
+                <i class="icon-pencil7"></i>
+                Edit
 
-                    <small>
-                        Employee Code : @Model.EmployeeCode
-                    </small>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <!-- Body -->
-        <div class="card-body p-4">
-
-            <div class="row g-4">
-
-                <!-- Personal -->
-                <div class="col-md-6">
-
-                    <div class="card border-0 shadow-sm rounded-4 h-100">
-
-                        <div class="card-header bg-light">
-                            <h5 class="mb-0">
-                                Personal Details
-                            </h5>
-                        </div>
-
-                        <div class="card-body">
-
-                            <table class="table table-borderless">
-
-                                <tr>
-                                    <th>Gender</th>
-                                    <td>@Model.Gender</td>
-                                </tr>
-
-                                <tr>
-                                    <th>DOB</th>
-                                    <td>@Model.DateOfBirth?.ToString("dd MMM yyyy")</td>
-                                </tr>
-
-                                <tr>
-                                    <th>Marital Status</th>
-                                    <td>@Model.MaritalStatus</td>
-                                </tr>
-
-                                <tr>
-                                    <th>Phone</th>
-                                    <td>@Model.Phone</td>
-                                </tr>
-
-                                <tr>
-                                    <th>Email</th>
-                                    <td>@Model.Email</td>
-                                </tr>
-
-                            </table>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                <!-- Organization -->
-                <div class="col-md-6">
-
-                    <div class="card border-0 shadow-sm rounded-4 h-100">
-
-                        <div class="card-header bg-light">
-                            <h5 class="mb-0">
-                                Organization Details
-                            </h5>
-                        </div>
-
-                        <div class="card-body">
-
-                            <table class="table table-borderless">
-
-                                <tr>
-                                    <th>Company</th>
-                                    <td>@Model.CompanyName</td>
-                                </tr>
-
-                                <tr>
-                                    <th>Branch</th>
-                                    <td>@Model.BrnachName</td>
-                                </tr>
-
-                                <tr>
-                                    <th>Department</th>
-                                    <td>@Model.DepartmentName</td>
-                                </tr>
-
-                                <tr>
-                                    <th>Designation</th>
-                                    <td>@Model.DesignationName</td>
-                                </tr>
-
-                                <tr>
-                                    <th>Reporting Manager</th>
-                                    <td>@Model.ReportingManagerName</td>
-                                </tr>
-
-                            </table>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                <!-- Employment -->
-                <div class="col-md-6">
-
-                    <div class="card border-0 shadow-sm rounded-4 h-100">
-
-                        <div class="card-header bg-light">
-                            <h5 class="mb-0">
-                                Employment Details
-                            </h5>
-                        </div>
-
-                        <div class="card-body">
-
-                            <table class="table table-borderless">
-
-                                <tr>
-                                    <th>Joining Date</th>
-                                    <td>@Model.JoiningDate?.ToString("dd MMM yyyy")</td>
-                                </tr>
-
-                                <tr>
-                                    <th>Confirmation Date</th>
-                                    <td>@Model.ConfirmationDate?.ToString("dd MMM yyyy")</td>
-                                </tr>
-
-                                <tr>
-                                    <th>Relieving Date</th>
-                                    <td>@Model.RelievingDate?.ToString("dd MMM yyyy")</td>
-                                </tr>
-
-                                <tr>
-                                    <th>Employment Type</th>
-                                    <td>@Model.EmploymentType</td>
-                                </tr>
-
-                            </table>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                <!-- KYC -->
-                <div class="col-md-6">
-
-                    <div class="card border-0 shadow-sm rounded-4 h-100">
-
-                        <div class="card-header bg-light">
-                            <h5 class="mb-0">
-                                KYC Details
-                            </h5>
-                        </div>
-
-                        <div class="card-body">
-
-                            <table class="table table-borderless">
-
-                                <tr>
-                                    <th>PAN #</th>
-                                    <td>@Model.PANNumber</td>
-                                </tr>
-
-                                <tr>
-                                    <th>Aadhar #</th>
-                                    <td>@Model.AadharNumber</td>
-                                </tr>
-
-                                <tr>
-                                    <th>Address</th>
-                                    <td>@Model.Address</td>
-                                </tr>
-
-                                <tr>
-                                    <th>Pincode</th>
-                                    <td>@Model.Pincode</td>
-                                </tr>
-
-                            </table>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-            <!-- Buttons -->
-            <div class="mt-4 text-end">
-
-                <a asp-action="Index"
-                   class="btn btn-light border rounded-3 px-4">
-
-                    <i class="bi bi-arrow-left"></i>
-                    Back
-
-                </a>
-
-                <a asp-action="Edit"
-                   asp-route-id="@Model.Id"
-                   class="btn btn-primary rounded-3 px-4">
-
-                    <i class="bi bi-pencil-square"></i>
-                    Edit
-
-                </a>
-
-            </div>
+            </a>
 
         </div>
 
     </div>
 
-</div>
-<style>
-    table th {
-        font-family: 'Inter', sans-serif;
-        font-size: 14px;
-        font-weight: 600;
-    }
+    <div class="panel-body">
+        <div class="row">
 
-    table td {
-        font-family: 'Inter', sans-serif;
-        font-size: 13px;
-        font-weight: normal;
-    }
-</style>
+            <div class="col-md-3 text-center">
+
+                @if (!string.IsNullOrEmpty(Model.FilePath))
+                {
+                    <img src="@Model.FilePath"
+                         class="img-circle img-responsive"
+                         style="width:150px;height:150px;object-fit:cover;margin:auto;" />
+                }
+                else
+                {
+                    <img src="~/images/no-image.png"
+                         class="img-circle img-responsive"
+                         style="width:150px;height:150px;margin:auto;" />
+                }
+
+                <h4 class="mt-15">
+
+                    @Model.FirstName @Model.LastName
+
+                </h4>
+
+                <span class="label bg-primary">
+
+                    @Model.EmployeeCode
+
+                </span>
+
+            </div>
+
+            <div class="col-md-9">
+
+                <div class="row">
+
+                    <div class="col-md-4">
+
+                        <div class="panel bg-primary-400">
+
+                            <div class="panel-body">
+
+                                <h3 class="no-margin">
+                                    @Model.CompanyName
+                                </h3>
+
+                                Company
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-4">
+
+                        <div class="panel bg-success-400">
+
+                            <div class="panel-body">
+
+                                <h3 class="no-margin">
+                                    @Model.DepartmentName
+                                </h3>
+
+                                Department
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-4">
+
+                        <div class="panel bg-warning-400">
+
+                            <div class="panel-body">
+
+                                <h3 class="no-margin">
+                                    @Model.DesignationName
+                                </h3>
+
+                                Designation
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <hr />
+        <ul class="nav nav-tabs nav-tabs-highlight">
+            <li class="active">
+                <a href="#personal" data-toggle="tab">
+                    Personal Information
+                </a>
+            </li>
+
+            <li>
+                <a href="#organization" data-toggle="tab">
+                    Organization Information
+                </a>
+            </li>
+
+            <li>
+                <a href="#contact" data-toggle="tab">
+                    Contact Information
+                </a>
+            </li>
+
+            <li>
+                <a href="#kyc" data-toggle="tab">
+                    KYC Information
+                </a>
+            </li>
+            <li>
+                <a href="#Passport" data-toggle="tab">
+                    Passport Information
+                </a>
+            </li>
+
+            <li>
+                <a href="#employment" data-toggle="tab">
+                    Employment Information
+                </a>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+
+            <div class="tab-pane active" id="personal">
+
+                <div class="row">
+
+                    <div class="col-md-3">
+                        <label class="text-semibold">First Name</label>
+                        <p>@Model.FirstName</p>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="text-semibold">Last Name</label>
+                        <p>@Model.LastName</p>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="text-semibold">Gender</label>
+                        <p>@Model.Gender</p>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="text-semibold">Date Of Birth</label>
+                        <p>@Model.DateOfBirth?.ToString("dd-MMM-yyyy")</p>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="text-semibold">Marital Status</label>
+                        <p>@Model.MaritalStatus</p>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="tab-pane" id="organization">
+
+                <div class="row">
+
+                    <div class="col-md-3">
+                        <label class="text-semibold">Company</label>
+                        <p>@Model.CompanyName</p>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="text-semibold">Branch</label>
+                        <p>@Model.BrnachName</p>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="text-semibold">Department</label>
+                        <p>@Model.DepartmentName</p>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="text-semibold">Designation</label>
+                        <p>@Model.DesignationName</p>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="text-semibold">Reporting Manager</label>
+                        <p>@Model.ReportingManagerName</p>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="text-semibold">Shift</label>
+                        <p>@Model.ShiftName</p>
+                    </div>
+
+                </div>
+
+            </div>
+            <div class="tab-pane" id="contact">
+
+                <div class="row">
+
+                    <div class="col-md-4">
+                        <label class="text-semibold">Phone</label>
+                        <p>@Model.Phone</p>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="text-semibold">Email</label>
+                        <p>@Model.Email</p>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="text-semibold">Emergency Contact</label>
+                        <p>@Model.EmergencyContact</p>
+                    </div>
+
+                    <div class="col-md-12">
+                        <label class="text-semibold">Address</label>
+                        <p>@Model.Address</p>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="text-semibold">Pincode</label>
+                        <p>@Model.Pincode</p>
+                    </div>
+
+                </div>
+
+            </div>
+            <div class="tab-pane" id="kyc">
+
+                <div class="row">
+
+                    <div class="col-md-4">
+                        <label class="text-semibold">PAN Number</label>
+                        <p>@Model.PANNumber</p>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="text-semibold">Aadhar Number</label>
+                        <p>@Model.AadharNumber</p>
+                    </div>
+
+                </div>
+
+            </div>
+            <div class="tab-pane" id="Passport">
+                <!-- Passport Information -->
+
+                <div class="panel panel-flat">
+
+                    <div class="panel-heading">
+
+                        <h6 class="panel-title">
+
+                            <i class="icon-airplane3 position-left"></i>
+
+                            Passport Information
+
+                        </h6>
+
+                    </div>
+
+                    <div class="panel-body">
+
+                        <table class="table table-bordered table-striped">
+
+                            <tbody>
+
+                                <tr>
+
+                                    <th width="250">
+                                        Passport Number
+                                    </th>
+
+                                    <td>
+
+                                        @(string.IsNullOrWhiteSpace(Model.PassportNumber)
+                                            ? "-"
+                                            : Model.PassportNumber)
+
+                                    </td>
+
+                                </tr>
+
+                                <tr>
+
+                                    <th>
+                                        Nationality
+                                    </th>
+
+                                    <td>
+
+                                        @Model.Nationality
+
+                                    </td>
+
+                                </tr>
+
+                                <tr>
+
+                                    <th>
+                                        Passport Status
+                                    </th>
+
+                                    <td>
+
+                                        @if (Model.PassportStatus == EnumExtensions.PassportStatus.Active)
+                                        {
+                                            <span class="label bg-success">
+                                                @Model.PassportStatus
+                                            </span>
+                                        }
+                                        else if (Model.PassportStatus == EnumExtensions.PassportStatus.Applied)
+                                        {
+                                            <span class="label bg-warning">
+                                                @Model.PassportStatus
+                                            </span>
+                                        }
+                                        else if (Model.PassportStatus == EnumExtensions.PassportStatus.Expired)
+                                        {
+                                            <span class="label bg-danger">
+                                                @Model.PassportStatus
+                                            </span>
+                                        }
+                                        else if (Model.PassportStatus == EnumExtensions.PassportStatus.Cancelled)
+                                        {
+                                            <span class="label bg-danger">
+                                                @Model.PassportStatus
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="label bg-grey">
+                                                @Model.PassportStatus
+                                            </span>
+                                        }
+
+                                    </td>
+
+                                </tr>
+
+                                <tr>
+
+                                    <th>
+                                        Passport Issuing Country
+                                    </th>
+
+                                    <td>
+
+                                        @(string.IsNullOrWhiteSpace(Model.CountryName)
+                                            ? "-"
+                                            : Model.CountryName)
+
+                                    </td>
+
+                                </tr>
+
+                                <tr>
+
+                                    <th>
+                                        Issue Date
+                                    </th>
+
+                                    <td>
+
+                                        @(Model.IssueDate == DateTime.MinValue
+                                            ? "-"
+                                            : Model.IssueDate.ToString("dd-MMM-yyyy"))
+
+                                    </td>
+
+                                </tr>
+
+                                <tr>
+
+                                    <th>
+                                        Expiry Date
+                                    </th>
+
+                                    <td>
+
+                                        @(Model.ExpiryDate == DateTime.MinValue
+                                            ? "-"
+                                            : Model.ExpiryDate.ToString("dd-MMM-yyyy"))
+
+                                    </td>
+
+                                </tr>
+
+                                <tr>
+
+                                    <th>
+                                        Place Of Issue
+                                    </th>
+
+                                    <td>
+
+                                        @(string.IsNullOrWhiteSpace(Model.PlaceOfIssue)
+                                            ? "-"
+                                            : Model.PlaceOfIssue)
+
+                                    </td>
+
+                                </tr>
+
+                                <tr>
+
+                                    <th>
+                                        Passport Document
+                                    </th>
+
+                                    <td>
+
+                                        @if (!string.IsNullOrWhiteSpace(Model.PassportFilePath))
+                                        {
+                                            <a asp-action="ViewPassport"
+                                               asp-route-employeeId="@Model.Id"
+                                               target="_blank"
+                                               class="btn bg-primary btn-sm">
+
+                                                <i class="icon-file-eye"></i>
+
+                                                View Passport
+
+                                            </a>
+
+                                            <a asp-action="DownloadPassport"
+                                               asp-route-employeeId="@Model.Id"
+                                               download
+                                               class="btn bg-success btn-sm">
+
+                                                <i class="icon-download"></i>
+
+                                                Download
+
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">
+
+                                                <i class="icon-file-empty"></i>
+
+                                                Not Uploaded
+
+                                            </span>
+                                        }
+
+                                    </td>
+
+                                </tr>
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+            </div>
+            <div class="tab-pane" id="employment">
+
+                <div class="row">
+
+                    <div class="col-md-3">
+                        <label class="text-semibold">Joining Date</label>
+                        <p>@Model.JoiningDate?.ToString("dd-MMM-yyyy")</p>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="text-semibold">Confirmation Date</label>
+                        <p>@Model.ConfirmationDate?.ToString("dd-MMM-yyyy")</p>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="text-semibold">Relieving Date</label>
+                        <p>@Model.RelievingDate?.ToString("dd-MMM-yyyy")</p>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="text-semibold">Employment Type</label>
+                        <p>@Model.EmploymentType</p>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="text-semibold">Email</label>
+                        <p>
+                            @Model.Email
+                        </p>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="text-semibold">Phone</label>
+                        <p>
+                            @Model.Phone
+                        </p>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+        @* <!-- Employee Header -->
+
+        <div class="row">
+
+            <div class="col-md-3 text-center">
+
+                @if (!string.IsNullOrEmpty(Model.FilePath))
+                {
+                    <img src="@Model.FilePath"
+                         class="img-circle img-responsive"
+                         style="width:150px;height:150px;object-fit:cover;margin:auto;" />
+                }
+                else
+                {
+                    <img src="~/images/no-image.png"
+                         class="img-circle img-responsive"
+                         style="width:150px;height:150px;margin:auto;" />
+                }
+
+                <h4 class="mt-15">
+
+                    @Model.FirstName @Model.LastName
+
+                </h4>
+
+                <span class="label bg-primary">
+
+                    @Model.EmployeeCode
+
+                </span>
+
+            </div>
+
+            <div class="col-md-9">
+
+                <div class="row">
+
+                    <div class="col-md-4">
+
+                        <div class="panel bg-primary-400">
+
+                            <div class="panel-body">
+
+                                <h3 class="no-margin">
+                                    @Model.CompanyName
+                                </h3>
+
+                                Company
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-4">
+
+                        <div class="panel bg-success-400">
+
+                            <div class="panel-body">
+
+                                <h3 class="no-margin">
+                                    @Model.DepartmentName
+                                </h3>
+
+                                Department
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-4">
+
+                        <div class="panel bg-warning-400">
+
+                            <div class="panel-body">
+
+                                <h3 class="no-margin">
+                                    @Model.DesignationName
+                                </h3>
+
+                                Designation
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <hr />
+
+        <!-- Personal Information -->
+
+        <div class="panel panel-bordered">
+
+            <div class="panel-heading">
+                <h6 class="panel-title">
+                    Personal Information
+                </h6>
+            </div>
+
+            <table class="table table-bordered">
+
+                <tr>
+                    <th width="250">First Name</th>
+                    <td>@Model.FirstName</td>
+                </tr>
+
+                <tr>
+                    <th>Last Name</th>
+                    <td>@Model.LastName</td>
+                </tr>
+
+                <tr>
+                    <th>Gender</th>
+                    <td>@Model.Gender</td>
+                </tr>
+
+                <tr>
+                    <th>Date Of Birth</th>
+                    <td>@Model.DateOfBirth?.ToString("dd-MMM-yyyy")</td>
+                </tr>
+
+                <tr>
+                    <th>Marital Status</th>
+                    <td>@Model.MaritalStatus</td>
+                </tr>
+
+            </table>
+
+        </div>
+
+        <!-- Organization -->
+
+        <div class="panel panel-bordered">
+
+            <div class="panel-heading">
+                <h6 class="panel-title">
+                    Organization Details
+                </h6>
+            </div>
+
+            <table class="table table-bordered">
+
+                <tr>
+                    <th width="250">Company</th>
+                    <td>@Model.CompanyName</td>
+                </tr>
+
+                <tr>
+                    <th>Branch</th>
+                    <td>@Model.BrnachName</td>
+                </tr>
+
+                <tr>
+                    <th>Department</th>
+                    <td>@Model.DepartmentName</td>
+                </tr>
+
+                <tr>
+                    <th>Designation</th>
+                    <td>@Model.DesignationName</td>
+                </tr>
+
+                <tr>
+                    <th>Reporting Manager</th>
+                    <td>@Model.ReportingManagerName</td>
+                </tr>
+
+            </table>
+
+        </div>
+
+        <!-- Contact Information -->
+
+        <div class="panel panel-bordered">
+
+            <div class="panel-heading">
+                <h6 class="panel-title">
+                    Contact Information
+                </h6>
+            </div>
+
+            <table class="table table-bordered">
+
+                <tr>
+                    <th width="250">Phone</th>
+                    <td>@Model.Phone</td>
+                </tr>
+
+                <tr>
+                    <th>Email</th>
+                    <td>@Model.Email</td>
+                </tr>
+
+                <tr>
+                    <th>Emergency Contact</th>
+                    <td>@Model.EmergencyContact</td>
+                </tr>
+
+                <tr>
+                    <th>Address</th>
+                    <td>@Model.Address</td>
+                </tr>
+
+                <tr>
+                    <th>Pincode</th>
+                    <td>@Model.Pincode</td>
+                </tr>
+
+            </table>
+
+        </div>
+
+        <!-- KYC -->
+
+        <div class="panel panel-bordered">
+
+            <div class="panel-heading">
+                <h6 class="panel-title">
+                    KYC Information
+                </h6>
+            </div>
+
+            <table class="table table-bordered">
+
+                <tr>
+                    <th width="250">PAN Number</th>
+                    <td>@Model.PANNumber</td>
+                </tr>
+
+                <tr>
+                    <th>Aadhar Number</th>
+                    <td>@Model.AadharNumber</td>
+                </tr>
+
+            </table>
+
+        </div>
+
+        <!-- Employment -->
+
+        <div class="panel panel-bordered">
+
+            <div class="panel-heading">
+                <h6 class="panel-title">
+                    Employment Information
+                </h6>
+            </div>
+
+            <table class="table table-bordered">
+
+                <tr>
+                    <th width="250">Joining Date</th>
+                    <td>@Model.JoiningDate?.ToString("dd-MMM-yyyy")</td>
+                </tr>
+
+                <tr>
+                    <th>Confirmation Date</th>
+                    <td>@Model.ConfirmationDate?.ToString("dd-MMM-yyyy")</td>
+                </tr>
+
+                <tr>
+                    <th>Relieving Date</th>
+                    <td>@Model.RelievingDate?.ToString("dd-MMM-yyyy")</td>
+                </tr>
+
+                <tr>
+                    <th>Employment Type</th>
+                    <td>@Model.EmploymentType</td>
+                </tr>
+
+                <tr>
+                    <th>Shift</th>
+                    <td>@Model.ShiftName</td>
+                </tr>
+
+            </table>
+
+        </div> *@
+
+    </div>
+
+</div>
+

@@ -117,17 +117,20 @@ builder.Services.AddScoped<ISequenceService, SequenceService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
+builder.Services.AddScoped<ITenantBusinessService, TenantBusinessService>();
 builder.Services.AddScoped<IAppFeatureService, AppFeatureService>();
 builder.Services.AddScoped<IFinancialYearService, FinancialYearService>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
+builder.Services.AddScoped<IEmployeeDocumentService, EmployeeDocumentService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
 builder.Services.AddScoped<IBiometricDeviceService, BiometricDeviceService>();
 builder.Services.AddScoped<IBiometricSyncService,BiometricSyncService>();
 builder.Services.AddScoped<IAttendanceProcessorService,AttendanceProcessorService>();
 builder.Services.AddScoped<ILeaveTypeService, LeaveTypeService>();
-builder.Services.AddScoped<ILeaveService, LeaveService>();
-builder.Services.AddScoped<ILeaveDashboardService, LeaveDashboardService>();
+builder.Services.AddScoped<ILeaveBalanceService, LeaveBalanceService>();
+builder.Services.AddScoped<ILeaveApplicationService, LeaveApplicationService>();
+//builder.Services.AddScoped<ILeaveDashboardService, LeaveDashboardService>();
 builder.Services.AddScoped<IHolidayGroupService, HolidayGroupService>();
 builder.Services.AddScoped<ICompanyService, CompanyService>();
 builder.Services.AddScoped<IBranchService, BranchService>();
@@ -142,6 +145,35 @@ builder.Services.AddScoped<IShiftService, ShiftService>();
 builder.Services.AddScoped<IEmployeeShiftMappingService, EmployeeShiftMappingService>();
 builder.Services.AddScoped<IHolidayGroupService, HolidayGroupService>();
 builder.Services.AddScoped<IWeekOffService, WeekOffService>();
+
+// ===================== Asset Module =====================
+builder.Services.AddScoped<Application.Interfaces.Assets.IAssetCategoryService, Application.Services.Assets.AssetCategoryService>();
+builder.Services.AddScoped<Application.Interfaces.Assets.IAssetService, Application.Services.Assets.AssetService>();
+builder.Services.AddScoped<Application.Interfaces.Assets.IAssetAllocationService, Application.Services.Assets.AssetAllocationService>();
+
+// ===================== Payroll Module =====================
+builder.Services.AddScoped<Application.Interfaces.Payroll.ISalaryComponentService, Application.Services.PayrollService.SalaryComponentService>();
+builder.Services.AddScoped<Application.Interfaces.Payroll.ISalaryStructureService, Application.Services.PayrollService.SalaryStructureService>();
+builder.Services.AddScoped<Application.Interfaces.Payroll.IPayrollBusinessService, Application.Services.PayrollService.PayrollBusinessService>();
+
+// ===================== Recruitment Module =====================
+builder.Services.AddScoped<Application.Interfaces.Recruitment.IJobOpeningService, Application.Services.Recruitment.JobOpeningService>();
+builder.Services.AddScoped<Application.Interfaces.Recruitment.ICandidateService, Application.Services.Recruitment.CandidateService>();
+builder.Services.AddScoped<Application.Interfaces.Recruitment.ICandidateApplicationService, Application.Services.Recruitment.CandidateApplicationService>();
+builder.Services.AddScoped<Application.Interfaces.Recruitment.IInterviewScheduleService, Application.Services.Recruitment.InterviewScheduleService>();
+builder.Services.AddScoped<Application.Interfaces.Recruitment.IRecruitmentDashboardService, Application.Services.Recruitment.RecruitmentDashboardService>();
+
+// ===================== Communication Module =====================
+builder.Services.AddScoped<Application.Interfaces.Communication.IAnnouncementService, Application.Services.Communication.AnnouncementService>();
+builder.Services.AddScoped<Application.Interfaces.Communication.IEventService, Application.Services.Communication.EventService>();
+builder.Services.AddScoped<Application.Interfaces.Communication.INotificationService, Application.Services.Communication.NotificationService>();
+
+// ===================== Tasks + Employee Dashboard =====================
+builder.Services.AddScoped<Application.Interfaces.Tasks.IEmployeeTaskService, Application.Services.Tasks.EmployeeTaskService>();
+builder.Services.AddScoped<Application.Interfaces.Dashboard.IEmployeeDashboardService, Application.Services.Dashboard.EmployeeDashboardService>();
+
+// ===================== User Management =====================
+builder.Services.AddScoped<Application.Interfaces.Users.IUserService, Application.Services.Users.UserService>();
 
 
 builder.Services.AddHttpClient();

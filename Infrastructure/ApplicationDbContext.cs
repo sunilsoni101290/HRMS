@@ -60,9 +60,10 @@ namespace Infrastructure
         #region 👤 EMPLOYEE
         public DbSet<Employee> Employees { get; set; }
         public DbSet<EmployeeDocument> EmployeeDocuments { get; set; }
-        public DbSet<BankDetail> BankDetails { get; set; }
+        public DbSet<EmployeeBankDetail> EmployeeBankDetails { get; set; }
         public DbSet<EmployeePFDetail> EmployeePFDetails { get; set; }
         public DbSet<EmployeeESICDetail> EmployeeESICDetails { get; set; }
+        public DbSet<EmployeeEducationDetail> EmployeeEducationDetails { get; set; }
         public DbSet<EmployeeShiftMapping> EmployeeShiftMappings { get; set; }
         #endregion
 
@@ -79,6 +80,7 @@ namespace Infrastructure
         #region  📅 LEAVE
         public DbSet<LeaveType> LeaveTypes { get; set; }
         public DbSet<LeaveBalance> LeaveBalances { get; set; }
+        public DbSet<LeaveBalanceTransaction> LeaveBalanceTransactions { get; set; }
         public DbSet<LeaveApplication> LeaveApplications { get; set; }
         public DbSet<LeaveApprovalHistory> LeaveApprovalHistories { get; set; }
         #endregion
@@ -88,6 +90,8 @@ namespace Infrastructure
         public DbSet<PayrollDetail> PayrollDetails { get; set; }
         public DbSet<Payslip> Payslips { get; set; }
         public DbSet<SalaryComponent> SalaryComponents { get; set; }
+        public DbSet<SalaryStructure> SalaryStructures { get; set; }
+        public DbSet<SalaryDetail> SalaryDetails { get; set; }
         #endregion
 
         #region 💼 ASSET
@@ -95,6 +99,10 @@ namespace Infrastructure
         public DbSet<AssetCategory> AssetCategories { get; set; }
         public DbSet<AssetAllocation> AssetAllocations { get; set; }
         public DbSet<AssetHistory> AssetHistories { get; set; }
+        #endregion
+
+        #region ✅ TASKS
+        public DbSet<EmployeeTask> EmployeeTasks { get; set; }
         #endregion
 
         #region 🎯 RECRUITMENT
@@ -334,6 +342,42 @@ namespace Infrastructure
 
             modelBuilder.Entity<Payroll>()
                 .HasIndex(x => new { x.EmployeeId, x.SalaryMonth });
+
+            // =====================================================
+            // 💰 SALARY STRUCTURE
+            // =====================================================
+            modelBuilder.Entity<SalaryStructure>()
+                .HasOne(x => x.Employee)
+                .WithMany()
+                .HasForeignKey(x => x.EmployeeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<SalaryStructure>()
+                .HasMany(x => x.SalaryDetails)
+                .WithOne(x => x.EmployeeSalaryStructure)
+                .HasForeignKey(x => x.SalaryStructureId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SalaryDetail>()
+                .HasOne(x => x.SalaryComponent)
+                .WithMany()
+                .HasForeignKey(x => x.SalaryComponentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<SalaryStructure>()
+                .HasIndex(x => new { x.EmployeeId, x.EffectiveFrom });
+
+            // =====================================================
+            // ✅ TASKS
+            // =====================================================
+            modelBuilder.Entity<EmployeeTask>()
+                .HasOne(x => x.Employee)
+                .WithMany()
+                .HasForeignKey(x => x.EmployeeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<EmployeeTask>()
+                .HasIndex(x => new { x.EmployeeId, x.Status });
 
             // =====================================================
             // 🔗 USER / ROLE / PERMISSION

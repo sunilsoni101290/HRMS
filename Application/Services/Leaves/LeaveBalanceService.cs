@@ -2,25 +2,34 @@
 using Application.Interfaces.Leaves;
 using Domain.Entities;
 using Infrastructure;
+using Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Microsoft.EntityFrameworkCore;
-using Infrastructure.Data;
+using static Domain.Enums.EnumExtensions;
 
 namespace Application.Services.Leaves
 {
+
     public class LeaveBalanceService : ILeaveBalanceService
     {
         private readonly ApplicationDbContext _context;
 
-        public LeaveBalanceService(ApplicationDbContext context)
+        public LeaveBalanceService(
+            ApplicationDbContext context)
         {
             _context = context;
         }
 
+        
+
+        #region CRUD
+
         public async Task<List<LeaveBalanceDto>> GetAllAsync()
         {
+            try
+            {
             return await _context.LeaveBalances
                 .Include(x => x.Employee)
                 .Include(x => x.LeaveType)
@@ -37,43 +46,31 @@ namespace Application.Services.Leaves
                     Year = x.Year,
 
                     OpeningBalance = x.OpeningBalance,
-                    Earned = x.Earned,
+                    Allocated = x.Allocated,
+                    Credited = x.Credited,
+                    CarryForward = x.CarryForward,
                     Used = x.Used,
                     Balance = x.Balance,
+
+                    TenantId = x.TenantId,
 
                     CreatedBy = x.CreatedBy,
                     ModifiedOn = x.ModifiedOn,
                     ModifiedBy = x.ModifiedBy
                 })
+                .OrderByDescending(x => x.Year)
                 .ToListAsync();
-        }
-
-        public async Task<List<LeaveBalanceDto>> GetByEmployeeAsync(string employeeId)
-        {
-            return await _context.LeaveBalances
-                .Include(x => x.LeaveType)
-                .Where(x => x.EmployeeId == employeeId)
-                .Select(x => new LeaveBalanceDto
-                {
-                    Id = x.Id,
-
-                    EmployeeId = x.EmployeeId,
-
-                    LeaveTypeId = x.LeaveTypeId,
-                    LeaveTypeName = x.LeaveType.Name,
-
-                    Year = x.Year,
-
-                    OpeningBalance = x.OpeningBalance,
-                    Earned = x.Earned,
-                    Used = x.Used,
-                    Balance = x.Balance
-                })
-                .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<LeaveBalanceDto>();
+            }
         }
 
         public async Task<LeaveBalanceDto?> GetByIdAsync(string id)
         {
+            try
+            {
             return await _context.LeaveBalances
                 .Include(x => x.Employee)
                 .Include(x => x.LeaveType)
@@ -91,98 +88,69 @@ namespace Application.Services.Leaves
                     Year = x.Year,
 
                     OpeningBalance = x.OpeningBalance,
-                    Earned = x.Earned,
+                    Allocated = x.Allocated,
+                    Credited = x.Credited,
+                    CarryForward = x.CarryForward,
+                    Used = x.Used,
+                    Balance = x.Balance,
+
+                    TenantId = x.TenantId,
+
+                    CreatedBy = x.CreatedBy,
+                    ModifiedOn = x.ModifiedOn,
+                    ModifiedBy = x.ModifiedBy
+                })
+                .FirstOrDefaultAsync();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        public async Task<List<LeaveBalanceDto>>
+            GetByEmployeeAsync(string employeeId)
+        {
+            try
+            {
+            return await _context.LeaveBalances
+                .Include(x => x.LeaveType)
+                .Where(x => x.EmployeeId == employeeId)
+                .Select(x => new LeaveBalanceDto
+                {
+                    Id = x.Id,
+
+                    EmployeeId = x.EmployeeId,
+
+                    LeaveTypeId = x.LeaveTypeId,
+                    LeaveTypeName = x.LeaveType.Name,
+
+                    Year = x.Year,
+
+                    OpeningBalance = x.OpeningBalance,
+                    Allocated = x.Allocated,
+                    Credited = x.Credited,
+                    CarryForward = x.CarryForward,
                     Used = x.Used,
                     Balance = x.Balance
                 })
-                .FirstOrDefaultAsync();
-        }
-
-        public async Task<LeaveBalanceDto> CreateAsync(LeaveBalanceDto dto)
-        {
-            var exists = await _context.LeaveBalances
-                .AnyAsync(x =>
-                    x.EmployeeId == dto.EmployeeId &&
-                    x.LeaveTypeId == dto.LeaveTypeId &&
-                    x.Year == dto.Year);
-
-            if (exists)
-                throw new Exception("Leave Balance already exists.");
-
-            var entity = new LeaveBalance
+                .OrderByDescending(x => x.Year)
+                .ToListAsync();
+            }
+            catch (Exception)
             {
-                Id=IDManager.GetNewId(new LeaveBalance()),
-                EmployeeId = dto.EmployeeId,
-                LeaveTypeId = dto.LeaveTypeId,
-
-                Year = dto.Year,
-
-                OpeningBalance = dto.OpeningBalance,
-                Earned = dto.Earned,
-                Used = dto.Used,
-
-                Balance = dto.OpeningBalance +
-                          dto.Earned -
-                          dto.Used,
-
-                CreatedBy = dto.CreatedBy,
-                CreatedOn = DateTime.UtcNow
-            };
-
-            _context.LeaveBalances.Add(entity);
-
-            await _context.SaveChangesAsync();
-
-            dto.Id = entity.Id;
-
-            return dto;
+                return new List<LeaveBalanceDto>();
+            }
         }
 
-        public async Task<LeaveBalanceDto?> UpdateAsync(string id, LeaveBalanceDto dto)
+        public async Task<LeaveBalanceDto?>
+            GetEmployeeLeaveBalanceAsync(
+                string employeeId,
+                string leaveTypeId,
+                int year)
         {
-            var entity = await _context.LeaveBalances
-                .FirstOrDefaultAsync(x => x.Id == id);
-
-            if (entity == null)
-                return null;
-
-            entity.OpeningBalance = dto.OpeningBalance;
-            entity.Earned = dto.Earned;
-            entity.Used = dto.Used;
-
-            entity.Balance =
-                dto.OpeningBalance +
-                dto.Earned -
-                dto.Used;
-
-            entity.ModifiedOn = DateTime.UtcNow;
-            entity.ModifiedBy = dto.ModifiedBy;
-
-            await _context.SaveChangesAsync();
-
-            return dto;
-        }
-
-        public async Task<bool> DeleteAsync(string id)
-        {
-            var entity = await _context.LeaveBalances
-                .FirstOrDefaultAsync(x => x.Id == id);
-
-            if (entity == null)
-                return false;
-
-            _context.LeaveBalances.Remove(entity);
-
-            await _context.SaveChangesAsync();
-
-            return true;
-        }
-
-        public async Task<LeaveBalanceDto?> GetEmployeeLeaveBalanceAsync(
-            string employeeId,
-            string leaveTypeId,
-            int year)
-        {
+            try
+            {
             return await _context.LeaveBalances
                 .Where(x =>
                     x.EmployeeId == employeeId &&
@@ -198,15 +166,149 @@ namespace Application.Services.Leaves
                     Year = x.Year,
 
                     OpeningBalance = x.OpeningBalance,
-                    Earned = x.Earned,
+                    Allocated = x.Allocated,
+                    Credited = x.Credited,
+                    CarryForward = x.CarryForward,
                     Used = x.Used,
                     Balance = x.Balance
                 })
                 .FirstOrDefaultAsync();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
-        public async Task<bool> AllocateLeaveAsync(string employeeId,int year)
+        public async Task<LeaveBalanceDto>
+            CreateAsync(LeaveBalanceDto dto)
         {
+            try
+            {
+            bool exists = await _context.LeaveBalances
+                .AnyAsync(x =>
+                    x.EmployeeId == dto.EmployeeId &&
+                    x.LeaveTypeId == dto.LeaveTypeId &&
+                    x.Year == dto.Year);
+
+            if (exists)
+                throw new Exception(
+                    "Leave balance already exists.");
+
+            var entity = new LeaveBalance
+            {
+                Id=IDManager.GetNewId(new LeaveBalance()),
+                EmployeeId = dto.EmployeeId,
+                LeaveTypeId = dto.LeaveTypeId,
+
+                Year = dto.Year,
+
+                OpeningBalance = dto.OpeningBalance,
+                Allocated = dto.Allocated,
+                Credited = dto.Credited,
+                CarryForward = dto.CarryForward,
+                Used = dto.Used,
+
+                Balance = CalculateBalance(
+                    dto.OpeningBalance,
+                    dto.Allocated,
+                    dto.Credited,
+                    dto.CarryForward,
+                    dto.Used),
+
+                TenantId = dto.TenantId,
+
+                CreatedBy = dto.CreatedBy
+            };
+
+            _context.LeaveBalances.Add(entity);
+
+            await _context.SaveChangesAsync();
+
+            dto.Id = entity.Id;
+
+            return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        public async Task<LeaveBalanceDto?>
+            UpdateAsync(
+                string id,
+                LeaveBalanceDto dto)
+        {
+            try
+            {
+            var entity = await _context.LeaveBalances
+                .FirstOrDefaultAsync(x => x.Id == id);
+
+            if (entity == null)
+                return null;
+
+            entity.OpeningBalance = dto.OpeningBalance;
+            entity.Allocated = dto.Allocated;
+            entity.Credited = dto.Credited;
+            entity.CarryForward = dto.CarryForward;
+            entity.Used = dto.Used;
+
+            entity.Balance = CalculateBalance(
+                dto.OpeningBalance,
+                dto.Allocated,
+                dto.Credited,
+                dto.CarryForward,
+                dto.Used);
+
+            entity.ModifiedOn = DateTime.UtcNow;
+            entity.ModifiedBy = dto.ModifiedBy;
+
+            await _context.SaveChangesAsync();
+
+            return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        public async Task<bool> DeleteAsync(string id)
+        {
+            try
+            {
+            var entity = await _context.LeaveBalances
+                .FirstOrDefaultAsync(x => x.Id == id);
+
+            if (entity == null)
+                return false;
+
+            _context.LeaveBalances.Remove(entity);
+
+            await _context.SaveChangesAsync();
+
+            return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        #endregion
+
+        #region Leave Operations
+
+        // =====================================================
+        // ALLOCATE LEAVE
+        // =====================================================
+
+        public async Task<bool> AllocateLeaveAsync(
+            AllocateLeaveRequestDto request)
+        {
+            try
+            {
             var leaveTypes = await _context.LeaveTypes
                 .ToListAsync();
 
@@ -214,23 +316,27 @@ namespace Application.Services.Leaves
             {
                 bool exists = await _context.LeaveBalances
                     .AnyAsync(x =>
-                        x.EmployeeId == employeeId &&
+                        x.EmployeeId == request.EmployeeId &&
                         x.LeaveTypeId == leaveType.Id &&
-                        x.Year == year);
+                        x.Year == request.Year);
 
                 if (exists)
                     continue;
 
                 var balance = new LeaveBalance
                 {
-                    EmployeeId = employeeId,
+                    Id=IDManager.GetNewId(new LeaveBalance()),
+                    EmployeeId = request.EmployeeId,
                     LeaveTypeId = leaveType.Id,
 
-                    Year = year,
+                    Year = request.Year,
 
-                    OpeningBalance = leaveType.MaxDaysPerYear,
-                    Earned = 0,
+                    OpeningBalance = 0,
+                    Allocated = leaveType.MaxDaysPerYear,
+                    Credited = 0,
+                    CarryForward = 0,
                     Used = 0,
+
                     Balance = leaveType.MaxDaysPerYear,
 
                     CreatedOn = DateTime.UtcNow,
@@ -238,125 +344,405 @@ namespace Application.Services.Leaves
                 };
 
                 _context.LeaveBalances.Add(balance);
+
+                await _context.SaveChangesAsync();
+
+                await CreateTransactionAsync(
+                    request.EmployeeId,
+                    leaveType.Id,
+                    request.Year,
+                    LeaveTransactionType.Allocate,
+                    leaveType.MaxDaysPerYear,
+                    0,
+                    leaveType.MaxDaysPerYear,
+                    "Annual Leave Allocation");
             }
 
-            await _context.SaveChangesAsync();
-
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
-        public async Task<bool> DeductLeaveAsync(
-        string employeeId,
-        string leaveTypeId,
-        decimal days)
-        {
-            int year = DateTime.Now.Year;
-
-            var balance = await _context.LeaveBalances
-                .FirstOrDefaultAsync(x =>
-                    x.EmployeeId == employeeId &&
-                    x.LeaveTypeId == leaveTypeId &&
-                    x.Year == year);
-
-            if (balance == null)
-                throw new Exception("Leave balance not found.");
-
-            if (balance.Balance < days)
-                throw new Exception("Insufficient leave balance.");
-
-            balance.Used += days;
-            balance.Balance -= days;
-
-            balance.ModifiedOn = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-
-            return true;
-        }
+        // =====================================================
+        // CREDIT LEAVE
+        // =====================================================
 
         public async Task<bool> CreditLeaveAsync(
-        string employeeId,
-        string leaveTypeId,
-        decimal days)
+            LeaveAdjustmentRequestDto request)
         {
+            try
+            {
             int year = DateTime.Now.Year;
 
             var balance = await _context.LeaveBalances
                 .FirstOrDefaultAsync(x =>
-                    x.EmployeeId == employeeId &&
-                    x.LeaveTypeId == leaveTypeId &&
+                    x.EmployeeId == request.EmployeeId &&
+                    x.LeaveTypeId == request.LeaveTypeId &&
                     x.Year == year);
 
             if (balance == null)
                 throw new Exception("Leave balance not found.");
 
-            balance.Earned += days;
-            balance.Balance += days;
+            decimal beforeBalance = balance.Balance;
+
+            balance.Credited += request.Days;
+
+            balance.Balance = CalculateBalance(
+                balance.OpeningBalance,
+                balance.Allocated,
+                balance.Credited,
+                balance.CarryForward,
+                balance.Used);
 
             balance.ModifiedOn = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
 
+            await CreateTransactionAsync(
+                request.EmployeeId,
+                request.LeaveTypeId,
+                year,
+                LeaveTransactionType.Credit,
+                request.Days,
+                beforeBalance,
+                balance.Balance,
+                "Leave Credit");
+
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
-        public async Task<bool> CarryForwardLeaveAsync(
-        string employeeId,
-        int fromYear,
-        int toYear)
+        // =====================================================
+        // DEDUCT LEAVE
+        // =====================================================
+
+        public async Task<bool> DeductLeaveAsync(
+            LeaveAdjustmentRequestDto request)
         {
+            try
+            {
+            int year = DateTime.Now.Year;
+
+            var balance = await _context.LeaveBalances
+                .FirstOrDefaultAsync(x =>
+                    x.EmployeeId == request.EmployeeId &&
+                    x.LeaveTypeId == request.LeaveTypeId &&
+                    x.Year == year);
+
+            if (balance == null)
+                throw new Exception("Leave balance not found.");
+
+            if (balance.Balance < request.Days)
+                throw new Exception("Insufficient leave balance.");
+
+            decimal beforeBalance = balance.Balance;
+
+            balance.Used += request.Days;
+
+            balance.Balance = CalculateBalance(
+                balance.OpeningBalance,
+                balance.Allocated,
+                balance.Credited,
+                balance.CarryForward,
+                balance.Used);
+
+            balance.ModifiedOn = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            await CreateTransactionAsync(
+                request.EmployeeId,
+                request.LeaveTypeId,
+                year,
+                LeaveTransactionType.Deduct,
+                request.Days,
+                beforeBalance,
+                balance.Balance,
+                "Leave Approved");
+
+            return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        // =====================================================
+        // CARRY FORWARD LEAVE
+        // =====================================================
+
+        public async Task<bool> CarryForwardLeaveAsync(
+            CarryForwardLeaveRequestDto request)
+        {
+            try
+            {
             var balances = await _context.LeaveBalances
                 .Include(x => x.LeaveType)
                 .Where(x =>
-                    x.EmployeeId == employeeId &&
-                    x.Year == fromYear)
+                    x.EmployeeId == request.EmployeeId &&
+                    x.Year == request.FromYear)
                 .ToListAsync();
 
-            foreach (var balance in balances)
+            foreach (var item in balances)
             {
-                decimal carryForward = 0;
+                if (!item.LeaveType.AllowCarryForward)
+                    continue;
 
-                if (balance.LeaveType.AllowCarryForward)
+                decimal carryForward = item.Balance;
+
+                if (item.LeaveType.MaxCarryForwardDays.HasValue)
                 {
-                    carryForward = balance.Balance;
-
-                    if (balance.LeaveType.MaxCarryForwardDays.HasValue)
-                    {
-                        carryForward = Math.Min(
-                            carryForward,
-                            balance.LeaveType.MaxCarryForwardDays.Value);
-                    }
+                    carryForward = Math.Min(
+                        carryForward,
+                        item.LeaveType.MaxCarryForwardDays.Value);
                 }
 
                 bool exists = await _context.LeaveBalances
                     .AnyAsync(x =>
-                        x.EmployeeId == employeeId &&
-                        x.LeaveTypeId == balance.LeaveTypeId &&
-                        x.Year == toYear);
+                        x.EmployeeId == request.EmployeeId &&
+                        x.LeaveTypeId == item.LeaveTypeId &&
+                        x.Year == request.ToYear);
 
                 if (exists)
                     continue;
 
-                _context.LeaveBalances.Add(new LeaveBalance
+                var newBalance = new LeaveBalance
                 {
-                    EmployeeId = employeeId,
-                    LeaveTypeId = balance.LeaveTypeId,
+                    EmployeeId = request.EmployeeId,
+                    LeaveTypeId = item.LeaveTypeId,
 
-                    Year = toYear,
+                    Year = request.ToYear,
 
-                    OpeningBalance = carryForward,
-                    Earned = 0,
+                    OpeningBalance = 0,
+                    Allocated = 0,
+                    Credited = 0,
                     Used = 0,
+
+                    CarryForward = carryForward,
+
                     Balance = carryForward,
 
                     CreatedOn = DateTime.UtcNow,
                     CreatedBy = "System"
-                });
+                };
+
+                _context.LeaveBalances.Add(newBalance);
+
+                await _context.SaveChangesAsync();
+
+                await CreateTransactionAsync(
+                    request.EmployeeId,
+                    item.LeaveTypeId,
+                    request.ToYear,
+                    LeaveTransactionType.CarryForward,
+                    carryForward,
+                    0,
+                    carryForward,
+                    $"Carry Forward From {request.FromYear}");
             }
 
-            await _context.SaveChangesAsync();
-
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
+
+        #endregion
+
+        #region Transactions
+
+        #region Transactions
+
+        public async Task<List<LeaveBalanceTransactionDto>> GetTransactionsAsync(
+            LeaveTransactionFilterRequestDto request)
+        {
+            try
+            {
+            return await _context.LeaveBalanceTransactions
+                .Include(x => x.Employee)
+                .Include(x => x.LeaveType)
+                .Where(x =>
+                    x.EmployeeId == request.EmployeeId &&
+                    x.LeaveTypeId == request.LeaveTypeId &&
+                    x.Year == request.Year)
+                .OrderByDescending(x => x.TransactionDate)
+                .Select(x => new LeaveBalanceTransactionDto
+                {
+                    Id = x.Id,
+
+                    EmployeeId = x.EmployeeId,
+                    EmployeeName = x.Employee.FirstName + " " + x.Employee.LastName,
+
+                    LeaveTypeId = x.LeaveTypeId,
+                    LeaveTypeName = x.LeaveType.Name,
+
+                    Year = x.Year,
+
+                    TransactionType = x.TransactionType,
+
+                    Quantity = x.Quantity,
+
+                    BalanceBefore = x.BalanceBefore,
+                    BalanceAfter = x.BalanceAfter,
+
+                    Remarks = x.Remarks,
+
+                    TransactionDate = x.TransactionDate,
+
+                    CreatedBy = x.CreatedBy,
+                    ModifiedOn = x.ModifiedOn,
+                    ModifiedBy = x.ModifiedBy
+                })
+                .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<LeaveBalanceTransactionDto>();
+            }
+        }
+
+        public async Task<List<LeaveBalanceTransactionDto>> GetEmployeeTransactionsAsync(
+            EmployeeTransactionRequestDto request)
+        {
+            try
+            {
+            return await _context.LeaveBalanceTransactions
+                .Include(x => x.Employee)
+                .Include(x => x.LeaveType)
+                .Where(x => x.EmployeeId == request.EmployeeId && x.LeaveTypeId == request.LeaveTypeId)
+                .OrderByDescending(x => x.TransactionDate)
+                .Select(x => new LeaveBalanceTransactionDto
+                {
+                    Id = x.Id,
+
+                    EmployeeId = x.EmployeeId,
+                    EmployeeName = x.Employee.FirstName + " " + x.Employee.LastName,
+
+                    LeaveTypeId = x.LeaveTypeId,
+                    LeaveTypeName = x.LeaveType.Name,
+
+                    Year = x.Year,
+
+                    TransactionType = x.TransactionType,
+
+                    Quantity = x.Quantity,
+
+                    BalanceBefore = x.BalanceBefore,
+                    BalanceAfter = x.BalanceAfter,
+
+                    Remarks = x.Remarks,
+
+                    TransactionDate = x.TransactionDate,
+
+                    CreatedBy = x.CreatedBy,
+                    ModifiedOn = x.ModifiedOn,
+                    ModifiedBy = x.ModifiedBy
+                })
+                .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<LeaveBalanceTransactionDto>();
+            }
+        }
+
+        public async Task<List<LeaveBalanceTransactionDto>> GetTransactionsByDateRangeAsync(
+            TransactionDateRangeRequestDto request)
+        {
+            try
+            {
+            return await _context.LeaveBalanceTransactions
+                .Include(x => x.Employee)
+                .Include(x => x.LeaveType)
+                .Where(x =>
+                    x.TransactionDate.Date >= request.FromDate &&
+                    x.TransactionDate.Date <= request.ToDate)
+                .OrderByDescending(x => x.TransactionDate)
+                .Select(x => new LeaveBalanceTransactionDto
+                {
+                    Id = x.Id,
+
+                    EmployeeId = x.EmployeeId,
+                    EmployeeName = x.Employee.FirstName + " " + x.Employee.LastName,
+
+                    LeaveTypeId = x.LeaveTypeId,
+                    LeaveTypeName = x.LeaveType.Name,
+
+                    Year = x.Year,
+
+                    TransactionType = x.TransactionType,
+
+                    Quantity = x.Quantity,
+
+                    BalanceBefore = x.BalanceBefore,
+                    BalanceAfter = x.BalanceAfter,
+
+                    Remarks = x.Remarks,
+
+                    TransactionDate = x.TransactionDate,
+
+                    CreatedBy = x.CreatedBy,
+                    ModifiedOn = x.ModifiedOn,
+                    ModifiedBy = x.ModifiedBy
+                })
+                .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<LeaveBalanceTransactionDto>();
+            }
+        }
+
+        #endregion
+
+        #endregion
+
+        #region Private Helper
+
+        private decimal CalculateBalance(decimal opening,decimal allocated,decimal credited,decimal carryForward,decimal used)
+        {
+            return (opening + allocated + credited + carryForward) - used;
+        }
+
+        private async Task CreateTransactionAsync(string employeeId,string leaveTypeId,int year,LeaveTransactionType transactionType,
+            decimal quantity,decimal beforeBalance,decimal afterBalance,string remarks)
+        {
+            var transaction = new LeaveBalanceTransaction
+            {
+                Id=IDManager.GetNewId(new LeaveBalanceTransaction()),
+                EmployeeId = employeeId,
+                LeaveTypeId = leaveTypeId,
+                Year = year,
+
+                TransactionType = transactionType,
+
+                Quantity = quantity,
+
+                BalanceBefore = beforeBalance,
+                BalanceAfter = afterBalance,
+
+                Remarks = remarks,
+
+                TransactionDate = DateTime.UtcNow,
+
+                CreatedOn = DateTime.UtcNow,
+                CreatedBy = "System"
+            };
+
+            _context.LeaveBalanceTransactions.Add(transaction);
+
+            await _context.SaveChangesAsync();
+        }
+        #endregion
     }
 }

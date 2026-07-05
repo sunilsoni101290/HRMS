@@ -1,0 +1,42 @@
+﻿<div class="modal fade"
+     id="approveModal">
+
+    <div class="modal-dialog">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5>Approve Leave</h5>
+            </div>
+
+            <form asp-action="Approve" method="post">
+
+                <div class="modal-body">
+
+                    <input type="hidden"
+                           id="ApproveLeaveId"
+                           name="LeaveApplicationId" />
+
+                    <label>Remarks</label>
+
+                    <textarea class="form-control"
+                              name="Remarks"></textarea>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button type="submit"
+                            class="btn btn-success">
+                        Approve
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>

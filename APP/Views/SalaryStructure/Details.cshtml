@@ -1,0 +1,49 @@
+@model SalaryStructureDto
+
+@{
+    ViewData["Title"] = "Structure Details";
+}
+
+<div class="panel panel-flat">
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-list-numbered position-left"></i> @Model.EmployeeName
+        </h5>
+        <div class="heading-elements">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary btn-xs"><i class="icon-pencil7"></i> Edit</a>
+            <a asp-action="Index" class="btn btn-default btn-xs"><i class="icon-arrow-left13"></i> Back</a>
+        </div>
+    </div>
+    <div class="panel-body">
+        <p><strong>Effective From:</strong> @Model.EffectiveFrom.ToString("dd MMM yyyy")</p>
+
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Component</th>
+                    <th>Type</th>
+                    <th class="text-right">Amount (₹)</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var d in Model.Details)
+                {
+                    <tr>
+                        <td>@d.SalaryComponentName</td>
+                        <td>
+                            <span class="label @(d.ComponentType == 1 ? "bg-success" : "bg-danger")">
+                                @(d.ComponentType == 1 ? "Earning" : "Deduction")
+                            </span>
+                        </td>
+                        <td class="text-right">@d.Amount.ToString("N2")</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr><th colspan="2" class="text-right">Total Earnings</th><th class="text-right text-success">₹ @Model.TotalEarnings.ToString("N2")</th></tr>
+                <tr><th colspan="2" class="text-right">Total Deductions</th><th class="text-right text-danger">₹ @Model.TotalDeductions.ToString("N2")</th></tr>
+                <tr><th colspan="2" class="text-right">Net Salary</th><th class="text-right">₹ @Model.NetSalary.ToString("N2")</th></tr>
+            </tfoot>
+        </table>
+    </div>
+</div>

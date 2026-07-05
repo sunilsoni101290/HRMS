@@ -75,9 +75,15 @@ namespace APP.Controllers
                     HttpContext.Session.SetString("UserId", response.Data.UserId);
                     HttpContext.Session.SetString("TenantId", response.Data.TenantId);
                     HttpContext.Session.SetString("Designation", response.Data.Designation ?? "");
+                    HttpContext.Session.SetString("CompanyName", response.Data.CompanyName ?? "");
+                    HttpContext.Session.SetString("CompanyId", response.Data.CompanyId ?? "");
+                    HttpContext.Session.SetString("BranchId", response.Data.BranchId ?? "");
                     HttpContext.Session.SetString("RoleName", response.Data.RoleName ?? "");
 
-                    return RedirectToAction("Index", "Dashboard");
+                    // Role-based landing page
+                    return SessionHelper.IsAdminRole(response.Data.RoleName)
+                        ? RedirectToAction("Index", "Dashboard")
+                        : RedirectToAction("Index", "EmployeeDashboard");
                 }
 
                 TempData["GlobalError"] = response?.Message ?? "Login failed.";

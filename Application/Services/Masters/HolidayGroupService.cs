@@ -25,6 +25,8 @@ namespace Application.Services.Masters
 
         public async Task<List<HolidayGroupDto>> GetAllGroupsAsync()
         {
+            try
+            {
             return await _context.HolidayGroups
                 .Select(x => new HolidayGroupDto
                 {
@@ -38,10 +40,17 @@ namespace Application.Services.Masters
                     ModifiedBy = x.ModifiedBy
                 })
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<HolidayGroupDto>();
+            }
         }
 
         public async Task<HolidayGroupDto?> GetGroupByIdAsync(string id)
         {
+            try
+            {
             return await _context.HolidayGroups
                 .Where(x => x.Id == id)
                 .Select(x => new HolidayGroupDto
@@ -56,10 +65,17 @@ namespace Application.Services.Masters
                     ModifiedBy = x.ModifiedBy
                 })
                 .FirstOrDefaultAsync();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<HolidayGroupDto> CreateGroupAsync(HolidayGroupDto dto)
         {
+            try
+            {
             var exists = await _context.HolidayGroups
                 .AnyAsync(x => x.Name == dto.Name);
 
@@ -84,10 +100,17 @@ namespace Application.Services.Masters
             dto.Id = entity.Id;
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<HolidayGroupDto?> UpdateGroupAsync(string id, HolidayGroupDto dto)
         {
+            try
+            {
             var entity = await _context.HolidayGroups
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -103,10 +126,17 @@ namespace Application.Services.Masters
             await _context.SaveChangesAsync();
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<bool> DeleteGroupAsync(string id)
         {
+            try
+            {
             var entity = await _context.HolidayGroups
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -118,6 +148,11 @@ namespace Application.Services.Masters
             await _context.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         // ======================================================
@@ -126,6 +161,8 @@ namespace Application.Services.Masters
 
         public async Task<List<HolidayGroupDetailDto>> GetAllDetailsAsync()
         {
+            try
+            {
             return await _context.HolidayGroupDetails
                 .Include(x => x.HolidayGroup)
                 .Select(x => new HolidayGroupDetailDto
@@ -147,10 +184,17 @@ namespace Application.Services.Masters
                 })
                 .OrderBy(x => x.HolidayDate)
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<HolidayGroupDetailDto>();
+            }
         }
 
         public async Task<List<HolidayGroupDetailDto>> GetDetailsByGroupAsync(string holidayGroupId)
         {
+            try
+            {
             return await _context.HolidayGroupDetails
                 .Include(x => x.HolidayGroup)
                 .Where(x => x.HolidayGroupId == holidayGroupId)
@@ -173,10 +217,17 @@ namespace Application.Services.Masters
                 })
                 .OrderBy(x => x.HolidayDate)
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<HolidayGroupDetailDto>();
+            }
         }
 
         public async Task<HolidayGroupDetailDto?> GetDetailByIdAsync(string id)
         {
+            try
+            {
             return await _context.HolidayGroupDetails
                 .Include(x => x.HolidayGroup)
                 .Where(x => x.Id == id)
@@ -198,10 +249,17 @@ namespace Application.Services.Masters
                     ModifiedBy = x.ModifiedBy
                 })
                 .FirstOrDefaultAsync();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<HolidayGroupDetailDto> CreateDetailAsync(HolidayGroupDetailDto dto)
         {
+            try
+            {
             var exists = await _context.HolidayGroupDetails
                 .AnyAsync(x =>
                     x.HolidayGroupId == dto.HolidayGroupId &&
@@ -232,10 +290,17 @@ namespace Application.Services.Masters
             dto.Id = entity.Id;
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<HolidayGroupDetailDto?> UpdateDetailAsync(string id, HolidayGroupDetailDto dto)
         {
+            try
+            {
             var entity = await _context.HolidayGroupDetails
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -255,10 +320,17 @@ namespace Application.Services.Masters
             await _context.SaveChangesAsync();
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<bool> DeleteDetailAsync(string id)
         {
+            try
+            {
             var entity = await _context.HolidayGroupDetails
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -270,6 +342,11 @@ namespace Application.Services.Masters
             await _context.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
     }
 }

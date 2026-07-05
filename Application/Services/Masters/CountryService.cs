@@ -25,6 +25,8 @@ namespace Application.Services.Masters
 
         public async Task<List<CountryDto>> GetAllAsync()
         {
+            try
+            {
             return await _context.Countries
                 .Select(x => new CountryDto
                 {
@@ -35,6 +37,11 @@ namespace Application.Services.Masters
                     TenantId = x.TenantId
                 })
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<CountryDto>();
+            }
         }
 
         // ======================================================
@@ -43,6 +50,8 @@ namespace Application.Services.Masters
 
         public async Task<CountryDto?> GetByIdAsync(string id)
         {
+            try
+            {
             return await _context.Countries
                 .Where(x => x.Id == id)
                 .Select(x => new CountryDto
@@ -54,6 +63,11 @@ namespace Application.Services.Masters
                     TenantId = x.TenantId
                 })
                 .FirstOrDefaultAsync();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         // ======================================================
@@ -62,6 +76,8 @@ namespace Application.Services.Masters
 
         public async Task<CountryDto> CreateAsync(CountryDto dto)
         {
+            try
+            {
             var entity = new Country
             {
                 Id=IDManager.GetNewId(new Country()),
@@ -80,6 +96,11 @@ namespace Application.Services.Masters
             dto.Id = entity.Id;
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         // ======================================================
@@ -88,6 +109,8 @@ namespace Application.Services.Masters
 
         public async Task<CountryDto?> UpdateAsync(string id, CountryDto dto)
         {
+            try
+            {
             var entity = await _context.Countries
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -105,6 +128,11 @@ namespace Application.Services.Masters
             await _context.SaveChangesAsync();
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         // ======================================================
@@ -113,6 +141,8 @@ namespace Application.Services.Masters
 
         public async Task<bool> DeleteAsync(string id)
         {
+            try
+            {
             var entity = await _context.Countries
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -124,6 +154,11 @@ namespace Application.Services.Masters
             await _context.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
     }
 }

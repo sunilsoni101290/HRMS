@@ -4,43 +4,105 @@
     ViewData["Title"] = "Financial Year";
 }
 
-<div class="container-fluid py-4">
+<form asp-action="@(string.IsNullOrEmpty(Model?.Id) ? "Create" : "Edit")"
+      method="post">
 
-    <div class="row justify-content-center">
+    <!-- Hidden Fields -->
 
-        <div class="col-lg-9">
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="TenantId" type="hidden" />
+    <input asp-for="CreatedBy" type="hidden" />
+    <input asp-for="ModifiedBy" type="hidden" />
+    <input asp-for="ModifiedOn" type="hidden" />
 
-            <div class="card shadow border-0 rounded-4 overflow-hidden">
+    <div class="panel panel-flat">
 
-                <!-- Header -->
-                <div class="card-header bg-success text-white py-4">
+        <!-- Header -->
 
-                    <div class="d-flex align-items-center">
+        <div class="panel-heading">
 
-                        <div class="me-3">
+            <h5 class="panel-title">
 
-                            <div class="bg-white text-success rounded-circle d-flex align-items-center justify-content-center"
-                                 style="width:70px;height:70px;">
+                <i class="icon-calendar3 position-left"></i>
 
-                                <i class="bi bi-calendar-range-fill fs-2"></i>
+                @(string.IsNullOrEmpty(Model?.Id)
+                    ? "Create Financial Year"
+                    : "Edit Financial Year")
 
-                            </div>
+            </h5>
+
+            <div class="heading-elements">
+
+                <a asp-action="Index"
+                   class="btn btn-default">
+
+                    <i class="icon-arrow-left13 position-left"></i>
+
+                    Back
+
+                </a>
+
+            </div>
+
+        </div>
+
+        <!-- Body -->
+
+        <div class="panel-body">
+
+            <div asp-validation-summary="ModelOnly"
+                 class="alert alert-danger">
+            </div>
+
+            <!-- ======================================== -->
+            <!-- Basic Information -->
+            <!-- ======================================== -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-info22 position-left"></i>
+
+                    Basic Information
+
+                </legend>
+
+                <div class="row">
+
+                    <!-- Name -->
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="Name"></label>
+
+                            <input asp-for="Name"
+                                   class="form-control"
+                                   placeholder="2025-2026" />
+
+                            <span asp-validation-for="Name"
+                                  class="text-danger"></span>
 
                         </div>
 
-                        <div>
+                    </div>
 
-                            <h3 class="mb-1">
+                    <!-- Code -->
 
-                                @(string.IsNullOrEmpty(Model?.Id)
-                                    ? "Create Financial Year"
-                                    : "Edit Financial Year")
+                    <div class="col-md-6">
 
-                            </h3>
+                        <div class="form-group">
 
-                            <p class="mb-0 opacity-75">
-                                Manage company financial year settings
-                            </p>
+                            <label asp-for="Code"></label>
+
+                            <input asp-for="Code"
+                                   class="form-control"
+                                   placeholder="FY25-26" />
+
+                            <span asp-validation-for="Code"
+                                  class="text-danger"></span>
 
                         </div>
 
@@ -48,207 +110,613 @@
 
                 </div>
 
-                <!-- Body -->
-                <div class="card-body p-4">
+            </fieldset>
 
-                    <form asp-action="@(Model.Id == null ? "Create" : "Edit")" method="post">
+            <!-- ======================================== -->
+            <!-- Financial Year Configuration -->
+            <!-- ======================================== -->
 
-                        <!-- Hidden -->
-                        <input asp-for="Id" type="hidden" />
-                        <input asp-for="TenantId" type="hidden" />
-                        <input asp-for="CreatedBy" type="hidden" />
-                        <input asp-for="ModifiedBy" type="hidden" />
-                        <input asp-for="ModifiedOn" type="hidden" />
+            <fieldset>
 
-                        <div class="row g-4">
+                <legend class="text-semibold">
 
-                            <!-- Financial Year Name -->
-                            <div class="col-md-6">
+                    <i class="icon-calendar52 position-left"></i>
 
-                                <label asp-for="Name"
-                                       class="form-label fw-semibold">
-                                </label>
+                    Financial Year Configuration
 
-                                <div class="input-group">
+                </legend>
 
-                                    <span class="input-group-text">
+                <div class="row">
 
-                                        <i class="bi bi-calendar-event"></i>
+                    <!-- Start Date -->
 
-                                    </span>
+                    <div class="col-md-6">
 
-                                    <input asp-for="Name"
-                                           class="form-control"
-                                           placeholder="2025-2026" />
+                        <div class="form-group">
 
-                                </div>
+                            <label asp-for="StartDate"></label>
 
-                                <span asp-validation-for="Name"
-                                      class="text-danger"></span>
+                            <input asp-for="StartDate"
+                                   type="date"
+                                   class="form-control" />
 
-                            </div>
-
-                            <!-- Code -->
-                            <div class="col-md-6">
-
-                                <label asp-for="Code"
-                                       class="form-label fw-semibold">
-                                </label>
-
-                                <div class="input-group">
-
-                                    <span class="input-group-text">
-
-                                        <i class="bi bi-code-square"></i>
-
-                                    </span>
-
-                                    <input asp-for="Code"
-                                           class="form-control"
-                                           placeholder="FY25-26" />
-
-                                </div>
-
-                                <span asp-validation-for="Code"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                            <!-- Start Date -->
-                            <div class="col-md-6">
-
-                                <label asp-for="StartDate"
-                                       class="form-label fw-semibold">
-                                </label>
-
-                                <input asp-for="StartDate"
-                                       type="date"
-                                       class="form-control" />
-
-                                <span asp-validation-for="StartDate"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                            <!-- End Date -->
-                            <div class="col-md-6">
-
-                                <label asp-for="EndDate"
-                                       class="form-label fw-semibold">
-                                </label>
-
-                                <input asp-for="EndDate"
-                                       type="date"
-                                       class="form-control" />
-
-                                <span asp-validation-for="EndDate"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                            <!-- Status -->
-                            <div class="col-md-6">
-
-                                <label asp-for="Status"
-                                       class="form-label fw-semibold">
-                                </label>
-
-                                <select asp-for="Status"
-                                        asp-items="EnumHelper.GetEnumList<EnumExtensions.FinancialYearStatus>()"
-                                        class="form-select">
-
-                                    <option value="">
-                                        -- Select Status --
-                                    </option>
-
-                                </select>
-
-                                <span asp-validation-for="Status"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                            <!-- Company -->
-                            <div class="col-md-6">
-
-                                <label asp-for="CompanyId"
-                                       class="form-label fw-semibold">
-                                </label>
-
-                                <select asp-for="CompanyId"
-                                        asp-items="ViewBag.CompanyList"
-                                        class="form-select">
-
-                                    <option value="">
-                                        -- Select Company --
-                                    </option>
-
-                                </select>
-
-                                <span asp-validation-for="CompanyId"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                            <!-- Current FY -->
-                            <div class="col-md-12">
-
-                                <div class="form-check form-switch mt-2">
-
-                                    <input asp-for="IsCurrent"
-                                           class="form-check-input"
-                                           type="checkbox" />
-
-                                    <label asp-for="IsCurrent"
-                                           class="form-check-label fw-semibold">
-                                    </label>
-
-                                </div>
-
-                            </div>
+                            <span asp-validation-for="StartDate"
+                                  class="text-danger"></span>
 
                         </div>
 
-                        <!-- Footer -->
-                        <div class="mt-5 d-flex justify-content-end gap-2">
+                    </div>
 
-                            <a asp-action="Index"
-                               class="btn btn-light border rounded-3 px-4">
+                    <!-- End Date -->
 
-                                <i class="bi bi-arrow-left"></i>
-                                Back
+                    <div class="col-md-6">
 
-                            </a>
+                        <div class="form-group">
 
-                            <button type="submit"
-                                    class="btn btn-success rounded-3 px-4">
+                            <label asp-for="EndDate"></label>
 
-                                <i class="bi bi-check-circle"></i>
+                            <input asp-for="EndDate"
+                                   type="date"
+                                   class="form-control" />
 
-                                @(string.IsNullOrEmpty(Model?.Id)
-                                    ? "Save"
-                                    : "Update")
-
-                            </button>
+                            <span asp-validation-for="EndDate"
+                                  class="text-danger"></span>
 
                         </div>
 
-                    </form>
+                    </div>
+
+                    <!-- Status -->
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="Status"></label>
+
+                            <select asp-for="Status"
+                                    asp-items="EnumHelper.GetEnumList<EnumExtensions.FinancialYearStatus>()"
+                                    class="form-control select-search">
+
+                                <option value="">
+
+                                    -- Select Status --
+
+                                </option>
+
+                            </select>
+
+                            <span asp-validation-for="Status"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Company -->
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="CompanyId"></label>
+
+                            <select asp-for="CompanyId"
+                                    asp-items="ViewBag.CompanyList"
+                                    id="CompanyId"
+                                    class="form-control select-search">
+
+                                <option value="">
+
+                                    -- Select Company --
+
+                                </option>
+
+                            </select>
+
+                            <span asp-validation-for="CompanyId"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
 
                 </div>
 
-            </div>
+            </fieldset>
+            <!-- ======================================== -->
+            <!-- Current Financial Year -->
+            <!-- ======================================== -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-checkmark-circle position-left"></i>
+
+                    Current Financial Year
+
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-12">
+
+                        <div class="checkbox checkbox-switchery switchery-sm">
+
+                            <label>
+
+                                <input asp-for="IsCurrent"
+                                       type="checkbox"
+                                       class="switchery" />
+
+                                Set as Current Financial Year
+
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- ======================================== -->
+            <!-- Summary -->
+            <!-- ======================================== -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-stats-bars position-left"></i>
+
+                    Financial Year Summary
+
+                </legend>
+
+                <div class="row">
+
+                    <!-- FY Name -->
+
+                    <div class="col-md-3">
+
+                        <div class="panel bg-primary-400">
+
+                            <div class="panel-body">
+
+                                <h4 class="no-margin">
+
+                                    <span id="FyNamePreview">
+
+                                        @(string.IsNullOrWhiteSpace(Model?.Name)
+                                            ? "-"
+                                            : Model.Name)
+
+                                    </span>
+
+                                </h4>
+
+                                Financial Year
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Company -->
+
+                    <div class="col-md-3">
+
+                        <div class="panel bg-success-400">
+
+                            <div class="panel-body">
+
+                                <h4 class="no-margin">
+
+                                    <span id="CompanyPreview">
+
+                                        @(string.IsNullOrWhiteSpace(Model?.CompanyName)
+                                            ? "-"
+                                            : Model.CompanyName)
+
+                                    </span>
+
+                                </h4>
+
+                                Company
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Duration -->
+
+                    <div class="col-md-3">
+
+                        <div class="panel bg-warning-400">
+
+                            <div class="panel-body">
+
+                                <h4 class="no-margin">
+
+                                    <span id="DurationPreview">
+
+                                        -
+
+                                    </span>
+
+                                </h4>
+
+                                Duration
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Status -->
+
+                    <div class="col-md-3">
+
+                        <div class="panel bg-info-400">
+
+                            <div class="panel-body">
+
+                                <h4 class="no-margin">
+
+                                    <span id="StatusPreview">
+
+                                        @(Model?.Status.ToString() ?? "-")
+
+                                    </span>
+
+                                </h4>
+
+                                Status
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+        </div>
+
+        <!-- ======================================== -->
+        <!-- Footer -->
+        <!-- ======================================== -->
+
+        <div class="panel-footer text-right">
+
+            <a asp-action="Index"
+               class="btn btn-default">
+
+                <i class="icon-arrow-left13 position-left"></i>
+
+                Back
+
+            </a>
+
+            <button type="reset"
+                    class="btn btn-warning">
+
+                <i class="icon-reset position-left"></i>
+
+                Reset
+
+            </button>
+
+            <button type="submit"
+                    class="btn bg-primary">
+
+                <i class="icon-floppy-disk position-left"></i>
+
+                @(string.IsNullOrEmpty(Model?.Id)
+                    ? "Save Financial Year"
+                    : "Update Financial Year")
+
+            </button>
 
         </div>
 
     </div>
 
-</div>
-
+</form>
 @section Scripts {
 
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+
+        $(document).ready(function () {
+
+            //=========================================
+            // Chosen Dropdown
+            //=========================================
+
+            if ($(".select-search").length) {
+
+                $(".select-search").chosen({
+
+                    width: "100%",
+                    search_contains: true,
+                    allow_single_deselect: true
+
+                });
+
+            }
+
+            //=========================================
+            // Switchery
+            //=========================================
+
+            if ($(".switchery").length) {
+
+                $(".switchery").each(function () {
+
+                    new Switchery(this, {
+
+                        color: '#2196F3'
+
+                    });
+
+                });
+
+            }
+
+            //=========================================
+            // Name Preview
+            //=========================================
+
+            $("#Name").keyup(function () {
+
+                var value = $(this).val();
+
+                if (value == "")
+                    value = "-";
+
+                $("#FyNamePreview").text(value);
+
+            });
+
+            //=========================================
+            // Company Preview
+            //=========================================
+
+            $("#CompanyId").change(function () {
+
+                var company =
+                    $("#CompanyId option:selected").text();
+
+                if ($("#CompanyId").val() == "")
+                    company = "-";
+
+                $("#CompanyPreview").text(company);
+
+            });
+
+            //=========================================
+            // Status Preview
+            //=========================================
+
+            $("#Status").change(function () {
+
+                var status =
+                    $("#Status option:selected").text();
+
+                if ($("#Status").val() == "")
+                    status = "-";
+
+                $("#StatusPreview").text(status);
+
+            });
+
+            //=========================================
+            // Duration
+            //=========================================
+
+            $("#StartDate,#EndDate").change(function () {
+
+                calculateDuration();
+
+            });
+
+            function calculateDuration() {
+
+                var start = $("#StartDate").val();
+
+                var end = $("#EndDate").val();
+
+                if (start == "" || end == "") {
+
+                    $("#DurationPreview").text("-");
+
+                    return;
+
+                }
+
+                var startDate = new Date(start);
+
+                var endDate = new Date(end);
+
+                var diff =
+                    endDate.getTime() -
+                    startDate.getTime();
+
+                var days =
+                    Math.floor(diff / (1000 * 60 * 60 * 24));
+
+                if (days < 0)
+                    days = 0;
+
+                $("#DurationPreview").text(days + " Days");
+
+            }
+
+            calculateDuration();
+
+            //=========================================
+            // Validation
+            //=========================================
+
+            $("form").submit(function () {
+
+                if ($("#Name").val().trim() == "") {
+
+                    alert("Please enter Financial Year Name.");
+
+                    $("#Name").focus();
+
+                    return false;
+
+                }
+
+                if ($("#Code").val().trim() == "") {
+
+                    alert("Please enter Financial Year Code.");
+
+                    $("#Code").focus();
+
+                    return false;
+
+                }
+
+                if ($("#CompanyId").val() == "") {
+
+                    alert("Please select Company.");
+
+                    $("#CompanyId").focus();
+
+                    return false;
+
+                }
+
+                if ($("#StartDate").val() == "") {
+
+                    alert("Please select Start Date.");
+
+                    $("#StartDate").focus();
+
+                    return false;
+
+                }
+
+                if ($("#EndDate").val() == "") {
+
+                    alert("Please select End Date.");
+
+                    $("#EndDate").focus();
+
+                    return false;
+
+                }
+
+                if ($("#Status").val() == "") {
+
+                    alert("Please select Status.");
+
+                    $("#Status").focus();
+
+                    return false;
+
+                }
+
+                return true;
+
+            });
+
+        });
+
+    </script>
+
+    <style>
+
+        .panel-heading {
+            padding: 18px 20px;
+        }
+
+        .panel-title {
+            font-weight: 600;
+        }
+
+        .panel-body {
+            padding: 20px;
+        }
+
+        fieldset {
+            border: 1px solid #e5e5e5;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        legend {
+            width: auto;
+            padding: 0 10px;
+            border: none;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .panel-footer {
+            background: #fafafa;
+            padding: 15px 20px;
+        }
+
+        .panel.bg-primary-400,
+        .panel.bg-success-400,
+        .panel.bg-warning-400,
+        .panel.bg-info-400 {
+            margin-bottom: 15px;
+            border-radius: 3px;
+        }
+
+            .panel.bg-primary-400 h4,
+            .panel.bg-success-400 h4,
+            .panel.bg-warning-400 h4,
+            .panel.bg-info-400 h4 {
+                color: #fff;
+                font-weight: 600;
+            }
+
+        .chosen-container {
+            width: 100% !important;
+        }
+
+        .chosen-single {
+            height: 36px !important;
+            line-height: 34px !important;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .text-danger {
+            font-size: 12px;
+        }
+
+        .btn {
+            min-width: 110px;
+        }
+
+        .alert {
+            margin-bottom: 20px;
+        }
+
+        .checkbox-switchery {
+            margin-top: 10px;
+        }
+
+    </style>
 
 }

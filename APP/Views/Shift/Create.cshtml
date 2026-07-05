@@ -4,41 +4,114 @@
     ViewData["Title"] = "Shift Management";
 }
 
-<div class="container-fluid py-4">
+<form asp-action="@(string.IsNullOrEmpty(Model?.Id) ? "Create" : "Edit")"
+      method="post">
 
-    <div class="row justify-content-center">
+    <!-- Hidden Fields -->
 
-        <div class="col-lg-10">
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="TenantId" type="hidden" />
+    <input asp-for="CreatedBy" type="hidden" />
 
-            <div class="card shadow border-0 rounded-4 overflow-hidden">
+    <div class="panel panel-flat">
 
-                <!-- Header -->
-                <div class="card-header bg-primary text-white py-4">
+        <!-- Header -->
 
-                    <div class="d-flex align-items-center">
+        <div class="panel-heading">
 
-                        <div class="me-3">
+            <h5 class="panel-title">
 
-                            <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center"
-                                 style="width:65px;height:65px;">
+                <i class="icon-alarm position-left"></i>
 
-                                <i class="bi bi-clock-history fs-2"></i>
+                @(string.IsNullOrEmpty(Model?.Id)
+                    ? "Create Shift"
+                    : "Edit Shift")
 
-                            </div>
+            </h5>
+
+            <div class="heading-elements">
+
+                <a asp-action="Index"
+                   class="btn btn-default">
+
+                    <i class="icon-arrow-left13"></i>
+
+                    Back
+
+                </a>
+
+            </div>
+
+        </div>
+
+        <!-- Body -->
+
+        <div class="panel-body">
+
+            <div asp-validation-summary="ModelOnly"
+                 class="alert alert-danger">
+            </div>
+
+            <!-- ============================= -->
+            <!-- Basic Information -->
+            <!-- ============================= -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-info22 position-left"></i>
+
+                    Basic Information
+
+                </legend>
+
+                <div class="row">
+
+                    <!-- Shift Name -->
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="Name"></label>
+
+                            <input asp-for="Name"
+                                   class="form-control"
+                                   placeholder="Enter Shift Name" />
+
+                            <span asp-validation-for="Name"
+                                  class="text-danger"></span>
 
                         </div>
 
-                        <div>
+                    </div>
 
-                            <h3 class="mb-1">
-                                @(string.IsNullOrEmpty(Model?.Id)
-                                    ? "Create Shift"
-                                    : "Edit Shift")
-                            </h3>
+                    <!-- Night Shift -->
 
-                            <p class="mb-0 opacity-75">
-                                Manage company working shift timings
-                            </p>
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label>
+
+                                Shift Type
+
+                            </label>
+
+                            <div class="checkbox checkbox-switchery switchery-sm">
+
+                                <label>
+
+                                    <input asp-for="IsNightShift"
+                                           type="checkbox"
+                                           class="switchery" />
+
+                                    Night Shift
+
+                                </label>
+
+                            </div>
 
                         </div>
 
@@ -46,280 +119,550 @@
 
                 </div>
 
-                <!-- Body -->
-                <div class="card-body p-4">
+            </fieldset>
 
-                    <form asp-action="@(Model.Id == null ? "Create" : "Edit")" method="post">
-                        <!-- Hidden Fields -->
-                        <input asp-for="Id" type="hidden" />
-                        <input asp-for="TenantId" type="hidden" />
+            <!-- ============================= -->
+            <!-- Shift Timing -->
+            <!-- ============================= -->
 
-                        <div class="row g-4">
+            <fieldset>
 
-                            <!-- Shift Name -->
-                            <div class="col-md-6">
+                <legend class="text-semibold">
 
-                                <label asp-for="Name"
-                                       class="form-label fw-semibold">
-                                </label>
+                    <i class="icon-watch2 position-left"></i>
 
-                                <div class="input-group">
+                    Shift Timing
 
-                                    <span class="input-group-text">
-                                        <i class="bi bi-calendar-week"></i>
-                                    </span>
+                </legend>
 
-                                    <input asp-for="Name"
-                                           class="form-control"
-                                           placeholder="Enter Shift Name" />
+                <div class="row">
 
-                                </div>
+                    <!-- Start Time -->
 
-                                <span asp-validation-for="Name"
-                                      class="text-danger"></span>
+                    <div class="col-md-6">
 
-                            </div>
+                        <div class="form-group">
 
-                            <!-- Night Shift -->
-                            <div class="col-md-6">
+                            <label asp-for="StartTime"></label>
 
-                                <label class="form-label fw-semibold d-block">
-                                    Shift Type
-                                </label>
+                            <input asp-for="StartTime"
+                                   type="time"
+                                   class="form-control"
+                                   id="StartTime" />
 
-                                <div class="form-check form-switch mt-2">
-
-                                    <input asp-for="IsNightShift"
-                                           class="form-check-input"
-                                           type="checkbox" />
-
-                                    <label asp-for="IsNightShift"
-                                           class="form-check-label">
-                                    </label>
-
-                                </div>
-
-                            </div>
-
-                            <!-- Start Time -->
-                            <div class="col-md-6">
-
-                                <label asp-for="StartTime"
-                                       class="form-label fw-semibold">
-                                </label>
-
-                                <div class="input-group">
-
-                                    <span class="input-group-text">
-                                        <i class="bi bi-clock"></i>
-                                    </span>
-
-                                    <input asp-for="StartTime"
-                                           type="time"
-                                           class="form-control" />
-
-                                </div>
-
-                                <span asp-validation-for="StartTime"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                            <!-- End Time -->
-                            <div class="col-md-6">
-
-                                <label asp-for="EndTime"
-                                       class="form-label fw-semibold">
-                                </label>
-
-                                <div class="input-group">
-
-                                    <span class="input-group-text">
-                                        <i class="bi bi-clock-fill"></i>
-                                    </span>
-
-                                    <input asp-for="EndTime"
-                                           type="time"
-                                           class="form-control" />
-
-                                </div>
-
-                                <span asp-validation-for="EndTime"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                            <!-- Grace In -->
-                            <div class="col-md-3">
-
-                                <label asp-for="GraceInMinutes"
-                                       class="form-label fw-semibold">
-                                </label>
-
-                                <input asp-for="GraceInMinutes"
-                                       type="number"
-                                       class="form-control"
-                                       placeholder="0" />
-
-                            </div>
-
-                            <!-- Grace Out -->
-                            <div class="col-md-3">
-
-                                <label asp-for="GraceOutMinutes"
-                                       class="form-label fw-semibold">
-                                </label>
-
-                                <input asp-for="GraceOutMinutes"
-                                       type="number"
-                                       class="form-control"
-                                       placeholder="0" />
-
-                            </div>
-
-                            <!-- Half Day -->
-                            <div class="col-md-3">
-
-                                <label asp-for="HalfDayMinutes"
-                                       class="form-label fw-semibold">
-                                </label>
-
-                                <input asp-for="HalfDayMinutes"
-                                       type="number"
-                                       class="form-control"
-                                       placeholder="Enter Half Day Minutes" />
-
-                                <span asp-validation-for="HalfDayMinutes"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                            <!-- Full Day -->
-                            <div class="col-md-3">
-
-                                <label asp-for="FullDayMinutes"
-                                       class="form-label fw-semibold">
-                                </label>
-
-                                <input asp-for="FullDayMinutes"
-                                       type="number"
-                                       class="form-control"
-                                       placeholder="Enter Full Day Minutes" />
-
-                                <span asp-validation-for="FullDayMinutes"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                            <!-- Minimum Working -->
-                            <div class="col-md-6">
-
-                                <label asp-for="MinimumWorkingMinutes"
-                                       class="form-label fw-semibold">
-                                </label>
-
-                                <input asp-for="MinimumWorkingMinutes"
-                                       type="number"
-                                       class="form-control"
-                                       placeholder="Enter Minimum Working Minutes" />
-
-                                <span asp-validation-for="MinimumWorkingMinutes"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                            <!-- Maximum Working -->
-                            <div class="col-md-6">
-
-                                <label asp-for="MaximumWorkingMinutes"
-                                       class="form-label fw-semibold">
-                                </label>
-
-                                <input asp-for="MaximumWorkingMinutes"
-                                       type="number"
-                                       class="form-control"
-                                       placeholder="Enter Maximum Working Minutes" />
-
-                                <span asp-validation-for="MaximumWorkingMinutes"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                            <!-- Active -->
-                            <div class="col-md-12">
-
-                                <div class="form-check form-switch">
-
-                                    <input asp-for="IsActive"
-                                           class="form-check-input"
-                                           type="checkbox" />
-
-                                    <label asp-for="IsActive"
-                                           class="form-check-label fw-semibold">
-                                    </label>
-
-                                </div>
-
-                            </div>
+                            <span asp-validation-for="StartTime"
+                                  class="text-danger"></span>
 
                         </div>
 
-                        <!-- Footer -->
-                        <div class="mt-5 d-flex justify-content-end gap-2">
+                    </div>
 
-                            <a asp-action="Index"
-                               class="btn btn-light border rounded-3 px-4">
+                    <!-- End Time -->
 
-                                <i class="bi bi-arrow-left"></i>
-                                Back
+                    <div class="col-md-6">
 
-                            </a>
+                        <div class="form-group">
 
-                            <button type="submit"
-                                    class="btn btn-primary rounded-3 px-4">
+                            <label asp-for="EndTime"></label>
 
-                                <i class="bi bi-check-circle"></i>
+                            <input asp-for="EndTime"
+                                   type="time"
+                                   class="form-control"
+                                   id="EndTime" />
 
-                                @(string.IsNullOrEmpty(Model?.Id)
-                                    ? "Save"
-                                    : "Update")
-
-                            </button>
+                            <span asp-validation-for="EndTime"
+                                  class="text-danger"></span>
 
                         </div>
-                        <div class="col-md-6 mt-2">
-                            @if (TempData["Success"] != null)
-                            {
-                                <div class="alert alert-success alert-dismissible fade show"
-                                     role="alert">
 
-                                    <i class="bi bi-check-circle-fill"></i>
-
-                                    @TempData["Success"]
-
-                                    <button type="button"
-                                            class="btn-close"
-                                            data-bs-dismiss="alert">
-                                    </button>
-                                </div>
-                            }
-                        </div>
-                    </form>
+                    </div>
 
                 </div>
 
-            </div>
+                <div class="row">
+
+                    <!-- Grace In -->
+
+                    <div class="col-md-3">
+
+                        <div class="form-group">
+
+                            <label asp-for="GraceInMinutes"></label>
+
+                            <input asp-for="GraceInMinutes"
+                                   type="number"
+                                   class="form-control"
+                                   placeholder="0" />
+
+                        </div>
+
+                    </div>
+
+                    <!-- Grace Out -->
+
+                    <div class="col-md-3">
+
+                        <div class="form-group">
+
+                            <label asp-for="GraceOutMinutes"></label>
+
+                            <input asp-for="GraceOutMinutes"
+                                   type="number"
+                                   class="form-control"
+                                   placeholder="0" />
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="row">
+
+                    <!-- Half Day Minutes -->
+
+                    <div class="col-md-3">
+
+                        <div class="form-group">
+
+                            <label asp-for="HalfDayMinutes"></label>
+
+                            <input asp-for="HalfDayMinutes"
+                                   type="number"
+                                   class="form-control"
+                                   id="HalfDayMinutes"
+                                   placeholder="Enter Half Day Minutes" />
+
+                            <span asp-validation-for="HalfDayMinutes"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Full Day Minutes -->
+
+                    <div class="col-md-3">
+
+                        <div class="form-group">
+
+                            <label asp-for="FullDayMinutes"></label>
+
+                            <input asp-for="FullDayMinutes"
+                                   type="number"
+                                   class="form-control"
+                                   id="FullDayMinutes"
+                                   placeholder="Enter Full Day Minutes" />
+
+                            <span asp-validation-for="FullDayMinutes"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Minimum Working -->
+
+                    <div class="col-md-3">
+
+                        <div class="form-group">
+
+                            <label asp-for="MinimumWorkingMinutes"></label>
+
+                            <input asp-for="MinimumWorkingMinutes"
+                                   type="number"
+                                   class="form-control"
+                                   id="MinimumWorkingMinutes"
+                                   placeholder="Minimum Working Minutes" />
+
+                            <span asp-validation-for="MinimumWorkingMinutes"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Maximum Working -->
+
+                    <div class="col-md-3">
+
+                        <div class="form-group">
+
+                            <label asp-for="MaximumWorkingMinutes"></label>
+
+                            <input asp-for="MaximumWorkingMinutes"
+                                   type="number"
+                                   class="form-control"
+                                   id="MaximumWorkingMinutes"
+                                   placeholder="Maximum Working Minutes" />
+
+                            <span asp-validation-for="MaximumWorkingMinutes"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- ===================================== -->
+            <!-- Shift Summary -->
+            <!-- ===================================== -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-statistics position-left"></i>
+
+                    Shift Summary
+
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-4">
+
+                        <div class="panel bg-primary-400">
+
+                            <div class="panel-body text-center">
+
+                                <h3 id="WorkingHoursLabel"
+                                    class="no-margin">
+
+                                    0
+
+                                </h3>
+
+                                Working Minutes
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-4">
+
+                        <div class="panel bg-success-400">
+
+                            <div class="panel-body text-center">
+
+                                <h3 id="HalfDayLabel"
+                                    class="no-margin">
+
+                                    0
+
+                                </h3>
+
+                                Half Day
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-4">
+
+                        <div class="panel bg-warning-400">
+
+                            <div class="panel-body text-center">
+
+                                <h3 id="FullDayLabel"
+                                    class="no-margin">
+
+                                    0
+
+                                </h3>
+
+                                Full Day
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- ===================================== -->
+            <!-- Status -->
+            <!-- ===================================== -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-checkmark-circle position-left"></i>
+
+                    Status
+
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-6">
+
+                        <div class="checkbox checkbox-switchery switchery-sm">
+
+                            <label>
+
+                                <input asp-for="IsActive"
+                                       type="checkbox"
+                                       class="switchery" />
+
+                                Active Shift
+
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+        </div>
+
+        </div>
+
+        <!-- Panel Footer -->
+
+        <div class="panel-footer text-right">
+
+            <a asp-action="Index"
+               class="btn btn-default">
+
+                <i class="icon-arrow-left13 position-left"></i>
+
+                Back
+
+            </a>
+
+            <button type="reset"
+                    class="btn btn-warning">
+
+                <i class="icon-reset position-left"></i>
+
+                Reset
+
+            </button>
+
+            <button type="submit"
+                    class="btn bg-primary">
+
+                <i class="icon-floppy-disk position-left"></i>
+
+                @(string.IsNullOrEmpty(Model?.Id)
+                    ? "Save Shift"
+                    : "Update Shift")
+
+            </button>
 
         </div>
 
     </div>
 
-</div>
+</form>
 
-@section Scripts {
+@section Scripts{
 
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    <partial name="_ValidationScriptsPartial" />
+    @if (TempData["Success"] != null)
+    {
+        <script>
+
+            $(function () {
+
+                swal({
+                    title: "Success",
+                    text: "@TempData["Success"]",
+                    type: "success"
+                });
+
+            });
+
+        </script>
     }
+    <script>
+
+        $(document).ready(function () {
+
+            //===========================================
+            // Switchery
+            //===========================================
+
+            if ($(".switchery").length) {
+
+                $(".switchery").each(function () {
+
+                    new Switchery(this, {
+                        color: '#2196F3'
+                    });
+
+                });
+
+            }
+
+            //===========================================
+            // Calculate Working Minutes
+            //===========================================
+
+            function calculateWorkingMinutes() {
+
+                var start = $("#StartTime").val();
+                var end = $("#EndTime").val();
+
+                if (start == "" || end == "")
+                    return;
+
+                var startParts = start.split(":");
+                var endParts = end.split(":");
+
+                var startMinutes =
+                    parseInt(startParts[0]) * 60 +
+                    parseInt(startParts[1]);
+
+                var endMinutes =
+                    parseInt(endParts[0]) * 60 +
+                    parseInt(endParts[1]);
+
+                // Night Shift
+
+                if (endMinutes < startMinutes) {
+
+                    endMinutes += (24 * 60);
+
+                }
+
+                var total = endMinutes - startMinutes;
+
+                $("#MaximumWorkingMinutes").val(total);
+
+                $("#MinimumWorkingMinutes").val(total);
+
+                $("#FullDayMinutes").val(total);
+
+                $("#HalfDayMinutes").val(
+                    Math.floor(total / 2)
+                );
+
+            }
+
+            $("#StartTime,#EndTime").change(function () {
+
+                calculateWorkingMinutes();
+
+            });
+
+            calculateWorkingMinutes();
+
+            //===========================================
+            // Validation
+            //===========================================
+
+            $("form").submit(function () {
+
+                var start = $("#StartTime").val();
+
+                var end = $("#EndTime").val();
+
+                if (start == "" || end == "") {
+
+                    alert("Please select Start Time and End Time.");
+
+                    return false;
+
+                }
+
+                if ($("#Name").val().trim() == "") {
+
+                    alert("Please enter Shift Name.");
+
+                    $("#Name").focus();
+
+                    return false;
+
+                }
+
+                return true;
+
+            });
+
+        });
+
+    </script>
+
+    <style>
+
+        .panel-heading{
+
+            padding:18px 20px;
+
+        }
+
+        .panel-title{
+
+            font-weight:600;
+
+        }
+
+        fieldset{
+
+            border:1px solid #e5e5e5;
+
+            padding:20px;
+
+            margin-bottom:20px;
+
+        }
+
+        legend{
+
+            width:auto;
+
+            padding:0 10px;
+
+            font-size:15px;
+
+            font-weight:600;
+
+            border:none;
+
+            margin-bottom:15px;
+
+        }
+
+        .form-group{
+
+            margin-bottom:18px;
+
+        }
+
+        .control-label,
+        label{
+
+            font-weight:600;
+
+        }
+
+        .panel-footer{
+
+            background:#fafafa;
+
+        }
+
+        .input-group-addon{
+
+            min-width:80px;
+
+        }
+
+    </style>
 
 }

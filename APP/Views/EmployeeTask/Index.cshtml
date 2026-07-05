@@ -1,0 +1,113 @@
+@model IEnumerable<EmployeeTaskListDto>
+
+@{
+    ViewData["Title"] = "Tasks";
+
+    string StatusLabel(string s) => s switch
+    {
+        "Pending" => "bg-warning",
+        "InProgress" => "bg-primary",
+        "Completed" => "bg-success",
+        _ => "bg-grey"
+    };
+    string PriorityLabel(string p) => p switch
+    {
+        "High" => "bg-danger",
+        "Medium" => "bg-warning",
+        "Low" => "bg-info",
+        _ => "bg-grey"
+    };
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title"><i class="icon-checkmark-circle position-left"></i> Tasks</h5>
+        <div class="heading-elements">
+            <a asp-action="Create" class="btn bg-primary"><i class="icon-plus22"></i> New Task</a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-4">
+                <input type="text" id="searchInput" class="form-control" placeholder="Search tasks..." />
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-striped">
+            <thead>
+                <tr>
+                    <th width="50">#</th>
+                    <th>Task</th>
+                    <th>Assigned To</th>
+                    <th>Due Date</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th width="260">Action</th>
+                </tr>
+            </thead>
+            <tbody id="dataTable">
+                @{ int sr = 1; }
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@sr</td>
+                            <td><strong>@item.Title</strong></td>
+                            <td>@item.EmployeeName</td>
+                            <td>@(item.DueDate?.ToString("dd MMM yyyy") ?? "-")</td>
+                            <td><span class="label @PriorityLabel(item.Priority)">@item.Priority</span></td>
+                            <td><span class="label @StatusLabel(item.Status)">@item.Status</span></td>
+                            <td>
+                                @if (item.Status != "Completed")
+                                {
+                                    <form asp-action="ChangeStatus" asp-route-id="@item.Id" method="post" style="display:inline;">
+                                        <input type="hidden" name="status" value="Completed" />
+                                        <button type="submit" class="btn btn-success btn-icon" title="Complete"><i class="icon-checkmark3"></i></button>
+                                    </form>
+                                }
+                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-default btn-icon" title="View"><i class="icon-eye"></i></a>
+                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary btn-icon" title="Edit"><i class="icon-pencil7"></i></a>
+                                <a asp-action="Delete" asp-route-id="@item.Id"
+                                   onclick="return confirm('Delete this task?');"
+                                   class="btn btn-danger btn-icon" title="Delete"><i class="icon-trash"></i></a>
+                            </td>
+                        </tr>
+                        sr++;
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="7" class="text-center text-muted" style="padding:30px;"><i class="icon-checkmark-circle" style="font-size:32px;"></i><br />No tasks found.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    <script>
+        $(function () {
+            $("#searchInput").on("keyup", function () {
+                var value = $(this).val().toLowerCase();
+                $("#dataTable tr").filter(function () {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+                });
+            });
+        });
+    </script>
+    <style>
+        .table > thead > tr > th { font-weight: 600; }
+        .table > tbody > tr > td { vertical-align: middle; }
+        .label { font-size: 11px; }
+        .btn-icon { width: 34px; }
+    </style>
+}

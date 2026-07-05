@@ -38,17 +38,18 @@ namespace APP.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(AppFeatureDto dto)
         {
-            if (!ModelState.IsValid)
+            if (dto != null)
             {
                 dto.CreatedBy = _userId;
 
-                await LoadDropdowns();
                 await _apiService.PostAsync<dynamic>("AppFeatures", dto);
 
-                TempData["Success"] = "Record saved successfully.";
-                return View(dto);
+                TempData["Success"] = "Feature created successfully.";
+                return RedirectToAction(nameof(Index));
             }
-            return RedirectToAction(nameof(Index));
+
+            await LoadDropdowns();
+            return View(dto);
         }
 
         [HttpGet]
@@ -61,23 +62,21 @@ namespace APP.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Edit(string id, AppFeatureDto dto)
+        public async Task<IActionResult> Edit(AppFeatureDto dto)
         {
-            if (!string.IsNullOrEmpty(id) && dto!=null)
+            if (dto != null && !string.IsNullOrEmpty(dto.Id) && ModelState.IsValid)
             {
-                dto.CreatedBy = _userId;
                 dto.ModifiedBy = _userId;
                 dto.ModifiedOn = DateTime.UtcNow;
-                
-                await LoadDropdowns();
-                await _apiService
-                .PutAsync<dynamic>($"AppFeatures", dto);
 
-                TempData["Success"] = "Record updated successfully.";
+                await _apiService.PutAsync<dynamic>("AppFeatures", dto);
 
-                return View("Create", dto);
+                TempData["Success"] = "Feature updated successfully.";
+                return RedirectToAction(nameof(Index));
             }
-            return RedirectToAction(nameof(Index));
+
+            await LoadDropdowns();
+            return View("Create", dto);
         }
 
         public async Task<IActionResult> Details(string id)

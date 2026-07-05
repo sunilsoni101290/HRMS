@@ -4,42 +4,447 @@
     ViewData["Title"] = "Employee Shift Mapping";
 }
 
-<div class="container-fluid py-4">
+<form asp-action="@(string.IsNullOrEmpty(Model?.Id) ? "Create" : "Edit")"
+      method="post">
 
-    <div class="row justify-content-center">
+    <!-- Hidden Fields -->
 
-        <div class="col-lg-8">
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="CreatedBy" type="hidden" />
+    <input asp-for="ModifiedBy" type="hidden" />
 
-            <div class="card shadow border-0 rounded-4 overflow-hidden">
+    <div class="panel panel-flat">
 
-                <!-- Header -->
-                <div class="card-header bg-primary text-white py-4">
+        <!-- Header -->
 
-                    <div class="d-flex align-items-center">
+        <div class="panel-heading">
 
-                        <div class="me-3">
+            <h5 class="panel-title">
 
-                            <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center"
-                                 style="width:70px;height:70px;">
+                <i class="icon-calendar52 position-left"></i>
 
-                                <i class="bi bi-person-workspace fs-2"></i>
+                @(string.IsNullOrEmpty(Model?.Id)
+                    ? "Assign Employee Shift"
+                    : "Edit Employee Shift")
+
+            </h5>
+
+            <div class="heading-elements">
+
+                <a asp-action="Index"
+                   class="btn btn-default">
+
+                    <i class="icon-arrow-left13 position-left"></i>
+
+                    Back
+
+                </a>
+
+            </div>
+
+        </div>
+
+        <!-- Body -->
+
+        <div class="panel-body">
+
+            <div asp-validation-summary="ModelOnly"
+                 class="alert alert-danger">
+            </div>
+
+            <!-- Employee Information -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-user position-left"></i>
+
+                    Employee Information
+
+                </legend>
+
+                <div class="row">
+
+                    <!-- Employee -->
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="EmployeeId"></label>
+
+                            <select asp-for="EmployeeId"
+                                    asp-items="ViewBag.EmployeeList"
+                                    id="EmployeeId"
+                                    class="form-control select-search">
+
+                                <option value="">
+
+                                    -- Select Employee --
+
+                                </option>
+
+                            </select>
+
+                            <span asp-validation-for="EmployeeId"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Shift -->
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="ShiftId"></label>
+
+                            <select asp-for="ShiftId"
+                                    asp-items="ViewBag.ShiftList"
+                                    id="ShiftId"
+                                    class="form-control select-search">
+
+                                <option value="">
+
+                                    -- Select Shift --
+
+                                </option>
+
+                            </select>
+
+                            <span asp-validation-for="ShiftId"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- Effective Period -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-calendar3 position-left"></i>
+
+                    Effective Period
+
+                </legend>
+
+                <div class="row">
+
+                    <!-- Effective From -->
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="EffectiveFrom"></label>
+
+                            <input asp-for="EffectiveFrom"
+                                   type="date"
+                                   class="form-control"
+                                   id="EffectiveFrom" />
+
+                            <span asp-validation-for="EffectiveFrom"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Effective To -->
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="EffectiveTo"></label>
+
+                            <input asp-for="EffectiveTo"
+                                   type="date"
+                                   class="form-control"
+                                   id="EffectiveTo" />
+
+                            <span asp-validation-for="EffectiveTo"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+                <div class="row">
+
+                    <!-- Status -->
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label class="display-block">
+
+                                Mapping Status
+
+                            </label>
+
+                            <div class="checkbox checkbox-switchery switchery-sm">
+
+                                <label>
+
+                                    <input asp-for="IsActive"
+                                           type="checkbox"
+                                           class="switchery" />
+
+                                    Active Mapping
+
+                                </label>
 
                             </div>
 
                         </div>
 
-                        <div>
+                    </div>
 
-                            <h3 class="mb-1">
+                </div>
 
-                                @(string.IsNullOrEmpty(Model?.Id)
-                                    ? "Assign Employee Shift"
-                                    : "Edit Employee Shift")
+            </fieldset>
 
-                            </h3>
+            <!-- =========================================== -->
+            <!-- Selected Shift Information -->
+            <!-- =========================================== -->
 
-                            <p class="mb-0 opacity-75">
-                                Manage employee shift assignments
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-alarm position-left"></i>
+
+                    Shift Information
+
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-3">
+
+                        <div class="panel bg-primary-400">
+
+                            <div class="panel-body text-center">
+
+                                <h4 id="ShiftName"
+                                    class="no-margin">
+
+                                    @(!string.IsNullOrEmpty(Model.Id) ? Model.ShiftName ?? "" : "")
+
+                                </h4>
+
+                                <span>
+
+                                    Shift
+
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-3">
+
+                        <div class="panel bg-success-400">
+
+                            <div class="panel-body text-center">
+
+                                <h4 id="StartTimeText"
+                                    class="no-margin">
+
+                                    --
+
+                                </h4>
+
+                                <span>
+
+                                    Start Time
+
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-3">
+
+                        <div class="panel bg-warning-400">
+
+                            <div class="panel-body text-center">
+
+                                <h4 id="EndTimeText"
+                                    class="no-margin">
+
+                                    --
+
+                                </h4>
+
+                                <span>
+
+                                    End Time
+
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-3">
+
+                        <div class="panel bg-info-400">
+
+                            <div class="panel-body text-center">
+
+                                <h4 id="WorkingHours"
+                                    class="no-margin">
+
+                                    --
+
+                                </h4>
+
+                                <span>
+
+                                    Working Minutes
+
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- =========================================== -->
+            <!-- Employee Information -->
+            <!-- =========================================== -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-user-check position-left"></i>
+
+                    Employee Summary
+
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-6">
+
+                        <table class="table table-bordered">
+
+                            <tr>
+
+                                <th width="180">
+
+                                    Employee
+
+                                </th>
+
+                                <td id="EmployeeName">
+
+                                    @(!string.IsNullOrEmpty(Model.Id) ? Model.EmployeeName ?? "" : "")
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <th>
+
+                                    Shift
+
+                                </th>
+
+                                <td id="SelectedShift">
+
+                                    @(!string.IsNullOrEmpty(Model.Id) ? Model.ShiftName ?? "" : "")
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <th>
+
+                                    Effective From
+
+                                </th>
+
+                                <td id="SummaryFrom">
+
+                                    @(!string.IsNullOrEmpty(Model.Id) ? Model.EffectiveFrom.ToString("MMM-dd-yyyy") ?? "" : "")
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <th>
+
+                                    Effective To
+
+                                </th>
+
+                                <td id="SummaryTo">
+
+                                    @(!string.IsNullOrEmpty(Model.Id) ? Model.EffectiveTo?.ToString("MMM-dd-yyyy") ?? "" : "")
+
+                                </td>
+
+                            </tr>
+
+                        </table>
+
+                    </div>
+
+                    <div class="col-md-6">
+
+                        <div class="alert alert-info no-margin">
+
+                            <h6 class="text-semibold">
+
+                                <i class="icon-info22"></i>
+
+                                Information
+
+                            </h6>
+
+                            <p>
+
+                                Assigning a new shift will become
+                                effective from the selected date.
+                                If Effective To is blank, the shift
+                                remains active until another mapping
+                                is assigned.
+
                             </p>
 
                         </div>
@@ -48,165 +453,293 @@
 
                 </div>
 
-                <!-- Body -->
-                <div class="card-body p-4">
+            </fieldset>
+        </div>
 
-                    <form asp-action="@(Model.Id == null ? "Create" : "Edit")" method="post">
+        <!-- Panel Footer -->
 
-                        <!-- Hidden -->
-                        <input asp-for="Id" type="hidden" />
+        <div class="panel-footer text-right">
 
-                        <div class="row g-4">
+            <a asp-action="Index"
+               class="btn btn-default">
 
-                            <!-- Employee -->
-                            <div class="col-md-6">
+                <i class="icon-arrow-left13 position-left"></i>
 
-                                <label asp-for="EmployeeId"
-                                       class="form-label fw-semibold">
-                                </label>
+                Back
 
-                                <select asp-for="EmployeeId"
-                                        asp-items="ViewBag.EmployeeList"
-                                        class="form-select">
+            </a>
 
-                                    <option value="">
-                                        -- Select Employee --
-                                    </option>
+            <button type="reset"
+                    class="btn btn-warning">
 
-                                </select>
+                <i class="icon-reset position-left"></i>
 
-                                <span asp-validation-for="EmployeeId"
-                                      class="text-danger"></span>
+                Reset
 
-                            </div>
+            </button>
 
-                            <!-- Shift -->
-                            <div class="col-md-6">
+            <button type="submit"
+                    class="btn bg-primary">
 
-                                <label asp-for="ShiftId"
-                                       class="form-label fw-semibold">
-                                </label>
+                <i class="icon-floppy-disk position-left"></i>
 
-                                <select asp-for="ShiftId"
-                                        asp-items="ViewBag.ShiftList"
-                                        class="form-select">
+                @(string.IsNullOrEmpty(Model?.Id)
+                    ? "Save"
+                    : "Update")
 
-                                    <option value="">
-                                        -- Select Shift --
-                                    </option>
-
-                                </select>
-
-                                <span asp-validation-for="ShiftId"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                            <!-- Effective From -->
-                            <div class="col-md-6">
-
-                                <label asp-for="EffectiveFrom"
-                                       class="form-label fw-semibold">
-                                </label>
-
-                                <input asp-for="EffectiveFrom"
-                                       type="date"
-                                       class="form-control" />
-
-                                <span asp-validation-for="EffectiveFrom"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                            <!-- Effective To -->
-                            <div class="col-md-6">
-
-                                <label asp-for="EffectiveTo"
-                                       class="form-label fw-semibold">
-                                </label>
-
-                                <input asp-for="EffectiveTo"
-                                       type="date"
-                                       class="form-control" />
-
-                            </div>
-
-                            <!-- Status -->
-                            <div class="col-md-12">
-
-                                <div class="form-check form-switch mt-2">
-
-                                    <input asp-for="IsActive"
-                                           class="form-check-input"
-                                           type="checkbox" />
-
-                                    <label asp-for="IsActive"
-                                           class="form-check-label fw-semibold">
-                                        Active Mapping
-                                    </label>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                        <!-- Footer -->
-                        <div class="mt-5 d-flex justify-content-end gap-2">
-
-                            <a asp-action="Index"
-                               class="btn btn-light border rounded-3 px-4">
-
-                                <i class="bi bi-arrow-left"></i>
-                                Back
-
-                            </a>
-
-                            <button type="submit"
-                                    class="btn btn-primary rounded-3 px-4">
-
-                                <i class="bi bi-check-circle"></i>
-
-                                @(string.IsNullOrEmpty(Model?.Id)
-                                    ? "Save"
-                                    : "Update")
-
-                            </button>
-
-                        </div>
-                        <div class="col-md-6 mt-2">
-                            @if (TempData["Success"] != null)
-                            {
-                                <div class="alert alert-success alert-dismissible fade show"
-                                     role="alert">
-
-                                    <i class="bi bi-check-circle-fill"></i>
-
-                                    @TempData["Success"]
-
-                                    <button type="button"
-                                            class="btn-close"
-                                            data-bs-dismiss="alert">
-                                    </button>
-                                </div>
-                            }
-                        </div>
-                    </form>
-
-                </div>
-
-            </div>
+            </button>
 
         </div>
 
     </div>
 
-</div>
+</form>
 
 @section Scripts {
 
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+
+        $(document).ready(function () {
+
+            //=======================================
+            // Chosen
+            //=======================================
+
+            if ($('.select-search').length) {
+
+                $('.select-search').chosen({
+
+                    width: '100%',
+                    search_contains: true
+
+                });
+
+            }
+
+            //=======================================
+            // Switchery
+            //=======================================
+
+            if ($(".switchery").length) {
+
+                $(".switchery").each(function () {
+
+                    new Switchery(this, {
+
+                        color: '#2196F3'
+
+                    });
+
+                });
+
+            }
+
+            //=======================================
+            // Employee Summary
+            //=======================================
+
+            $("#EmployeeId").change(function () {
+
+                var text = $("#EmployeeId option:selected").text();
+
+                $("#EmployeeName").text(text);
+
+            });
+
+            //=======================================
+            // Effective Date Summary
+            //=======================================
+
+            $("#EffectiveFrom").change(function () {
+
+                $("#SummaryFrom").text($(this).val());
+
+            });
+
+            $("#EffectiveTo").change(function () {
+
+                var value = $(this).val();
+
+                if (value == "")
+                    value = "Current";
+
+                $("#SummaryTo").text(value);
+
+            });
+
+            //=======================================
+            // Shift Details
+            //=======================================
+
+            $("#ShiftId").change(function () {
+
+                loadShift();
+
+            });
+
+            function loadShift() {
+
+                var shiftId = $("#ShiftId").val();
+
+                if (shiftId == "") {
+
+                    $("#ShiftName").text("-");
+                    $("#SelectedShift").text("-");
+                    $("#StartTimeText").text("--");
+                    $("#EndTimeText").text("--");
+                    $("#WorkingHours").text("--");
+
+                    return;
+
+                }
+
+                $.ajax({
+
+                    url: '@Url.Action("GetShift", "Shift")',
+
+                    type: 'GET',
+
+                    data: {
+
+                        id: shiftId
+
+                    },
+
+                    success: function (response) {
+
+                        if (response == null)
+                            return;
+
+                        $("#ShiftName").text(response.name);
+
+                        $("#SelectedShift").text(response.name);
+
+                        $("#StartTimeText").text(response.startTime);
+
+                        $("#EndTimeText").text(response.endTime);
+
+                        $("#WorkingHours").text(response.minimumWorkingMinutes);
+
+                    },
+
+                    error: function () {
+
+                        console.log("Unable to load shift.");
+
+                    }
+
+                });
+
+            }
+
+            loadShift();
+
+            //=======================================
+            // Validation
+            //=======================================
+
+            $("form").submit(function () {
+
+                if ($("#EmployeeId").val() == "") {
+
+                    alert("Please select Employee.");
+
+                    return false;
+
+                }
+
+                if ($("#ShiftId").val() == "") {
+
+                    alert("Please select Shift.");
+
+                    return false;
+
+                }
+
+                if ($("#EffectiveFrom").val() == "") {
+
+                    alert("Please select Effective From Date.");
+
+                    return false;
+
+                }
+
+                return true;
+
+            });
+
+        });
+
+    </script>
+
+    <style>
+
+        .panel-heading {
+            padding: 18px 20px;
+        }
+
+        .panel-title {
+            font-weight: 600;
+        }
+
+        .panel-body {
+            padding: 20px;
+        }
+
+        fieldset {
+            border: 1px solid #e5e5e5;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        legend {
+            width: auto;
+            padding: 0 10px;
+            border: none;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .panel-footer {
+            background: #fafafa;
+        }
+
+        .table > tbody > tr > th {
+            width: 180px;
+            background: #fafafa;
+            font-weight: 600;
+        }
+
+        .panel.bg-primary-400,
+        .panel.bg-success-400,
+        .panel.bg-warning-400,
+        .panel.bg-info-400 {
+            margin-bottom: 15px;
+        }
+
+            .panel.bg-primary-400 h4,
+            .panel.bg-success-400 h4,
+            .panel.bg-warning-400 h4,
+            .panel.bg-info-400 h4 {
+                color: #fff;
+                font-weight: 600;
+            }
+
+        .chosen-container {
+            width: 100% !important;
+        }
+
+        .chosen-single {
+            height: 36px !important;
+            line-height: 34px !important;
+        }
+
+        .alert {
+            margin-bottom: 0;
+        }
+
+    </style>
 
 }

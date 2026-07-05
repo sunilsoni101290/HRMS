@@ -1,0 +1,54 @@
+﻿@model CarryForwardLeaveRequestDto
+
+<div class="modal fade"
+     id="carryForwardModal">
+
+    <div class="modal-dialog">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+
+                <h5>Carry Forward Leave</h5>
+
+            </div>
+
+            <div class="modal-body">
+
+                <select id="CarryEmployeeId"
+                        class="form-control">
+                </select>
+
+                <br />
+
+                <input type="number"
+                       id="FromYear"
+                       class="form-control"
+                       placeholder="From Year" />
+
+                <br />
+
+                <input type="number"
+                       id="ToYear"
+                       class="form-control"
+                       placeholder="To Year" />
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button type="button"
+                        id="btnCarryForward"
+                        class="btn btn-primary">
+
+                    Carry Forward
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

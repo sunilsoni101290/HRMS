@@ -1,0 +1,238 @@
+﻿@model LeaveApplicationDto
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-calendar3 position-left"></i>
+            Leave Application Details
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Index"
+               class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+
+            @if (Model.Status == EnumExtensions.ApprovalStatus.Pending)
+            {
+                <a asp-action="Edit"
+                   asp-route-id="@Model.Id"
+                   class="btn bg-primary">
+                    <i class="icon-pencil7"></i>
+                    Edit
+                </a>
+            }
+            
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <!-- Status Banner -->
+
+        <div class="alert @(Model.Status == EnumExtensions.ApprovalStatus.Approved ? "alert-success" :
+                            Model.Status == EnumExtensions.ApprovalStatus.Rejected ? "alert-danger" :
+                            Model.Status == EnumExtensions.ApprovalStatus.Cancelled ? "alert-warning" :
+                            "alert-info")">
+
+            <strong>Status :</strong>
+
+            @if (Model.Status == EnumExtensions.ApprovalStatus.Pending)
+            {
+                <span class="label bg-warning">Pending</span>
+            }
+            else if (Model.Status == EnumExtensions.ApprovalStatus.Approved)
+            {
+                <span class="label bg-success">Approved</span>
+            }
+            else if (Model.Status == EnumExtensions.ApprovalStatus.Rejected)
+            {
+                <span class="label bg-danger">Rejected</span>
+            }
+            else
+            {
+                <span class="label bg-grey">Cancelled</span>
+            }
+
+        </div>
+
+        <!-- Leave Information -->
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-user position-left"></i>
+                Employee Information
+            </legend>
+
+            <div class="row">
+
+                <div class="col-md-4">
+                    <label class="text-semibold text-muted">Employee</label>
+                    <h6>@Model.EmployeeName</h6>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="text-semibold text-muted">Leave Type</label>
+                    <h6>
+                        <span class="label bg-primary">
+                            @Model.LeaveTypeName
+                        </span>
+                    </h6>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="text-semibold text-muted">Total Days</label>
+                    <h6>
+                        <span class="label bg-success">
+                            @Model.TotalDays Day(s)
+                        </span>
+                    </h6>
+                </div>
+
+            </div>
+
+        </fieldset>
+
+        <!-- Leave Duration -->
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-calendar position-left"></i>
+                Leave Duration
+            </legend>
+
+            <div class="row">
+
+                <div class="col-md-4">
+                    <label class="text-semibold text-muted">From Date</label>
+                    <h6>@Model.FromDate.ToString("dd-MMM-yyyy")</h6>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="text-semibold text-muted">To Date</label>
+                    <h6>@Model.ToDate.ToString("dd-MMM-yyyy")</h6>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="text-semibold text-muted">Half Day</label>
+                    <h6>
+                        @(Model.IsHalfDay ? "Yes" : "No")
+                    </h6>
+                </div>
+
+            </div>
+
+            @if (Model.IsHalfDay)
+            {
+                <div class="row">
+
+                    <div class="col-md-4">
+                        <label class="text-semibold text-muted">
+                            Half Day Type
+                        </label>
+
+                        <h6>@Model.HalfDayType</h6>
+                    </div>
+
+                </div>
+            }
+
+        </fieldset>
+
+        <!-- Reason -->
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-file-text2 position-left"></i>
+                Leave Reason
+            </legend>
+
+            <div class="well">
+
+                @Model.Reason
+
+            </div>
+
+        </fieldset>
+
+        <!-- Attachment -->
+
+        @if (!string.IsNullOrEmpty(Model.DocumentUrl))
+        {
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-attachment position-left"></i>
+                    Supporting Document
+                </legend>
+
+                <a href="@Model.DocumentUrl"
+                   target="_blank"
+                   class="btn bg-info">
+
+                    <i class="icon-download"></i>
+                    View Attachment
+
+                </a>
+
+            </fieldset>
+        }
+
+        <!-- Approval Information -->
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-checkmark-circle position-left"></i>
+                Approval Information
+            </legend>
+
+            <div class="row">
+
+                <div class="col-md-4">
+                    <label class="text-semibold text-muted">
+                        Applied On
+                    </label>
+
+                    <h6>
+                        @(Model.CreatedOn.ToString("dd-MMM-yyyy HH:mm"))
+                    </h6>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="text-semibold text-muted">
+                        Approved By
+                    </label>
+
+                    <h6>
+                        @(string.IsNullOrEmpty(Model.ApprovedByName)
+                            ? "-"
+                            : Model.ApprovedByName)
+                    </h6>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="text-semibold text-muted">
+                        Approved Date
+                    </label>
+
+                    <h6>
+                        @(Model.ApprovedDate?.ToString("dd-MMM-yyyy HH:mm") ?? "-")
+                    </h6>
+                </div>
+
+            </div>
+
+        </fieldset>
+
+    </div>
+
+</div>

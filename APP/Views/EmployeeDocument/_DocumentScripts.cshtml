@@ -1,0 +1,355 @@
+﻿<script>
+    $(document).ready(function () {
+        //---------------------------------------------
+        // Chosen Dropdown
+        //---------------------------------------------
+        $(".chosen-select").chosen({
+            width: "100%",
+            search_contains: true,
+            allow_single_deselect: true
+        });
+        //---------------------------------------------
+        // Disable Upload Until Employee Selected
+        //---------------------------------------------
+        toggleUploadButton();
+        $("#EmployeeId").change(function () {
+            toggleUploadButton();
+        });
+        //---------------------------------------------
+        // Browse File
+        //---------------------------------------------
+        $("#dropZone").click(function () {
+            $("#DocumentFile").trigger("click");
+        });
+        //---------------------------------------------
+        // File Selected
+        //---------------------------------------------
+        $("#DocumentFile").change(function () {
+            if (this.files.length == 0)
+                return;
+            previewFile(this.files[0]);
+        });
+        //---------------------------------------------
+        // Drag Enter / Over / Leave
+        //---------------------------------------------
+        $("#dropZone").on("dragenter dragover", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $(this).addClass("drag-active");
+        });
+        $("#dropZone").on("dragleave", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $(this).removeClass("drag-active");
+        });
+        //---------------------------------------------
+        // Drop
+        //---------------------------------------------
+        $("#dropZone").on("drop", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $(this).removeClass("drag-active");
+            var files = e.originalEvent.dataTransfer.files;
+            if (files.length == 0)
+                return;
+            $("#DocumentFile")[0].files = files;
+            previewFile(files[0]);
+        });
+    });
+
+    ////////////////////////////////////////////////////
+    // Enable Disable Upload Button
+    ////////////////////////////////////////////////////
+    function toggleUploadButton() {
+        if ($("#EmployeeId").val() == "") {
+            $("#btnUploadFile").prop("disabled", true);
+        } else {
+            $("#btnUploadFile").prop("disabled", false);
+        }
+    }
+
+    ////////////////////////////////////////////////////
+    // Preview File
+    ////////////////////////////////////////////////////
+    function previewFile(file) {
+        var maxSize = 5 * 1024 * 1024;
+        if (file.size > maxSize) {
+            toastr.error("Maximum file size is 5 MB.");
+            $("#DocumentFile").val("");
+            return;
+        }
+        var extension = "." + file.name.split('.').pop().toLowerCase();
+        var allowed = [".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx", ".xls", ".xlsx"];
+
+        if ($.inArray(extension, allowed) == -1) {
+            toastr.error("Unsupported file type.");
+            $("#DocumentFile").val("");
+            return;
+        }
+        // Hidden Fields
+        $("#FileName").val(file.name);
+        $("#FileExtension").val(extension);
+        $("#FileSize").val(file.size);
+
+        $("#previewContainer").show();
+        $("#imagePreview").hide();
+        $("#pdfPreview").hide();
+        $("#fileInfo").hide();
+
+        $("#selectedFileName").html(
+            "<strong>" + file.name + "</strong><br/>" + formatBytes(file.size)
+        );
+
+        // Image Preview
+        if (extension == ".jpg" || extension == ".jpeg" || extension == ".png") {
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                $("#imagePreview").attr("src", e.target.result).fadeIn();
+            };
+            reader.readAsDataURL(file);
+            return;
+        }
+        // PDF Preview
+        if (extension == ".pdf") {
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                $("#pdfPreview").attr("src", e.target.result).fadeIn();
+            };
+            reader.readAsDataURL(file);
+            return;
+        }
+        // Office Files
+        $("#fileInfo").fadeIn();
+    }
+</script>
+
+<script>
+    //////////////////////////////////////////////////////
+    // Upload Button
+    //////////////////////////////////////////////////////
+    $("#btnUploadFile").click(function () {
+        uploadEmployeeDocument();
+    });
+    //////////////////////////////////////////////////////
+    // Replace Existing File
+    //////////////////////////////////////////////////////
+    $("#btnReplaceFile").click(function () {
+        if ($("#EmployeeId").val() == "") {
+            toastr.warning("Please select Employee first.");
+            return;
+        }
+        if (confirm("Replace the existing document?")) {
+            $("#DocumentFile").click();
+        }
+    });
+    //////////////////////////////////////////////////////
+    // Upload New Version
+    //////////////////////////////////////////////////////
+    $("#btnNewVersion").click(function () {
+        if ($("#EmployeeId").val() == "") {
+            toastr.warning("Please select Employee first.");
+            return;
+        }
+        $("#DocumentFile").click();
+    });
+    //////////////////////////////////////////////////////
+    // Remove Selected File
+    //////////////////////////////////////////////////////
+    $("#btnRemoveFile").click(function () {
+        if (!confirm("Remove selected document?"))
+            return;
+        $("#DocumentFile").val("");
+        $("#FileName").val("");
+        $("#FilePath").val("");
+        $("#FileExtension").val("");
+        $("#FileSize").val("");
+        $("#previewContainer").hide();
+        $("#imagePreview").hide();
+        $("#pdfPreview").hide();
+        $("#fileInfo").hide();
+        toastr.success("Selected document removed. Click Update to persist the change.");
+    });
+    //////////////////////////////////////////////////////
+    // Upload Function (AJAX)
+    //////////////////////////////////////////////////////
+    function uploadEmployeeDocument() {
+        var id = $("#Id").val();
+        if (id == "") {
+            toastr.warning("Please save the document first.");
+            return;
+        }
+        var fileInput = $("#DocumentFile")[0];
+        if (fileInput.files.length == 0) {
+            toastr.warning("Please select a file.");
+            return;
+        }
+        var formData = new FormData();
+        formData.append("id", id);
+        formData.append("file", fileInput.files[0]);
+
+        $("#uploadProgressContainer").show();
+        $("#uploadProgress").css("width", "0%").html("0%");
+        $("#btnUploadFile")
+            .prop("disabled", true)
+            .html("<i class='icon-spinner2 spinner'></i> Uploading...");
+
+        $.ajax({
+            url: '@Url.Action("Upload", "EmployeeDocument")',
+            type: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {
+                RequestVerificationToken:
+                    $('input[name="__RequestVerificationToken"]').val()
+            },
+            xhr: function () {
+                var xhr = new window.XMLHttpRequest();
+                xhr.upload.addEventListener("progress", function (evt) {
+                    if (evt.lengthComputable) {
+                        var percent = parseInt((evt.loaded / evt.total) * 100);
+                        $("#uploadProgress").css("width", percent + "%").html(percent + "%");
+                    }
+                });
+                return xhr;
+            },
+            success: function (response) {
+                $("#btnUploadFile")
+                    .prop("disabled", false)
+                    .html("<i class='icon-cloud-upload2'></i> Upload");
+                if (response.success) {
+                    toastr.success(response.message);
+                    $("#uploadProgress").css("width", "100%").html("100%");
+                    setTimeout(function () {
+                        $("#uploadProgressContainer").fadeOut();
+                    }, 1000);
+                    location.reload();
+                } else {
+                    toastr.error(response.message);
+                    $("#uploadProgressContainer").hide();
+                }
+            },
+            error: function () {
+                $("#btnUploadFile")
+                    .prop("disabled", false)
+                    .html("<i class='icon-cloud-upload2'></i> Upload");
+                $("#uploadProgressContainer").hide();
+                toastr.error("Upload failed.");
+            }
+        });
+    }
+</script>
+
+<script>
+    //////////////////////////////////////////////////////
+    // Format File Size
+    //////////////////////////////////////////////////////
+    function formatBytes(bytes) {
+        if (bytes === 0) return "0 Bytes";
+        var k = 1024;
+        var sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+        var i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+    }
+    //////////////////////////////////////////////////////
+    // Get File Icon
+    //////////////////////////////////////////////////////
+    function getFileIcon(extension) {
+        extension = extension.toLowerCase();
+        switch (extension) {
+            case ".pdf": return "icon-file-pdf";
+            case ".doc":
+            case ".docx": return "icon-file-word";
+            case ".xls":
+            case ".xlsx": return "icon-file-excel";
+            case ".jpg":
+            case ".jpeg":
+            case ".png": return "icon-image2";
+            default: return "icon-file-text2";
+        }
+    }
+    //////////////////////////////////////////////////////
+    // Client-side Form Validation
+    //////////////////////////////////////////////////////
+    $("#employeeDocumentForm").submit(function (e) {
+        if ($("#EmployeeId").val() == "") {
+            toastr.warning("Please select Employee.");
+            $("#EmployeeId").trigger("chosen:activate");
+            return false;
+        }
+        if ($("#DocumentType").val() == "") {
+            toastr.warning("Please select Document Type.");
+            $("#DocumentType").focus();
+            return false;
+        }
+        if ($("#DocumentName").val().trim() == "") {
+            toastr.warning("Please enter Document Name.");
+            $("#DocumentName").focus();
+            return false;
+        }
+        return true;
+    });
+    //////////////////////////////////////////////////////
+    // Existing Document Preview (on load)
+    //////////////////////////////////////////////////////
+    $(window).on("load", function () {
+        var filePath = $("#FilePath").val();
+        if (filePath == "") return;
+
+        var extension = filePath.substring(filePath.lastIndexOf(".")).toLowerCase();
+        $("#previewContainer").show();
+
+        if (extension == ".jpg" || extension == ".jpeg" || extension == ".png") {
+            $("#imagePreview").attr("src", filePath).show();
+            return;
+        }
+        if (extension == ".pdf") {
+            $("#pdfPreview").attr("src", filePath).show();
+            return;
+        }
+        $("#selectedFileName").html(
+            "<i class='" + getFileIcon(extension) + "'></i> " + $("#FileName").val()
+        );
+        $("#fileInfo").show();
+    });
+    //////////////////////////////////////////////////////
+    // Drag & Drop Highlight
+    //////////////////////////////////////////////////////
+    $("#dropZone")
+        .on("dragenter dragover", function () {
+            $(this).addClass("border-primary").css({
+                "background": "#f5fbff",
+                "border-style": "dashed"
+            });
+        })
+        .on("dragleave drop", function () {
+            $(this).removeClass("border-primary").css({
+                "background": "",
+                "border-style": ""
+            });
+        });
+    //////////////////////////////////////////////////////
+    // Prevent Double Submit
+    //////////////////////////////////////////////////////
+    var isSubmitting = false;
+    $("#employeeDocumentForm").submit(function (e) {
+        // If the validation handler above blocked the submit, don't lock the button.
+        if (e.isDefaultPrevented()) return;
+        if (isSubmitting) return false;
+        isSubmitting = true;
+        $("button[type='submit']")
+            .prop("disabled", true)
+            .html("<i class='icon-spinner2 spinner'></i> Saving...");
+    });
+    //////////////////////////////////////////////////////
+    // Reset Form
+    //////////////////////////////////////////////////////
+    $("button[type='reset']").click(function () {
+        $("#previewContainer").hide();
+        $("#imagePreview").hide();
+        $("#pdfPreview").hide();
+        $("#fileInfo").hide();
+        $("#uploadProgressContainer").hide();
+        $("#DocumentFile").val("");
+    });
+</script>

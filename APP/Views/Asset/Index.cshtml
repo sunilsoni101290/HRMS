@@ -1,0 +1,146 @@
+@model IEnumerable<AssetListDto>
+
+@{
+    ViewData["Title"] = "Asset Management";
+
+    string StatusLabel(string? s) => s switch
+    {
+        "Available" => "bg-success",
+        "Allocated" => "bg-primary",
+        "UnderMaintenance" => "bg-warning",
+        "Scrap" => "bg-danger",
+        _ => "bg-grey"
+    };
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-laptop position-left"></i> Asset Management
+        </h5>
+        <div class="heading-elements">
+            <a asp-action="Create" class="btn bg-primary">
+                <i class="icon-plus22"></i> Add Asset
+            </a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-4">
+                <input type="text" id="searchInput" class="form-control"
+                       placeholder="Search asset, code, serial..." />
+            </div>
+            <div class="col-md-3">
+                <select id="statusFilter" class="form-control">
+                    <option value="">All Status</option>
+                    <option value="Available">Available</option>
+                    <option value="Allocated">Allocated</option>
+                    <option value="UnderMaintenance">Under Maintenance</option>
+                    <option value="Scrap">Scrap</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-striped">
+            <thead>
+                <tr>
+                    <th width="60">#</th>
+                    <th>Asset</th>
+                    <th>Code</th>
+                    <th>Category</th>
+                    <th>Allocated To</th>
+                    <th class="text-right">Cost</th>
+                    <th>Warranty</th>
+                    <th>Status</th>
+                    <th width="170">Action</th>
+                </tr>
+            </thead>
+            <tbody id="dataTable">
+                @{ int sr = 1; }
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr data-status="@item.Status">
+                            <td>@sr</td>
+                            <td>
+                                <strong>@item.Name</strong>
+                                @if (!string.IsNullOrEmpty(item.SerialNumber))
+                                {
+                                    <br /><small class="text-muted">SN: @item.SerialNumber</small>
+                                }
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(item.AssetCode))
+                                {
+                                    <span class="label bg-primary">@item.AssetCode</span>
+                                }
+                                else { <span>-</span> }
+                            </td>
+                            <td>@(item.AssetCategoryName ?? "-")</td>
+                            <td>@(string.IsNullOrEmpty(item.CurrentEmployeeName) ? "-" : item.CurrentEmployeeName)</td>
+                            <td class="text-right">
+                                @(item.PurchaseCost.HasValue ? "₹ " + item.PurchaseCost.Value.ToString("N2") : "-")
+                            </td>
+                            <td>
+                                @(item.WarrantyExpiryDate.HasValue ? item.WarrantyExpiryDate.Value.ToString("dd MMM yyyy") : "-")
+                            </td>
+                            <td>
+                                <span class="label @StatusLabel(item.Status)">@item.Status</span>
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <a asp-action="Details" asp-route-id="@item.Id"
+                                       class="btn btn-default btn-icon" title="View"><i class="icon-eye"></i></a>
+                                    <a asp-action="Edit" asp-route-id="@item.Id"
+                                       class="btn btn-primary btn-icon" title="Edit"><i class="icon-pencil7"></i></a>
+                                    <a asp-action="Delete" asp-route-id="@item.Id"
+                                       onclick="return confirm('Are you sure you want to delete this asset?');"
+                                       class="btn btn-danger btn-icon" title="Delete"><i class="icon-trash"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                        sr++;
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="9" class="text-center text-muted" style="padding:30px;">
+                            <i class="icon-laptop" style="font-size:32px;"></i><br />
+                            No assets found.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            function applyFilter() {
+                var search = $("#searchInput").val().toLowerCase();
+                var status = $("#statusFilter").val();
+                $("#dataTable tr").each(function () {
+                    var matchText = $(this).text().toLowerCase().indexOf(search) > -1;
+                    var matchStatus = status === "" || $(this).data("status") === status;
+                    $(this).toggle(matchText && matchStatus);
+                });
+            }
+            $("#searchInput").on("keyup", applyFilter);
+            $("#statusFilter").on("change", applyFilter);
+        });
+    </script>
+    <style>
+        .table > thead > tr > th { font-weight: 600; }
+        .table > tbody > tr > td { vertical-align: middle; }
+        .label { font-size: 11px; }
+        .btn-icon { width: 34px; }
+    </style>
+}

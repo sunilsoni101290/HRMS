@@ -74,6 +74,26 @@ namespace Domain.Entities
         public DateTime? ConfirmationDate { get; set; }
         public DateTime? RelievingDate { get; set; }
 
+        #region Passport Details 
+        public string PassportNumber { get; set; }
+        public DateTime IssueDate { get; set; }
+        public DateTime ExpiryDate { get; set; }
+        public string PlaceOfIssue { get; set; }
+
+        [Display(Name = "Nationality")]
+        public Nationality Nationality { get; set; } = Nationality.Indian;
+
+        [Display(Name = "Passport Status")]
+        public PassportStatus PassportStatus { get; set; } = PassportStatus.NotAvailable;
+
+        [Display(Name = "Passport Issuing Country")]
+        public string? CountryId { get; set; }
+        public Country? Country { get; set; }
+
+        [Display(Name = "Passport Document")]
+        public string? PassportFilePath { get; set; }
+        #endregion
+
         public EmploymentType EmploymentType { get; set; }
         public override string GetSequencePrefix() => "EMP";
         // Navigation

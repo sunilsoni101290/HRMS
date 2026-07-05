@@ -1,0 +1,365 @@
+@model Application.DTOs.Dashboard.EmployeeDashboardDto
+
+@{
+    ViewData["Title"] = "Employee Dashboard";
+
+    string DayColor(string s) => s switch
+    {
+        "Present" or "Late" or "WorkFromHome" or "OnDuty" or "Overtime" or "CompOff" => "bg-success",
+        "HalfDay" => "bg-warning",
+        "Absent" => "bg-danger",
+        "Leave" => "bg-blue",
+        "Holiday" => "bg-teal",
+        "WeekOff" => "bg-grey-300",
+        _ => "bg-grey-100"
+    };
+
+    var trendLabels = string.Join(",", Model.AttendanceTrend.Select(x => "'" + x.Label + "'"));
+    var trendValues = string.Join(",", Model.AttendanceTrend.Select(x => x.Value));
+    var leaveData = string.Join(",", Model.LeaveDistribution.Select(x => "{value:" + x.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) + ",name:'" + (x.Name ?? "") + "'}"));
+}
+
+<!-- Welcome -->
+<div class="panel panel-flat">
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-8">
+                <h4 class="no-margin-top">Welcome back, @Model.FullName! 👋</h4>
+                <span class="text-muted">Here's what's happening with your work today.</span>
+            </div>
+            <div class="col-md-4 text-right">
+                <span class="text-muted">@DateTime.Now.ToString("dd MMMM yyyy, dddd")</span>
+                <div style="margin-top:6px;">
+                    <span class="text-size-small text-muted">Profile @Model.ProfileCompletionPercent% complete</span>
+                    <div class="progress" style="height:6px;">
+                        <div class="progress-bar bg-primary" style="width:@Model.ProfileCompletionPercent%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row">
+    <div class="col-lg-3 col-sm-6">
+        <div class="panel bg-teal-400">
+            <div class="panel-body">
+                <h3 class="no-margin">@(Model.CheckIn?.ToString("hh:mm tt") ?? "—")</h3>
+                Attendance Today — @Model.AttendanceStatus
+                <div class="pull-right"><i class="icon-alarm" style="font-size:34px;opacity:.75;"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-sm-6">
+        <div class="panel bg-blue-400">
+            <div class="panel-body">
+                <h3 class="no-margin">@Model.TotalLeaveBalance.ToString("0.#")</h3>
+                Leave Balance (days)
+                <div class="pull-right"><i class="icon-calendar3" style="font-size:34px;opacity:.75;"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-sm-6">
+        <div class="panel bg-indigo-400">
+            <div class="panel-body">
+                <h3 class="no-margin">@(Model.UpcomingHolidays.Any() ? Model.UpcomingHolidays.First().Date.ToString("dd MMM") : "—")</h3>
+                @(Model.UpcomingHolidays.Any() ? Model.UpcomingHolidays.First().Name : "No upcoming holiday")
+                <div class="pull-right"><i class="icon-gift" style="font-size:34px;opacity:.75;"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-sm-6">
+        <div class="panel bg-pink-400">
+            <div class="panel-body">
+                <h3 class="no-margin">@Model.PendingTaskCount</h3>
+                Pending Tasks
+                <div class="pull-right"><i class="icon-checkmark-circle" style="font-size:34px;opacity:.75;"></i></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Leave Balance -->
+    <div class="col-md-4">
+        <div class="panel panel-flat">
+            <div class="panel-heading"><h6 class="panel-title"><i class="icon-list position-left"></i> My Leave Balance</h6></div>
+            <table class="table table-striped">
+                <thead><tr><th>Leave Type</th><th class="text-right">Available</th></tr></thead>
+                <tbody>
+                    @if (Model.LeaveBalances.Any())
+                    {
+                        foreach (var b in Model.LeaveBalances)
+                        {
+                            <tr><td>@b.LeaveTypeName</td><td class="text-right"><strong>@b.Balance.ToString("0.#")</strong></td></tr>
+                        }
+                    }
+                    else { <tr><td colspan="2" class="text-muted text-center">No leave balance.</td></tr> }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Recent Payslip -->
+    <div class="col-md-4">
+        <div class="panel panel-flat">
+            <div class="panel-heading"><h6 class="panel-title"><i class="icon-coins position-left"></i> Recent Payslip</h6></div>
+            <div class="panel-body text-center">
+                @if (Model.RecentPayslip != null)
+                {
+                    <h6 class="text-muted no-margin">@Model.RecentPayslip.MonthName @Model.RecentPayslip.Year</h6>
+                    <h3 class="text-success">₹ @Model.RecentPayslip.NetSalary.ToString("N2")</h3>
+                    <span class="text-muted">Net Salary · @Model.RecentPayslip.Status</span>
+                    <div class="text-muted text-size-small">Pay date: @Model.RecentPayslip.PayDate.ToString("dd MMM yyyy")</div>
+                }
+                else { <p class="text-muted" style="padding:20px;">No payslip yet.</p> }
+            </div>
+        </div>
+    </div>
+
+    <!-- Week attendance -->
+    <div class="col-md-4">
+        <div class="panel panel-flat">
+            <div class="panel-heading"><h6 class="panel-title"><i class="icon-calendar2 position-left"></i> My Attendance (This Week)</h6></div>
+            <div class="panel-body">
+                <div class="row text-center">
+                    @foreach (var d in Model.WeekAttendance)
+                    {
+                        <div class="col-xs-1" style="width:14.28%;padding:2px;">
+                            <div class="text-muted text-size-mini">@d.DayName</div>
+                            <div class="@DayColor(d.Status)" title="@d.Status"
+                                 style="height:26px;border-radius:4px;margin-top:3px;"></div>
+                        </div>
+                    }
+                </div>
+                <hr />
+                <div class="text-muted text-size-small">
+                    <span class="text-success">●</span> Present &nbsp;
+                    <span class="text-warning">●</span> Half Day &nbsp;
+                    <span class="text-danger">●</span> Absent
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Upcoming Events -->
+    <div class="col-md-4">
+        <div class="panel panel-flat">
+            <div class="panel-heading"><h6 class="panel-title"><i class="icon-calendar3 position-left"></i> Upcoming Events</h6></div>
+            <div class="panel-body">
+                <ul class="media-list">
+                    @if (Model.UpcomingEvents.Any())
+                    {
+                        foreach (var e in Model.UpcomingEvents)
+                        {
+                            <li class="media" style="padding:6px 0;">
+                                <div class="media-body">
+                                    <strong>@e.Title</strong>
+                                    <div class="text-muted text-size-small">@e.StartDate.ToString("dd MMM yyyy") @(string.IsNullOrEmpty(e.Location) ? "" : "· " + e.Location)</div>
+                                </div>
+                            </li>
+                        }
+                    }
+                    else { <li class="text-muted">No upcoming events.</li> }
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Announcements -->
+    <div class="col-md-4">
+        <div class="panel panel-flat">
+            <div class="panel-heading">
+                <h6 class="panel-title"><i class="icon-bullhorn position-left"></i> Company Announcements</h6>
+                <div class="heading-elements"><a asp-controller="Announcement" asp-action="Index" class="text-size-small">View All</a></div>
+            </div>
+            <div class="panel-body">
+                <ul class="media-list">
+                    @if (Model.Announcements.Any())
+                    {
+                        foreach (var a in Model.Announcements)
+                        {
+                            <li class="media" style="padding:6px 0;">
+                                <div class="media-body">
+                                    <strong>@a.Title</strong>
+                                    <div class="text-muted text-size-small">@a.PublishDate.ToString("dd MMM yyyy")</div>
+                                </div>
+                            </li>
+                        }
+                    }
+                    else { <li class="text-muted">No announcements.</li> }
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="col-md-4">
+        <div class="panel panel-flat">
+            <div class="panel-heading"><h6 class="panel-title"><i class="icon-grid position-left"></i> Quick Links</h6></div>
+            <div class="panel-body">
+                <div class="row text-center">
+                    <div class="col-xs-4" style="margin-bottom:12px;"><a asp-controller="LeaveApplication" asp-action="Create"><i class="icon-calendar2 icon-2x text-primary"></i><div class="text-size-small">Apply Leave</div></a></div>
+                    <div class="col-xs-4" style="margin-bottom:12px;"><a asp-controller="Employee" asp-action="Index"><i class="icon-user icon-2x text-primary"></i><div class="text-size-small">My Profile</div></a></div>
+                    <div class="col-xs-4" style="margin-bottom:12px;"><a asp-controller="Payroll" asp-action="Index"><i class="icon-file-text2 icon-2x text-primary"></i><div class="text-size-small">Payslip</div></a></div>
+                    <div class="col-xs-4"><a asp-controller="EmployeeDocument" asp-action="Index"><i class="icon-folder icon-2x text-primary"></i><div class="text-size-small">Documents</div></a></div>
+                    <div class="col-xs-4"><a asp-controller="EmployeeTask" asp-action="Index"><i class="icon-checkmark-circle icon-2x text-primary"></i><div class="text-size-small">Tasks</div></a></div>
+                    <div class="col-xs-4"><a asp-controller="Notification" asp-action="Index"><i class="icon-bell2 icon-2x text-primary"></i><div class="text-size-small">Notifications</div></a></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="row">
+    <div class="col-md-7">
+        <div class="panel panel-flat">
+            <div class="panel-heading"><h6 class="panel-title"><i class="icon-stats-bars position-left"></i> Attendance Trend (6 months)</h6></div>
+            <div class="panel-body"><div id="attTrend" style="height:260px;"></div></div>
+        </div>
+    </div>
+    <div class="col-md-5">
+        <div class="panel panel-flat">
+            <div class="panel-heading"><h6 class="panel-title"><i class="icon-pie-chart3 position-left"></i> Leave Utilization</h6></div>
+            <div class="panel-body"><div id="leavePie" style="height:260px;"></div></div>
+        </div>
+    </div>
+</div>
+
+<!-- My Tasks -->
+<div class="panel panel-flat">
+    <div class="panel-heading">
+        <h6 class="panel-title"><i class="icon-checkmark-circle position-left"></i> My Tasks</h6>
+        <div class="heading-elements"><a asp-controller="EmployeeTask" asp-action="Index" class="text-size-small">View All</a></div>
+    </div>
+    <table class="table table-striped">
+        <thead><tr><th>Task</th><th>Due Date</th><th>Priority</th><th>Status</th></tr></thead>
+        <tbody>
+            @if (Model.MyTasks.Any())
+            {
+                foreach (var t in Model.MyTasks)
+                {
+                    <tr>
+                        <td><strong>@t.Title</strong></td>
+                        <td>@(t.DueDate?.ToString("dd MMM yyyy") ?? "-")</td>
+                        <td><span class="label @(t.Priority == "High" ? "bg-danger" : t.Priority == "Low" ? "bg-info" : "bg-warning")">@t.Priority</span></td>
+                        <td><span class="label @(t.Status == "InProgress" ? "bg-primary" : "bg-warning")">@t.Status</span></td>
+                    </tr>
+                }
+            }
+            else { <tr><td colspan="4" class="text-muted text-center" style="padding:20px;">No pending tasks. 🎉</td></tr> }
+        </tbody>
+    </table>
+</div>
+
+<!-- Birthdays / Anniversaries / Pending Leaves / Activity -->
+<div class="row">
+    <div class="col-md-3">
+        <div class="panel panel-flat">
+            <div class="panel-heading"><h6 class="panel-title"><i class="icon-cake position-left"></i> Birthdays</h6></div>
+            <div class="panel-body">
+                <ul class="media-list">
+                    @if (Model.Birthdays.Any())
+                    {
+                        foreach (var b in Model.Birthdays)
+                        {
+                            <li class="media" style="padding:5px 0;"><div class="media-body"><strong>@b.Name</strong><div class="text-muted text-size-small">@b.Date.ToString("dd MMM") · @b.DepartmentName</div></div></li>
+                        }
+                    }
+                    else { <li class="text-muted">None this month.</li> }
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="panel panel-flat">
+            <div class="panel-heading"><h6 class="panel-title"><i class="icon-trophy2 position-left"></i> Work Anniversaries</h6></div>
+            <div class="panel-body">
+                <ul class="media-list">
+                    @if (Model.WorkAnniversaries.Any())
+                    {
+                        foreach (var w in Model.WorkAnniversaries)
+                        {
+                            <li class="media" style="padding:5px 0;"><div class="media-body"><strong>@w.Name</strong><div class="text-muted text-size-small">@w.Years yr(s) · @w.Date.ToString("dd MMM")</div></div></li>
+                        }
+                    }
+                    else { <li class="text-muted">None this month.</li> }
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="panel panel-flat">
+            <div class="panel-heading"><h6 class="panel-title"><i class="icon-calendar2 position-left"></i> Pending Leave Requests</h6></div>
+            <div class="panel-body">
+                <ul class="media-list">
+                    @if (Model.PendingLeaveRequests.Any())
+                    {
+                        foreach (var l in Model.PendingLeaveRequests)
+                        {
+                            <li class="media" style="padding:5px 0;"><div class="media-body"><strong>@l.LeaveTypeName</strong><div class="text-muted text-size-small">@l.FromDate.ToString("dd MMM") - @l.ToDate.ToString("dd MMM") · @l.TotalDays.ToString("0.#")d</div></div></li>
+                        }
+                    }
+                    else { <li class="text-muted">No pending requests.</li> }
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="panel panel-flat">
+            <div class="panel-heading"><h6 class="panel-title"><i class="icon-history position-left"></i> Recent Activity</h6></div>
+            <div class="panel-body">
+                <ul class="media-list">
+                    @if (Model.RecentActivity.Any())
+                    {
+                        foreach (var r in Model.RecentActivity)
+                        {
+                            <li class="media" style="padding:5px 0;"><div class="media-body">@r.Text<div class="text-muted text-size-small">@r.Date.ToString("dd MMM yyyy")</div></div></li>
+                        }
+                    }
+                    else { <li class="text-muted">No recent activity.</li> }
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/global_assets/js/plugins/visualization/echarts/echarts.min.js"></script>
+    <script>
+        $(function () {
+            if (typeof echarts !== 'undefined') {
+                var t = document.getElementById('attTrend');
+                if (t) {
+                    var c1 = echarts.init(t);
+                    c1.setOption({
+                        tooltip: { trigger: 'axis' },
+                        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+                        xAxis: { type: 'category', data: [@Html.Raw(trendLabels)] },
+                        yAxis: { type: 'value' },
+                        series: [{ type: 'bar', barWidth: '50%', itemStyle: { color: '#26A69A' }, data: [@Html.Raw(trendValues)] }]
+                    });
+                    window.addEventListener('resize', function () { c1.resize(); });
+                }
+                var p = document.getElementById('leavePie');
+                if (p) {
+                    var c2 = echarts.init(p);
+                    var pieData = [@Html.Raw(leaveData)];
+                    c2.setOption({
+                        tooltip: { trigger: 'item' },
+                        series: [{
+                            type: 'pie', radius: ['45%', '70%'],
+                            data: pieData.length ? pieData : [{ value: 1, name: 'No leave used' }],
+                            label: { formatter: '{b}: {c}' }
+                        }]
+                    });
+                    window.addEventListener('resize', function () { c2.resize(); });
+                }
+            }
+        });
+    </script>
+}

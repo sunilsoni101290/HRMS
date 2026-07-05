@@ -1,0 +1,94 @@
+@model PayrollDto
+
+@{
+    ViewData["Title"] = "Payslip";
+}
+
+<div class="panel panel-flat" id="payslip">
+    <div class="panel-body">
+
+        <div class="text-right hidden-print" style="margin-bottom:10px;">
+            <button onclick="window.print()" class="btn bg-primary"><i class="icon-printer"></i> Print</button>
+            <a asp-action="Index" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
+        </div>
+
+        <div class="text-center" style="border-bottom:2px solid #333; padding-bottom:10px; margin-bottom:20px;">
+            <h4 class="text-semibold" style="margin:0;">PAYSLIP</h4>
+            <span class="text-muted">For @Model.MonthName @Model.SalaryYear</span>
+        </div>
+
+        <div class="row">
+            <div class="col-xs-6">
+                <p><strong>Employee:</strong> @Model.EmployeeName</p>
+                <p><strong>Employee Code:</strong> @Model.EmployeeCode</p>
+            </div>
+            <div class="col-xs-6 text-right">
+                <p><strong>Pay Date:</strong> @Model.SalaryDate.ToString("dd MMM yyyy")</p>
+                <p><strong>Status:</strong> @Model.Status</p>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-xs-6">
+                <p>
+                    <strong>Working Days:</strong> @(Model.TotalWorkingDays?.ToString("0.#") ?? "-")
+                </p>
+            </div>
+            <div class="col-xs-6 text-right">
+                <p>
+                    <strong>Present Days:</strong> @(Model.PresentDays?.ToString("0.#") ?? "-")
+                </p>
+            </div>
+        </div>
+
+        <table class="table table-bordered" style="margin-top:15px;">
+            <thead>
+                <tr>
+                    <th>Earnings</th>
+                    <th class="text-right">Amount (₹)</th>
+                    <th>Deductions</th>
+                    <th class="text-right">Amount (₹)</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    var earnings = Model.Details.Where(x => x.IsEarning).ToList();
+                    var deductions = Model.Details.Where(x => !x.IsEarning).ToList();
+                    int rows = Math.Max(earnings.Count, deductions.Count);
+                }
+                @for (int i = 0; i < rows; i++)
+                {
+                    <tr>
+                        <td>@(i < earnings.Count ? earnings[i].SalaryComponentName : "")</td>
+                        <td class="text-right">@(i < earnings.Count ? earnings[i].Amount.ToString("N2") : "")</td>
+                        <td>@(i < deductions.Count ? deductions[i].SalaryComponentName : "")</td>
+                        <td class="text-right">@(i < deductions.Count ? deductions[i].Amount.ToString("N2") : "")</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th>Total Earnings</th>
+                    <th class="text-right">₹ @Model.TotalEarnings.ToString("N2")</th>
+                    <th>Total Deductions</th>
+                    <th class="text-right">₹ @Model.TotalDeductions.ToString("N2")</th>
+                </tr>
+            </tfoot>
+        </table>
+
+        <div class="text-right" style="border-top:2px solid #333; padding-top:10px;">
+            <h4 class="text-semibold">Net Pay: ₹ @Model.NetSalary.ToString("N2")</h4>
+        </div>
+
+        <p class="text-muted text-center" style="margin-top:30px;">
+            This is a computer-generated payslip and does not require a signature.
+        </p>
+    </div>
+</div>
+
+@section Scripts {
+    <style media="print">
+        .hidden-print, .sidebar, .navbar, .page-header, .breadcrumb-line, .footer { display: none !important; }
+        .content-wrapper, .content, .page-content { margin: 0 !important; padding: 0 !important; }
+    </style>
+}

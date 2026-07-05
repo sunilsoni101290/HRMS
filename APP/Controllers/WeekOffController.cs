@@ -103,7 +103,7 @@ namespace APP.Controllers
 
             await LoadDayDropdown();
 
-            return View(data);
+            return View("Create",data);
         }
 
         // =====================================================

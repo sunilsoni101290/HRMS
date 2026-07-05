@@ -56,7 +56,14 @@ namespace APP.Helpers
             General = 1,
             Policy = 2,
             Holiday = 3,
-            Urgent = 4
+            Urgent = 4,
+            Achievement = 5,
+            Important = 6,
+        }
+        public enum AnnouncementPriority
+        {
+            High = 1,
+            Medium = 2,
         }
         public enum EventType
         {
@@ -262,116 +269,254 @@ namespace APP.Helpers
             Agriculture = 17,      // Farming / Agro business
             Hospitality = 18       // Hotel / Restaurant
         }
-    public enum DocumentType
-    {
-        // Government ID Proofs
+        public enum DocumentType
+        {
+            // Government ID Proofs
 
-        [Display(Name = "Aadhaar Card")]
-        AadhaarCard = 1,
+            [Display(Name = "Aadhaar Card")]
+            AadhaarCard = 1,
 
-        [Display(Name = "PAN Card")]
-        PANCard = 2,
+            [Display(Name = "PAN Card")]
+            PANCard = 2,
 
-        [Display(Name = "Passport")]
-        Passport = 3,
+            [Display(Name = "Passport")]
+            Passport = 3,
 
-        [Display(Name = "Driving License")]
-        DrivingLicense = 4,
+            [Display(Name = "Driving License")]
+            DrivingLicense = 4,
 
-        [Display(Name = "Voter ID")]
-        VoterID = 5,
-
-
-        // Employee Documents
-
-        [Display(Name = "Resume")]
-        Resume = 6,
-
-        [Display(Name = "Offer Letter")]
-        OfferLetter = 7,
-
-        [Display(Name = "Appointment Letter")]
-        AppointmentLetter = 8,
-
-        [Display(Name = "Experience Letter")]
-        ExperienceLetter = 9,
-
-        [Display(Name = "Relieving Letter")]
-        RelievingLetter = 10,
-
-        [Display(Name = "Salary Slip")]
-        SalarySlip = 11,
+            [Display(Name = "Voter ID")]
+            VoterID = 5,
 
 
-        // Education Documents
+            // Employee Documents
 
-        [Display(Name = "Education Certificate")]
-        EducationCertificate = 12,
+            [Display(Name = "Resume")]
+            Resume = 6,
 
-        [Display(Name = "Degree Certificate")]
-        DegreeCertificate = 13,
+            [Display(Name = "Offer Letter")]
+            OfferLetter = 7,
 
-        [Display(Name = "10th Marksheet")]
-        Marksheet10th = 14,
+            [Display(Name = "Appointment Letter")]
+            AppointmentLetter = 8,
 
-        [Display(Name = "12th Marksheet")]
-        Marksheet12th = 15,
+            [Display(Name = "Experience Letter")]
+            ExperienceLetter = 9,
 
-        [Display(Name = "Graduation Certificate")]
-        GraduationCertificate = 16,
+            [Display(Name = "Relieving Letter")]
+            RelievingLetter = 10,
 
-        [Display(Name = "Post Graduation Certificate")]
-        PostGraduationCertificate = 17,
-
-
-        // Bank Documents
-
-        [Display(Name = "Bank Passbook")]
-        BankPassbook = 18,
-
-        [Display(Name = "Cancel Cheque")]
-        CancelCheque = 19,
-
-        [Display(Name = "Bank Statement")]
-        BankStatement = 20,
+            [Display(Name = "Salary Slip")]
+            SalarySlip = 11,
 
 
-        // HR & Compliance Documents
+            // Education Documents
 
-        [Display(Name = "PF Document")]
-        PFDocument = 21,
+            [Display(Name = "Education Certificate")]
+            EducationCertificate = 12,
 
-        [Display(Name = "ESIC Document")]
-        ESICDocument = 22,
+            [Display(Name = "Degree Certificate")]
+            DegreeCertificate = 13,
 
-        [Display(Name = "Medical Certificate")]
-        MedicalCertificate = 23,
+            [Display(Name = "10th Marksheet")]
+            Marksheet10th = 14,
 
-        [Display(Name = "Address Proof")]
-        AddressProof = 24,
+            [Display(Name = "12th Marksheet")]
+            Marksheet12th = 15,
 
-        [Display(Name = "Photo")]
-        Photo = 25,
+            [Display(Name = "Graduation Certificate")]
+            GraduationCertificate = 16,
 
-        [Display(Name = "Signature")]
-        Signature = 26,
+            [Display(Name = "Post Graduation Certificate")]
+            PostGraduationCertificate = 17,
 
 
-        // Other Documents
+            // Bank Documents
 
-        [Display(Name = "Birth Certificate")]
-        BirthCertificate = 27,
+            [Display(Name = "Bank Passbook")]
+            BankPassbook = 18,
 
-        [Display(Name = "Marriage Certificate")]
-        MarriageCertificate = 28,
+            [Display(Name = "Cancel Cheque")]
+            CancelCheque = 19,
 
-        [Display(Name = "Police Verification")]
-        PoliceVerification = 29,
+            [Display(Name = "Bank Statement")]
+            BankStatement = 20,
 
-        [Display(Name = "Other")]
-        Other = 30
+
+            // HR & Compliance Documents
+
+            [Display(Name = "PF Document")]
+            PFDocument = 21,
+
+            [Display(Name = "ESIC Document")]
+            ESICDocument = 22,
+
+            [Display(Name = "Medical Certificate")]
+            MedicalCertificate = 23,
+
+            [Display(Name = "Address Proof")]
+            AddressProof = 24,
+
+            [Display(Name = "Photo")]
+            Photo = 25,
+
+            [Display(Name = "Signature")]
+            Signature = 26,
+
+
+            // Other Documents
+
+            [Display(Name = "Birth Certificate")]
+            BirthCertificate = 27,
+
+            [Display(Name = "Marriage Certificate")]
+            MarriageCertificate = 28,
+
+            [Display(Name = "Police Verification")]
+            PoliceVerification = 29,
+
+            [Display(Name = "Other")]
+            Other = 30
+        }
+
+        public enum LeaveTransactionType
+        {
+            Allocate = 1,
+            Credit = 2,
+            Deduct = 3,
+            CarryForward = 4
+        }
+
+        public enum Nationality
+        {
+            [Display(Name = "Indian")]
+            Indian = 1,
+
+            [Display(Name = "American")]
+            American = 2,
+
+            [Display(Name = "British")]
+            British = 3,
+
+            [Display(Name = "Canadian")]
+            Canadian = 4,
+
+            [Display(Name = "Australian")]
+            Australian = 5,
+
+            [Display(Name = "German")]
+            German = 6,
+
+            [Display(Name = "French")]
+            French = 7,
+
+            [Display(Name = "Japanese")]
+            Japanese = 8,
+
+            [Display(Name = "Chinese")]
+            Chinese = 9,
+
+            [Display(Name = "Singaporean")]
+            Singaporean = 10,
+
+            [Display(Name = "UAE")]
+            UAE = 11,
+
+            [Display(Name = "Saudi Arabian")]
+            SaudiArabian = 12,
+
+            [Display(Name = "Nepalese")]
+            Nepalese = 13,
+
+            [Display(Name = "Bangladeshi")]
+            Bangladeshi = 14,
+
+            [Display(Name = "Sri Lankan")]
+            SriLankan = 15,
+
+            [Display(Name = "Pakistani")]
+            Pakistani = 16,
+
+            [Display(Name = "Other")]
+            Other = 99
+        }
+
+        public enum PassportStatus
+        {
+            [Display(Name = "Not Available")]
+            NotAvailable = 0,
+
+            [Display(Name = "Applied")]
+            Applied = 1,
+
+            [Display(Name = "Active")]
+            Active = 2,
+
+            [Display(Name = "Expired")]
+            Expired = 3,
+
+            [Display(Name = "Renewal in Progress")]
+            RenewalInProgress = 4,
+
+            [Display(Name = "Cancelled")]
+            Cancelled = 5,
+
+            [Display(Name = "Lost")]
+            Lost = 6,
+
+            [Display(Name = "Damaged")]
+            Damaged = 7,
+
+            [Display(Name = "Surrendered")]
+            Surrendered = 8
+        }
+        public enum BankAccountType
+        {
+            Savings = 1,
+            Current = 2,
+            Salary = 3
+        }
+        public enum EmployeeDocumentType
+        {
+            Aadhaar = 1,
+            PAN = 2,
+            Passport = 3,
+            DrivingLicense = 4,
+            VoterId = 5,
+
+            Resume = 6,
+            ProfilePhoto = 7,
+            Signature = 8,
+
+            OfferLetter = 9,
+            AppointmentLetter = 10,
+            JoiningLetter = 11,
+            RelievingLetter = 12,
+            ExperienceLetter = 13,
+
+            DegreeCertificate = 14,
+            DiplomaCertificate = 15,
+            Marksheet = 16,
+
+            SalarySlip = 17,
+            BankPassbook = 18,
+            CancelledCheque = 19,
+
+            BirthCertificate = 20,
+            MarriageCertificate = 21,
+
+            MedicalCertificate = 22,
+            FitnessCertificate = 23,
+
+            PoliceVerification = 24,
+            BackgroundVerification = 25,
+
+            PFDocument = 26,
+            ESICDocument = 27,
+
+            Other = 99
+        }
     }
-}
 
     public static class EnumHelper
     {

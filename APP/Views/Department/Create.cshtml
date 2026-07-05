@@ -100,7 +100,7 @@
 
                             <select asp-for="CompanyId"
                                     asp-items="ViewBag.CompanyList"
-                                    class="form-control select-search">
+                                    class="form-control select-search" id="CompanyId">
 
                                 <option value="">
                                     -- Select Company --
@@ -125,7 +125,7 @@
 
                             <select asp-for="BranchId"
                                     asp-items="ViewBag.BranchList"
-                                    class="form-control select-search">
+                                    class="form-control select-search" id="BranchId">
 
                                 <option value="">
                                     -- Select Branch --
@@ -266,8 +266,8 @@
                     <i class="icon-checkmark3"></i>
 
                     @(string.IsNullOrEmpty(Model?.Id)
-                        ? "Save Department"
-                        : "Update Department")
+                        ? "Save"
+                        : "Update")
 
                 </button>
 
@@ -279,10 +279,84 @@
 
 </div>
 
-@section Scripts{
 
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+@section Scripts {
+
+    @if (TempData["Success"] != null)
+    {
+        <script>
+
+            $(function () {
+
+                swal({
+                    title: "Success",
+                    text: "@TempData["Success"]",
+                    type: "success"
+                });
+
+            });
+
+        </script>
     }
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    <script>
+
+        $(document).ready(function () {
+
+        $(document).on("change", "#CompanyId", function () {
+
+        debugger;
+
+        let companyId = $(this).val();
+
+        console.log(companyId);
+
+        if (companyId == null || companyId === "") {
+
+        $("#BranchId").html(
+        '<option value="">-- Select Branch --</option>'
+        );
+
+        return;
+        }
+
+        $.ajax({
+
+        url: '@Url.Action("GetBranchByCompanyId")',
+
+        type: 'GET',
+
+        data: { companyId: companyId },
+
+        success: function (response) {
+
+        let html = '<option value="">-- Select Branch --</option>';
+
+        $.each(response, function (i, item) {
+
+        html += `<option value="${item.value}">
+        ${item.text}
+        </option>`;
+        });
+
+        $("#BranchId").html(html);
+        },
+
+        error: function (xhr) {
+
+        console.log(xhr);
+
+        alert("Error loading branches");
+        }
+        });
+
+        });
+
+        });
+
+    </script>
+    <partial name="_ValidationScriptsPartial" />
 
 }

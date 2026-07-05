@@ -11,7 +11,7 @@ namespace Domain.Entities
         public LeaveApplication LeaveApplication { get; set; }
 
         public string ActionBy { get; set; }
-        public LeaveStatus Action { get; set; } // Approved / Rejected
+        public ApprovalStatus Action { get; set; } // Approved / Rejected
 
         public string? Remarks { get; set; }
 

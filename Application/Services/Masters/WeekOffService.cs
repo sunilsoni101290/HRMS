@@ -25,6 +25,8 @@ namespace Application.Services.Masters
 
         public async Task<List<WeekOffDto>> GetAllAsync()
         {
+            try
+            {
             return await _context.WeekOffs
                 .Select(x => new WeekOffDto
                 {
@@ -37,6 +39,11 @@ namespace Application.Services.Masters
                     ModifiedBy = x.ModifiedBy
                 })
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<WeekOffDto>();
+            }
         }
 
         // ======================================================
@@ -45,6 +52,8 @@ namespace Application.Services.Masters
 
         public async Task<WeekOffDto?> GetByIdAsync(string id)
         {
+            try
+            {
             return await _context.WeekOffs
                 .Where(x => x.Id == id)
                 .Select(x => new WeekOffDto
@@ -58,6 +67,11 @@ namespace Application.Services.Masters
                     ModifiedBy = x.ModifiedBy
                 })
                 .FirstOrDefaultAsync();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         // ======================================================
@@ -66,6 +80,8 @@ namespace Application.Services.Masters
 
         public async Task<WeekOffDto> CreateAsync(WeekOffDto dto)
         {
+            try
+            {
             // Duplicate Check
             var exists = await _context.WeekOffs
                 .AnyAsync(x => x.Day == dto.Day);
@@ -90,6 +106,11 @@ namespace Application.Services.Masters
             dto.Id = entity.Id;
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         // ======================================================
@@ -98,6 +119,8 @@ namespace Application.Services.Masters
 
         public async Task<WeekOffDto?> UpdateAsync(string id, WeekOffDto dto)
         {
+            try
+            {
             var entity = await _context.WeekOffs
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -120,6 +143,11 @@ namespace Application.Services.Masters
             await _context.SaveChangesAsync();
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         // ======================================================
@@ -128,6 +156,8 @@ namespace Application.Services.Masters
 
         public async Task<bool> DeleteAsync(string id)
         {
+            try
+            {
             var entity = await _context.WeekOffs
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -139,6 +169,11 @@ namespace Application.Services.Masters
             await _context.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         // ======================================================
@@ -147,6 +182,8 @@ namespace Application.Services.Masters
 
         public async Task<List<WeekOffDto>> GetWeekOffs(string tenantId)
         {
+            try
+            {
             return await _context.WeekOffs
                 .Where(x => x.TenantId == tenantId)
                 .Select(x => new WeekOffDto
@@ -161,6 +198,11 @@ namespace Application.Services.Masters
                 })
                 .OrderBy(x => x.Day)
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<WeekOffDto>();
+            }
         }
 
         // ======================================================
@@ -169,6 +211,8 @@ namespace Application.Services.Masters
 
         public async Task<WeekOffDto> AddWeekOff(WeekOffDto dto)
         {
+            try
+            {
             // Duplicate Check
             var exists = await _context.WeekOffs
                 .AnyAsync(x =>
@@ -194,6 +238,11 @@ namespace Application.Services.Masters
             dto.Id = entity.Id;
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         // ======================================================
@@ -202,6 +251,8 @@ namespace Application.Services.Masters
 
         public async Task<bool> RemoveWeekOff(string id)
         {
+            try
+            {
             var entity = await _context.WeekOffs
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -213,6 +264,11 @@ namespace Application.Services.Masters
             await _context.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         // ======================================================
@@ -221,10 +277,17 @@ namespace Application.Services.Masters
 
         public async Task<bool> IsHoliday(DateTime date, string tenantId)
         {
+            try
+            {
             return await _context.HolidayGroupDetails
                 .AnyAsync(x =>
                     x.HolidayDate.Date == date.Date &&
                     x.TenantId == tenantId);
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         // ======================================================
@@ -233,12 +296,19 @@ namespace Application.Services.Masters
 
         public async Task<bool> IsWeekOff(DateTime date, string tenantId)
         {
+            try
+            {
             var day = date.DayOfWeek;
 
             return await _context.WeekOffs
                 .AnyAsync(x =>
                     x.Day == day &&
                     x.TenantId == tenantId);
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
     }
 }

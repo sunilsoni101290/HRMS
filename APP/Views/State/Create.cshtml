@@ -1,46 +1,107 @@
 ﻿@model StateDto
 
 @{
-    ViewData["Title"] = "State";
+    ViewData["Title"] = "State Management";
 }
 
-<div class="container-fluid py-4">
+<form asp-action="@(string.IsNullOrEmpty(Model?.Id) ? "Create" : "Edit")"
+      method="post">
+    <!-- Hidden Fields -->
 
-    <div class="row justify-content-center">
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="TenantId" type="hidden" />
+    <input asp-for="CreatedBy" type="hidden" />
+    <input asp-for="ModifiedBy" type="hidden" />
+    <input asp-for="ModifiedOn" type="hidden" />
 
-        <div class="col-lg-8">
+    <div class="panel panel-flat">
 
-            <div class="card shadow border-0 rounded-4 overflow-hidden">
+        <!-- Header -->
 
-                <!-- Header -->
-                <div class="card-header bg-primary text-white py-4">
+        <div class="panel-heading">
 
-                    <div class="d-flex align-items-center">
+            <h5 class="panel-title">
 
-                        <div class="me-3">
+                <i class="icon-location4 position-left"></i>
 
-                            <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center"
-                                 style="width:70px;height:70px;">
+                @(string.IsNullOrEmpty(Model?.Id)
+                    ? "Create State"
+                    : "Edit State")
 
-                                <i class="bi bi-geo-alt-fill fs-2"></i>
+            </h5>
 
-                            </div>
+            <div class="heading-elements">
+
+                <a asp-action="Index"
+                   class="btn btn-default">
+
+                    <i class="icon-arrow-left13 position-left"></i>
+
+                    Back
+
+                </a>
+
+            </div>
+
+        </div>
+
+        <!-- Body -->
+
+        <div class="panel-body">
+
+            <div asp-validation-summary="ModelOnly"
+                 class="alert alert-danger">
+            </div>
+
+            <!-- ========================================= -->
+            <!-- Basic Information -->
+            <!-- ========================================= -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+
+                    <i class="icon-info22 position-left"></i>
+
+                    Basic Information
+
+                </legend>
+
+                <div class="row">
+
+                    <!-- State Name -->
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="Name"></label>
+
+                            <input asp-for="Name"
+                                   class="form-control"
+                                   placeholder="Enter State Name" />
+
+                            <span asp-validation-for="Name"
+                                  class="text-danger"></span>
 
                         </div>
 
-                        <div>
+                    </div>
 
-                            <h3 class="mb-1">
+                    <!-- State Code -->
 
-                                @(string.IsNullOrEmpty(Model?.Id)
-                                    ? "Create State"
-                                    : "Edit State")
+                    <div class="col-md-6">
 
-                            </h3>
+                        <div class="form-group">
 
-                            <p class="mb-0 opacity-75">
-                                Manage state master information
-                            </p>
+                            <label asp-for="Code"></label>
+
+                            <input asp-for="Code"
+                                   class="form-control"
+                                   placeholder="MH / DL / GJ" />
+
+                            <span asp-validation-for="Code"
+                                  class="text-danger"></span>
 
                         </div>
 
@@ -48,162 +109,411 @@
 
                 </div>
 
-                <!-- Body -->
-                <div class="card-body p-4">
+            </fieldset>
 
-                    <form asp-action="@(Model.Id == null ? "Create" : "Edit")" method="post">
+            <!-- ========================================= -->
+            <!-- Country & GST Information -->
+            <!-- ========================================= -->
 
-                        <!-- Hidden -->
-                        <input asp-for="Id" type="hidden" />
-                        <input asp-for="TenantId" type="hidden" />
-                        <input asp-for="CreatedBy" type="hidden" />
-                        <input asp-for="ModifiedBy" type="hidden" />
-                        <input asp-for="ModifiedOn" type="hidden" />
+            <fieldset>
+                <legend class="text-semibold">
 
-                        <div class="row g-4">
+                    <i class="icon-earth position-left"></i>
 
-                            <!-- State Name -->
-                            <div class="col-md-6">
+                    Country & GST Information
 
-                                <label asp-for="Name"
-                                       class="form-label fw-semibold">
-                                </label>
+                </legend>
 
-                                <div class="input-group">
+                <div class="row">
 
-                                    <span class="input-group-text">
+                    <!-- Country -->
 
-                                        <i class="bi bi-building"></i>
+                    <div class="col-md-6">
 
-                                    </span>
+                        <div class="form-group">
 
-                                    <input asp-for="Name"
-                                           class="form-control"
-                                           placeholder="Enter State Name" />
+                            <label asp-for="CountryId"></label>
 
-                                </div>
+                            <select asp-for="CountryId"
+                                    asp-items="ViewBag.CountryList"
+                                    id="CountryId"
+                                    class="form-control select-search">
 
-                                <span asp-validation-for="Name"
-                                      class="text-danger"></span>
+                                <option value="">
 
-                            </div>
+                                    -- Select Country --
 
-                            <!-- State Code -->
-                            <div class="col-md-6">
+                                </option>
 
-                                <label asp-for="Code"
-                                       class="form-label fw-semibold">
-                                </label>
+                            </select>
 
-                                <div class="input-group">
+                            <span asp-validation-for="CountryId"
+                                  class="text-danger"></span>
 
-                                    <span class="input-group-text">
+                        </div>
 
-                                        <i class="bi bi-code-square"></i>
+                    </div>
 
-                                    </span>
+                    <!-- GST State Code -->
 
-                                    <input asp-for="Code"
-                                           class="form-control"
-                                           placeholder="MH / DL / GJ" />
+                    <div class="col-md-6">
 
-                                </div>
+                        <div class="form-group">
 
-                                <span asp-validation-for="Code"
-                                      class="text-danger"></span>
+                            <label asp-for="GSTStateCode"></label>
 
-                            </div>
+                            <input asp-for="GSTStateCode"
+                                   class="form-control"
+                                   placeholder="GST State Code" />
 
-                            <!-- Country -->
-                            <div class="col-md-6">
+                            <span asp-validation-for="GSTStateCode"
+                                  class="text-danger"></span>
 
-                                <label asp-for="CountryId"
-                                       class="form-label fw-semibold">
-                                </label>
+                        </div>
 
-                                <select asp-for="CountryId"
-                                        asp-items="ViewBag.CountryList"
-                                        class="form-select">
+                    </div>
 
-                                    <option value="">
-                                        -- Select Country --
-                                    </option>
+                </div>
+            </fieldset>
 
-                                </select>
+            </div>
 
-                                <span asp-validation-for="CountryId"
-                                      class="text-danger"></span>
+        <!-- ========================================= -->
+        <!-- Summary -->
+        <!-- ========================================= -->
 
-                            </div>
+        <fieldset>
 
-                            <!-- GST State Code -->
-                            <div class="col-md-6">
+            <legend class="text-semibold">
 
-                                <label asp-for="GSTStateCode"
-                                       class="form-label fw-semibold">
-                                </label>
+                <i class="icon-file-text2 position-left"></i>
 
-                                <div class="input-group">
+                Summary
 
-                                    <span class="input-group-text">
+            </legend>
 
-                                        <i class="bi bi-receipt"></i>
+            <div class="row">
 
-                                    </span>
+                <div class="col-md-4">
 
-                                    <input asp-for="GSTStateCode"
-                                           class="form-control"
-                                           placeholder="27" />
+                    <div class="panel bg-primary-400">
 
-                                </div>
+                        <div class="panel-body">
 
-                                <span asp-validation-for="GSTStateCode"
-                                      class="text-danger"></span>
+                            <h5 class="no-margin">
+
+                                <span id="StateNamePreview">
+
+                                    @(string.IsNullOrWhiteSpace(Model?.Name)
+                                        ? "-"
+                                        : Model.Name)
+
+                                </span>
+
+                            </h5>
+
+                            <div class="text-size-small">
+
+                                State Name
 
                             </div>
 
                         </div>
 
-                        <!-- Footer -->
-                        <div class="mt-5 d-flex justify-content-end gap-2">
+                    </div>
 
-                            <a asp-action="Index"
-                               class="btn btn-light border rounded-3 px-4">
+                </div>
 
-                                <i class="bi bi-arrow-left"></i>
-                                Back
+                <div class="col-md-4">
 
-                            </a>
+                    <div class="panel bg-success-400">
 
-                            <button type="submit"
-                                    class="btn btn-primary rounded-3 px-4">
+                        <div class="panel-body">
 
-                                <i class="bi bi-check-circle"></i>
+                            <h5 class="no-margin">
 
-                                @(string.IsNullOrEmpty(Model?.Id)
-                                    ? "Save"
-                                    : "Update")
+                                <span id="CountryPreview">
 
-                            </button>
+                                    @(string.IsNullOrWhiteSpace(Model?.CountryName)
+                                        ? "-"
+                                        : Model.CountryName)
+
+                                </span>
+
+                            </h5>
+
+                            <div class="text-size-small">
+
+                                Country
+
+                            </div>
 
                         </div>
 
-                    </form>
+                    </div>
+
+                </div>
+
+                <div class="col-md-4">
+
+                    <div class="panel bg-warning-400">
+
+                        <div class="panel-body">
+
+                            <h5 class="no-margin">
+
+                                <span id="GSTPreview">
+
+                                    @(string.IsNullOrWhiteSpace(Model?.GSTStateCode)
+                                        ? "-"
+                                        : Model.GSTStateCode)
+
+                                </span>
+
+                            </h5>
+
+                            <div class="text-size-small">
+
+                                GST State Code
+
+                            </div>
+
+                        </div>
+
+                    </div>
 
                 </div>
 
             </div>
 
-        </div>
+        </fieldset>
 
     </div>
 
-</div>
+    <!-- ========================================= -->
+    <!-- Footer -->
+    <!-- ========================================= -->
+
+    <div class="panel-footer text-right">
+
+        <a asp-action="Index"
+           class="btn btn-default">
+
+            <i class="icon-arrow-left13 position-left"></i>
+
+            Back
+
+        </a>
+
+        <button type="reset"
+                class="btn btn-warning">
+
+            <i class="icon-reset position-left"></i>
+
+            Reset
+
+        </button>
+
+        <button type="submit"
+                class="btn bg-primary">
+
+            <i class="icon-floppy-disk position-left"></i>
+
+            @(string.IsNullOrWhiteSpace(Model?.Id)
+                ? "Save"
+                : "Update")
+
+        </button>
+
+    </div>
+
+</form>
 
 @section Scripts {
 
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+
+        $(document).ready(function () {
+
+            //=========================================
+            // Chosen Dropdown
+            //=========================================
+
+            if ($(".select-search").length) {
+
+                $(".select-search").chosen({
+
+                    width: "100%",
+                    search_contains: true,
+                    allow_single_deselect: true
+
+                });
+
+            }
+
+            //=========================================
+            // State Name Preview
+            //=========================================
+
+            $("#Name").keyup(function () {
+
+                var state = $(this).val();
+
+                if (state == "")
+                    state = "-";
+
+                $("#StateNamePreview").text(state);
+
+            });
+
+            //=========================================
+            // Country Preview
+            //=========================================
+
+            $("#CountryId").change(function () {
+
+                var country = $("#CountryId option:selected").text();
+
+                if ($("#CountryId").val() == "")
+                    country = "-";
+
+                $("#CountryPreview").text(country);
+
+            });
+
+            //=========================================
+            // GST Preview
+            //=========================================
+
+            $("#GSTStateCode").keyup(function () {
+
+                var gst = $(this).val();
+
+                if (gst == "")
+                    gst = "-";
+
+                $("#GSTPreview").text(gst);
+
+            });
+
+            //=========================================
+            // Form Validation
+            //=========================================
+
+            $("form").submit(function () {
+
+                if ($("#Name").val().trim() == "") {
+
+                    alert("Please enter State Name.");
+
+                    $("#Name").focus();
+
+                    return false;
+
+                }
+
+                if ($("#Code").val().trim() == "") {
+
+                    alert("Please enter State Code.");
+
+                    $("#Code").focus();
+
+                    return false;
+
+                }
+
+                if ($("#CountryId").val() == "") {
+
+                    alert("Please select Country.");
+
+                    $("#CountryId").focus();
+
+                    return false;
+
+                }
+
+                return true;
+
+            });
+
+        });
+
+    </script>
+
+    <style>
+
+        .panel-heading {
+            padding: 18px 20px;
+        }
+
+        .panel-title {
+            font-weight: 600;
+        }
+
+        .panel-body {
+            padding: 20px;
+        }
+
+        fieldset {
+            border: 1px solid #e5e5e5;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        legend {
+            width: auto;
+            border: none;
+            padding: 0 10px;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .panel-footer {
+            background: #fafafa;
+            padding: 15px 20px;
+        }
+
+        .panel.bg-primary-400,
+        .panel.bg-success-400,
+        .panel.bg-warning-400 {
+            margin-bottom: 0;
+            color: #fff;
+        }
+
+            .panel.bg-primary-400 h5,
+            .panel.bg-success-400 h5,
+            .panel.bg-warning-400 h5 {
+                color: #fff;
+                font-weight: 600;
+            }
+
+        .chosen-container {
+            width: 100% !important;
+        }
+
+        .chosen-single {
+            height: 36px !important;
+            line-height: 34px !important;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .text-danger {
+            font-size: 12px;
+        }
+
+        .btn {
+            min-width: 110px;
+        }
+
+        .alert {
+            margin-bottom: 20px;
+        }
+
+    </style>
 
 }

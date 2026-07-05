@@ -22,6 +22,8 @@ namespace Application.Services
         // 🔥 MAIN METHOD (Use this everywhere)
         public async Task<string> GetNextERPIdAsync(string module, string tenantId)
         {
+            try
+            {
             if (string.IsNullOrWhiteSpace(module))
                 throw new BadRequestException("Module is required");
 
@@ -72,6 +74,11 @@ namespace Application.Services
                     throw;
                 }
             });
+            }
+            catch (Exception ex)
+            {
+                return ex.ToString();
+            }
         }
 
         // 🔹 FORMAT GENERATOR

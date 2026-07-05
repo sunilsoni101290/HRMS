@@ -1,0 +1,198 @@
+@model SalaryStructureDto
+
+@{
+    ViewData["Title"] = "Salary Structure";
+    bool isEdit = !string.IsNullOrEmpty(Model?.Id);
+    var componentList = ViewBag.ComponentList as Microsoft.AspNetCore.Mvc.Rendering.SelectList;
+}
+
+<form asp-action="@(isEdit ? "Edit" : "Create")"
+      asp-controller="SalaryStructure" asp-route-id="@Model?.Id" method="post" id="structureForm">
+
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="TenantId" type="hidden" />
+    <input asp-for="CreatedBy" type="hidden" />
+
+    <div class="panel panel-flat">
+
+        <div class="panel-heading">
+            <h5 class="panel-title">
+                <i class="icon-list-numbered position-left"></i>
+                @(isEdit ? "Edit Salary Structure" : "Create Salary Structure")
+            </h5>
+            <div class="heading-elements">
+                <a asp-action="Index" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
+            </div>
+        </div>
+
+        <div class="panel-body">
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger">@TempData["Error"]</div>
+            }
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="EmployeeId"></label> <span class="text-danger">*</span>
+                        <select asp-for="EmployeeId" asp-items="ViewBag.EmployeeList" class="form-control">
+                            <option value="">Select Employee</option>
+                        </select>
+                        <span asp-validation-for="EmployeeId" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="EffectiveFrom"></label> <span class="text-danger">*</span>
+                        <input asp-for="EffectiveFrom" type="date" class="form-control"
+                               value="@Model?.EffectiveFrom.ToString("yyyy-MM-dd")" />
+                        <span asp-validation-for="EffectiveFrom" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <fieldset>
+                <legend class="text-semibold">
+                    <i class="icon-list position-left"></i> Salary Components
+                    <a href="javascript:void(0)" id="addRow" class="btn btn-xs bg-primary pull-right">
+                        <i class="icon-plus22"></i> Add Component
+                    </a>
+                </legend>
+
+                <table class="table table-bordered" id="componentsTable">
+                    <thead>
+                        <tr>
+                            <th>Component</th>
+                            <th width="220">Amount (₹)</th>
+                            <th width="60"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="rows">
+                        @if (Model?.Details != null && Model.Details.Any())
+                        {
+                            for (int i = 0; i < Model.Details.Count; i++)
+                            {
+                                <tr class="component-row">
+                                    <td>
+                                        <select name="Details[@i].SalaryComponentId" class="form-control" required>
+                                            <option value="">Select Component</option>
+                                            @if (componentList != null)
+                                            {
+                                                foreach (var opt in componentList)
+                                                {
+                                                    if (opt.Value == Model.Details[i].SalaryComponentId)
+                                                    {
+                                                        <option value="@opt.Value" selected>@opt.Text</option>
+                                                    }
+                                                    else
+                                                    {
+                                                        <option value="@opt.Value">@opt.Text</option>
+                                                    }
+                                                }
+                                            }
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <input name="Details[@i].Amount" type="number" step="0.01"
+                                               value="@Model.Details[i].Amount" class="form-control amount" placeholder="0.00" />
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-danger btn-icon removeRow"><i class="icon-trash"></i></button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th class="text-right">Total</th>
+                            <th class="text-right"><span id="totalAmount">0.00</span></th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </fieldset>
+        </div>
+
+        <div class="panel-footer text-right">
+            <button type="submit" class="btn bg-primary">
+                <i class="icon-floppy-disk"></i> @(isEdit ? "Update" : "Save")
+            </button>
+        </div>
+    </div>
+</form>
+
+<!-- Row template -->
+<template id="rowTemplate">
+    <tr class="component-row">
+        <td>
+            <select name="Details[IDX].SalaryComponentId" class="form-control" required>
+                <option value="">Select Component</option>
+                @if (componentList != null)
+                {
+                    foreach (var opt in componentList)
+                    {
+                        <option value="@opt.Value">@opt.Text</option>
+                    }
+                }
+            </select>
+        </td>
+        <td>
+            <input name="Details[IDX].Amount" type="number" step="0.01" class="form-control amount" placeholder="0.00" />
+        </td>
+        <td class="text-center">
+            <button type="button" class="btn btn-danger btn-icon removeRow"><i class="icon-trash"></i></button>
+        </td>
+    </tr>
+</template>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    <script>
+        $(function () {
+
+            function reindex() {
+                $("#rows .component-row").each(function (i) {
+                    $(this).find("select").attr("name", "Details[" + i + "].SalaryComponentId");
+                    $(this).find("input.amount").attr("name", "Details[" + i + "].Amount");
+                });
+            }
+
+            function calcTotal() {
+                var total = 0;
+                $("#rows input.amount").each(function () {
+                    var v = parseFloat($(this).val());
+                    if (!isNaN(v)) total += v;
+                });
+                $("#totalAmount").text(total.toFixed(2));
+            }
+
+            function addRow() {
+                var html = $("#rowTemplate").html().replace(/IDX/g, $("#rows .component-row").length);
+                $("#rows").append(html);
+                reindex();
+            }
+
+            $("#addRow").on("click", addRow);
+
+            $("#rows").on("click", ".removeRow", function () {
+                $(this).closest("tr").remove();
+                reindex();
+                calcTotal();
+            });
+
+            $("#rows").on("input", "input.amount", calcTotal);
+
+            // Start with one empty row if none
+            if ($("#rows .component-row").length === 0) addRow();
+
+            calcTotal();
+
+            $("#structureForm").on("submit", reindex);
+        });
+    </script>
+    <partial name="_ValidationScriptsPartial" />
+}

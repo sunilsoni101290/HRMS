@@ -1,0 +1,156 @@
+﻿@model IEnumerable<TenantDto>
+
+<div class="panel panel-flat">
+        
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-office position-left"></i>
+            Tenant Management
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Create"
+               class="btn bg-primary">
+
+                <i class="icon-plus22"></i>
+                Add Tenant
+
+            </a>
+
+        </div>
+
+    </div>
+
+    <table class="table table-bordered table-striped datatable-basic">
+
+        <thead>
+
+            <tr>
+
+                <th>Name</th>
+                <th>Code</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Country</th>
+                <th>Subscription End</th>
+                <th>Status</th>
+                <th width="180">Action</th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            @foreach (var item in Model)
+            {
+                <tr>
+
+                    <td>@item.Name</td>
+
+                    <td>
+                        <span class="label bg-primary">
+                            @item.Code
+                        </span>
+                    </td>
+
+                    <td>@item.Email</td>
+
+                    <td>@item.Phone</td>
+
+                    <td>@item.CountryName</td>
+
+                    <td>
+                        @item.SubscriptionEndDate?.ToString("dd-MMM-yyyy")
+                    </td>
+
+                    <td>
+
+                        @if (item.IsActive)
+                        {
+                            <span class="label bg-success">
+                                Active
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="label bg-danger">
+                                Inactive
+                            </span>
+                        }
+
+                    </td>
+
+                    <td>
+
+                        <div class="btn-group">
+
+                            <a asp-action="Details"
+                               asp-route-id="@item.Id"
+                               class="btn btn-default btn-icon">
+
+                                <i class="icon-eye"></i>
+
+                            </a>
+
+                            <a asp-action="Edit"
+                               asp-route-id="@item.Id"
+                               class="btn btn-primary btn-icon">
+
+                                <i class="icon-pencil7"></i>
+
+                            </a>
+
+                            <a asp-action="Delete"
+                               asp-route-id="@item.Id"
+                               class="btn btn-danger btn-icon">
+
+                                <i class="icon-trash"></i>
+
+                            </a>
+
+                        </div>
+
+                    </td>
+
+                </tr>
+            }
+
+        </tbody>
+
+    </table>
+
+</div>
+<script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+
+@section Scripts {
+    <script>
+
+        @if (TempData["Success"] != null)
+        {
+                <text>
+                    swal({
+                        title: 'Success',
+                        text: '@Html.Raw(TempData["Success"])',
+                        type: 'success',
+                        confirmButtonColor: '#66BB6A'
+                    });
+                </text>
+        }
+
+        @if (TempData["Error"] != null)
+        {
+                <text>
+                    swal({
+                        title: 'Error',
+                        text: '@Html.Raw(TempData["Error"])',
+                        type: 'error',
+                        confirmButtonColor: '#EF5350'
+                    });
+                </text>
+        }
+
+    </script>
+}

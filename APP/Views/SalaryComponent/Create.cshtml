@@ -1,0 +1,92 @@
+@model SalaryComponentDto
+
+@{
+    ViewData["Title"] = "Salary Component";
+    bool isEdit = !string.IsNullOrEmpty(Model?.Id);
+}
+
+<form asp-action="@(isEdit ? "Edit" : "Create")"
+      asp-controller="SalaryComponent" asp-route-id="@Model?.Id" method="post">
+
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="TenantId" type="hidden" />
+    <input asp-for="CreatedBy" type="hidden" />
+
+    <div class="panel panel-flat">
+
+        <div class="panel-heading">
+            <h5 class="panel-title">
+                <i class="icon-calculator position-left"></i>
+                @(isEdit ? "Edit Component" : "Create Component")
+            </h5>
+            <div class="heading-elements">
+                <a asp-action="Index" class="btn btn-default">
+                    <i class="icon-arrow-left13"></i> Back
+                </a>
+            </div>
+        </div>
+
+        <div class="panel-body">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="Name"></label> <span class="text-danger">*</span>
+                        <input asp-for="Name" class="form-control" placeholder="e.g. Basic, HRA, PF" />
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="Code"></label> <span class="text-danger">*</span>
+                        <input asp-for="Code" class="form-control" placeholder="e.g. BASIC, HRA" />
+                        <span asp-validation-for="Code" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="ComponentType"></label>
+                        <select asp-for="ComponentType" class="form-control">
+                            <option value="1">Earning</option>
+                            <option value="2">Deduction</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="checkbox-inline">
+                        <label><input asp-for="IsTaxable" type="checkbox" /> Taxable</label>
+                    </div>
+                    &nbsp;&nbsp;
+                    <div class="checkbox-inline">
+                        <label><input asp-for="IsPFApplicable" type="checkbox" /> PF Applicable</label>
+                    </div>
+                    &nbsp;&nbsp;
+                    <div class="checkbox-inline">
+                        <label><input asp-for="IsESICApplicable" type="checkbox" /> ESIC Applicable</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-footer text-right">
+            <button type="reset" class="btn btn-default"><i class="icon-reset"></i> Reset</button>
+            <button type="submit" class="btn bg-primary">
+                <i class="icon-floppy-disk"></i> @(isEdit ? "Update" : "Save")
+            </button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>
+            $(function () { swal({ title: "Success", text: "@TempData["Success"]", type: "success" }); });
+        </script>
+    }
+    <partial name="_ValidationScriptsPartial" />
+}

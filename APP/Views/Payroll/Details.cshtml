@@ -1,0 +1,90 @@
+@model PayrollDto
+
+@{
+    ViewData["Title"] = "Payroll Details";
+
+    string StatusLabel(string? s) => s switch
+    {
+        "Draft" => "bg-grey",
+        "Processed" => "bg-primary",
+        "Paid" => "bg-success",
+        _ => "bg-info"
+    };
+}
+
+<div class="panel panel-flat">
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-cash3 position-left"></i> @Model.EmployeeName — @Model.MonthName @Model.SalaryYear
+            <span class="label @StatusLabel(Model.Status)" style="margin-left:8px;">@Model.Status</span>
+        </h5>
+        <div class="heading-elements">
+            <a asp-action="Payslip" asp-route-id="@Model.Id" target="_blank" class="btn btn-info btn-xs"><i class="icon-printer"></i> Payslip</a>
+            <a asp-action="Index" class="btn btn-default btn-xs"><i class="icon-arrow-left13"></i> Back</a>
+        </div>
+    </div>
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="content-group text-center">
+                    <h6 class="text-muted no-margin">Gross</h6>
+                    <h4 class="text-success no-margin-top">₹ @Model.GrossSalary.ToString("N2")</h4>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="content-group text-center">
+                    <h6 class="text-muted no-margin">Earnings (Prorated)</h6>
+                    <h4 class="no-margin-top">₹ @Model.TotalEarnings.ToString("N2")</h4>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="content-group text-center">
+                    <h6 class="text-muted no-margin">Deductions</h6>
+                    <h4 class="text-danger no-margin-top">₹ @Model.TotalDeductions.ToString("N2")</h4>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="content-group text-center">
+                    <h6 class="text-muted no-margin">Net Pay</h6>
+                    <h4 class="text-primary no-margin-top">₹ @Model.NetSalary.ToString("N2")</h4>
+                </div>
+            </div>
+        </div>
+
+        <hr />
+
+        <p>
+            <strong>Employee Code:</strong> @Model.EmployeeCode &nbsp;|&nbsp;
+            <strong>Working Days:</strong> @(Model.TotalWorkingDays?.ToString("0.#") ?? "-") &nbsp;|&nbsp;
+            <strong>Present Days:</strong> @(Model.PresentDays?.ToString("0.#") ?? "-") &nbsp;|&nbsp;
+            <strong>Leave Days:</strong> @(Model.LeaveDays?.ToString("0.#") ?? "-")
+        </p>
+
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table table-striped">
+                    <thead><tr><th>Earnings</th><th class="text-right">Amount (₹)</th></tr></thead>
+                    <tbody>
+                        @foreach (var d in Model.Details.Where(x => x.IsEarning))
+                        {
+                            <tr><td>@d.SalaryComponentName</td><td class="text-right">@d.Amount.ToString("N2")</td></tr>
+                        }
+                    </tbody>
+                    <tfoot><tr><th>Total Earnings</th><th class="text-right text-success">₹ @Model.TotalEarnings.ToString("N2")</th></tr></tfoot>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <table class="table table-striped">
+                    <thead><tr><th>Deductions</th><th class="text-right">Amount (₹)</th></tr></thead>
+                    <tbody>
+                        @foreach (var d in Model.Details.Where(x => !x.IsEarning))
+                        {
+                            <tr><td>@d.SalaryComponentName</td><td class="text-right">@d.Amount.ToString("N2")</td></tr>
+                        }
+                    </tbody>
+                    <tfoot><tr><th>Total Deductions</th><th class="text-right text-danger">₹ @Model.TotalDeductions.ToString("N2")</th></tr></tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

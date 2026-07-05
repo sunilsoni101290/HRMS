@@ -1,0 +1,88 @@
+@model NotificationCreateDto
+
+@{
+    ViewData["Title"] = "Send Notification";
+}
+
+<form asp-action="Create" asp-controller="Notification" method="post">
+
+    <input asp-for="CreatedBy" type="hidden" />
+    <input asp-for="TenantId" type="hidden" />
+
+    <div class="panel panel-flat">
+
+        <div class="panel-heading">
+            <h5 class="panel-title"><i class="icon-bell2 position-left"></i> Send Notification</h5>
+            <div class="heading-elements">
+                <a asp-action="Manage" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
+            </div>
+        </div>
+
+        <div class="panel-body">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <div class="alert alert-info">
+                <i class="icon-info22"></i> This notification will be delivered to all active users in your organization.
+            </div>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="form-group">
+                        <label asp-for="Title"></label> <span class="text-danger">*</span>
+                        <input asp-for="Title" class="form-control" placeholder="Notification title" />
+                        <span asp-validation-for="Title" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label asp-for="NotificationType"></label>
+                        <select asp-for="NotificationType" class="form-control">
+                            <option value="Info">Info</option>
+                            <option value="Success">Success</option>
+                            <option value="Warning">Warning</option>
+                            <option value="Error">Error</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label asp-for="Priority"></label>
+                        <select asp-for="Priority" class="form-control">
+                            <option value="1">High</option>
+                            <option value="2">Normal</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Message"></label> <span class="text-danger">*</span>
+                <textarea asp-for="Message" class="form-control" rows="4" placeholder="Notification message..."></textarea>
+                <span asp-validation-for="Message" class="text-danger"></span>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="RedirectUrl"></label>
+                        <input asp-for="RedirectUrl" class="form-control" placeholder="/Controller/Action (optional)" />
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="ExpiryDate"></label>
+                        <input asp-for="ExpiryDate" type="date" class="form-control" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-footer text-right">
+            <button type="submit" class="btn bg-primary"><i class="icon-paperplane"></i> Send to All</button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

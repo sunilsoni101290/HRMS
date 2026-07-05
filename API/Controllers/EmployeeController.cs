@@ -44,10 +44,10 @@ namespace API.Controllers
 
                 var result = await _service.CreateAsync(dto);
 
-                return Ok(new ApiResponse<BiometricDeviceDto>
+                return Ok(new ApiResponse<EmployeeDto>
                 {
                     Success = true,
-                    Message = "Biometric device created successfully.",
+                    Message = "Employee created successfully.",
                 });
             }
             catch (Exception ex)
@@ -55,7 +55,7 @@ namespace API.Controllers
                 return BadRequest(new ApiResponse<object>
                 {
                     Success = false,
-                    Message = "Failed to create biometric device."
+                    Message = "Failed to create employee."
                 });
             }
         }

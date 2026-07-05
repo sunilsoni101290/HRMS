@@ -1,0 +1,434 @@
+﻿
+@model TenantDto
+
+<div class="panel panel-flat">
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-office position-left"></i>
+            Tenant Management
+        </h5>
+
+    </div>
+    <form asp-action="@(Model.Id == null ? "Create" : "Edit")"
+              method="post"
+              enctype="multipart/form-data">
+    <div class="panel-body">
+
+        <!-- Basic Information -->
+
+        <div class="panel panel-flat border-left-primary">
+
+            <div class="panel-heading">
+                <h6 class="panel-title">
+                    Basic Information
+                </h6>
+            </div>
+
+            <div class="panel-body">
+
+                <div class="row">
+
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="Name"></label>
+                            <input asp-for="Name"
+                                   class="form-control"
+                                   placeholder="Enter Tenant Name" />
+                            <span asp-validation-for="Name"
+                                  class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="Code"></label>
+                            <input asp-for="Code"
+                                   class="form-control"
+                                   placeholder="TEN001" />
+                            <span asp-validation-for="Code"
+                                  class="text-danger"></span>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Domain -->
+
+        <div class="panel panel-flat">
+
+            <div class="panel-heading">
+                <h6 class="panel-title">
+                    Domain Information
+                </h6>
+            </div>
+
+            <div class="panel-body">
+
+                <div class="row">
+
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="Domain"></label>
+                            <input asp-for="Domain"
+                                   class="form-control"
+                                   placeholder="company.com" />
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="SubDomain"></label>
+                            <input asp-for="SubDomain"
+                                   class="form-control"
+                                   placeholder="client1" />
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Contact & Address -->
+
+        <div class="panel panel-flat">
+
+            <div class="panel-heading">
+                <h6 class="panel-title">
+                    Contact & Address
+                </h6>
+            </div>
+
+            <div class="panel-body">
+
+                <div class="row">
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="Email"></label>
+                            <input asp-for="Email"
+                                   class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="Phone"></label>
+                            <input asp-for="Phone"
+                                   class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="Pincode"></label>
+                            <input asp-for="Pincode"
+                                   class="form-control" />
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="row">
+
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label asp-for="Address"></label>
+                            <textarea asp-for="Address"
+                                      rows="3"
+                                      class="form-control"></textarea>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="row">
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="CountryId"></label>
+                            <select asp-for="CountryId"
+                                    asp-items="ViewBag.CountryList"
+                                    id="CountryId"
+                                    class="form-control">
+                                <option value="">Select Country</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="StateId"></label>
+                            <select asp-for="StateId"
+                                    asp-items="ViewBag.StateList"
+                                    id="StateId"
+                                    class="form-control">
+                                <option value="">Select State</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="CityId"></label>
+                            <select asp-for="CityId"
+                                    asp-items="ViewBag.CityList"
+                                    id="CityId"
+                                    class="form-control">
+                                <option value="">Select City</option>
+                            </select>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Subscription -->
+
+        <div class="panel panel-flat">
+
+            <div class="panel-heading">
+                <h6 class="panel-title">
+                    Subscription & Branding
+                </h6>
+            </div>
+
+            <div class="panel-body">
+
+                <div class="row">
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="SubscriptionStartDate"></label>
+                            <input asp-for="SubscriptionStartDate"
+                                   type="date"
+                                   class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="SubscriptionEndDate"></label>
+                            <input asp-for="SubscriptionEndDate"
+                                   type="date"
+                                   class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="WebsiteUrl"></label>
+                            <input asp-for="WebsiteUrl"
+                                   class="form-control" />
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="row">
+
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Company Logo</label>
+                            <input type="file"
+                                       name="LogoFile"
+                                   class="form-control" />
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Security -->
+
+        <div class="panel panel-flat">
+
+            <div class="panel-heading">
+                <h6 class="panel-title">
+                    Security & Database
+                </h6>
+            </div>
+
+            <div class="panel-body">
+
+                <div class="row">
+
+                    <div class="col-md-10">
+                        <div class="form-group">
+                            <label asp-for="ConnectionString"></label>
+                            <textarea asp-for="ConnectionString"
+                                      rows="3"
+                                      class="form-control"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="col-md-2">
+
+                        <div class="checkbox" style="margin-top:35px;">
+
+                            <label>
+
+                                <input asp-for="IsActive"
+                                       type="checkbox" />
+
+                                Active
+
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="panel-footer text-right">
+
+        <a asp-action="Index"
+           class="btn btn-default">
+
+            Back
+
+        </a>
+
+        <button type="submit"
+                class="btn bg-primary">
+
+            <i class="icon-floppy-disk"></i>
+                @(Model.Id != null ? "Update Tenant" : "Save Tenant")
+
+        </button>
+
+    </div>
+    </form>
+</div>
+@section Scripts {
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+
+        $(document).on("change", "#CountryId", function () {
+        debugger;
+        let countryId = $(this).val();
+
+        console.log(countryId);
+
+        if (countryId == null || countryId === "") {
+
+        $("#StateId").html(
+        '<option value="">-- Select State --</option>'
+        );
+
+        return;
+        }
+
+        $.ajax({
+
+        url: '@Url.Action("GetStatesByCountry")',
+
+        type: 'GET',
+
+        data: { countryId: countryId },
+
+        success: function (response) {
+
+        let html = '<option value="">-- Select State --</option>';
+
+        $.each(response, function (i, item) {
+
+        html += `<option value="${item.value}">
+        ${item.text}
+        </option>`;
+        });
+
+        $("#StateId").html(html);
+        },
+
+        error: function (xhr) {
+
+        console.log(xhr);
+
+        alert("Error loading states");
+
+        }
+
+        });
+
+        });
+        $(document).on("change", "#StateId", function () {
+        debugger;
+        let stateId = $(this).val();
+
+        console.log(stateId);
+
+        if (stateId == null || stateId === "") {
+
+        $("#CityId").html(
+        '<option value="">-- Select City --</option>'
+        );
+
+        return;
+        }
+
+        $.ajax({
+
+        url: '@Url.Action("GetCityByState")',
+
+        type: 'GET',
+
+        data: { stateId: stateId },
+
+        success: function (response) {
+
+        let html = '<option value="">-- Select City --</option>';
+
+        $.each(response, function (i, item) {
+
+        html += `<option value="${item.value}">
+        ${item.text}
+        </option>`;
+        });
+
+        $("#CityId").html(html);
+        },
+
+        error: function (xhr) {
+
+        console.log(xhr);
+
+        alert("Error loading states");
+
+        }
+
+        });
+
+        });
+        });
+
+    </script>
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    
+}

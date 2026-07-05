@@ -1,0 +1,129 @@
+@model APP.Models.DTOs.AnnouncementDto
+
+@{
+    ViewData["Title"] = "Announcement";
+    bool isEdit = !string.IsNullOrEmpty(Model?.Id);
+}
+
+<form asp-action="@(isEdit ? "Edit" : "Create")" asp-controller="Announcement" asp-route-id="@Model?.Id" method="post">
+
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="TenantId" type="hidden" />
+    <input asp-for="CreatedBy" type="hidden" />
+    <input asp-for="AttachmentUrl" type="hidden" />
+
+    <div class="panel panel-flat">
+
+        <div class="panel-heading">
+            <h5 class="panel-title">
+                <i class="icon-bullhorn position-left"></i>
+                @(isEdit ? "Edit Announcement" : "New Announcement")
+            </h5>
+            <div class="heading-elements">
+                <a asp-action="Index" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
+            </div>
+        </div>
+
+        <div class="panel-body">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="form-group">
+                        <label asp-for="Title"></label> <span class="text-danger">*</span>
+                        <input asp-for="Title" class="form-control" placeholder="Announcement title" />
+                        <span asp-validation-for="Title" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label asp-for="AnnouncementType"></label>
+                        <select asp-for="AnnouncementType" class="form-control">
+                            <option value="1">General</option>
+                            <option value="2">Policy</option>
+                            <option value="3">Holiday</option>
+                            <option value="4">Urgent</option>
+                            <option value="5">Achievement</option>
+                            <option value="6">Important</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label asp-for="Priority"></label>
+                        <select asp-for="Priority" class="form-control">
+                            <option value="1">High</option>
+                            <option value="2">Medium</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Message"></label> <span class="text-danger">*</span>
+                <textarea asp-for="Message" class="form-control" rows="5" placeholder="Write your announcement..."></textarea>
+                <span asp-validation-for="Message" class="text-danger"></span>
+            </div>
+
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="PublishDate"></label>
+                        <input asp-for="PublishDate" type="date" class="form-control" value="@Model?.PublishDate.ToString("yyyy-MM-dd")" />
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="ExpiryDate"></label>
+                        <input asp-for="ExpiryDate" type="date" class="form-control" value="@(Model?.ExpiryDate?.ToString("yyyy-MM-dd"))" />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group" style="margin-top:28px;">
+                        <label class="checkbox-inline">
+                            <input asp-for="IsForAll" type="checkbox" id="IsForAll" /> Publish to everyone
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row" id="targetRow">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="DepartmentId"></label>
+                        <select asp-for="DepartmentId" asp-items="ViewBag.DepartmentList" class="form-control">
+                            <option value="">All Departments</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="RoleId"></label>
+                        <select asp-for="RoleId" asp-items="ViewBag.RoleList" class="form-control">
+                            <option value="">All Roles</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-footer text-right">
+            <button type="submit" class="btn bg-primary"><i class="icon-floppy-disk"></i> @(isEdit ? "Update" : "Publish")</button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    <script>
+        $(function () {
+            function toggleTarget() { $("#targetRow").toggle(!$("#IsForAll").is(":checked")); }
+            $("#IsForAll").on("change", toggleTarget);
+            toggleTarget();
+        });
+    </script>
+    <partial name="_ValidationScriptsPartial" />
+}

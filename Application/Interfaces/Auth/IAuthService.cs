@@ -8,7 +8,7 @@ namespace Application.Interfaces.Auth
 {
     public interface IAuthService
     {
-        //Task<AuthResponse> RegisterAsync(RegisterDto dto);
+        Task<AuthResponse> RegisterAsync(RegisterDto dto);
         Task<User> GetUserDetailByIdAsync(string id); // Only for update scenario
         Task<User> GettUserDetailByUsernameAsync(string username);
         Task<bool> UpdateUserAsync(User user);

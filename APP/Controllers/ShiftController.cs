@@ -54,8 +54,10 @@ namespace APP.Controllers
             if (dto!=null)
             {
                 await _apiService.PostAsync<dynamic>($"shift/add-shift", dto);
-                TempData["Success"] = "Record created successfully.";
-                return View(dto);
+
+                TempData["Success"] = "Record saved successfully.";
+
+                return View("Create", dto);
             }
             return RedirectToAction(nameof(Index));
         }

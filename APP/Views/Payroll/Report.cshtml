@@ -1,0 +1,165 @@
+@model IEnumerable<PayrollListDto>
+
+@{
+    ViewData["Title"] = "Payroll Register";
+    int selYear = ViewBag.Year != null ? (int)ViewBag.Year : DateTime.UtcNow.Year;
+    int selMonth = ViewBag.Month != null ? (int)ViewBag.Month : 0;
+    string selStatus = ViewBag.Status as string ?? "";
+
+    var rows = Model?.ToList() ?? new List<PayrollListDto>();
+    decimal totalGross = rows.Sum(x => x.GrossSalary);
+    decimal totalNet = rows.Sum(x => x.NetSalary);
+
+    string StatusLabel(string? s) => s switch
+    {
+        "Draft" => "bg-grey",
+        "Processed" => "bg-primary",
+        "Paid" => "bg-success",
+        _ => "bg-info"
+    };
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title"><i class="icon-file-text2 position-left"></i> Payroll Register</h5>
+        <div class="heading-elements">
+            <button onclick="exportCsv()" class="btn btn-default btn-xs"><i class="icon-file-excel"></i> CSV</button>
+            <button onclick="window.print()" class="btn btn-default btn-xs"><i class="icon-printer"></i> Print</button>
+            <a asp-action="Dashboard" class="btn btn-default btn-xs"><i class="icon-stats-bars"></i> Dashboard</a>
+        </div>
+    </div>
+
+    <div class="panel-body hidden-print">
+        <form asp-action="Report" method="get" class="form-inline">
+            <div class="form-group">
+                <label>Year</label>
+                <select name="year" class="form-control" style="margin:0 8px;">
+                    @for (int y = DateTime.UtcNow.Year; y >= DateTime.UtcNow.Year - 5; y--)
+                    {
+                        if (y == selYear) { <option value="@y" selected>@y</option> }
+                        else { <option value="@y">@y</option> }
+                    }
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Month</label>
+                <select name="month" class="form-control" style="margin:0 8px;">
+                    <option value="0">All</option>
+                    @for (int m = 1; m <= 12; m++)
+                    {
+                        var name = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m);
+                        if (m == selMonth) { <option value="@m" selected>@name</option> }
+                        else { <option value="@m">@name</option> }
+                    }
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Status</label>
+                <select name="status" class="form-control" style="margin:0 8px;">
+                    <option value="">All</option>
+                    <option value="Draft" selected="@(selStatus == "Draft")">Draft</option>
+                    <option value="Processed" selected="@(selStatus == "Processed")">Processed</option>
+                    <option value="Paid" selected="@(selStatus == "Paid")">Paid</option>
+                </select>
+            </div>
+            <button type="submit" class="btn bg-primary"><i class="icon-search4"></i> Filter</button>
+        </form>
+    </div>
+
+    <div class="panel-body" style="border-bottom:1px solid #ddd;">
+        <div class="row text-center">
+            <div class="col-md-4"><span class="text-muted">Records</span><h4 class="no-margin-top">@rows.Count</h4></div>
+            <div class="col-md-4"><span class="text-muted">Total Gross</span><h4 class="no-margin-top text-success">₹ @totalGross.ToString("N2")</h4></div>
+            <div class="col-md-4"><span class="text-muted">Total Net</span><h4 class="no-margin-top text-primary">₹ @totalNet.ToString("N2")</h4></div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped" id="reportTable">
+            <thead>
+                <tr>
+                    <th width="50">#</th>
+                    <th>Employee</th>
+                    <th>Code</th>
+                    <th>Period</th>
+                    <th class="text-center">Present/Working</th>
+                    <th class="text-right">Gross</th>
+                    <th class="text-right">Net</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{ int sr = 1; }
+                @if (rows.Any())
+                {
+                    foreach (var item in rows)
+                    {
+                        <tr>
+                            <td>@sr</td>
+                            <td>@item.EmployeeName</td>
+                            <td>@item.EmployeeCode</td>
+                            <td>@item.MonthName @item.SalaryYear</td>
+                            <td class="text-center">@(item.PresentDays?.ToString("0.#") ?? "-") / @(item.TotalWorkingDays?.ToString("0.#") ?? "-")</td>
+                            <td class="text-right">@item.GrossSalary.ToString("N2")</td>
+                            <td class="text-right">@item.NetSalary.ToString("N2")</td>
+                            <td><span class="label @StatusLabel(item.Status)">@item.Status</span></td>
+                        </tr>
+                        sr++;
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="8" class="text-center text-muted" style="padding:30px;">No records for the selected filters.</td></tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th colspan="5" class="text-right">Total</th>
+                    <th class="text-right">₹ @totalGross.ToString("N2")</th>
+                    <th class="text-right">₹ @totalNet.ToString("N2")</th>
+                    <th></th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function exportCsv() {
+            var rows = [];
+            var header = ["#", "Employee", "Code", "Period", "Present", "Working", "Gross", "Net", "Status"];
+            rows.push(header.join(","));
+            $("#reportTable tbody tr").each(function () {
+                var cols = $(this).find("td");
+                if (cols.length < 8) return;
+                var present = $(cols[4]).text().trim();
+                var line = [
+                    $(cols[0]).text().trim(),
+                    '"' + $(cols[1]).text().trim() + '"',
+                    $(cols[2]).text().trim(),
+                    '"' + $(cols[3]).text().trim() + '"',
+                    '"' + present + '"',
+                    "",
+                    $(cols[5]).text().trim().replace(/,/g, ""),
+                    $(cols[6]).text().trim().replace(/,/g, ""),
+                    $(cols[7]).text().trim()
+                ];
+                rows.push(line.join(","));
+            });
+            var csv = rows.join("\n");
+            var blob = new Blob([csv], { type: "text/csv" });
+            var link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "payroll-register-@(selYear).csv";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+    <style media="print">
+        .hidden-print, .sidebar, .navbar, .page-header, .breadcrumb-line, .footer, .heading-elements { display: none !important; }
+        .content-wrapper, .content, .page-content { margin: 0 !important; padding: 0 !important; }
+    </style>
+}

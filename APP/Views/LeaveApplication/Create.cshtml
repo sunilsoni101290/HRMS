@@ -1,0 +1,419 @@
+﻿@model ApplyLeaveRequestDto
+
+@{
+    ViewData["Title"] = "Apply Leave";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-calendar-plus position-left"></i>
+            Apply Leave
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Index"
+               class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="Create"
+              method="post"
+              enctype="multipart/form-data">
+
+            <div asp-validation-summary="ModelOnly"
+                 class="alert alert-danger"></div>
+
+            <!-- Employee Information -->
+
+            <div class="row">
+
+                <div class="col-md-6">
+
+                    <div class="form-group">
+
+                        <label asp-for="EmployeeId"></label>
+
+                        <select asp-for="EmployeeId"
+                                asp-items="ViewBag.EmployeeList"
+                                class="form-control">
+                            <option value="">Select Employee</option>
+                        </select>
+
+                        <span asp-validation-for="EmployeeId"
+                              class="text-danger"></span>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-6">
+
+                    <div class="form-group">
+
+                        <label asp-for="LeaveTypeId"></label>
+
+                        <select asp-for="LeaveTypeId"
+                                asp-items="ViewBag.LeaveTypeList"
+                                class="form-control">
+                            <option value="">Select Leave Type</option>
+                        </select>
+
+                        <span asp-validation-for="LeaveTypeId"
+                              class="text-danger"></span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Leave Balance -->
+            <div class="alert bg-info-300 alert-styled-left">
+                <span id="leaveBalanceInfo">
+                    Available Leave Balance : <strong>0 Days</strong>
+                </span>
+            </div>
+
+            <input type="hidden" id="AvailableBalance" />
+
+            <!-- Leave Dates -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-calendar3"></i>
+                    Leave Duration
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-3">
+
+                        <div class="form-group">
+
+                            <label asp-for="FromDate"></label>
+
+                            <input asp-for="FromDate"
+                                   type="date"
+                                   class="form-control" />
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-3">
+
+                        <div class="form-group">
+
+                            <label asp-for="ToDate"></label>
+
+                            <input asp-for="ToDate"
+                                   type="date"
+                                   class="form-control" />
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-3">
+
+                        <div class="form-group">
+
+                            <label>Total Days</label>
+
+                            <input asp-for="TotalDays"
+                                   readonly
+                                   class="form-control bg-slate-100" />
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-3">
+
+                        <div class="form-group">
+
+                            <label>Half Day Leave</label>
+
+                            <div class="checkbox checkbox-switchery">
+
+                                <label>
+
+                                    <input asp-for="IsHalfDay"
+                                           id="chkHalfDay"
+                                           type="checkbox"
+                                           class="switchery" />
+
+                                </label>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- Half Day -->
+
+            <div id="halfDaySection"
+                 style="display:none;">
+
+                <div class="row">
+
+                    <div class="col-md-4">
+
+                        <div class="form-group">
+
+                            <label asp-for="HalfDayType"></label>
+
+                            <select asp-for="HalfDayType"
+                                    asp-items="Html.GetEnumSelectList<EnumExtensions.HalfDayType>()"
+                                    class="form-control">
+                                <option value="">
+                                    Select Half Day Type
+                                </option>
+                            </select>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Reason -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-file-text2"></i>
+                    Leave Reason
+                </legend>
+
+                <div class="form-group">
+
+                    <label asp-for="Reason"></label>
+
+                    <textarea asp-for="Reason"
+                              rows="5"
+                              maxlength="500"
+                              class="form-control"
+                              id="Reason"></textarea>
+
+                    <small class="text-muted">
+                        <span id="charCount">0</span>/500 Characters
+                    </small>
+
+                </div>
+
+            </fieldset>
+
+            <!-- Attachment -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-attachment"></i>
+                    Supporting Document
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-6">
+
+                        <input type="file"
+                               name="UploadDocument"
+                               class="file-input" />
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <hr />
+
+            <div class="text-right">
+
+                <a asp-action="Index"
+                   class="btn btn-default">
+
+                    Cancel
+
+                </a>
+
+                <button type="submit"
+                        class="btn bg-primary">
+
+                    <i class="icon-checkmark4"></i>
+                    Submit Leave
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+@section Scripts {
+
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+
+        $(function () {
+
+            $("#chkHalfDay").change(function () {
+
+                if ($(this).is(":checked")) {
+
+                    $("#halfDaySection").show();
+
+                }
+                else {
+
+                    $("#halfDaySection").hide();
+
+                }
+
+            });
+
+            $("#FromDate,#ToDate").change(function () {
+
+                calculateDays();
+
+            });
+
+            function calculateDays() {
+
+                var fromDate = new Date($("#FromDate").val());
+
+                var toDate = new Date($("#ToDate").val());
+
+                if ($("#FromDate").val() != '' &&
+                    $("#ToDate").val() != '') {
+
+                    var diffTime =
+                        toDate.getTime() - fromDate.getTime();
+
+                    var diffDays =
+                        (diffTime / (1000 * 3600 * 24)) + 1;
+
+                    if (diffDays > 0) {
+
+                        $("#TotalDays").val(diffDays);
+
+                    }
+
+                }
+
+            }
+
+        });
+
+                    $(document).ready(function () {
+
+            $("#EmployeeId, #LeaveTypeId").on("change", function () {
+
+                loadLeaveBalance();
+
+            });
+
+        });
+
+        function loadLeaveBalance() {
+
+            var employeeId = $("#EmployeeId").val();
+            var leaveTypeId = $("#LeaveTypeId").val();
+
+            if (!employeeId || !leaveTypeId) {
+
+                $("#leaveBalanceInfo").html(
+                    'Available Leave Balance : <strong>0 Days</strong>'
+                );
+
+                return;
+            }
+
+            $.ajax({
+
+                url: '@Url.Action("EmployeeBalance", "LeaveBalance")',
+                type: 'GET',
+                dataType: 'json',
+
+                data: {
+                    employeeId: employeeId,
+                    leaveTypeId: leaveTypeId
+                },
+
+                beforeSend: function () {
+
+                    $("#leaveBalanceInfo").html(
+                        '<i class="icon-spinner2 spinner"></i> Loading balance...'
+                    );
+
+                },
+
+                success: function (response) {
+
+                    console.log("Response:", response);
+
+                    var balance = 0;
+
+                    // Case 1
+                    if (response.balance !== undefined) {
+                        balance = response.balance;
+                    }
+
+                    // Case 2
+                    else if (response.Balance !== undefined) {
+                        balance = response.Balance;
+                    }
+
+                    // Case 3
+                    else if (response.success && response.balance !== undefined) {
+                        balance = response.balance;
+                    }
+
+                    $("#leaveBalanceInfo").html(
+                        'Available Leave Balance : <strong class="text-white">' +
+                        balance +
+                        ' Days</strong>'
+                    );
+
+                    $("#AvailableBalance").val(balance);
+                },
+
+                error: function (xhr, status, error) {
+
+                    console.log(xhr.responseText);
+
+                    $("#leaveBalanceInfo").html(
+                        '<span class="text-danger">Unable to load balance</span>'
+                    );
+
+                }
+
+            });
+
+        }
+    </script>
+
+}

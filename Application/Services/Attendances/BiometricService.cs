@@ -25,6 +25,8 @@ namespace Application.Services.Attendances
 
         public async Task<IEnumerable<BiometricDeviceDto>> GetDevices()
         {
+            try
+            {
             return await _db.BiometricDevices
                 .Select(x => new BiometricDeviceDto
                 {
@@ -36,10 +38,17 @@ namespace Application.Services.Attendances
                     ApiUrl = x.ApiUrl,
                     IsActive = x.IsActive
                 }).ToListAsync();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<BiometricDeviceDto> AddDevice(BiometricDeviceDto dto)
         {
+            try
+            {
             var entity = new BiometricDevice
             {
                 DeviceName = dto.DeviceName,
@@ -59,10 +68,17 @@ namespace Application.Services.Attendances
             dto.Id = entity.Id;
 
             return dto;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<List<BiometricAttendanceLogDto>> FetchAttendanceLogs(string deviceId)
         {
+            try
+            {
             var device = await _db.BiometricDevices
                 .FirstOrDefaultAsync(x => x.Id == deviceId);
 
@@ -79,10 +95,17 @@ namespace Application.Services.Attendances
                 .ReadFromJsonAsync<List<BiometricAttendanceLogDto>>();
 
             return result ?? new List<BiometricAttendanceLogDto>();
+            }
+            catch (Exception)
+            {
+                return new List<BiometricAttendanceLogDto>();
+            }
         }
 
         public async Task<bool> SyncAttendance(string deviceId)
         {
+            try
+            {
             var logs = await FetchAttendanceLogs(deviceId);
 
             foreach (var item in logs)
@@ -109,10 +132,17 @@ namespace Application.Services.Attendances
             await _db.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         public async Task<BiometricDeviceDto> GetDeviceById(string id)
         {
+            try
+            {
             return await _db.BiometricDevices
                 .Where(x => x.Id == id)
                 .Select(x => new BiometricDeviceDto
@@ -127,10 +157,17 @@ namespace Application.Services.Attendances
                     Password = x.Password,
                     IsActive = x.IsActive
                 }).FirstOrDefaultAsync();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<bool> UpdateDevice(BiometricDeviceDto dto)
         {
+            try
+            {
             var entity = await _db.BiometricDevices
                 .FirstOrDefaultAsync(x => x.Id == dto.Id);
 
@@ -149,10 +186,17 @@ namespace Application.Services.Attendances
             await _db.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         public async Task<bool> DeleteDevice(string id)
         {
+            try
+            {
             var entity = await _db.BiometricDevices
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -164,6 +208,11 @@ namespace Application.Services.Attendances
             await _db.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
     }
 }

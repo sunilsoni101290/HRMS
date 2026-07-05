@@ -1,0 +1,87 @@
+@model EmployeeTaskDto
+
+@{
+    ViewData["Title"] = "Task";
+    bool isEdit = !string.IsNullOrEmpty(Model?.Id);
+}
+
+<form asp-action="@(isEdit ? "Edit" : "Create")" asp-controller="EmployeeTask" asp-route-id="@Model?.Id" method="post">
+
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="TenantId" type="hidden" />
+    <input asp-for="CreatedBy" type="hidden" />
+
+    <div class="panel panel-flat">
+
+        <div class="panel-heading">
+            <h5 class="panel-title">
+                <i class="icon-checkmark-circle position-left"></i>
+                @(isEdit ? "Edit Task" : "New Task")
+            </h5>
+            <div class="heading-elements">
+                <a asp-action="Index" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
+            </div>
+        </div>
+
+        <div class="panel-body">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="form-group">
+                        <label asp-for="Title"></label> <span class="text-danger">*</span>
+                        <input asp-for="Title" class="form-control" placeholder="Task title" />
+                        <span asp-validation-for="Title" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="EmployeeId"></label> <span class="text-danger">*</span>
+                        <select asp-for="EmployeeId" asp-items="ViewBag.EmployeeList" class="form-control">
+                            <option value="">Select Employee</option>
+                        </select>
+                        <span asp-validation-for="EmployeeId" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Description"></label>
+                <textarea asp-for="Description" class="form-control" rows="3" placeholder="Task details..."></textarea>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="DueDate"></label>
+                        <input asp-for="DueDate" type="date" class="form-control" value="@(Model?.DueDate?.ToString("yyyy-MM-dd"))" />
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="Priority"></label>
+                        <select asp-for="Priority" asp-items="ViewBag.PriorityList" class="form-control"></select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="Status"></label>
+                        <select asp-for="Status" asp-items="ViewBag.StatusList" class="form-control"></select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-footer text-right">
+            <button type="submit" class="btn bg-primary"><i class="icon-floppy-disk"></i> @(isEdit ? "Update" : "Save")</button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    <partial name="_ValidationScriptsPartial" />
+}

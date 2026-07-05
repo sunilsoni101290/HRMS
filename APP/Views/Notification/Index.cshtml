@@ -1,0 +1,80 @@
+@model IEnumerable<MyNotificationDto>
+
+@{
+    ViewData["Title"] = "My Notifications";
+
+    string TypeIcon(string? t) => t switch
+    {
+        "Success" => "icon-checkmark-circle text-success",
+        "Warning" => "icon-warning22 text-warning",
+        "Error" => "icon-cross-circle text-danger",
+        _ => "icon-info22 text-info"
+    };
+
+    int unread = Model?.Count(x => !x.IsRead) ?? 0;
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-bell2 position-left"></i> My Notifications
+            @if (unread > 0) { <span class="badge bg-danger">@unread new</span> }
+        </h5>
+        <div class="heading-elements">
+            <form asp-action="MarkAllRead" method="post" style="display:inline;">
+                <button type="submit" class="btn btn-default btn-xs"><i class="icon-checkmark3"></i> Mark all read</button>
+            </form>
+            <a asp-action="Manage" class="btn btn-default btn-xs"><i class="icon-cog3"></i> Manage</a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+        <ul class="media-list">
+            @if (Model != null && Model.Any())
+            {
+                foreach (var item in Model)
+                {
+                    <li class="media @(item.IsRead ? "" : "bg-light")" style="padding:12px;border-bottom:1px solid #eee;@(item.IsRead ? "" : "background:#f5f9ff;")">
+                        <div class="media-left">
+                            <i class="@TypeIcon(item.NotificationType)" style="font-size:22px;"></i>
+                        </div>
+                        <div class="media-body">
+                            <div class="media-heading">
+                                <strong>@item.Title</strong>
+                                @if (item.Priority == 1) { <span class="label bg-danger">High</span> }
+                                <span class="pull-right text-muted text-size-small">@item.CreatedOn.ToString("dd MMM yyyy HH:mm")</span>
+                            </div>
+                            <div>@item.Message</div>
+                            <div style="margin-top:6px;">
+                                @if (!string.IsNullOrEmpty(item.RedirectUrl))
+                                {
+                                    <a href="@item.RedirectUrl" class="text-primary text-size-small">Open →</a>
+                                }
+                                @if (!item.IsRead)
+                                {
+                                    <form asp-action="MarkRead" asp-route-recipientId="@item.RecipientId" method="post" style="display:inline;">
+                                        <button type="submit" class="btn btn-link btn-xs">Mark read</button>
+                                    </form>
+                                }
+                            </div>
+                        </div>
+                    </li>
+                }
+            }
+            else
+            {
+                <li class="text-center text-muted" style="padding:30px;">
+                    <i class="icon-bell2" style="font-size:32px;"></i><br />You have no notifications.
+                </li>
+            }
+        </ul>
+    </div>
+</div>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+}

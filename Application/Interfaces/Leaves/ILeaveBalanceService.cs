@@ -7,40 +7,42 @@ namespace Application.Interfaces.Leaves
 {
     public interface ILeaveBalanceService
     {
-        Task<List<LeaveBalanceDto>> GetAllAsync();
+        #region Leave Balance
 
-        Task<List<LeaveBalanceDto>> GetByEmployeeAsync(string employeeId);
+        Task<List<LeaveBalanceDto>> GetAllAsync();
 
         Task<LeaveBalanceDto?> GetByIdAsync(string id);
 
+        Task<List<LeaveBalanceDto>> GetByEmployeeAsync(string employeeId);
+
+        Task<LeaveBalanceDto?> GetEmployeeLeaveBalanceAsync(string employeeId,string leaveTypeId,int year);
+
         Task<LeaveBalanceDto> CreateAsync(LeaveBalanceDto dto);
 
-        Task<LeaveBalanceDto?> UpdateAsync(string id, LeaveBalanceDto dto);
+        Task<LeaveBalanceDto?> UpdateAsync(string id,LeaveBalanceDto dto);
 
         Task<bool> DeleteAsync(string id);
 
-        Task<LeaveBalanceDto?> GetEmployeeLeaveBalanceAsync(
-            string employeeId,
-            string leaveTypeId,
-            int year);
+        #endregion
 
-        Task<bool> AllocateLeaveAsync(
-        string employeeId,
-        int year);
+        #region Leave Operations
+        Task<bool> AllocateLeaveAsync(AllocateLeaveRequestDto request);
+        Task<bool> CreditLeaveAsync(LeaveAdjustmentRequestDto request);
+        Task<bool> DeductLeaveAsync(LeaveAdjustmentRequestDto request);
+        Task<bool> CarryForwardLeaveAsync(CarryForwardLeaveRequestDto request);
+        #endregion
 
-        Task<bool> DeductLeaveAsync(
-            string employeeId,
-            string leaveTypeId,
-            decimal days);
+        #region Transactions
 
-        Task<bool> CreditLeaveAsync(
-            string employeeId,
-            string leaveTypeId,
-            decimal days);
+        Task<List<LeaveBalanceTransactionDto>> GetTransactionsAsync(
+            LeaveTransactionFilterRequestDto request);
 
-        Task<bool> CarryForwardLeaveAsync(
-            string employeeId,
-            int fromYear,
-            int toYear);
+        Task<List<LeaveBalanceTransactionDto>> GetEmployeeTransactionsAsync(
+            EmployeeTransactionRequestDto request);
+
+        Task<List<LeaveBalanceTransactionDto>> GetTransactionsByDateRangeAsync(
+            TransactionDateRangeRequestDto request);
+
+        #endregion
     }
 }

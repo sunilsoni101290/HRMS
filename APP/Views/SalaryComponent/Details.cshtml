@@ -1,0 +1,32 @@
+@model SalaryComponentDto
+
+@{
+    ViewData["Title"] = "Component Details";
+}
+
+<div class="panel panel-flat">
+    <div class="panel-heading">
+        <h5 class="panel-title"><i class="icon-calculator position-left"></i> Component Details</h5>
+        <div class="heading-elements">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary btn-xs"><i class="icon-pencil7"></i> Edit</a>
+            <a asp-action="Index" class="btn btn-default btn-xs"><i class="icon-arrow-left13"></i> Back</a>
+        </div>
+    </div>
+    <div class="panel-body">
+        <table class="table table-striped">
+            <tr><th style="width:200px;">Name</th><td><strong>@Model.Name</strong></td></tr>
+            <tr><th>Code</th><td>@Model.Code</td></tr>
+            <tr>
+                <th>Type</th>
+                <td>
+                    <span class="label @(Model.ComponentType == 1 ? "bg-success" : "bg-danger")">
+                        @(Model.ComponentType == 1 ? "Earning" : "Deduction")
+                    </span>
+                </td>
+            </tr>
+            <tr><th>Taxable</th><td>@(Model.IsTaxable ? "Yes" : "No")</td></tr>
+            <tr><th>PF Applicable</th><td>@(Model.IsPFApplicable ? "Yes" : "No")</td></tr>
+            <tr><th>ESIC Applicable</th><td>@(Model.IsESICApplicable ? "Yes" : "No")</td></tr>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,25 @@
+@model EmployeeTaskDto
+
+@{
+    ViewData["Title"] = "Task Details";
+}
+
+<div class="panel panel-flat">
+    <div class="panel-heading">
+        <h5 class="panel-title"><i class="icon-checkmark-circle position-left"></i> @Model.Title</h5>
+        <div class="heading-elements">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary btn-xs"><i class="icon-pencil7"></i> Edit</a>
+            <a asp-action="Index" class="btn btn-default btn-xs"><i class="icon-arrow-left13"></i> Back</a>
+        </div>
+    </div>
+    <div class="panel-body">
+        <table class="table table-striped">
+            <tr><th style="width:200px;">Assigned To</th><td>@Model.EmployeeName</td></tr>
+            <tr><th>Due Date</th><td>@(Model.DueDate?.ToString("dd MMM yyyy") ?? "-")</td></tr>
+            <tr><th>Priority</th><td>@Model.Priority</td></tr>
+            <tr><th>Status</th><td>@Model.Status</td></tr>
+            <tr><th>Completed On</th><td>@(Model.CompletedDate?.ToString("dd MMM yyyy") ?? "-")</td></tr>
+            <tr><th>Description</th><td>@(Model.Description ?? "-")</td></tr>
+        </table>
+    </div>
+</div>

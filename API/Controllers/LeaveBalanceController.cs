@@ -1,5 +1,7 @@
-﻿using Application.DTOs.Leaves;
+﻿using Application.Common.Responses;
+using Application.DTOs.Leaves;
 using Application.Interfaces.Leaves;
+using Application.Services.Leaves;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -19,24 +21,20 @@ namespace API.Controllers
             _leaveBalanceService = leaveBalanceService;
         }
 
+        #region Leave Balance CRUD
+
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            return Ok(await _leaveBalanceService.GetAllAsync());
-        }
-
-        [HttpGet("employee/{employeeId}")]
-        public async Task<IActionResult> GetByEmployee(string employeeId)
-        {
             return Ok(
-                await _leaveBalanceService
-                    .GetByEmployeeAsync(employeeId));
+                await _leaveBalanceService.GetAllAsync());
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
-            var data = await _leaveBalanceService.GetByIdAsync(id);
+            var data =
+                await _leaveBalanceService.GetByIdAsync(id);
 
             if (data == null)
                 return NotFound();
@@ -44,12 +42,20 @@ namespace API.Controllers
             return Ok(data);
         }
 
+        [HttpGet("employee/{employeeId}")]
+        public async Task<IActionResult> GetByEmployee(
+            string employeeId)
+        {
+            return Ok(
+                await _leaveBalanceService
+                    .GetByEmployeeAsync(employeeId));
+        }
+
         [HttpGet("employee-balance")]
         public async Task<IActionResult> GetBalance(string employeeId,string leaveTypeId,int year)
         {
             var data =
-                await _leaveBalanceService
-                    .GetEmployeeLeaveBalanceAsync(
+                await _leaveBalanceService.GetEmployeeLeaveBalanceAsync(
                         employeeId,
                         leaveTypeId,
                         year);
@@ -61,7 +67,8 @@ namespace API.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create(LeaveBalanceDto dto)
+        public async Task<IActionResult> Create(
+            LeaveBalanceDto dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -71,10 +78,13 @@ namespace API.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(string id,LeaveBalanceDto dto)
+        public async Task<IActionResult> Update(
+            string id,
+            LeaveBalanceDto dto)
         {
             var data =
-                await _leaveBalanceService.UpdateAsync(id, dto);
+                await _leaveBalanceService
+                    .UpdateAsync(id, dto);
 
             if (data == null)
                 return NotFound();
@@ -93,21 +103,19 @@ namespace API.Controllers
 
             return Ok(new
             {
-                Message = "Leave Balance deleted successfully."
+                Message = "Leave balance deleted successfully."
             });
         }
 
-        // ======================================================
-        // LEAVE ALLOCATION
-        // ======================================================
+        #endregion
+
+        #region Leave Operations
 
         [HttpPost("allocate")]
-        public async Task<IActionResult> AllocateLeave(
-            string employeeId,
-            int year)
+        public async Task<IActionResult> AllocateLeave(AllocateLeaveRequestDto model)
         {
-            var result = await _leaveBalanceService
-                .AllocateLeaveAsync(employeeId, year);
+            var result =
+                await _leaveBalanceService.AllocateLeaveAsync(model);
 
             return Ok(new
             {
@@ -116,73 +124,64 @@ namespace API.Controllers
             });
         }
 
-        // ======================================================
-        // LEAVE DEDUCTION
-        // ======================================================
+        [HttpPost("credit")]
+        public async Task<IActionResult> CreditLeave(LeaveAdjustmentRequestDto request)
+        {
+            var result = await _leaveBalanceService.CreditLeaveAsync(request);
+
+            return Ok(new
+            {
+                Success = result,
+                Message = "Leave credited successfully."
+            });
+        }
 
         [HttpPost("deduct")]
-        public async Task<IActionResult> DeductLeave(
-            string employeeId,
-            string leaveTypeId,
-            decimal days)
+        public async Task<IActionResult> DeductLeave(LeaveAdjustmentRequestDto request)
         {
-            var result = await _leaveBalanceService
-                .DeductLeaveAsync(
-                    employeeId,
-                    leaveTypeId,
-                    days);
+            var result = await _leaveBalanceService.DeductLeaveAsync(request);
 
             return Ok(new
             {
                 Success = result,
-                Message = $"{days} leave days deducted successfully."
+                Message = "Leave deducted successfully."
             });
         }
-
-        // ======================================================
-        // LEAVE CREDIT
-        // ======================================================
-
-        [HttpPost("credit")]
-        public async Task<IActionResult> CreditLeave(
-            string employeeId,
-            string leaveTypeId,
-            decimal days)
-        {
-            var result = await _leaveBalanceService
-                .CreditLeaveAsync(
-                    employeeId,
-                    leaveTypeId,
-                    days);
-
-            return Ok(new
-            {
-                Success = result,
-                Message = $"{days} leave days credited successfully."
-            });
-        }
-
-        // ======================================================
-        // CARRY FORWARD
-        // ======================================================
 
         [HttpPost("carry-forward")]
-        public async Task<IActionResult> CarryForwardLeave(
-            string employeeId,
-            int fromYear,
-            int toYear)
+        public async Task<IActionResult> CarryForward(CarryForwardLeaveRequestDto request)
         {
-            var result = await _leaveBalanceService
-                .CarryForwardLeaveAsync(
-                    employeeId,
-                    fromYear,
-                    toYear);
+            var result = await _leaveBalanceService.CarryForwardLeaveAsync(request);
 
             return Ok(new
             {
                 Success = result,
-                Message = "Leave carry forward completed successfully."
+                Message = "Leave carry forward completed."
             });
         }
+
+        #endregion
+
+        #region Transactions
+
+        [HttpPost("transactions")]
+        public async Task<IActionResult> GetTransactions(LeaveTransactionFilterRequestDto request)
+        {
+            return Ok(await _leaveBalanceService.GetTransactionsAsync(request));
+        }
+
+        [HttpPost("transactions/employee")]
+        public async Task<IActionResult>GetEmployeeTransactions(EmployeeTransactionRequestDto request)
+        {
+            return Ok(await _leaveBalanceService.GetEmployeeTransactionsAsync(request));
+        }
+
+        [HttpPost("transactions/date-range")]
+        public async Task<IActionResult>GetTransactionsByDateRange(TransactionDateRangeRequestDto requestDto)
+        {
+            return Ok(await _leaveBalanceService.GetTransactionsByDateRangeAsync(requestDto));
+        }
+
+        #endregion
     }
 }

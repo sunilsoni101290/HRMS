@@ -28,6 +28,8 @@ namespace Application.Services.Attendances
         // =========================
         public async Task<bool> PunchInAsync(PunchRequestDto dto)
         {
+            try
+            {
             var now = dto.PunchTime;
 
             // =====================================================
@@ -206,6 +208,11 @@ namespace Application.Services.Attendances
             await _db.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
         //public async Task<bool> PunchInAsync(PunchRequestDto dto)
         //{
@@ -341,6 +348,8 @@ namespace Application.Services.Attendances
 
         public async Task<bool> PunchOutAsync(PunchRequestDto dto)
         {
+            try
+            {
             var now = dto.PunchTime;
 
             // =====================================================
@@ -529,6 +538,11 @@ namespace Application.Services.Attendances
             await _db.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         // =========================
@@ -536,6 +550,8 @@ namespace Application.Services.Attendances
         // =========================
         public async Task<bool> BreakInAsync(PunchRequestDto dto)
         {
+            try
+            {
             var now = dto.PunchTime;
 
             // =====================================================
@@ -609,6 +625,11 @@ namespace Application.Services.Attendances
             await _db.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         // =========================
@@ -616,6 +637,8 @@ namespace Application.Services.Attendances
         // =========================
         public async Task<bool> BreakOutAsync(PunchRequestDto dto)
         {
+            try
+            {
             var now = dto.PunchTime;
 
             // =====================================================
@@ -690,6 +713,11 @@ namespace Application.Services.Attendances
             await _db.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         // =========================
@@ -900,16 +928,25 @@ namespace Application.Services.Attendances
         // =========================
         public async Task<List<Attendance>> GetMonthlyAsync(string employeeId, int month, int year)
         {
+            try
+            {
             return await _db.Attendances
                 .Where(x => x.EmployeeId == employeeId &&
                             x.Date.Month == month &&
                             x.Date.Year == year)
                 .OrderBy(x => x.Date)
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<Attendance>();
+            }
         }
 
         public async Task ProcessMonthlyAttendance(int year, int month)
         {
+            try
+            {
             var attendances = await _db.Attendances
                 .Include(x => x.Shift)
                 .Where(x => x.Date.Year == year && x.Date.Month == month)
@@ -925,6 +962,11 @@ namespace Application.Services.Attendances
             }
 
             await _db.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+                return;
+            }
         }
 
         #region Private function
@@ -962,6 +1004,8 @@ namespace Application.Services.Attendances
         //Showing "Currently Working / Not Working"
         public async Task<object> GetLiveStatus(string employeeId)
         {
+            try
+            {
             var today = DateTime.UtcNow.Date;
 
             var attendance = await _db.Attendances
@@ -988,6 +1032,11 @@ namespace Application.Services.Attendances
                 IsPunchedIn = lastLog.PunchType == PunchType.In,
                 LastPunch = lastLog.PunchTime
             };
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         private void CalculateWorkingHours(Attendance attendance)
@@ -1081,6 +1130,8 @@ namespace Application.Services.Attendances
 
         public async Task<List<AttendanceLogDto>> GetAllAsync()
         {
+            try
+            {
             return await _db.AttendanceLogs
                 .Include(x => x.Attendance)
                 .OrderByDescending(x => x.PunchTime)
@@ -1106,6 +1157,11 @@ namespace Application.Services.Attendances
                     CreatedDate = x.CreatedOn
                 })
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<AttendanceLogDto>();
+            }
         }
 
         #endregion
@@ -1114,6 +1170,8 @@ namespace Application.Services.Attendances
 
         public async Task<AttendanceLogDto?> GetByIdAsync(string id)
         {
+            try
+            {
             return await _db.AttendanceLogs
                 .AsNoTracking()
                 .Where(x => x.Id == id)
@@ -1140,6 +1198,11 @@ namespace Application.Services.Attendances
                     CreatedDate = x.CreatedOn
                 })
                 .FirstOrDefaultAsync();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         #endregion
@@ -1149,6 +1212,8 @@ namespace Application.Services.Attendances
         // =========================
         public async Task<List<AttendanceDto>> GetAllAttendanceListAsync()
         {
+            try
+            {
             return await _db.Attendances
                 .Include(x => x.Employee)
                 .Include(x => x.Company)
@@ -1207,6 +1272,11 @@ namespace Application.Services.Attendances
                     IsManualEntry = x.IsManualEntry
                 })
                 .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<AttendanceDto>();
+            }
         }
 
         // =========================
@@ -1214,6 +1284,8 @@ namespace Application.Services.Attendances
         // =========================
         public async Task<AttendanceDto?> GetAttendanceByIdAsync(string id)
         {
+            try
+            {
             var x = await _db.Attendances
                 .Include(x => x.Employee)
                 .Include(x => x.Company)
@@ -1276,6 +1348,11 @@ namespace Application.Services.Attendances
 
                 IsManualEntry = x.IsManualEntry
             };
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         // =========================
@@ -1283,6 +1360,8 @@ namespace Application.Services.Attendances
         // =========================
         public async Task<bool> CreateAsync(AttendanceDto dto)
         {
+            try
+            {
             Attendance attendance = new Attendance
             {
                 TenantId = dto.TenantId,
@@ -1312,6 +1391,11 @@ namespace Application.Services.Attendances
             await _db.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         // =========================
@@ -1319,6 +1403,8 @@ namespace Application.Services.Attendances
         // =========================
         public async Task<bool> UpdateAsync(AttendanceDto dto)
         {
+            try
+            {
             var attendance = await _db.Attendances
                 .FirstOrDefaultAsync(x => x.Id == dto.Id);
 
@@ -1351,6 +1437,11 @@ namespace Application.Services.Attendances
             await _db.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         // =========================
@@ -1358,6 +1449,8 @@ namespace Application.Services.Attendances
         // =========================
         public async Task<bool> DeleteAsync(string id)
         {
+            try
+            {
             var attendance = await _db.Attendances
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -1369,6 +1462,11 @@ namespace Application.Services.Attendances
             await _db.SaveChangesAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
     }

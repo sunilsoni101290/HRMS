@@ -105,6 +105,39 @@ namespace APP.Controllers
 
                 #endregion
 
+                #region Upload Image
+                // Upload Folder
+                string uploadPassportFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/passportDocument");
+
+                // Create Folder if not exists
+                if (!Directory.Exists(uploadPassportFolder))
+                    Directory.CreateDirectory(uploadPassportFolder);
+
+                // Upload Document
+                if (dto.UploadPassport != null && dto.UploadPassport.Length > 0)
+                {
+                    
+                    // Get File Extension
+                    var extension = Path.GetExtension(dto.UploadPassport.FileName).ToLower();
+
+                   
+                    // Generate Unique File Name
+                    string fileName = DateTime.Now.Hour + DateTime.Now.Minute + DateTime.Now.Second + DateTime.Now.Millisecond + extension;
+
+                    // Full File Path
+                    string filePath = Path.Combine(uploadPassportFolder, fileName);
+
+                    // Save File
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await dto.UploadPassport.CopyToAsync(stream);
+                    }
+
+                    // Save Relative Path in DB
+                    dto.PassportFilePath = "/passportDocument/" + fileName;
+                }
+
+                #endregion
                 var response =
                     await _apiService.PostAsync<EmployeeDto, ApiResponse<EmployeeDto>>
                     (
@@ -257,6 +290,53 @@ namespace APP.Controllers
                 }
                 #endregion
 
+                #region upload Passport Document 
+
+                // Upload Passport Folder
+                string uploadPassporFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/passportDocument");
+
+                // Create Folder if not exists
+                if (!Directory.Exists(uploadPassporFolder))
+                    Directory.CreateDirectory(uploadPassporFolder);
+
+                // New Image Upload
+                if (dto.UploadPassport != null && dto.UploadPassport.Length > 0)
+                {
+                    // Extension
+                    var extension = Path.GetExtension(dto.UploadPassport.FileName).ToLower();
+
+                    // Delete Old Image
+                    if (!string.IsNullOrEmpty(dto.FilePath))
+                    {
+                        string oldFilePath = Path.Combine(Directory.GetCurrentDirectory(),"wwwroot",dto.FilePath.TrimStart('/'));
+
+                        if (System.IO.File.Exists(oldFilePath))
+                        {
+                            System.IO.File.Delete(oldFilePath);
+                        }
+                    }
+
+                    // Generate New File Name
+                    string fileName = DateTime.Now.Hour + "" + DateTime.Now.Minute + "" + DateTime.Now.Second + "" + DateTime.Now.Millisecond + extension;
+
+                    // File Path
+                    string filePath = Path.Combine(uploadPassporFolder, fileName);
+
+                    // Save File
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await dto.UploadPassport.CopyToAsync(stream);
+                    }
+
+                    // Update Passport Path
+                    dto.PassportFilePath = "/passportDocument/" + fileName;
+                }
+                else
+                {
+                    dto.PassportFilePath = dto.PassportFilePath;
+                }
+                #endregion
+
                 var response = await _apiService.PutAsync<EmployeeDto, ApiResponse<EmployeeDto>>
                     (
                         $"Employee/update-employee",
@@ -302,6 +382,72 @@ namespace APP.Controllers
 
         #endregion
 
+        #region View and Download Passport
+        public async Task<IActionResult> ViewPassport(string employeeId)
+        {
+
+            var employee = await _apiService
+                .GetAsync<EmployeeDto>($"Employee/get-employee-detail/{employeeId}");
+
+            if (employee == null || string.IsNullOrEmpty(employee.PassportFilePath))
+                return NotFound();
+
+            var filePath = Path.Combine(
+            Directory.GetCurrentDirectory(),
+            "wwwroot",
+            employee.PassportFilePath.TrimStart('/'));
+
+            if (!System.IO.File.Exists(filePath))
+                return NotFound();
+
+            var extension = Path.GetExtension(filePath).ToLower();
+
+            var contentType = extension switch
+            {
+                ".pdf" => "application/pdf",
+                ".jpg" => "image/jpeg",
+                ".jpeg" => "image/jpeg",
+                ".png" => "image/png",
+                _ => "application/octet-stream"
+            };
+
+            return PhysicalFile(filePath, contentType);
+        }
+
+        public async Task<IActionResult> DownloadPassport(string employeeId)
+        {
+            var employee = await _apiService
+                .GetAsync<EmployeeDto>($"Employee/get-employee-detail/{employeeId}");
+
+            if (employee == null || string.IsNullOrEmpty(employee.PassportFilePath))
+                return NotFound();
+
+            var filePath = Path.Combine(
+            Directory.GetCurrentDirectory(),
+            "wwwroot",
+            employee.PassportFilePath.TrimStart('/'));
+
+            if (!System.IO.File.Exists(filePath))
+                return NotFound();
+
+            var bytes = await System.IO.File.ReadAllBytesAsync(filePath);
+
+            var extension = Path.GetExtension(employee.PassportFilePath);
+
+            var fullName = string.Join(" ",
+            new[] { employee.FirstName, employee.LastName }
+            .Where(x => !string.IsNullOrWhiteSpace(x)));
+
+            var downloadFileName = $"{fullName}_Passport{extension}";
+
+            return File(
+                bytes,
+                "application/octet-stream",
+                downloadFileName);
+        }
+        #endregion
+
+
         [HttpGet]
         public async Task<JsonResult> GetBranchByCompanyId(string companyId)
         {
@@ -324,7 +470,7 @@ namespace APP.Controllers
         {
             var designations = await _apiService
                 .GetAsync<List<DropdownDto>>(
-                    $"dropdown/designantion/{departmentId}"
+                    $"dropdown/designation/{departmentId}"
                 );
 
             var result = designations.Select(x => new
@@ -339,10 +485,16 @@ namespace APP.Controllers
 
         #region LoadDropdowns
 
-        private async Task LoadDropdowns(
-            string? companyId = null,
-            string? deptId = null)
+        private async Task LoadDropdowns(string? companyId = null,string? deptId = null)
         {
+            var countries = await _apiService.GetAsync<List<DropdownDto>>($"dropdown/country");
+
+            ViewBag.CountryList = countries.Select(x => new SelectListItem
+            {
+                Value = x.Value,
+                Text = x.Text
+            }).ToList();
+
             // Company
             var companies = await _apiService
                 .GetAsync<List<DropdownDto>>("dropdown/company");
