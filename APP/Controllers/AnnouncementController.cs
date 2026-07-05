@@ -14,12 +14,14 @@ namespace APP.Controllers
     {
         private readonly IApiService _apiService;
         private string _tenantId;
+        private string _companyId;
         private string _userId;
 
         public AnnouncementController(IApiService apiService)
         {
             _apiService = apiService;
             _tenantId = SessionHelper.GetActiveTenantId;
+            _companyId = SessionHelper.GetActiveCompanyId;
             _userId = SessionHelper.GetActiveUserId;
         }
 
@@ -42,6 +44,7 @@ namespace APP.Controllers
             if (dto != null)
             {
                 dto.TenantId = _tenantId;
+                dto.CompanyId = _companyId;
                 dto.CreatedBy = _userId;
 
                 await _apiService.PostAsync<dynamic>("announcement", dto);
@@ -75,6 +78,7 @@ namespace APP.Controllers
             if (dto != null)
             {
                 dto.TenantId = _tenantId;
+                dto.CompanyId = _companyId;
                 dto.ModifiedBy = _userId;
                 dto.ModifiedOn = DateTime.UtcNow;
 

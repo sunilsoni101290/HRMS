@@ -26,20 +26,20 @@ namespace API.Controllers
             _authService = authService;
         }
 
-        //[HttpPost("register")]
-        //public async Task<IActionResult> Register([FromBody] RegisterDto dto)
-        //{
-        //    // 🔥 Debug
-        //    if (!ModelState.IsValid)
-        //        return BadRequest(ModelState);
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] RegisterDto dto)
+        {
+            // 🔥 Debug
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
-        //    if (string.IsNullOrEmpty(dto.TenantId))
-        //        return BadRequest("Tenant not provided");
+            if (string.IsNullOrEmpty(dto.TenantId))
+                return BadRequest("Tenant not provided");
 
-        //    var result = await _auth.RegisterAsync(dto);
+            var result = await _authService.RegisterAsync(dto);
 
-        //    return Ok(result);
-        //}
+            return Ok(result);
+        }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDto dto)

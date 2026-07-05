@@ -1,0 +1,27 @@
+@model UserDto
+
+@{
+    ViewData["Title"] = "User Details";
+}
+
+<div class="panel panel-flat">
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-user position-left"></i> @Model.Username
+            <span class="label @(Model.IsActive ? "bg-success" : "bg-grey")" style="margin-left:8px;">@(Model.IsActive ? "Active" : "Inactive")</span>
+            @if (Model.IsLocked) { <span class="label bg-danger">Locked</span> }
+        </h5>
+        <div class="heading-elements">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary btn-xs"><i class="icon-pencil7"></i> Edit</a>
+            <a asp-action="Index" class="btn btn-default btn-xs"><i class="icon-arrow-left13"></i> Back</a>
+        </div>
+    </div>
+    <div class="panel-body">
+        <table class="table table-striped">
+            <tr><th style="width:200px;">Username</th><td>@Model.Username</td></tr>
+            <tr><th>Email</th><td>@(Model.Email ?? "-")</td></tr>
+            <tr><th>Phone</th><td>@(Model.PhoneNumber ?? "-")</td></tr>
+            <tr><th>Employee</th><td>@(Model.EmployeeName ?? "-")</td></tr>
+        </table>
+    </div>
+</div>

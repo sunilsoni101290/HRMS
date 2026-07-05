@@ -23,9 +23,10 @@ namespace Application.Services.Communication
         {
             try
             {
-            var list = await _context.Announcements
+                var list = await _context.Announcements
                 .AsNoTracking()
-                .Where(x => !x.IsDeleted)
+                .IgnoreQueryFilters()
+                .Where(x => !x.IsDeleted && x.TenantId==x.TenantId)
                 .OrderByDescending(x => x.PublishDate)
                 .Select(x => new AnnouncementListDto
                 {

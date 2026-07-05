@@ -172,6 +172,9 @@ builder.Services.AddScoped<Application.Interfaces.Communication.INotificationSer
 builder.Services.AddScoped<Application.Interfaces.Tasks.IEmployeeTaskService, Application.Services.Tasks.EmployeeTaskService>();
 builder.Services.AddScoped<Application.Interfaces.Dashboard.IEmployeeDashboardService, Application.Services.Dashboard.EmployeeDashboardService>();
 
+// ===================== User Management =====================
+builder.Services.AddScoped<Application.Interfaces.Users.IUserService, Application.Services.Users.UserService>();
+
 
 builder.Services.AddHttpClient();
 

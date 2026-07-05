@@ -1225,6 +1225,14 @@ namespace Infrastructure.Data
                 AppFeatureType.Transaction,
                 63, canApprove: true);
 
+            Add("Leave Balance", AppFeatureConstants.LEAVE_BALANCE, AppFeatureConstants.HRMS,
+                AppFeatureConstants.LEAVE_BALANCE_CONTROLLER,
+                AppFeatureConstants.LEAVE_BALANCE_ACTION,
+                leave.Id,
+                "bi bi-check-circle-fill",
+                AppFeatureType.Transaction,
+                63, canApprove: true);
+
             // =====================================================
             // PAYROLL
             // =====================================================

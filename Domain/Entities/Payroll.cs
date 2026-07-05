@@ -9,7 +9,7 @@ namespace Domain.Entities
     {
         
         public string CompanyId { get; set; }
-        public string BranchId { get; set; }
+        public string? BranchId { get; set; }
 
         // Employee
         [Required]

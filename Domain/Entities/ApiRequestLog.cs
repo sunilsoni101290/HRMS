@@ -37,7 +37,7 @@ namespace Domain.Entities
 
         // 🔹 Multi-Tenant Context
         public string CompanyId { get; set; }
-        public string BranchId { get; set; }
+        public string? BranchId { get; set; }
 
         // 🔹 Client Info
         public string IPAddress { get; set; }

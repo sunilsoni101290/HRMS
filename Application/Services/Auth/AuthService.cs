@@ -27,45 +27,45 @@ namespace Application.Services.Auth
             _config= config;
         }
 
-        //public async Task<AuthResponse> RegisterAsync(RegisterDto dto)
-        //{
-        //    if (_db.Users.Any(x => x.Username == dto.Username))
-        //        throw new Exception("User already exists");
+        public async Task<AuthResponse> RegisterAsync(RegisterDto dto)
+        {
+            if (_db.Users.Any(x => x.Username == dto.Username))
+                throw new Exception("User already exists");
 
-        //    var user = new User
-        //    {
-        //        Id = IDManager.GetNewId(new User()),
-        //        Username = dto.Username,
-        //        Email = dto.Email,
-        //        TenantId = dto.TenantId,
-        //        CompanyId = dto.CompanyId,
-        //        PhoneNumber = dto.PhoneNumber,
-        //        BranchId = dto.BranchId,
-        //        EmployeeId = dto.EmployeeId,
-        //        PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-        //        CreatedBy = string.IsNullOrEmpty(dto.CreatedBy) ? "System" : dto.CreatedBy
-        //    };
+            var user = new User
+            {
+                Id = IDManager.GetNewId(new User()),
+                Username = dto.Username,
+                Email = dto.Email,
+                TenantId = dto.TenantId,
+                CompanyId = dto.CompanyId,
+                PhoneNumber = dto.PhoneNumber,
+                BranchId = dto.BranchId,
+                EmployeeId = dto.EmployeeId,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+                CreatedBy = string.IsNullOrEmpty(dto.CreatedBy) ? "System" : dto.CreatedBy
+            };
 
-        //    _db.Users.Add(user);
+            _db.Users.Add(user);
 
-        //    // Default Role Assign
-        //    var role =  _db.Roles.FirstOrDefault(x => x.Code == ConstantHelper.EMPLOYEE);
+            // Default Role Assign
+            var role = _db.Roles.FirstOrDefault(x => x.Code == ConstantHelper.EMPLOYEE);
 
-        //    if (role != null)
-        //    {
-        //        _db.UserRoles.Add(new UserRole
-        //        {
-        //            Id = IDManager.GetNewId(new UserRole()),
-        //            UserId = user.Id,
-        //            RoleId = string.IsNullOrEmpty(dto.RoleId) ? role.Id :dto.RoleId,
-        //            CreatedBy = string.IsNullOrEmpty(dto.CreatedBy) ? "System" : dto.CreatedBy
-        //        });
-        //    }
+            if (role != null)
+            {
+                _db.UserRoles.Add(new UserRole
+                {
+                    Id = IDManager.GetNewId(new UserRole()),
+                    UserId = user.Id,
+                    RoleId = string.IsNullOrEmpty(dto.RoleId) ? role.Id : dto.RoleId,
+                    CreatedBy = string.IsNullOrEmpty(dto.CreatedBy) ? "System" : dto.CreatedBy
+                });
+            }
 
-        //    await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync();
 
-        //    return await GenerateAuthResponse(user);
-        //}
+            return await GenerateAuthResponse(user);
+        }
 
 
         // ==============================

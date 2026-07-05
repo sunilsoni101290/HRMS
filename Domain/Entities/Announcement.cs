@@ -25,10 +25,10 @@ namespace Domain.Entities
         // Target Audience
         public bool IsForAll { get; set; } = true;
 
-        public string DepartmentId { get; set; }
+        public string? DepartmentId { get; set; }
         public virtual Department Department { get; set; }
 
-        public string RoleId { get; set; }
+        public string? RoleId { get; set; }
         public virtual Role Role { get; set; }
 
         // Attachment
@@ -38,7 +38,7 @@ namespace Domain.Entities
         public AnnouncementPriority Priority { get; set; }
 
         public string CompanyId { get; set; }
-        public string BranchId { get; set; }
+        public string? BranchId { get; set; }
 
         public override string GetSequencePrefix() => "ANN";
     }

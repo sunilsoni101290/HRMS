@@ -64,10 +64,53 @@
 	<!-- Global stylesheets -->
 	<link href="https://fonts.googleapis.com/css?family=Roboto:400,300,100,500,700,900" rel="stylesheet" type="text/css">
 	<link href="~/global_assets/css/icons/icomoon/styles.css" rel="stylesheet" type="text/css">
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" type="text/css">
 	<link href="~/assets/css/bootstrap.min.css" rel="stylesheet" type="text/css">
 	<link href="~/assets/css/core.min.css" rel="stylesheet" type="text/css">
 	<link href="~/assets/css/components.min.css" rel="stylesheet" type="text/css">
 	<link href="~/assets/css/colors.min.css" rel="stylesheet" type="text/css">
+
+	<!-- Sidebar redesign -->
+	<style>
+		.sidebar-main .sidebar-content { background: #1b2a4a; }
+		.navigation-main > li > a {
+			color: #cfd8e6; padding: 11px 20px; font-size: 13px;
+			border-left: 3px solid transparent; transition: all .15s ease;
+		}
+		.navigation-main > li > a > i,
+		.navigation-main > li > a > [class^="bi-"],
+		.navigation-main > li > a > [class^="icon-"] {
+			margin-right: 12px; font-size: 16px; min-width: 18px; text-align: center;
+			display: inline-block; vertical-align: middle; opacity: .9;
+		}
+		.navigation-main > li > a:hover {
+			background: rgba(255,255,255,.06); color: #fff; border-left-color: #4e9cff;
+		}
+		.navigation-main > li.active > a,
+		.navigation-main > li.active > a:hover {
+			background: linear-gradient(90deg, rgba(78,156,255,.22), rgba(78,156,255,0));
+			color: #fff; border-left-color: #4e9cff;
+		}
+		.navigation-main .navigation-header {
+			color: #6b7a99; font-size: 11px; letter-spacing: .6px; text-transform: uppercase;
+			padding: 14px 20px 6px; font-weight: 600;
+		}
+		.navigation-main li ul { background: rgba(0,0,0,.18); }
+		.navigation-main li ul > li > a {
+			color: #b4c0d4; padding: 9px 20px 9px 50px; font-size: 12.5px;
+			border-left: 3px solid transparent;
+		}
+		.navigation-main li ul > li > a:hover { color: #fff; background: rgba(255,255,255,.05); }
+		.navigation-main li ul > li.active > a { color: #fff; border-left-color: #4e9cff; font-weight: 500; }
+		.navigation-main li ul > li > a > i,
+		.navigation-main li ul > li > a > [class^="bi-"],
+		.navigation-main li ul > li > a > [class^="icon-"] { margin-right: 9px; font-size: 13px; opacity: .8; }
+		.navigation-main > li.has-children > a:after {
+			content: "\f282"; font-family: "bootstrap-icons"; font-size: 11px;
+			float: right; margin-top: 3px; opacity: .6; transition: transform .2s ease;
+		}
+		.navigation-main > li.has-children.active > a:after { transform: rotate(90deg); }
+	</style>
 	<!-- /global stylesheets -->
 	<!-- Core JS files -->
 	<script src="~/global_assets/js/plugins/loaders/pace.min.js"></script>
@@ -191,9 +234,9 @@
 
 									if (hasChild)
 									{
-										<li class="@(isParentActive ? "active" : "")">
+										<li class="has-children @(isParentActive ? "active" : "")">
 											<a href="#">
-												<i class="@(string.IsNullOrEmpty(parent.Icon) ? "icon-stack2" : parent.Icon)"></i>
+												<i class="@(string.IsNullOrEmpty(parent.Icon) ? "bi bi-grid" : parent.Icon)"></i>
 												<span>@parent.Name</span>
 											</a>
 
@@ -210,7 +253,7 @@
 														<a href="@Url.Content(child.Url ?? "#")">
 
 															<i class="@(string.IsNullOrEmpty(child.Icon)
-																								   ? "icon-circle-right2"
+																								   ? "bi bi-dot"
 																								   : child.Icon)"></i>
 
 															@child.Name
@@ -220,51 +263,49 @@
 													</li>
 												}
 
-											</ul>
+												</ul>
 
-										</li>
+											</li>
+										}
+										else
+										{
+											<li class="@(isMenuActive ? "active" : "")">
+
+												<a href="@Url.Content(parent.Url ?? "#")">
+
+													<i class="@(string.IsNullOrEmpty(parent.Icon) ? "bi bi-circle" : parent.Icon)"></i>
+
+													<span>@parent.Name</span>
+
+												</a>
+
+											</li>
+										}
 									}
-									else
-									{
-										<li class="@(isMenuActive ? "active" : "")">
 
-											<a href="@Url.Content(parent.Url ?? "#")">
-
-												<i class="@(string.IsNullOrEmpty(parent.Icon)
-																		   ? "icon-home4"
-																		   : parent.Icon)"></i>
-
-												<span>@parent.Name</span>
-
-											</a>
-
-										</li>
-									}
-								}
-
-							</ul>
+								</ul>
+							</div>
 						</div>
-					</div>
-					<!-- /main navigation -->
+						<!-- /main navigation -->
 
+					</div>
 				</div>
-			</div>
 			<!-- /main sidebar -->
 
 			<!-- Main content -->
 			<div class="content-wrapper">
 
-				<!-- Content area -->
 				<div class="content">
+
 				<!-- Page header -->
 				<div class="page-header page-header-default">
 					<div class="page-header-content">
 						<div class="page-title">
-								<h4><i class="icon-arrow-left52 position-left"></i> <span class="text-semibold">@pageTitle</span></h4>
+							<h4><i class="icon-arrow-left52 position-left"></i> <span class="text-semibold">@pageTitle</span></h4>
 						</div>
 						<div class="heading-elements">
 							<div class="heading-btn-group">
-									@await Html.PartialAsync("_AlertMessage")
+								@await Html.PartialAsync("_AlertMessage")
 							</div>
 						</div>
 					</div>
@@ -281,7 +322,7 @@
 
 				<!-- Footer -->
 				<div class="footer text-muted">
-						&copy; 2015. <a href="https://prosaectotal.com/">Prosaec Total PVT. LTD. </a>
+					&copy; 2015. <a href="https://prosaectotal.com/">Prosaec Total PVT. LTD. </a>
 				</div>
 				<!-- /footer -->
 				</div>
@@ -293,8 +334,6 @@
 
 	</div>
 	<!-- /page container -->
-	<!-- ================= SCRIPTS ================= -->
-
 
 	<script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
 	<script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>

@@ -29,7 +29,7 @@ namespace Domain.Entities
         public DateTime? CompletedDate { get; set; }
 
         public string CompanyId { get; set; }
-        public string BranchId { get; set; }
+        public string? BranchId { get; set; }
 
         public override string GetSequencePrefix() => "TSK";
     }

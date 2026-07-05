@@ -49,6 +49,8 @@
     <Compile Remove="Migrations\20260630051006_AddEmployeeBankEducationDetails.Designer.cs" />
     <Compile Remove="Migrations\20260702170916_AssetTable.cs" />
     <Compile Remove="Migrations\20260702170916_AssetTable.Designer.cs" />
+    <Compile Remove="Migrations\20260703055127__InitialMigration.cs" />
+    <Compile Remove="Migrations\20260703055127__InitialMigration.Designer.cs" />
     <Compile Remove="Migrations\20260704105958_ModifyAnnoucmentTableAttachmentUrl.cs" />
     <Compile Remove="Migrations\20260704105958_ModifyAnnoucmentTableAttachmentUrl.Designer.cs" />
     <Compile Remove="Migrations\ApplicationDbContextModelSnapshot.cs" />

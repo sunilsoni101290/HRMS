@@ -147,7 +147,7 @@ namespace Domain.Entities
         public string LocationCode { get; set; }
 
         [ForeignKey(nameof(Branch))]
-        public string BranchId { get; set; }
+        public string? BranchId { get; set; }
 
         public virtual Branch Branch { get; set; }
 

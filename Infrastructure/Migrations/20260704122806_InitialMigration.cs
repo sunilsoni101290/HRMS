@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreation : Migration
+    public partial class InitialMigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -143,6 +143,31 @@ namespace Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "BiometricAttendanceLogs",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    EmployeeCode = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PunchTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    PunchType = table.Column<int>(type: "int", nullable: false),
+                    DeviceId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    IsDuplicate = table.Column<bool>(type: "bit", nullable: false),
+                    IsProcessed = table.Column<bool>(type: "bit", nullable: false),
+                    ProcessedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    TenantId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BiometricAttendanceLogs", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Candidates",
                 columns: table => new
                 {
@@ -227,13 +252,12 @@ namespace Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Holidays",
+                name: "HolidayGroups",
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Date = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     TenantId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
                     CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -244,7 +268,7 @@ namespace Infrastructure.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Holidays", x => x.Id);
+                    table.PrimaryKey("PK_HolidayGroups", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -516,6 +540,35 @@ namespace Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "HolidayGroupDetails",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    HolidayGroupId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    HolidayDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    HolidayName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    Remarks = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    IsOptional = table.Column<bool>(type: "bit", nullable: false),
+                    TenantId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_HolidayGroupDetails", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_HolidayGroupDetails_HolidayGroups_HolidayGroupId",
+                        column: x => x.HolidayGroupId,
+                        principalTable: "HolidayGroups",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "NotificationGroupAccesses",
                 columns: table => new
                 {
@@ -614,7 +667,7 @@ namespace Infrastructure.Migrations
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     AssetId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     Action = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ReferenceId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ReferenceId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ActionDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     PerformedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     TenantId = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -674,20 +727,15 @@ namespace Infrastructure.Migrations
                     Email = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
                     Phone = table.Column<string>(type: "nvarchar(15)", maxLength: 15, nullable: false),
                     Address = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
-                    Pincode = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
+                    Pincode = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     CountryId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     StateId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     CityId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     SubscriptionStartDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     SubscriptionEndDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    PlanName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    MaxUsers = table.Column<int>(type: "int", nullable: false),
-                    MaxBranches = table.Column<int>(type: "int", nullable: false),
                     Logo = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    WebsiteUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    WebsiteUrl = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: true),
                     ConnectionString = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    TenantId = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
                     CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -945,6 +993,53 @@ namespace Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "BiometricDevices",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    TenantId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CompanyId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    BranchId = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    DeviceName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    DeviceCode = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    IPAddress = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Port = table.Column<int>(type: "int", nullable: false),
+                    ApiUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Username = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Password = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SerialNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    LastSyncDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BiometricDevices", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_BiometricDevices_Branches_BranchId",
+                        column: x => x.BranchId,
+                        principalTable: "Branches",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_BiometricDevices_Companies_CompanyId",
+                        column: x => x.CompanyId,
+                        principalTable: "Companies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_BiometricDevices_Tenants_TenantId",
+                        column: x => x.TenantId,
+                        principalTable: "Tenants",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Departments",
                 columns: table => new
                 {
@@ -1033,7 +1128,7 @@ namespace Infrastructure.Migrations
                     IsForAll = table.Column<bool>(type: "bit", nullable: false),
                     DepartmentId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     RoleId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    AttachmentUrl = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    AttachmentUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Priority = table.Column<int>(type: "int", nullable: false),
                     CompanyId = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     BranchId = table.Column<string>(type: "nvarchar(max)", nullable: false),
@@ -1075,8 +1170,8 @@ namespace Infrastructure.Migrations
                     DepartmentId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     ParentDesignationId = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     Level = table.Column<int>(type: "int", nullable: false),
-                    MinSalary = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
-                    MaxSalary = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    MinSalary = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    MaxSalary = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
                     CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
@@ -1189,10 +1284,19 @@ namespace Infrastructure.Migrations
                     Pincode = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     PANNumber = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
                     AadharNumber = table.Column<string>(type: "nvarchar(12)", maxLength: 12, nullable: true),
+                    FilePath = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ShiftId = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     JoiningDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ConfirmationDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     RelievingDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    PassportNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    IssueDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ExpiryDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    PlaceOfIssue = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Nationality = table.Column<int>(type: "int", nullable: false),
+                    PassportStatus = table.Column<int>(type: "int", nullable: false),
+                    CountryId = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    PassportFilePath = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     EmploymentType = table.Column<int>(type: "int", nullable: false),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
                     CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -1214,6 +1318,12 @@ namespace Infrastructure.Migrations
                         name: "FK_Employees_Companies_CompanyId",
                         column: x => x.CompanyId,
                         principalTable: "Companies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Employees_Countries_CountryId",
+                        column: x => x.CountryId,
+                        principalTable: "Countries",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
@@ -1300,7 +1410,7 @@ namespace Infrastructure.Migrations
                     ReturnedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
                     AllocationStatus = table.Column<int>(type: "int", nullable: false),
                     ConditionOnIssue = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ConditionOnReturn = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ConditionOnReturn = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Remarks = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     TenantId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
@@ -1348,6 +1458,10 @@ namespace Infrastructure.Migrations
                     IsEarlyExit = table.Column<bool>(type: "bit", nullable: false),
                     Remarks = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsManualEntry = table.Column<bool>(type: "bit", nullable: false),
+                    IsBiometricAttendance = table.Column<bool>(type: "bit", nullable: false),
+                    ProcessedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ProcessedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SourceDeviceId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
                     CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
@@ -1391,16 +1505,21 @@ namespace Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "BankDetails",
+                name: "EmployeeBankDetails",
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     EmployeeId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    BankName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    AccountNumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    BankName = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    BranchName = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    AccountNumber = table.Column<string>(type: "nvarchar(25)", maxLength: 25, nullable: false),
+                    AccountHolderName = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
                     IFSCCode = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    AccountHolderName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    MICRCode = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    AccountType = table.Column<int>(type: "int", maxLength: 20, nullable: false),
+                    CancelledChequeFilePath = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
                     IsPrimary = table.Column<bool>(type: "bit", nullable: false),
+                    Remarks = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
                     TenantId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
                     CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -1411,9 +1530,38 @@ namespace Infrastructure.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_BankDetails", x => x.Id);
+                    table.PrimaryKey("PK_EmployeeBankDetails", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_BankDetails_Employees_EmployeeId",
+                        name: "FK_EmployeeBankDetails_Employees_EmployeeId",
+                        column: x => x.EmployeeId,
+                        principalTable: "Employees",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "EmployeeBiometricMappings",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    EmployeeId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    BiometricEmployeeCode = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CardNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    FaceId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    FingerTemplateId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    TenantId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_EmployeeBiometricMappings", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_EmployeeBiometricMappings_Employees_EmployeeId",
                         column: x => x.EmployeeId,
                         principalTable: "Employees",
                         principalColumn: "Id",
@@ -1426,8 +1574,20 @@ namespace Infrastructure.Migrations
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     EmployeeId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    DocumentType = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    FilePath = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    DocumentType = table.Column<int>(type: "int", nullable: false),
+                    DocumentNumber = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    DocumentName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    FileName = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: true),
+                    FilePath = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    FileExtension = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    FileSize = table.Column<long>(type: "bigint", nullable: true),
+                    IssueDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ExpiryDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IssuedBy = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    IsVerified = table.Column<bool>(type: "bit", nullable: false),
+                    VerifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    VerifiedBy = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Remarks = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     TenantId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
                     CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -1448,17 +1608,56 @@ namespace Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "EmployeeESICDetails",
+                name: "EmployeeEducationDetails",
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     EmployeeId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    IsESICApplicable = table.Column<bool>(type: "bit", nullable: false),
-                    ESICNumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    EmployeeContribution = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
-                    EmployerContribution = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
-                    ESICJoiningDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Qualification = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Degree = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    Specialization = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    InstituteName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    University = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    Board = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    PassingYear = table.Column<int>(type: "int", nullable: false),
+                    PercentageOrCGPA = table.Column<decimal>(type: "decimal(5,2)", nullable: false),
+                    Grade = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    IsHighestQualification = table.Column<bool>(type: "bit", nullable: false),
+                    Remarks = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    CertificateFilePath = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
                     TenantId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_EmployeeEducationDetails", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_EmployeeEducationDetails_Employees_EmployeeId",
+                        column: x => x.EmployeeId,
+                        principalTable: "Employees",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "EmployeeESICDetails",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    TenantId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    EmployeeId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    ESICNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    RegistrationDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ExitDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ESICDispensary = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    BranchOffice = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    IsEligible = table.Column<bool>(type: "bit", nullable: false),
+                    Remarks = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
                     CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
@@ -1483,11 +1682,16 @@ namespace Infrastructure.Migrations
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     EmployeeId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    IsPFApplicable = table.Column<bool>(type: "bit", nullable: false),
+                    UANNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
                     PFNumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    EmployeeContribution = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
-                    EmployerContribution = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    PFOffice = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
                     PFJoiningDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    PFExitDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    EPSApplicable = table.Column<bool>(type: "bit", nullable: false),
+                    EPFApplicable = table.Column<bool>(type: "bit", nullable: false),
+                    EDLIApplicable = table.Column<bool>(type: "bit", nullable: false),
+                    IsInternationalWorker = table.Column<bool>(type: "bit", nullable: false),
+                    Remarks = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
                     TenantId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
                     CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -1537,6 +1741,40 @@ namespace Infrastructure.Migrations
                         name: "FK_EmployeeShiftMappings_Shifts_ShiftId",
                         column: x => x.ShiftId,
                         principalTable: "Shifts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "EmployeeTasks",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Title = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    EmployeeId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    DueDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Priority = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    AssignedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CompletedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CompanyId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    BranchId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    TenantId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_EmployeeTasks", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_EmployeeTasks_Employees_EmployeeId",
+                        column: x => x.EmployeeId,
+                        principalTable: "Employees",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -1628,7 +1866,9 @@ namespace Infrastructure.Migrations
                     LeaveTypeId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     Year = table.Column<int>(type: "int", nullable: false),
                     OpeningBalance = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    Earned = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Allocated = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Credited = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    CarryForward = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     Used = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     Balance = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     TenantId = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -1650,6 +1890,45 @@ namespace Infrastructure.Migrations
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_LeaveBalances_LeaveTypes_LeaveTypeId",
+                        column: x => x.LeaveTypeId,
+                        principalTable: "LeaveTypes",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "LeaveBalanceTransactions",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    EmployeeId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    LeaveTypeId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Year = table.Column<int>(type: "int", nullable: false),
+                    TransactionType = table.Column<int>(type: "int", nullable: false),
+                    Quantity = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    BalanceBefore = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    BalanceAfter = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Remarks = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    TransactionDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    TenantId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_LeaveBalanceTransactions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_LeaveBalanceTransactions_Employees_EmployeeId",
+                        column: x => x.EmployeeId,
+                        principalTable: "Employees",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_LeaveBalanceTransactions_LeaveTypes_LeaveTypeId",
                         column: x => x.LeaveTypeId,
                         principalTable: "LeaveTypes",
                         principalColumn: "Id",
@@ -1688,6 +1967,32 @@ namespace Infrastructure.Migrations
                     table.PrimaryKey("PK_Payrolls", x => x.Id);
                     table.ForeignKey(
                         name: "FK_Payrolls_Employees_EmployeeId",
+                        column: x => x.EmployeeId,
+                        principalTable: "Employees",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "SalaryStructures",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    EmployeeId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    EffectiveFrom = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    TenantId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SalaryStructures", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_SalaryStructures_Employees_EmployeeId",
                         column: x => x.EmployeeId,
                         principalTable: "Employees",
                         principalColumn: "Id",
@@ -1791,12 +2096,17 @@ namespace Infrastructure.Migrations
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     AttendanceId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    EmployeeId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    EmployeeId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     PunchTime = table.Column<DateTime>(type: "datetime2", nullable: false),
                     PunchType = table.Column<int>(type: "int", nullable: false),
-                    DeviceId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Browser = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Version = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    OS = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DeviceType = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Location = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsManual = table.Column<bool>(type: "bit", nullable: false),
+                    DeviceId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    BiometricCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     TenantId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
                     CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -1812,6 +2122,12 @@ namespace Infrastructure.Migrations
                         name: "FK_AttendanceLogs_Attendances_AttendanceId",
                         column: x => x.AttendanceId,
                         principalTable: "Attendances",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_AttendanceLogs_Employees_EmployeeId",
+                        column: x => x.EmployeeId,
+                        principalTable: "Employees",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -1901,6 +2217,39 @@ namespace Infrastructure.Migrations
                         name: "FK_Payslips_Payrolls_PayrollId",
                         column: x => x.PayrollId,
                         principalTable: "Payrolls",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "SalaryDetails",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    SalaryStructureId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    SalaryComponentId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    TenantId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SalaryDetails", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_SalaryDetails_SalaryComponents_SalaryComponentId",
+                        column: x => x.SalaryComponentId,
+                        principalTable: "SalaryComponents",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_SalaryDetails_SalaryStructures_SalaryStructureId",
+                        column: x => x.SalaryStructureId,
+                        principalTable: "SalaryStructures",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -2195,6 +2544,11 @@ namespace Infrastructure.Migrations
                 column: "AttendanceId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_AttendanceLogs_EmployeeId",
+                table: "AttendanceLogs",
+                column: "EmployeeId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Attendances_BranchId",
                 table: "Attendances",
                 column: "BranchId");
@@ -2220,9 +2574,19 @@ namespace Infrastructure.Migrations
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_BankDetails_EmployeeId",
-                table: "BankDetails",
-                column: "EmployeeId");
+                name: "IX_BiometricDevices_BranchId",
+                table: "BiometricDevices",
+                column: "BranchId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BiometricDevices_CompanyId",
+                table: "BiometricDevices",
+                column: "CompanyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BiometricDevices_TenantId",
+                table: "BiometricDevices",
+                column: "TenantId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Branches_CityId",
@@ -2330,8 +2694,23 @@ namespace Infrastructure.Migrations
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_EmployeeBankDetails_EmployeeId",
+                table: "EmployeeBankDetails",
+                column: "EmployeeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_EmployeeBiometricMappings_EmployeeId",
+                table: "EmployeeBiometricMappings",
+                column: "EmployeeId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_EmployeeDocuments_EmployeeId",
                 table: "EmployeeDocuments",
+                column: "EmployeeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_EmployeeEducationDetails_EmployeeId",
+                table: "EmployeeEducationDetails",
                 column: "EmployeeId");
 
             migrationBuilder.CreateIndex(
@@ -2353,6 +2732,11 @@ namespace Infrastructure.Migrations
                 name: "IX_Employees_CompanyId",
                 table: "Employees",
                 column: "CompanyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Employees_CountryId",
+                table: "Employees",
+                column: "CountryId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Employees_DepartmentId",
@@ -2394,6 +2778,11 @@ namespace Infrastructure.Migrations
                 name: "IX_EmployeeShiftMappings_ShiftId",
                 table: "EmployeeShiftMappings",
                 column: "ShiftId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_EmployeeTasks_EmployeeId_Status",
+                table: "EmployeeTasks",
+                columns: new[] { "EmployeeId", "Status" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_ErrorLogs_CompanyId",
@@ -2468,6 +2857,11 @@ namespace Infrastructure.Migrations
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_HolidayGroupDetails_HolidayGroupId",
+                table: "HolidayGroupDetails",
+                column: "HolidayGroupId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_InterviewSchedules_CandidateApplicationId",
                 table: "InterviewSchedules",
                 column: "CandidateApplicationId");
@@ -2510,6 +2904,16 @@ namespace Infrastructure.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_LeaveBalances_LeaveTypeId",
                 table: "LeaveBalances",
+                column: "LeaveTypeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_LeaveBalanceTransactions_EmployeeId",
+                table: "LeaveBalanceTransactions",
+                column: "EmployeeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_LeaveBalanceTransactions_LeaveTypeId",
+                table: "LeaveBalanceTransactions",
                 column: "LeaveTypeId");
 
             migrationBuilder.CreateIndex(
@@ -2596,6 +3000,21 @@ namespace Infrastructure.Migrations
                 name: "IX_RolePermissions_RoleId",
                 table: "RolePermissions",
                 column: "RoleId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SalaryDetails_SalaryComponentId",
+                table: "SalaryDetails",
+                column: "SalaryComponentId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SalaryDetails_SalaryStructureId",
+                table: "SalaryDetails",
+                column: "SalaryStructureId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SalaryStructures_EmployeeId_EffectiveFrom",
+                table: "SalaryStructures",
+                columns: new[] { "EmployeeId", "EffectiveFrom" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Shifts_TenantId",
@@ -2697,10 +3116,22 @@ namespace Infrastructure.Migrations
                 name: "AttendanceLogs");
 
             migrationBuilder.DropTable(
-                name: "BankDetails");
+                name: "BiometricAttendanceLogs");
+
+            migrationBuilder.DropTable(
+                name: "BiometricDevices");
+
+            migrationBuilder.DropTable(
+                name: "EmployeeBankDetails");
+
+            migrationBuilder.DropTable(
+                name: "EmployeeBiometricMappings");
 
             migrationBuilder.DropTable(
                 name: "EmployeeDocuments");
+
+            migrationBuilder.DropTable(
+                name: "EmployeeEducationDetails");
 
             migrationBuilder.DropTable(
                 name: "EmployeeESICDetails");
@@ -2712,6 +3143,9 @@ namespace Infrastructure.Migrations
                 name: "EmployeeShiftMappings");
 
             migrationBuilder.DropTable(
+                name: "EmployeeTasks");
+
+            migrationBuilder.DropTable(
                 name: "ErrorLogs");
 
             migrationBuilder.DropTable(
@@ -2721,7 +3155,7 @@ namespace Infrastructure.Migrations
                 name: "FinancialYears");
 
             migrationBuilder.DropTable(
-                name: "Holidays");
+                name: "HolidayGroupDetails");
 
             migrationBuilder.DropTable(
                 name: "InterviewSchedules");
@@ -2731,6 +3165,9 @@ namespace Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "LeaveBalances");
+
+            migrationBuilder.DropTable(
+                name: "LeaveBalanceTransactions");
 
             migrationBuilder.DropTable(
                 name: "Locations");
@@ -2763,6 +3200,9 @@ namespace Infrastructure.Migrations
                 name: "RolePermissions");
 
             migrationBuilder.DropTable(
+                name: "SalaryDetails");
+
+            migrationBuilder.DropTable(
                 name: "SequenceMasters");
 
             migrationBuilder.DropTable(
@@ -2787,6 +3227,9 @@ namespace Infrastructure.Migrations
                 name: "Events");
 
             migrationBuilder.DropTable(
+                name: "HolidayGroups");
+
+            migrationBuilder.DropTable(
                 name: "CandidateApplications");
 
             migrationBuilder.DropTable(
@@ -2799,13 +3242,16 @@ namespace Infrastructure.Migrations
                 name: "Notifications");
 
             migrationBuilder.DropTable(
-                name: "SalaryComponents");
-
-            migrationBuilder.DropTable(
                 name: "Payrolls");
 
             migrationBuilder.DropTable(
                 name: "Permissions");
+
+            migrationBuilder.DropTable(
+                name: "SalaryComponents");
+
+            migrationBuilder.DropTable(
+                name: "SalaryStructures");
 
             migrationBuilder.DropTable(
                 name: "AppFeatures");

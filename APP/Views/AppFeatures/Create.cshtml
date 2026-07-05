@@ -18,6 +18,9 @@
         <form asp-action="@(Model.Id == null ? "Create" : "Edit")"
               method="post">
 
+            <input asp-for="Id" type="hidden" />
+            <input asp-for="CreatedBy" type="hidden" />
+
             <!-- Basic Information -->
             <fieldset>
                 <legend class="text-semibold">
