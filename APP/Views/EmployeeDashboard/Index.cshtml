@@ -1,7 +1,8 @@
 @model Application.DTOs.Dashboard.EmployeeDashboardDto
 
 @{
-    ViewData["Title"] = "Employee Dashboard";
+    Layout = "~/Views/Shared/EmployeeLayout/_EmployeeLayout.cshtml";
+    ViewData["Title"] = "My Dashboard";
 
     string DayColor(string s) => s switch
     {
@@ -17,24 +18,71 @@
     var trendLabels = string.Join(",", Model.AttendanceTrend.Select(x => "'" + x.Label + "'"));
     var trendValues = string.Join(",", Model.AttendanceTrend.Select(x => x.Value));
     var leaveData = string.Join(",", Model.LeaveDistribution.Select(x => "{value:" + x.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) + ",name:'" + (x.Name ?? "") + "'}"));
+
+    string LeaveChip(string? name)
+    {
+        var n = (name ?? "").ToLower();
+        if (n.Contains("casual")) return "bg-blue";
+        if (n.Contains("earned") || n.Contains("privilege")) return "bg-success";
+        if (n.Contains("sick")) return "bg-danger";
+        if (n.Contains("comp")) return "bg-purple";
+        if (n.Contains("mater") || n.Contains("pater")) return "bg-pink";
+        return "bg-slate";
+    }
+    var photoSrc = string.IsNullOrWhiteSpace(Model.PhotoUrl)
+        ? Url.Content("~/global_assets/images/placeholders/placeholder.jpg")
+        : Url.Content(Model.PhotoUrl);
+
+    string LeaveCode(string? name)
+    {
+        var n = (name ?? "").ToLower();
+        if (n.Contains("casual")) return "CL";
+        if (n.Contains("earned") || n.Contains("privilege")) return "EL";
+        if (n.Contains("sick")) return "SL";
+        if (n.Contains("comp")) return "CO";
+        var parts = (name ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2 ? ("" + parts[0][0] + parts[1][0]).ToUpper()
+             : (string.IsNullOrEmpty(name) ? "LV" : name!.Substring(0, Math.Min(2, name.Length)).ToUpper());
+    }
+
+    // Model.AttendanceStatus / CheckIn default to a bare "—" when the
+    // employee hasn't punched in yet today - show that as a clear
+    // "Not Marked" label instead of a lone dash.
+    bool notMarkedToday = string.IsNullOrWhiteSpace(Model.AttendanceStatus) || Model.AttendanceStatus == "—";
+    string attendanceLabel = notMarkedToday ? "Not Marked" : Model.AttendanceStatus;
+    string attendanceBadgeCss = notMarkedToday ? "bg-slate-300" : "bg-success";
 }
 
 <!-- Welcome -->
-<div class="panel panel-flat">
+<div class="panel panel-flat employee-welcome">
     <div class="panel-body">
         <div class="row">
             <div class="col-md-8">
-                <h4 class="no-margin-top">Welcome back, @Model.FullName! 👋</h4>
-                <span class="text-muted">Here's what's happening with your work today.</span>
-            </div>
-            <div class="col-md-4 text-right">
-                <span class="text-muted">@DateTime.Now.ToString("dd MMMM yyyy, dddd")</span>
-                <div style="margin-top:6px;">
-                    <span class="text-size-small text-muted">Profile @Model.ProfileCompletionPercent% complete</span>
-                    <div class="progress" style="height:6px;">
-                        <div class="progress-bar bg-primary" style="width:@Model.ProfileCompletionPercent%"></div>
+                <div class="media">
+                    <div class="media-left">
+                        <img src="@photoSrc" class="img-circle" alt="@Model.FullName" style="width:80px;height:80px;" />
+                    </div>
+                    <div class="media-body">
+                        <h2 class="no-margin">Welcome back, <strong>@Model.FullName</strong></h2>
+                        <br />
+                        <span class="text-size-large">Employee Code: <strong>@Model.EmployeeCode</strong></span>
+                        <br />
+                        <span>@Model.DesignationName | @Model.DepartmentName</span>
+                        <br />
+                        <span class="text-size-small text-muted">
+                            Profile @Model.ProfileCompletionPercent% complete
+                            <div class="progress" style="height:6px;width:200px;display:inline-block;vertical-align:middle;margin-left:8px;">
+                                <div class="progress-bar bg-primary" style="width:@(Model.ProfileCompletionPercent)%"></div>
+                            </div>
+                        </span>
                     </div>
                 </div>
+            </div>
+            <div class="col-md-4 text-right">
+                <h3>@DateTime.Now.ToString("dddd")</h3>
+                <h4>@DateTime.Now.ToString("dd MMMM yyyy")</h4>
+                <br />
+                <span class="label @attendanceBadgeCss">@attendanceLabel</span>
             </div>
         </div>
     </div>
@@ -42,49 +90,87 @@
 
 <!-- KPI Cards -->
 <div class="row">
-    <div class="col-lg-3 col-sm-6">
-        <div class="panel bg-teal-400">
-            <div class="panel-body">
-                <h3 class="no-margin">@(Model.CheckIn?.ToString("hh:mm tt") ?? "—")</h3>
-                Attendance Today — @Model.AttendanceStatus
-                <div class="pull-right"><i class="icon-alarm" style="font-size:34px;opacity:.75;"></i></div>
+
+    <!-- Attendance Today -->
+    <div class="col-md-3">
+        <div class="panel panel-body bg-teal-400">
+            <div class="media no-margin">
+                <div class="media-left media-middle">
+                    <i class="icon-alarm icon-3x opacity-75"></i>
+                </div>
+                <div class="media-body text-right">
+                    <h3 class="no-margin">@(Model.CheckIn?.ToString("hh:mm tt") ?? "--:--")</h3>
+                    <span class="text-uppercase text-size-mini">
+                        @attendanceLabel
+                    </span>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-lg-3 col-sm-6">
-        <div class="panel bg-blue-400">
-            <div class="panel-body">
-                <h3 class="no-margin">@Model.TotalLeaveBalance.ToString("0.#")</h3>
-                Leave Balance (days)
-                <div class="pull-right"><i class="icon-calendar3" style="font-size:34px;opacity:.75;"></i></div>
+
+    <!-- Leave Balance -->
+    <div class="col-md-3">
+        <div class="panel panel-body bg-blue-400">
+            <div class="media no-margin">
+                <div class="media-left media-middle">
+                    <i class="icon-calendar3 icon-3x opacity-75"></i>
+                </div>
+                <div class="media-body text-right">
+                    <h3 class="no-margin">@Model.TotalLeaveBalance.ToString("0.#")</h3>
+                    <span class="text-uppercase text-size-mini">
+                        Leave Balance (days)
+                    </span>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-lg-3 col-sm-6">
-        <div class="panel bg-indigo-400">
-            <div class="panel-body">
-                <h3 class="no-margin">@(Model.UpcomingHolidays.Any() ? Model.UpcomingHolidays.First().Date.ToString("dd MMM") : "—")</h3>
-                @(Model.UpcomingHolidays.Any() ? Model.UpcomingHolidays.First().Name : "No upcoming holiday")
-                <div class="pull-right"><i class="icon-gift" style="font-size:34px;opacity:.75;"></i></div>
+
+    <!-- Upcoming Holiday -->
+    <div class="col-md-3">
+        <div class="panel panel-body bg-indigo-400">
+            <div class="media no-margin">
+                <div class="media-left media-middle">
+                    <i class="icon-gift icon-3x opacity-75"></i>
+                </div>
+                <div class="media-body text-right">
+                    <h3 class="no-margin">@(Model.UpcomingHolidays.Any() ? Model.UpcomingHolidays.First().Date.ToString("dd MMM") : "N/A")</h3>
+                    <span class="text-uppercase text-size-mini">
+                        @(Model.UpcomingHolidays.Any() ? Model.UpcomingHolidays.First().Name : "No upcoming holiday")
+                    </span>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-lg-3 col-sm-6">
-        <div class="panel bg-pink-400">
-            <div class="panel-body">
-                <h3 class="no-margin">@Model.PendingTaskCount</h3>
-                Pending Tasks
-                <div class="pull-right"><i class="icon-checkmark-circle" style="font-size:34px;opacity:.75;"></i></div>
+
+    <!-- Pending Tasks -->
+    <div class="col-md-3">
+        <div class="panel panel-body bg-pink-400">
+            <div class="media no-margin">
+                <div class="media-left media-middle">
+                    <i class="icon-checkmark-circle icon-3x opacity-75"></i>
+                </div>
+                <div class="media-body text-right">
+                    <h3 class="no-margin">@Model.PendingTaskCount</h3>
+                    <span class="text-uppercase text-size-mini">
+                        Pending Tasks
+                    </span>
+                </div>
             </div>
         </div>
     </div>
+
 </div>
 
 <div class="row">
     <!-- Leave Balance -->
     <div class="col-md-4">
         <div class="panel panel-flat">
-            <div class="panel-heading"><h6 class="panel-title"><i class="icon-list position-left"></i> My Leave Balance</h6></div>
+            <div class="panel-heading">
+                <h6 class="panel-title"><i class="icon-list position-left"></i> My Leave Balance</h6>
+                <div class="heading-elements">
+                    <span class="badge bg-blue">@Model.TotalLeaveBalance.ToString("0.#")</span>
+                </div>
+            </div>
             <table class="table table-striped">
                 <thead><tr><th>Leave Type</th><th class="text-right">Available</th></tr></thead>
                 <tbody>
@@ -92,7 +178,13 @@
                     {
                         foreach (var b in Model.LeaveBalances)
                         {
-                            <tr><td>@b.LeaveTypeName</td><td class="text-right"><strong>@b.Balance.ToString("0.#")</strong></td></tr>
+                            <tr>
+                                <td>
+                                    <span class="label @LeaveChip(b.LeaveTypeName)" style="min-width:34px;display:inline-block;text-align:center;">@LeaveCode(b.LeaveTypeName)</span>
+                                    <span class="position-left">@b.LeaveTypeName</span>
+                                </td>
+                                <td class="text-right"><strong>@b.Balance.ToString("0.#")</strong></td>
+                            </tr>
                         }
                     }
                     else { <tr><td colspan="2" class="text-muted text-center">No leave balance.</td></tr> }
@@ -148,7 +240,13 @@
     <!-- Upcoming Events -->
     <div class="col-md-4">
         <div class="panel panel-flat">
-            <div class="panel-heading"><h6 class="panel-title"><i class="icon-calendar3 position-left"></i> Upcoming Events</h6></div>
+            <div class="panel-heading">
+                <h6 class="panel-title"><i class="icon-calendar3 position-left"></i> Upcoming Events</h6>
+                <div class="heading-elements">
+                    <span class="badge bg-primary">@Model.UpcomingEvents.Count</span>
+                    <a asp-controller="Event" asp-action="Index" class="text-size-small">View All</a>
+                </div>
+            </div>
             <div class="panel-body">
                 <ul class="media-list">
                     @if (Model.UpcomingEvents.Any())
@@ -174,7 +272,10 @@
         <div class="panel panel-flat">
             <div class="panel-heading">
                 <h6 class="panel-title"><i class="icon-bullhorn position-left"></i> Company Announcements</h6>
-                <div class="heading-elements"><a asp-controller="Announcement" asp-action="Index" class="text-size-small">View All</a></div>
+                <div class="heading-elements">
+                    <span class="badge bg-warning">@Model.Announcements.Count</span>
+                    <a asp-controller="Announcement" asp-action="Index" class="text-size-small">View All</a>
+                </div>
             </div>
             <div class="panel-body">
                 <ul class="media-list">
@@ -202,12 +303,27 @@
             <div class="panel-heading"><h6 class="panel-title"><i class="icon-grid position-left"></i> Quick Links</h6></div>
             <div class="panel-body">
                 <div class="row text-center">
-                    <div class="col-xs-4" style="margin-bottom:12px;"><a asp-controller="LeaveApplication" asp-action="Create"><i class="icon-calendar2 icon-2x text-primary"></i><div class="text-size-small">Apply Leave</div></a></div>
-                    <div class="col-xs-4" style="margin-bottom:12px;"><a asp-controller="Employee" asp-action="Index"><i class="icon-user icon-2x text-primary"></i><div class="text-size-small">My Profile</div></a></div>
-                    <div class="col-xs-4" style="margin-bottom:12px;"><a asp-controller="Payroll" asp-action="Index"><i class="icon-file-text2 icon-2x text-primary"></i><div class="text-size-small">Payslip</div></a></div>
-                    <div class="col-xs-4"><a asp-controller="EmployeeDocument" asp-action="Index"><i class="icon-folder icon-2x text-primary"></i><div class="text-size-small">Documents</div></a></div>
-                    <div class="col-xs-4"><a asp-controller="EmployeeTask" asp-action="Index"><i class="icon-checkmark-circle icon-2x text-primary"></i><div class="text-size-small">Tasks</div></a></div>
-                    <div class="col-xs-4"><a asp-controller="Notification" asp-action="Index"><i class="icon-bell2 icon-2x text-primary"></i><div class="text-size-small">Notifications</div></a></div>
+                    <div class="col-xs-4" style="margin-bottom:12px;">
+                        <a asp-controller="Attendance" asp-action="Create"><i class="icon-alarm icon-2x text-primary"></i><div class="text-size-small">Punch In/Out</div></a>
+                    </div>
+                    <div class="col-xs-4" style="margin-bottom:12px;">
+                        <a asp-controller="LeaveApplication" asp-action="Create"><i class="icon-calendar2 icon-2x text-primary"></i><div class="text-size-small">Apply Leave</div></a>
+                    </div>
+                    <div class="col-xs-4" style="margin-bottom:12px;">
+                        <a asp-controller="Employee" asp-action="Details" asp-route-id="@Model.EmployeeId"><i class="icon-user icon-2x text-primary"></i><div class="text-size-small">My Profile</div></a>
+                    </div>
+                    <div class="col-xs-4" style="margin-bottom:12px;">
+                        <a asp-controller="Payroll" asp-action="MyPayslips"><i class="icon-cash3 icon-2x text-primary"></i><div class="text-size-small">Payslip</div></a>
+                    </div>
+                    <div class="col-xs-4">
+                        <a asp-controller="EmployeeDocument" asp-action="MyDocuments"><i class="icon-folder icon-2x text-primary"></i><div class="text-size-small">Documents</div></a>
+                    </div>
+                    <div class="col-xs-4">
+                        <a asp-controller="EmployeeTask" asp-action="MyTasks"><i class="icon-checkmark-circle icon-2x text-primary"></i><div class="text-size-small">Tasks</div></a>
+                    </div>
+                    <div class="col-xs-4">
+                        <a asp-controller="Notification" asp-action="Index"><i class="icon-bell2 icon-2x text-primary"></i><div class="text-size-small">Notifications</div></a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -234,7 +350,10 @@
 <div class="panel panel-flat">
     <div class="panel-heading">
         <h6 class="panel-title"><i class="icon-checkmark-circle position-left"></i> My Tasks</h6>
-        <div class="heading-elements"><a asp-controller="EmployeeTask" asp-action="Index" class="text-size-small">View All</a></div>
+        <div class="heading-elements">
+            <span class="badge bg-pink">@Model.PendingTaskCount</span>
+            <a asp-controller="EmployeeTask" asp-action="MyTasks" class="text-size-small">View All</a>
+        </div>
     </div>
     <table class="table table-striped">
         <thead><tr><th>Task</th><th>Due Date</th><th>Priority</th><th>Status</th></tr></thead>
@@ -251,7 +370,7 @@
                     </tr>
                 }
             }
-            else { <tr><td colspan="4" class="text-muted text-center" style="padding:20px;">No pending tasks. 🎉</td></tr> }
+            else { <tr><td colspan="4" class="text-muted text-center" style="padding:20px;">No pending tasks.</td></tr> }
         </tbody>
     </table>
 </div>
@@ -294,7 +413,12 @@
     </div>
     <div class="col-md-3">
         <div class="panel panel-flat">
-            <div class="panel-heading"><h6 class="panel-title"><i class="icon-calendar2 position-left"></i> Pending Leave Requests</h6></div>
+            <div class="panel-heading">
+                <h6 class="panel-title"><i class="icon-calendar2 position-left"></i> Pending Leave Requests</h6>
+                <div class="heading-elements">
+                    <span class="badge bg-warning">@Model.PendingLeaveRequests.Count</span>
+                </div>
+            </div>
             <div class="panel-body">
                 <ul class="media-list">
                     @if (Model.PendingLeaveRequests.Any())

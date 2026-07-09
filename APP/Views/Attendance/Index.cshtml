@@ -4,6 +4,18 @@
 
 @{
     ViewData["Title"] = "Attendance Dashboard";
+    bool isAdmin = ViewBag.IsAdmin ?? true;
+
+    var records = Model?.ToList() ?? new List<AttendanceDto>();
+
+    var totalPresent = records.Count(x => x.StatusText == "Present");
+    var totalAbsent = records.Count(x => x.StatusText == "Absent");
+    var totalHalfDay = records.Count(x => x.StatusText == "HalfDay");
+
+    var totalOtHours = records.Sum(x => x.OvertimeHours);
+    var otHoursPart = (int)totalOtHours;
+    var otMinutesPart = (int)Math.Round((totalOtHours - otHoursPart) * 60);
+    var totalOtText = $"{otHoursPart:00}:{otMinutesPart:00}";
 }
 
 <div class="panel panel-flat">
@@ -12,20 +24,23 @@
 
         <h5 class="panel-title">
             <i class="icon-calendar3 position-left"></i>
-            Attendance History
+            @(ViewBag.ListTitle ?? "Attendance History")
         </h5>
 
-        <div class="heading-elements">
+        @if (isAdmin)
+        {
+            <div class="heading-elements">
 
-            <a asp-action="Create"
-               class="btn bg-primary btn-sm">
+                <a asp-action="Create"
+                   class="btn bg-primary btn-sm">
 
-                <i class="icon-plus22 position-left"></i>
-                Add Attendance
+                    <i class="icon-plus22 position-left"></i>
+                    Add Attendance
 
-            </a>
+                </a>
 
-        </div>
+            </div>
+        }
 
     </div>
 
@@ -39,7 +54,7 @@
 
                 <div class="panel bg-success-400">
                     <div class="panel-body text-center">
-                        <h3 class="no-margin">248</h3>
+                        <h3 class="no-margin">@totalPresent</h3>
                         <span>Total Present</span>
                     </div>
                 </div>
@@ -50,7 +65,7 @@
 
                 <div class="panel bg-danger-400">
                     <div class="panel-body text-center">
-                        <h3 class="no-margin">12</h3>
+                        <h3 class="no-margin">@totalAbsent</h3>
                         <span>Absent</span>
                     </div>
                 </div>
@@ -61,7 +76,7 @@
 
                 <div class="panel bg-warning-400">
                     <div class="panel-body text-center">
-                        <h3 class="no-margin">18</h3>
+                        <h3 class="no-margin">@totalHalfDay</h3>
                         <span>Half Day</span>
                     </div>
                 </div>
@@ -72,7 +87,7 @@
 
                 <div class="panel bg-info-400">
                     <div class="panel-body text-center">
-                        <h3 class="no-margin">34:20</h3>
+                        <h3 class="no-margin">@totalOtText</h3>
                         <span>Total OT Hours</span>
                     </div>
                 </div>

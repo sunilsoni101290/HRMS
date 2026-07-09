@@ -56,9 +56,11 @@ namespace APP.Controllers
 
                 if (response.Success)
                 {
-                    TempData["Success"] = response.Message;
+                    TempData["Success"] =
+                        $"{response.Message} Device Key: {response.Data?.DeviceKey} " +
+                        "(also visible any time on this device's Details page - you'll need it to configure the BiometricAgent / test the ingest API).";
 
-                    return RedirectToAction(nameof(Index));
+                    return RedirectToAction(nameof(Details), new { id = response.Data?.Id });
                 }
 
                 ModelState.AddModelError(
@@ -91,7 +93,7 @@ namespace APP.Controllers
             return View("Create", data);
         }
 
-        [HttpPut]
+        [HttpPost]
         public async Task<ActionResult> Edit(BiometricDeviceDto model)
         {
             if (!ModelState.IsValid)
@@ -142,6 +144,69 @@ namespace APP.Controllers
             );
 
             return View(data);
+        }
+
+        /// <summary>
+        /// Pulls whatever punches the on-site BiometricAgent has pushed for this
+        /// device (or, for older pull-based setups, whatever the device's own
+        /// ApiUrl exposes) and runs them through AttendanceProcessorService.
+        /// This is a manual trigger for HR - the normal path is the agent
+        /// pushing to /api/BiometricSync/ingest on its own schedule.
+        /// </summary>
+        public async Task<IActionResult> SyncNow(string id)
+        {
+            try
+            {
+                await _apiService.PostAsync<object>($"BiometricSync/sync/{id}", new { });
+
+                AlertHelper.Success(TempData, "Device synced and attendance processed.");
+            }
+            catch (Exception ex)
+            {
+                AlertHelper.Error(TempData, $"Sync failed: {ex.Message}");
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        public async Task<IActionResult> Health()
+        {
+            var data = await _apiService
+                .GetAsync<List<BiometricDeviceHealthDto>>("BiometricDevice/health");
+
+            return View(data);
+        }
+
+        public async Task<IActionResult> SyncAll()
+        {
+            try
+            {
+                await _apiService.PostAsync<object>("BiometricSync/sync-all", new { });
+
+                AlertHelper.Success(TempData, "All active devices synced and attendance processed.");
+            }
+            catch (Exception ex)
+            {
+                AlertHelper.Error(TempData, $"Sync failed: {ex.Message}");
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        public async Task<IActionResult> Delete(string id)
+        {
+            try
+            {
+                await _apiService.DeleteAsync($"BiometricDevice/{id}");
+
+                AlertHelper.Success(TempData, "Biometric device deleted successfully.");
+            }
+            catch (Exception ex)
+            {
+                AlertHelper.Error(TempData, ex.Message);
+            }
+
+            return RedirectToAction(nameof(Index));
         }
 
         [HttpGet]

@@ -1,0 +1,130 @@
+@model EmployeeBiometricMappingDto
+
+@{
+    ViewData["Title"] = "Map Employee to Biometric Device";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-fingerprint position-left"></i>
+            @(string.IsNullOrEmpty(Model?.Id)
+                ? "Map Employee to Biometric Code"
+                : "Edit Employee Biometric Mapping")
+        </h5>
+
+        <div class="heading-elements">
+            <span class="text-muted">
+                Required before this employee's punches will turn into Attendance records
+            </span>
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="@(string.IsNullOrEmpty(Model?.Id) ? "Create" : "Edit")" method="post">
+
+            <input asp-for="Id" type="hidden" />
+
+            <div class="row">
+
+                <div class="col-md-6">
+
+                    <div class="form-group">
+
+                        <label asp-for="EmployeeId"></label>
+
+                        <select asp-for="EmployeeId"
+                                asp-items="ViewBag.EmployeeList"
+                                class="form-control">
+
+                            <option value="">-- Select Employee --</option>
+
+                        </select>
+
+                        <span asp-validation-for="EmployeeId" class="text-danger"></span>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-6">
+
+                    <div class="form-group">
+
+                        <label asp-for="BiometricEmployeeCode"></label>
+
+                        <input asp-for="BiometricEmployeeCode"
+                               class="form-control"
+                               placeholder="e.g. the enrollment ID/code on the device (EMP001)" />
+
+                        <span asp-validation-for="BiometricEmployeeCode" class="text-danger"></span>
+
+                        <span class="text-muted">
+                            For Mock-driver testing, this must exactly match the
+                            EmployeeCode you send in the test punch payload.
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="row">
+
+                <div class="col-md-6">
+
+                    <div class="form-group">
+
+                        <label asp-for="CardNumber"></label>
+
+                        <input asp-for="CardNumber" class="form-control" placeholder="Optional" />
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-6">
+
+                    <div class="checkbox checkbox-switchery" style="margin-top: 28px;">
+
+                        <label>
+                            <input asp-for="IsActive" type="checkbox" class="switchery" checked />
+                            Active
+                        </label>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="text-right">
+
+                <a asp-action="Index" class="btn btn-default">
+                    <i class="icon-arrow-left13"></i>
+                    Back
+                </a>
+
+                <button type="submit" class="btn bg-primary">
+                    <i class="icon-checkmark3"></i>
+                    @(string.IsNullOrEmpty(Model?.Id) ? "Save" : "Update")
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

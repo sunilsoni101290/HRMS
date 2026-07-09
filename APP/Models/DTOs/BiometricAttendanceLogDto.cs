@@ -32,26 +32,26 @@ namespace APP.Models.DTOs
     }
 
 
-    public class EmployeeBiometricMappingDto
-    {
-        public string? Id { get; set; }
+    //public class EmployeeBiometricMappingDto
+    //{
+    //    public string? Id { get; set; }
 
-        [Required(ErrorMessage = "{0} is required.")]
-        [Display(Name = "Employee")]
-        public string EmployeeId { get; set; } = string.Empty;
+    //    [Required(ErrorMessage = "{0} is required.")]
+    //    [Display(Name = "Employee")]
+    //    public string EmployeeId { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "{0} is required.")]
-        [Display(Name = "Biometric Employee Code")]
-        public string BiometricEmployeeCode { get; set; } = string.Empty;
+    //    [Required(ErrorMessage = "{0} is required.")]
+    //    [Display(Name = "Biometric Employee Code")]
+    //    public string BiometricEmployeeCode { get; set; } = string.Empty;
 
-        [Display(Name = "Card Number")]
-        [StringLength(50, ErrorMessage = "{0} cannot exceed {1} characters.")]
-        public string? CardNumber { get; set; }
+    //    [Display(Name = "Card Number")]
+    //    [StringLength(50, ErrorMessage = "{0} cannot exceed {1} characters.")]
+    //    public string? CardNumber { get; set; }
 
-        [Display(Name = "Active")]
-        public bool IsActive { get; set; }
-        public string CreatedBy { get; set; }
-        public DateTime? ModifiedOn { get; set; }
-        public string? ModifiedBy { get; set; }
-    }
+    //    [Display(Name = "Active")]
+    //    public bool IsActive { get; set; }
+    //    public string CreatedBy { get; set; }
+    //    public DateTime? ModifiedOn { get; set; }
+    //    public string? ModifiedBy { get; set; }
+    //}
 }

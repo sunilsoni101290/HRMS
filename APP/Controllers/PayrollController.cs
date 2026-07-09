@@ -16,15 +16,29 @@ namespace APP.Controllers
         private string _tenantId;
         private string _userId;
 
+        // The employee record linked to whoever is logged in - used to
+        // scope "My Payslip" to the caller's own records only.
+        private readonly string? _employeeId;
+
+        // Generating/processing/deleting payroll is an Admin/HR function
+        // only - a plain employee can view and print their own payslips but
+        // nothing else, enforced server-side here.
+        private readonly bool _isAdmin;
+
         public PayrollController(IApiService apiService)
         {
             _apiService = apiService;
             _tenantId = SessionHelper.GetActiveTenantId;
             _userId = SessionHelper.GetActiveUserId;
+            _employeeId = SessionHelper.GetActiveEmployeeId;
+            _isAdmin = SessionHelper.IsAdminRole();
         }
 
         public async Task<IActionResult> Index(int? year = null, int? month = null)
         {
+            if (!_isAdmin)
+                return RedirectToAction(nameof(MyPayslips));
+
             var url = "payroll";
             var query = new List<string>();
             if (year.HasValue) query.Add($"year={year}");
@@ -38,9 +52,36 @@ namespace APP.Controllers
             return View(data);
         }
 
+        /// <summary>
+        /// Self-service "my payslips" list - filters the payroll list down
+        /// to the logged-in user's own employee record, so an employee can
+        /// never browse another employee's salary data from this page.
+        /// </summary>
+        public async Task<IActionResult> MyPayslips()
+        {
+            if (string.IsNullOrEmpty(_employeeId))
+            {
+                ViewBag.NoEmployeeProfile = true;
+                return View(new List<PayrollListDto>());
+            }
+
+            var data = await _apiService.GetAsync<List<PayrollListDto>>("payroll");
+
+            var mine = (data ?? new List<PayrollListDto>())
+                .Where(p => p.EmployeeId == _employeeId)
+                .OrderByDescending(p => p.SalaryYear)
+                .ThenByDescending(p => p.SalaryMonth)
+                .ToList();
+
+            return View(mine);
+        }
+
         [HttpGet]
         public async Task<IActionResult> Generate()
         {
+            if (!_isAdmin)
+                return RedirectToAction(nameof(MyPayslips));
+
             await LoadDropdowns();
             return View(new PayrollGenerateDto());
         }
@@ -48,6 +89,9 @@ namespace APP.Controllers
         [HttpPost]
         public async Task<IActionResult> Generate(PayrollGenerateDto dto)
         {
+            if (!_isAdmin)
+                return RedirectToAction(nameof(MyPayslips));
+
             if (dto != null)
             {
                 dto.TenantId = _tenantId;
@@ -71,6 +115,9 @@ namespace APP.Controllers
         [HttpGet]
         public async Task<IActionResult> Details(string id)
         {
+            if (!_isAdmin)
+                return RedirectToAction(nameof(MyPayslips));
+
             var data = await _apiService.GetAsync<PayrollDto>($"payroll/{id}");
             return View(data);
         }
@@ -78,6 +125,9 @@ namespace APP.Controllers
         [HttpPost]
         public async Task<IActionResult> Process(string id)
         {
+            if (!_isAdmin)
+                return Forbid();
+
             await _apiService.PutAsync<dynamic>(
                 $"payroll/status/{id}?status=Processed&userId={_userId}", new { });
             TempData["Success"] = "Payroll marked as Processed.";
@@ -87,6 +137,9 @@ namespace APP.Controllers
         [HttpPost]
         public async Task<IActionResult> MarkPaid(string id)
         {
+            if (!_isAdmin)
+                return Forbid();
+
             await _apiService.PutAsync<dynamic>(
                 $"payroll/status/{id}?status=Paid&userId={_userId}", new { });
             TempData["Success"] = "Payroll marked as Paid.";
@@ -95,6 +148,9 @@ namespace APP.Controllers
 
         public async Task<IActionResult> Delete(string id)
         {
+            if (!_isAdmin)
+                return Forbid();
+
             await _apiService.DeleteAsync($"payroll/{id}");
             return RedirectToAction(nameof(Index));
         }
@@ -102,6 +158,9 @@ namespace APP.Controllers
         [HttpGet]
         public async Task<IActionResult> Dashboard(int? year = null, int? month = null)
         {
+            if (!_isAdmin)
+                return RedirectToAction(nameof(MyPayslips));
+
             int y = year ?? DateTime.UtcNow.Year;
             int m = month ?? DateTime.UtcNow.Month;
 
@@ -114,6 +173,9 @@ namespace APP.Controllers
         [HttpGet]
         public async Task<IActionResult> Report(int? year = null, int? month = null, string? status = null)
         {
+            if (!_isAdmin)
+                return RedirectToAction(nameof(MyPayslips));
+
             int y = year ?? DateTime.UtcNow.Year;
 
             var url = $"payroll?year={y}";
@@ -137,6 +199,13 @@ namespace APP.Controllers
             await _apiService.PostAsync<dynamic>($"payroll/payslip/{id}?userId={_userId}", new { });
 
             var data = await _apiService.GetAsync<PayrollDto>($"payroll/payslip/{id}");
+
+            // An employee may only view/print their own payslip - never
+            // another employee's, even by guessing/incrementing an id.
+            if (!_isAdmin && (data == null || data.EmployeeId != _employeeId))
+                return Forbid();
+
+            ViewBag.IsAdmin = _isAdmin;
             return View(data);
         }
 

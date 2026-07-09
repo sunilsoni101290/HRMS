@@ -1,3 +1,5 @@
+using Application.DTOs.Attendances;
+using Application.DTOs.Communication;
 using Application.DTOs.Dashboard;
 using Application.Interfaces.Dashboard;
 using Domain.Entities;
@@ -236,6 +238,334 @@ namespace Application.Services.Dashboard
                 return null;
             }
         }
+
+        #region Profile
+
+        public async Task<EmployeeProfileDto> GetProfileAsync(string employeeId)
+        {
+            try
+            {
+                var e = await _context.Employees.AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.Id == employeeId && !x.IsDeleted);
+                if (e == null) return null;
+
+                var today = DateTime.UtcNow.Date;
+
+                var department = await _context.Departments.AsNoTracking()
+                    .Where(d => d.Id == e.DepartmentId).Select(d => d.Name).FirstOrDefaultAsync();
+                var designation = await _context.Designations.AsNoTracking()
+                    .Where(d => d.Id == e.DesignationId).Select(d => d.Name).FirstOrDefaultAsync();
+                var company = await _context.Set<Company>().AsNoTracking()
+                    .Where(c => c.Id == e.CompanyId).Select(c => c.Name).FirstOrDefaultAsync();
+                var manager = await _context.Employees.AsNoTracking()
+                    .Where(m => m.Id == e.ReportingManagerId)
+                    .Select(m => m.FirstName + " " + m.LastName).FirstOrDefaultAsync();
+
+                var isCheckedIn = await _context.Attendances.AsNoTracking()
+                    .AnyAsync(a => a.EmployeeId == employeeId && a.Date.Date == today
+                              && a.FirstIn != null && a.LastOut == null && !a.IsDeleted);
+
+                return new EmployeeProfileDto
+                {
+                    EmployeeId = e.Id,
+                    EmployeeCode = e.EmployeeCode,
+                    FullName = $"{e.FirstName} {e.LastName}".Trim(),
+                    Designation = designation ?? "",
+                    Department = department ?? "",
+                    Branch = "",
+                    Company = company ?? "",
+                    ProfileImage = e.FilePath,
+                    JoiningDate = e.JoiningDate,
+                    ExperienceYears = Math.Max(0, today.Year - e.JoiningDate.Year),
+                    Email = e.Email,
+                    Mobile = e.Phone,
+                    ProfileCompletion = ProfileCompletion(e),
+                    IsCheckedIn = isCheckedIn,
+                    ReportingManager = manager ?? "",
+                    EmploymentType = e.EmploymentType.ToString(),
+                    EmploymentStatus = e.IsActive ? "Active" : "Inactive"
+                };
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        #endregion
+
+        #region Attendance (this month)
+
+        public async Task<List<AttendanceDto>> GetAttendanceAsync(string employeeId)
+        {
+            try
+            {
+                var today = DateTime.UtcNow.Date;
+                var rows = await _context.Attendances.AsNoTracking()
+                    .Where(a => a.EmployeeId == employeeId && !a.IsDeleted
+                             && a.Date.Year == today.Year && a.Date.Month == today.Month)
+                    .OrderByDescending(a => a.Date)
+                    .Select(a => new
+                    {
+                        a.Id, a.TenantId, a.CompanyId, a.BranchId, a.EmployeeId, a.Date,
+                        a.FirstIn, a.LastOut, a.TotalWorkingHours, a.BreakHours,
+                        a.OvertimeHours, a.Status, a.IsLate, a.IsEarlyExit, a.Remarks
+                    })
+                    .ToListAsync();
+
+                return rows.Select(a => new AttendanceDto
+                {
+                    Id = a.Id,
+                    TenantId = a.TenantId,
+                    CompanyId = a.CompanyId,
+                    BranchId = a.BranchId,
+                    EmployeeId = a.EmployeeId,
+                    Date = a.Date,
+                    FirstIn = a.FirstIn,
+                    LastOut = a.LastOut,
+                    TotalWorkingHours = a.TotalWorkingHours,
+                    BreakHours = a.BreakHours,
+                    OvertimeHours = a.OvertimeHours,
+                    Status = a.Status,
+                    IsLate = a.IsLate,
+                    IsEarlyExit = a.IsEarlyExit,
+                    Remarks = a.Remarks
+                }).ToList();
+            }
+            catch (Exception)
+            {
+                return new List<AttendanceDto>();
+            }
+        }
+
+        #endregion
+
+        #region Leaves (summary)
+
+        public async Task<List<LeaveDto>> GetLeavesAsync(string employeeId)
+        {
+            try
+            {
+                var year = DateTime.UtcNow.Year;
+
+                var balances = await _context.LeaveBalances.AsNoTracking()
+                    .Where(b => b.EmployeeId == employeeId && b.Year == year && !b.IsDeleted)
+                    .Select(b => new { Name = b.LeaveType != null ? b.LeaveType.Name : "", b.Balance, b.Used })
+                    .ToListAsync();
+
+                var applications = await _context.LeaveApplications.AsNoTracking()
+                    .Where(l => l.EmployeeId == employeeId && !l.IsDeleted && l.FromDate.Year == year)
+                    .Select(l => new { l.Status, l.TotalDays })
+                    .ToListAsync();
+
+                decimal MatchBalance(params string[] keys) =>
+                    balances.Where(b => keys.Any(k => (b.Name ?? "").ToLower().Contains(k)))
+                            .Sum(b => b.Balance);
+
+                var dto = new LeaveDto
+                {
+                    CasualLeave = MatchBalance("casual", "cl"),
+                    EarnedLeave = MatchBalance("earned", "el", "privilege", "pl"),
+                    SickLeave = MatchBalance("sick", "sl"),
+                    CompOff = MatchBalance("comp"),
+                    TotalAvailable = balances.Sum(b => b.Balance),
+                    UsedLeave = balances.Sum(b => b.Used),
+                    PendingApproval = applications.Where(a => a.Status == ApprovalStatus.Pending).Sum(a => a.TotalDays),
+                    ApprovedLeave = applications.Where(a => a.Status == ApprovalStatus.Approved).Sum(a => a.TotalDays),
+                    RejectedLeave = applications.Where(a => a.Status == ApprovalStatus.Rejected).Sum(a => a.TotalDays)
+                };
+
+                return new List<LeaveDto> { dto };
+            }
+            catch (Exception)
+            {
+                return new List<LeaveDto> { new LeaveDto() };
+            }
+        }
+
+        #endregion
+
+        #region Payslips
+
+        public async Task<List<PayslipDto>> GetPayslipsAsync(string employeeId)
+        {
+            try
+            {
+                var rows = await _context.Payrolls.AsNoTracking()
+                    .Where(p => p.EmployeeId == employeeId && !p.IsDeleted)
+                    .OrderByDescending(p => p.SalaryYear).ThenByDescending(p => p.SalaryMonth)
+                    .Take(12)
+                    .Select(p => new
+                    {
+                        p.SalaryMonth, p.SalaryYear, p.GrossSalary, p.TotalEarnings,
+                        p.TotalDeductions, p.NetSalary, p.SalaryDate, p.Status
+                    })
+                    .ToListAsync();
+
+                return rows.Select(p => new PayslipDto
+                {
+                    SalaryMonth = $"{MonthName(p.SalaryMonth)} {p.SalaryYear}",
+                    GrossSalary = p.GrossSalary,
+                    TotalAllowance = p.TotalEarnings,
+                    TotalDeduction = p.TotalDeductions,
+                    NetSalary = p.NetSalary,
+                    SalaryDate = p.SalaryDate,
+                    IsPaid = string.Equals(p.Status, "Paid", StringComparison.OrdinalIgnoreCase),
+                    PayslipUrl = ""
+                }).ToList();
+            }
+            catch (Exception)
+            {
+                return new List<PayslipDto>();
+            }
+        }
+
+        #endregion
+
+        #region Announcements
+
+        public async Task<List<AnnouncementDto>> GetAnnouncementsAsync()
+        {
+            try
+            {
+                var today = DateTime.UtcNow.Date;
+                var rows = await _context.Announcements.AsNoTracking()
+                    .Where(a => !a.IsDeleted && a.IsActive
+                             && a.PublishDate <= today
+                             && (a.ExpiryDate == null || a.ExpiryDate >= today))
+                    .OrderByDescending(a => a.PublishDate)
+                    .Take(10)
+                    .Select(a => new
+                    {
+                        a.Id, a.Title, a.Message, a.AnnouncementType, a.Priority,
+                        a.PublishDate, a.ExpiryDate, a.CompanyId, a.BranchId, a.TenantId, a.CreatedBy
+                    })
+                    .ToListAsync();
+
+                return rows.Select(a => new AnnouncementDto
+                {
+                    Id = a.Id,
+                    Title = a.Title,
+                    Message = a.Message,
+                    AnnouncementType = (int)a.AnnouncementType,
+                    TypeText = a.AnnouncementType.ToString(),
+                    Priority = (int)a.Priority,
+                    PriorityText = a.Priority.ToString(),
+                    PublishDate = a.PublishDate,
+                    ExpiryDate = a.ExpiryDate,
+                    CompanyId = a.CompanyId,
+                    BranchId = a.BranchId,
+                    TenantId = a.TenantId,
+                    CreatedBy = a.CreatedBy
+                }).ToList();
+            }
+            catch (Exception)
+            {
+                return new List<AnnouncementDto>();
+            }
+        }
+
+        #endregion
+
+        #region Upcoming Events
+
+        public async Task<List<EventDto>> GetUpcomingEventsAsync()
+        {
+            try
+            {
+                var today = DateTime.UtcNow.Date;
+                var rows = await _context.Events.AsNoTracking()
+                    .Where(e => !e.IsDeleted && e.StartDate >= today)
+                    .OrderBy(e => e.StartDate)
+                    .Take(10)
+                    .Select(e => new
+                    {
+                        e.Id, e.Title, e.Description, e.StartDate, e.EndDate,
+                        e.StartTime, e.EndTime, e.Location, e.EventType,
+                        e.CompanyId, e.BranchId, e.TenantId, e.CreatedBy
+                    })
+                    .ToListAsync();
+
+                return rows.Select(e => new EventDto
+                {
+                    Id = e.Id,
+                    Title = e.Title,
+                    Description = e.Description,
+                    StartDate = e.StartDate,
+                    EndDate = e.EndDate,
+                    StartTime = e.StartTime,
+                    EndTime = e.EndTime,
+                    Location = e.Location,
+                    EventType = (int)e.EventType,
+                    TypeText = e.EventType.ToString(),
+                    CompanyId = e.CompanyId,
+                    BranchId = e.BranchId,
+                    TenantId = e.TenantId,
+                    CreatedBy = e.CreatedBy
+                }).ToList();
+            }
+            catch (Exception)
+            {
+                return new List<EventDto>();
+            }
+        }
+
+        #endregion
+
+        #region Tasks
+
+        public async Task<List<TaskDto>> GetTasksAsync(string employeeId)
+        {
+            try
+            {
+                var rows = await _context.EmployeeTasks.AsNoTracking()
+                    .Where(t => t.EmployeeId == employeeId && !t.IsDeleted)
+                    .OrderBy(t => t.Status == "Completed")
+                    .ThenBy(t => t.DueDate)
+                    .Take(20)
+                    .Select(t => new
+                    {
+                        t.Title, t.Description, t.DueDate, t.Status, t.Priority
+                    })
+                    .ToListAsync();
+
+                return rows.Select(t => new TaskDto
+                {
+                    Id = 0,
+                    TaskName = t.Title,
+                    Description = t.Description,
+                    DueDate = t.DueDate ?? DateTime.MinValue,
+                    Status = t.Status,
+                    Priority = t.Priority,
+                    Progress = string.Equals(t.Status, "Completed", StringComparison.OrdinalIgnoreCase) ? 100
+                             : string.Equals(t.Status, "InProgress", StringComparison.OrdinalIgnoreCase) ? 50 : 0
+                }).ToList();
+            }
+            catch (Exception)
+            {
+                return new List<TaskDto>();
+            }
+        }
+
+        #endregion
+
+        #region Quick Links
+
+        public Task<List<QuickLinkDto>> GetQuickLinksAsync()
+        {
+            var links = new List<QuickLinkDto>
+            {
+                new() { Title = "Apply Leave",    Icon = "bi bi-calendar-plus", Url = "/LeaveApplication/Create", Color = "primary", DisplayOrder = 1 },
+                new() { Title = "My Profile",     Icon = "bi bi-person",        Url = "/Employee/Profile",        Color = "info",    DisplayOrder = 2 },
+                new() { Title = "Payslip",        Icon = "bi bi-cash-stack",    Url = "/Payroll",                 Color = "success", DisplayOrder = 3 },
+                new() { Title = "Documents",      Icon = "bi bi-folder",        Url = "/EmployeeDocument",        Color = "warning", DisplayOrder = 4 },
+                new() { Title = "My Tasks",       Icon = "bi bi-list-check",    Url = "/EmployeeTask",            Color = "secondary", DisplayOrder = 5 },
+                new() { Title = "Announcements",  Icon = "bi bi-megaphone",     Url = "/Announcement",            Color = "danger",  DisplayOrder = 6 }
+            };
+            return Task.FromResult(links);
+        }
+
+        #endregion
 
         #region Company-wide (announcements, events, holidays, birthdays, anniversaries)
 

@@ -13,5 +13,7 @@ namespace Application.Interfaces.Attendances
         Task<bool> UpdateAsync(BiometricDeviceDto dto);
         Task<bool> DeleteAsync(string id);
         Task<bool> TestConnectionAsync(string id);
+
+        Task<List<BiometricDeviceHealthDto>> GetHealthSummaryAsync();
     }
 }

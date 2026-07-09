@@ -79,5 +79,11 @@ namespace API.Controllers
                 await _service
                 .TestConnectionAsync(id));
         }
+
+        [HttpGet("health")]
+        public async Task<IActionResult> Health()
+        {
+            return Ok(await _service.GetHealthSummaryAsync());
+        }
     }
 }

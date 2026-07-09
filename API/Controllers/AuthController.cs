@@ -139,20 +139,29 @@ namespace API.Controllers
 
         #region CHANGE PASSWORD
 
+        // Any logged-in user (admin, HR, or self-service employee) can
+        // change their own password. [Authorize] + the UserId claim from the
+        // caller's own JWT (never the posted model.UserId) means a user can
+        // never change - or even attempt to brute-force - someone else's
+        // password through this endpoint.
+        [Authorize]
         [HttpPost("change-password")]
         public async Task<IActionResult> ChangePassword(ChangePAsswordDto model)
         {
-            bool result = await _authService.ChangePasswordAsync(
-                model.UserId,
+            var userId = User.FindFirst("UserId")?.Value;
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var result = await _authService.ChangePasswordAsync(
+                userId,
                 model.OldPassword,
                 model.NewPassword);
 
-            if (!result)
-            {
-                return NotFound();
-            }
+            if (!result.Success)
+                return BadRequest(new ApiResponse<object> { Success = false, Message = result.Message });
 
-            return Ok(result);
+            return Ok(new ApiResponse<object> { Success = true, Message = result.Message });
         }
 
         #endregion

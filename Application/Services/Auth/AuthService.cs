@@ -291,6 +291,7 @@ namespace Application.Services.Auth
                 ExpiresIn = Convert.ToInt32(_config["Jwt:ExpiryMinutes"]),
 
                 UserId = user.Id,
+                EmployeeId = user.EmployeeId,
                 TenantId = user.TenantId,
                 Username = user.Username,
 
@@ -583,41 +584,45 @@ namespace Application.Services.Auth
             }
         }
 
-        public async Task<bool> ChangePasswordAsync(string userId, string oldPassword, string newPassword)
+        public async Task<ChangePasswordResultDto> ChangePasswordAsync(string userId, string oldPassword, string newPassword)
         {
             try
             {
-            var user = await _db.Users
-            .FirstOrDefaultAsync(x => x.Id == userId);
+                if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 6)
+                    return new ChangePasswordResultDto { Success = false, Message = "New password must be at least 6 characters." };
 
-            if (user == null)
-                return false;
+                var user = await _db.Users
+                    .FirstOrDefaultAsync(x => x.Id == userId);
 
-            // ================================
-            // VERIFY PASSWORD
-            // ================================
+                if (user == null)
+                    return new ChangePasswordResultDto { Success = false, Message = "User not found." };
 
-            var oldHash = BCrypt.Net.BCrypt.Verify(
-                oldPassword,
-                user.PasswordHash);
+                // ================================
+                // VERIFY CURRENT PASSWORD
+                // ================================
+                // BCrypt.Verify returns true when oldPassword matches the
+                // stored hash - the change must only proceed in that case
+                // (this was previously inverted, which rejected every
+                // correct password and silently allowed wrong ones through).
+                bool oldPasswordMatches = BCrypt.Net.BCrypt.Verify(
+                    oldPassword,
+                    user.PasswordHash);
 
-            if (oldHash)
-                return false;
+                if (!oldPasswordMatches)
+                    return new ChangePasswordResultDto { Success = false, Message = "Current password is incorrect." };
 
-            string passwordHash =
-                    BCrypt.Net.BCrypt.HashPassword(
-                        newPassword,
-                        workFactor: 12);
+                if (BCrypt.Net.BCrypt.Verify(newPassword, user.PasswordHash))
+                    return new ChangePasswordResultDto { Success = false, Message = "New password must be different from the current password." };
 
-            user.PasswordHash = passwordHash;
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword, workFactor: 12);
 
-            await _db.SaveChangesAsync();
+                await _db.SaveChangesAsync();
 
-            return true;
+                return new ChangePasswordResultDto { Success = true, Message = "Password changed successfully." };
             }
             catch (Exception)
             {
-                return false;
+                return new ChangePasswordResultDto { Success = false, Message = "Something went wrong while changing the password." };
             }
         }
     }

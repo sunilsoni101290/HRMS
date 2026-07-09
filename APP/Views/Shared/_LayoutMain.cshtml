@@ -181,7 +181,10 @@
 								<a asp-action="Details" asp-controller="Auth"
 								   asp-route-id="@userId"><i class="icon-user-plus"></i> My profile</a>
 							</li>
-							<li><a href="#"><i class="icon-cog5"></i> Account settings</a></li>
+							<li>
+								<a asp-controller="Auth"
+								   asp-action="ChangePassword"><i class="icon-lock"></i> Change Password</a>
+							</li>
 							<li>
 								<a asp-controller="Auth"
 								   asp-action="Logout"><i class="icon-switch2"></i> Logout</a>

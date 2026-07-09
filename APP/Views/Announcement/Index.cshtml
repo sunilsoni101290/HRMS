@@ -2,6 +2,7 @@
 
 @{
     ViewData["Title"] = "Announcements";
+    bool isAdmin = ViewBag.IsAdmin ?? true;
 
     string TypeLabel(int t) => t switch
     {
@@ -19,9 +20,12 @@
 
     <div class="panel-heading">
         <h5 class="panel-title"><i class="icon-bullhorn position-left"></i> Announcements</h5>
-        <div class="heading-elements">
-            <a asp-action="Create" class="btn bg-primary"><i class="icon-plus22"></i> New Announcement</a>
-        </div>
+        @if (isAdmin)
+        {
+            <div class="heading-elements">
+                <a asp-action="Create" class="btn bg-primary"><i class="icon-plus22"></i> New Announcement</a>
+            </div>
+        }
     </div>
 
     <div class="panel-body">
@@ -69,10 +73,13 @@
                             <td>
                                 <div class="btn-group">
                                     <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-default btn-icon" title="View"><i class="icon-eye"></i></a>
-                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary btn-icon" title="Edit"><i class="icon-pencil7"></i></a>
-                                    <a asp-action="Delete" asp-route-id="@item.Id"
-                                       onclick="return confirm('Delete this announcement?');"
-                                       class="btn btn-danger btn-icon" title="Delete"><i class="icon-trash"></i></a>
+                                    @if (isAdmin)
+                                    {
+                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary btn-icon" title="Edit"><i class="icon-pencil7"></i></a>
+                                        <a asp-action="Delete" asp-route-id="@item.Id"
+                                           onclick="return confirm('Delete this announcement?');"
+                                           class="btn btn-danger btn-icon" title="Delete"><i class="icon-trash"></i></a>
+                                    }
                                 </div>
                             </td>
                         </tr>

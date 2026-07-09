@@ -1,0 +1,212 @@
+@using APP.Helpers
+
+@{
+    var employeeName = SessionHelper.GetActiveFullName;
+    var designation = SessionHelper.GetActiveDesignation;
+    var employeeId = SessionHelper.GetActiveEmployeeId;
+
+    employeeName = string.IsNullOrWhiteSpace(employeeName) ? "Employee" : employeeName;
+    designation = string.IsNullOrWhiteSpace(designation) ? "" : designation;
+
+    // Dynamic profile photo - fetched once in _EmployeeLayout.cshtml from the
+    // employee's real record. Falls back to the theme's generic placeholder
+    // (never a missing/broken image) when no photo has been uploaded.
+    var photoUrl = ViewData["EmployeePhotoUrl"] as string;
+    var photoSrc = string.IsNullOrWhiteSpace(photoUrl)
+        ? Url.Content("~/global_assets/images/placeholders/placeholder.jpg")
+        : Url.Content(photoUrl);
+
+    string currentPath = Context.Request.Path.Value?.ToLower() ?? "";
+    bool IsActive(string controller, string action) =>
+        currentPath.StartsWith(Url.Content($"~/{controller}/{action}").ToLower());
+    bool attendanceActive = IsActive("Attendance", "Create") || IsActive("Attendance", "MyAttendance");
+    bool leaveActive = IsActive("LeaveApplication", "Create") || IsActive("LeaveApplication", "EmployeeLeaves");
+}
+
+<div class="sidebar sidebar-main">
+
+    <div class="sidebar-content">
+
+        <!-- Employee Card -->
+
+        <div class="employee-sidebar-card">
+
+            <img src="@photoSrc" class="img-circle" alt="@employeeName" />
+
+            <h5>@employeeName</h5>
+
+            @if (!string.IsNullOrEmpty(designation))
+            {
+                <span>@designation</span>
+            }
+
+        </div>
+
+        <!-- Navigation -->
+
+        <div class="sidebar-category sidebar-category-visible">
+
+            <div class="category-content no-padding">
+
+                <ul class="navigation navigation-main navigation-accordion">
+
+                    <li class="navigation-header">
+                        <span>MAIN MENU</span>
+                        <i class="icon-menu"></i>
+                    </li>
+
+                    <li class="@(IsActive("EmployeeDashboard", "Index") ? "active" : "")">
+                        <a asp-controller="EmployeeDashboard"
+                           asp-action="Index">
+                            <i class="icon-home4"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+
+                    <li class="@(IsActive("Employee", "Details") ? "active" : "")">
+                        <a asp-controller="Employee"
+                           asp-action="Details"
+                           asp-route-id="@employeeId">
+                            <i class="icon-user"></i>
+                            <span>My Profile</span>
+                        </a>
+                    </li>
+
+                    <!-- Attendance -->
+
+                    <li class="has-children @(attendanceActive ? "active" : "")">
+
+                        <a href="#">
+
+                            <i class="icon-alarm"></i>
+
+                            <span>Attendance</span>
+
+                        </a>
+
+                        <ul style="@(attendanceActive ? "display:block;" : "")">
+
+                            <li class="@(IsActive("Attendance", "Create") ? "active" : "")">
+
+                                <a asp-controller="Attendance"
+                                   asp-action="Create">
+
+                                    Punch In / Out
+
+                                </a>
+
+                            </li>
+
+                            <li class="@(IsActive("Attendance", "MyAttendance") ? "active" : "")">
+
+                                <a asp-controller="Attendance"
+                                   asp-action="MyAttendance">
+
+                                    My Attendance History
+
+                                </a>
+
+                            </li>
+
+                        </ul>
+
+                    </li>
+
+                    <!-- Leave -->
+
+                    <li class="has-children @(leaveActive ? "active" : "")">
+
+                        <a href="#">
+
+                            <i class="icon-calendar3"></i>
+
+                            <span>Leave</span>
+
+                        </a>
+
+                        <ul style="@(leaveActive ? "display:block;" : "")">
+
+                            <li class="@(IsActive("LeaveApplication", "Create") ? "active" : "")">
+
+                                <a asp-controller="LeaveApplication"
+                                   asp-action="Create">
+
+                                    Apply Leave
+
+                                </a>
+
+                            </li>
+
+                            <li class="@(IsActive("LeaveApplication", "EmployeeLeaves") ? "active" : "")">
+
+                                <a asp-controller="LeaveApplication"
+                                   asp-action="EmployeeLeaves"
+                                   asp-route-employeeId="@employeeId">
+
+                                    My Leave History
+
+                                </a>
+
+                            </li>
+
+                        </ul>
+
+                    </li>
+
+                    <li class="@(IsActive("Payroll", "MyPayslips") ? "active" : "")">
+                        <a asp-controller="Payroll"
+                           asp-action="MyPayslips">
+                            <i class="icon-cash3"></i>
+                            <span>My Payslip</span>
+                        </a>
+                    </li>
+
+                    <li class="@(IsActive("EmployeeDocument", "MyDocuments") ? "active" : "")">
+                        <a asp-controller="EmployeeDocument"
+                           asp-action="MyDocuments">
+                            <i class="icon-folder-open"></i>
+                            <span>My Documents</span>
+                        </a>
+                    </li>
+
+                    <li class="@(IsActive("EmployeeTask", "MyTasks") ? "active" : "")">
+                        <a asp-controller="EmployeeTask"
+                           asp-action="MyTasks">
+                            <i class="icon-checkmark-circle"></i>
+                            <span>My Tasks</span>
+                        </a>
+                    </li>
+
+                    <li class="@(IsActive("Announcement", "Index") ? "active" : "")">
+                        <a asp-controller="Announcement"
+                           asp-action="Index">
+                            <i class="icon-megaphone"></i>
+                            <span>Announcements</span>
+                        </a>
+                    </li>
+
+                    <li class="@(IsActive("Event", "Index") ? "active" : "")">
+                        <a asp-controller="Event"
+                           asp-action="Index">
+                            <i class="icon-gift"></i>
+                            <span>Events</span>
+                        </a>
+                    </li>
+
+                    <li class="@(IsActive("Notification", "Index") ? "active" : "")">
+                        <a asp-controller="Notification"
+                           asp-action="Index">
+                            <i class="icon-bell2"></i>
+                            <span>Notifications</span>
+                        </a>
+                    </li>
+
+                </ul>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

@@ -1,4 +1,5 @@
-﻿using Application.Interfaces.Attendances;
+﻿using Application.DTOs.Attendances;
+using Application.Interfaces.Attendances;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -19,6 +20,29 @@ namespace API.Controllers
         {
             _service = service;
             _processor = processor;
+        }
+
+        /// <summary>
+        /// Called by the on-site BiometricAgent (running on a machine at the
+        /// client's location, on the same LAN as the biometric device) to push
+        /// newly collected punches. Authenticated via DeviceCode + DeviceKey in
+        /// the body rather than a user JWT, since the agent is not a logged-in
+        /// user. Still requires the X-Tenant-ID header (see TenantMiddleware).
+        /// </summary>
+        [HttpPost("ingest")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Ingest(
+            [FromBody] PunchIngestRequestDto request)
+        {
+            var result = await _service.IngestPunchesAsync(request);
+
+            if (!result.Success)
+                return Unauthorized(result);
+
+            if (result.InsertedCount > 0)
+                await _processor.ProcessAttendanceAsync();
+
+            return Ok(result);
         }
 
         [HttpPost("sync/{deviceId}")]

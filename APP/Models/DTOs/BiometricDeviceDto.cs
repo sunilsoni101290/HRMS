@@ -56,6 +56,20 @@ namespace APP.Models.DTOs
 
         [Display(Name = "Active")]
         public bool IsActive { get; set; }
+
+        [Display(Name = "Serial Number")]
+        public string? SerialNumber { get; set; }
+
+        [Display(Name = "Last Sync")]
+        public DateTime? LastSyncDate { get; set; }
+
+        /// <summary>
+        /// Auto-generated secret the BiometricAgent uses to authenticate
+        /// punch pushes. Only meaningful to display right after Create.
+        /// </summary>
+        [Display(Name = "Device Key")]
+        public string? DeviceKey { get; set; }
+
         public string CreatedBy { get; set; }
         public DateTime? ModifiedOn { get; set; }
         public string? ModifiedBy { get; set; }

@@ -27,6 +27,9 @@ namespace Application.DTOs.Auth
 
         public string UserId { get; set; }
 
+        /// <summary>Linked Employee record, if this login account is tied to one (empty for pure admin/system accounts).</summary>
+        public string? EmployeeId { get; set; }
+
         public string TenantId { get; set; }
         public string CompanyName { get; set; }
         public string CompanyId { get; set; }

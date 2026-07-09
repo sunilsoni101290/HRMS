@@ -1,0 +1,96 @@
+@model IEnumerable<PayrollListDto>
+
+@{
+    ViewData["Title"] = "My Payslips";
+
+    string StatusLabel(string? s) => s switch
+    {
+        "Draft" => "bg-grey",
+        "Processed" => "bg-primary",
+        "Paid" => "bg-success",
+        _ => "bg-info"
+    };
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-cash3 position-left"></i> My Payslips
+        </h5>
+    </div>
+
+    @if (ViewBag.NoEmployeeProfile == true)
+    {
+        <div class="panel-body">
+            <div class="alert alert-warning">
+                Your login isn't linked to an employee profile, so there are no payslips to show.
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover table-striped">
+                <thead>
+                    <tr>
+                        <th width="50">#</th>
+                        <th>Period</th>
+                        <th class="text-center">Present / Working</th>
+                        <th class="text-right">Gross</th>
+                        <th class="text-right">Net</th>
+                        <th>Status</th>
+                        <th width="120">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{ int sr = 1; }
+                    @if (Model != null && Model.Any())
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>@sr</td>
+                                <td>@item.MonthName @item.SalaryYear</td>
+                                <td class="text-center">
+                                    @(item.PresentDays?.ToString("0.#") ?? "-") / @(item.TotalWorkingDays?.ToString("0.#") ?? "-")
+                                </td>
+                                <td class="text-right">₹ @item.GrossSalary.ToString("N2")</td>
+                                <td class="text-right"><strong>₹ @item.NetSalary.ToString("N2")</strong></td>
+                                <td><span class="label @StatusLabel(item.Status)">@item.Status</span></td>
+                                <td>
+                                    <a asp-action="Payslip" asp-route-id="@item.Id" target="_blank" class="btn btn-info btn-icon" title="View Payslip">
+                                        <i class="icon-file-text2"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            sr++;
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center text-muted" style="padding:30px;">
+                                <i class="icon-cash3" style="font-size:32px;"></i><br />
+                                No payslips yet.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    <style>
+        .table > thead > tr > th { font-weight: 600; }
+        .table > tbody > tr > td { vertical-align: middle; }
+        .label { font-size: 11px; }
+        .btn-icon { width: 34px; }
+    </style>
+}

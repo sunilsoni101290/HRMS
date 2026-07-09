@@ -1,7 +1,8 @@
 @model IEnumerable<EmployeeTaskListDto>
 
 @{
-    ViewData["Title"] = "Tasks";
+    ViewData["Title"] = ViewBag.ListTitle ?? "Tasks";
+    bool isAdmin = ViewBag.IsAdmin ?? true;
 
     string StatusLabel(string s) => s switch
     {
@@ -22,10 +23,13 @@
 <div class="panel panel-flat">
 
     <div class="panel-heading">
-        <h5 class="panel-title"><i class="icon-checkmark-circle position-left"></i> Tasks</h5>
-        <div class="heading-elements">
-            <a asp-action="Create" class="btn bg-primary"><i class="icon-plus22"></i> New Task</a>
-        </div>
+        <h5 class="panel-title"><i class="icon-checkmark-circle position-left"></i> @ViewData["Title"]</h5>
+        @if (isAdmin)
+        {
+            <div class="heading-elements">
+                <a asp-action="Create" class="btn bg-primary"><i class="icon-plus22"></i> New Task</a>
+            </div>
+        }
     </div>
 
     <div class="panel-body">
@@ -46,7 +50,8 @@
                     <th>Due Date</th>
                     <th>Priority</th>
                     <th>Status</th>
-                    <th width="260">Action</th>
+                    <th>Remarks</th>
+                    <th width="@(isAdmin ? "230" : "140")">Action</th>
                 </tr>
             </thead>
             <tbody id="dataTable">
@@ -62,27 +67,70 @@
                             <td>@(item.DueDate?.ToString("dd MMM yyyy") ?? "-")</td>
                             <td><span class="label @PriorityLabel(item.Priority)">@item.Priority</span></td>
                             <td><span class="label @StatusLabel(item.Status)">@item.Status</span></td>
+                            <td class="text-muted text-size-small">@(string.IsNullOrWhiteSpace(item.Remarks) ? "-" : item.Remarks)</td>
                             <td>
                                 @if (item.Status != "Completed")
                                 {
-                                    <form asp-action="ChangeStatus" asp-route-id="@item.Id" method="post" style="display:inline;">
-                                        <input type="hidden" name="status" value="Completed" />
-                                        <button type="submit" class="btn btn-success btn-icon" title="Complete"><i class="icon-checkmark3"></i></button>
-                                    </form>
+                                    <button type="button"
+                                            class="btn btn-primary btn-icon"
+                                            title="Update Status &amp; Remarks"
+                                            data-toggle="modal"
+                                            data-target="#statusModal-@item.Id">
+                                        <i class="icon-pencil7"></i>
+                                    </button>
                                 }
                                 <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-default btn-icon" title="View"><i class="icon-eye"></i></a>
-                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary btn-icon" title="Edit"><i class="icon-pencil7"></i></a>
-                                <a asp-action="Delete" asp-route-id="@item.Id"
-                                   onclick="return confirm('Delete this task?');"
-                                   class="btn btn-danger btn-icon" title="Delete"><i class="icon-trash"></i></a>
+                                @if (isAdmin)
+                                {
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-default btn-icon" title="Edit"><i class="icon-pencil"></i></a>
+                                    <a asp-action="Delete" asp-route-id="@item.Id"
+                                       onclick="return confirm('Delete this task?');"
+                                       class="btn btn-danger btn-icon" title="Delete"><i class="icon-trash"></i></a>
+                                }
                             </td>
                         </tr>
+
+                        @if (item.Status != "Completed")
+                        {
+                            <!-- Update Status & Remarks modal -->
+                            <div class="modal fade" id="statusModal-@item.Id" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <form asp-action="ChangeStatus" asp-route-id="@item.Id" method="post">
+                                            <div class="modal-header">
+                                                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                                                <h5 class="modal-title">Update Status - @item.Title</h5>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="form-group">
+                                                    <label>Status</label>
+                                                    <select name="status" class="form-control">
+                                                        <option value="Pending" selected="@(item.Status == "Pending")">Pending</option>
+                                                        <option value="InProgress" selected="@(item.Status == "InProgress")">In Progress</option>
+                                                        <option value="Completed">Completed</option>
+                                                    </select>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Remarks</label>
+                                                    <textarea name="remarks" rows="3" maxlength="500" class="form-control" placeholder="Optional note, e.g. waiting on approval...">@item.Remarks</textarea>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn bg-primary">Save</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+
                         sr++;
                     }
                 }
                 else
                 {
-                    <tr><td colspan="7" class="text-center text-muted" style="padding:30px;"><i class="icon-checkmark-circle" style="font-size:32px;"></i><br />No tasks found.</td></tr>
+                    <tr><td colspan="8" class="text-center text-muted" style="padding:30px;"><i class="icon-checkmark-circle" style="font-size:32px;"></i><br />No tasks found.</td></tr>
                 }
             </tbody>
         </table>

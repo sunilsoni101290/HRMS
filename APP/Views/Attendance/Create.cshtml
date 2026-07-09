@@ -22,6 +22,15 @@
 
     <div class="panel-body">
 
+        @if (ViewBag.NoEmployeeProfile == true)
+        {
+            <div class="alert alert-danger">
+                <i class="icon-cross2 position-left"></i>
+                Your login isn't linked to an employee profile, so attendance can't be punched from this account.
+                Contact your admin to link an employee record to your user account.
+            </div>
+        }
+
         <!-- Status Summary -->
 
         <div class="row">
@@ -66,6 +75,8 @@
 
         <form asp-action="SavePunch" method="post">
 
+            <input asp-for="EmployeeId" type="hidden" />
+
             <fieldset>
 
                 <legend class="text-semibold">
@@ -81,16 +92,11 @@
 
                             <label>Employee</label>
 
-                            <select asp-for="EmployeeId"
-                                    asp-items="ViewBag.EmployeeList"
-                                    class="form-control"
-                                    id="EmployeeId">
-
-                                <option value="">
-                                    -- Select Employee --
-                                </option>
-
-                            </select>
+                            <p class="form-control-static">
+                                <i class="icon-user2 position-left"></i>
+                                <strong>@ViewBag.EmployeeDisplayName</strong>
+                                <span class="text-muted">(punching in as yourself)</span>
+                            </p>
 
                         </div>
 
@@ -272,32 +278,23 @@
             // Hide buttons initially
             $("#ActionButtons").empty();
 
-            // Employee Change Event
-            $("#EmployeeId").change(function () {
+            @if (ViewBag.NoEmployeeProfile == true)
+            {
+                <text>
+                // No linked employee - nothing to load, buttons stay hidden.
+                return;
+                </text>
+            }
 
-                let employeeId = $(this).val();
+            loadMyStatus();
 
-                // No employee selected
-                if (!employeeId) {
-
-                    $("#CurrentStatus").text("-");
-                    $("#FirstIn").text("-");
-                    $("#WorkingHours").text("0");
-                    $("#BreakHours").text("0");
-
-                    // Hide all buttons
-                    $("#ActionButtons").empty();
-
-                    return;
-                }
+            function loadMyStatus() {
 
                 $.ajax({
 
-                    url: '@Url.Action("GetEmployeeAttendanceStatus", "Attendance")',
+                    url: '@Url.Action("GetMyAttendanceStatus", "Attendance")',
 
                     type: 'GET',
-
-                    data: { employeeId: employeeId },
 
                     success: function (response) {
 
@@ -416,10 +413,7 @@
 
                 });
 
-            });
-
-            // Trigger once on page load
-            $("#EmployeeId").trigger("change");
+            }
 
         });
 

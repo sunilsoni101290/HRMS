@@ -28,6 +28,11 @@ namespace Domain.Entities
 
         public DateTime? CompletedDate { get; set; }
 
+        // Free-text note the assigned employee (or admin/HR) can attach when
+        // updating the task status - e.g. "waiting on approval from finance".
+        [MaxLength(500)]
+        public string? Remarks { get; set; }
+
         public string CompanyId { get; set; }
         public string? BranchId { get; set; }
 

@@ -1,12 +1,16 @@
 ﻿@model IEnumerable<LeaveApplicationDto>
 
+@{
+    bool isAdmin = ViewBag.IsAdmin ?? true;
+}
+
 <div class="panel panel-flat">
 
     <div class="panel-heading">
 
         <h5 class="panel-title">
             <i class="icon-calendar3 position-left"></i>
-            Leave Application Management
+            @(ViewBag.ListTitle ?? "Leave Application Management")
         </h5>
 
         <div class="heading-elements">
@@ -93,35 +97,38 @@
 
                             @if (item.Status == EnumExtensions.ApprovalStatus.Pending)
                             {
-                                <a asp-action="Edit"
-                                   asp-route-id="@item.Id"
-                                   class="btn btn-primary btn-icon"
-                                   data-popup="tooltip"
-                                   title="Edit">
+                                @if (isAdmin)
+                                {
+                                    <a asp-action="Edit"
+                                       asp-route-id="@item.Id"
+                                       class="btn btn-primary btn-icon"
+                                       data-popup="tooltip"
+                                       title="Edit">
 
-                                    <i class="icon-pencil7"></i>
+                                        <i class="icon-pencil7"></i>
 
-                                </a>
+                                    </a>
 
-                                <button type="button"
-                                        class="btn btn-success btn-icon btnApprove"
-                                        data-id="@item.Id"
-                                        data-popup="tooltip"
-                                        title="Approve">
+                                    <button type="button"
+                                            class="btn btn-success btn-icon btnApprove"
+                                            data-id="@item.Id"
+                                            data-popup="tooltip"
+                                            title="Approve">
 
-                                    <i class="icon-checkmark4"></i>
+                                        <i class="icon-checkmark4"></i>
 
-                                </button>
+                                    </button>
 
-                                <button type="button"
-                                        class="btn btn-danger btn-icon btnReject"
-                                        data-id="@item.Id"
-                                        data-popup="tooltip"
-                                        title="Reject">
+                                    <button type="button"
+                                            class="btn btn-danger btn-icon btnReject"
+                                            data-id="@item.Id"
+                                            data-popup="tooltip"
+                                            title="Reject">
 
-                                    <i class="icon-cross2"></i>
+                                        <i class="icon-cross2"></i>
 
-                                </button>
+                                    </button>
+                                }
 
                                 <button type="button"
                                         class="btn bg-warning btn-icon btnCancel"
@@ -133,16 +140,19 @@
 
                                 </button>
                             }
-                            <a asp-action="ApprovalHistory"
-                               asp-controller="LeaveApprovalHistory"
-                               asp-route-leaveApplicationId="@item.Id"
-                               class="btn btn-primary btn-icon"
-                               data-popup="tooltip"
-                               title="Approval History">
+                            @if (isAdmin)
+                            {
+                                <a asp-action="ApprovalHistory"
+                                   asp-controller="LeaveApprovalHistory"
+                                   asp-route-leaveApplicationId="@item.Id"
+                                   class="btn btn-primary btn-icon"
+                                   data-popup="tooltip"
+                                   title="Approval History">
 
-                                <i class="icon-history"></i>
+                                    <i class="icon-history"></i>
 
-                            </a>
+                                </a>
+                            }
                         </div>
 
                     </td>
@@ -195,10 +205,11 @@
     </script>
     <script>
 
-        // Search Table
+        // Search Table (not rendered for self-service users)
 
-        document.getElementById("searchInput")
-            .addEventListener("keyup", function () {
+        var searchInputEl = document.getElementById("searchInput");
+        if (searchInputEl) {
+            searchInputEl.addEventListener("keyup", function () {
 
                 let value = this.value.toLowerCase();
 
@@ -214,6 +225,7 @@
                 });
 
             });
+        }
 
 
         $(document).ready(function () {

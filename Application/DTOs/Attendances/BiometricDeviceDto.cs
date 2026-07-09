@@ -28,6 +28,16 @@ namespace Application.DTOs.Attendances
 
         public string? Password { get; set; }
 
+        public string? SerialNumber { get; set; }
+
+        public DateTime? LastSyncDate { get; set; }
+
+        /// <summary>
+        /// Shared secret the on-site BiometricAgent sends when pushing punches
+        /// to /api/BiometricSync/ingest. Auto-generated on create if left blank.
+        /// </summary>
+        public string? DeviceKey { get; set; }
+
         public bool IsActive { get; set; }
 
         public string CreatedBy { get; set; }

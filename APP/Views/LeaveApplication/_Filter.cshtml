@@ -1,21 +1,33 @@
 ﻿@model LeaveApplicationFilterRequestDto
 
+@using APP.Helpers
+
+@{
+    // Employee search/filter only makes sense on the org-wide admin list -
+    // "My Leave History" already scopes to one employee, so showing a
+    // "search employee" box or an employee picker there would be pointless
+    // (and could invite trying to view someone else's history).
+    bool isAdmin = ViewBag.IsAdmin ?? true;
+}
 
 <!-- Row 1 -->
 <div class="row">
 
-    <div class="col-md-3">
-        <input type="text" id="searchInput"
-               class="form-control"
-               placeholder="Search Employee..." />
-    </div>
+    @if (isAdmin)
+    {
+        <div class="col-md-3">
+            <input type="text" id="searchInput"
+                   class="form-control"
+                   placeholder="Search Employee..." />
+        </div>
 
-    <div class="col-md-3">
-        <select asp-for="EmployeeId"
-                asp-items="ViewBag.EmployeeList" class="form-control" id="EmployeeId">
-            <option value="">All Employees</option>
-        </select>
-    </div>
+        <div class="col-md-3">
+            <select asp-for="EmployeeId"
+                    asp-items="ViewBag.EmployeeList" class="form-control" id="EmployeeId">
+                <option value="">All Employees</option>
+            </select>
+        </div>
+    }
 
     <div class="col-md-3">
         <select asp-for="LeaveTypeId"
@@ -57,11 +69,23 @@
             Filter
         </button>
 
-        <a asp-action="Index"
-           class="btn bg-grey">
-            <i class="icon-reset position-left"></i>
-            Reset
-        </a>
+        @if (isAdmin)
+        {
+            <a asp-action="Index"
+               class="btn bg-grey">
+                <i class="icon-reset position-left"></i>
+                Reset
+            </a>
+        }
+        else
+        {
+            <a asp-action="EmployeeLeaves"
+               asp-route-employeeId="@SessionHelper.GetActiveEmployeeId"
+               class="btn bg-grey">
+                <i class="icon-reset position-left"></i>
+                Reset
+            </a>
+        }
 
     </div>
 

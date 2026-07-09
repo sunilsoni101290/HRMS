@@ -13,10 +13,19 @@ namespace Application.DTOs.Auth
 
     public class ChangePAsswordDto
     {
+        // Kept for backward compatibility with any older caller, but the API
+        // ignores this and always resolves the target user from the caller's
+        // own JWT claims - a user can only ever change their own password.
         public string UserId { get; set; }
         public string OldPassword { get; set; }
         public string NewPassword { get; set; }
-    } 
+    }
+
+    public class ChangePasswordResultDto
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = "";
+    }
     public class UserListDto
     {
         public string Id { get; set; }

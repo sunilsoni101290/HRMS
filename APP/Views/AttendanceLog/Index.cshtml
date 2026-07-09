@@ -3,6 +3,18 @@
 
 @{
     ViewData["Title"] = "Attendance Logs";
+
+    var logs = Model?.ToList() ?? new List<AttendanceLogDto>();
+
+    var totalPunchIn = logs.Count(x => x.PunchType == "In");
+    var totalPunchOut = logs.Count(x => x.PunchType == "Out");
+    var manualEntries = logs.Count(x => x.IsManual);
+
+    var deviceCount = logs
+        .Where(x => !string.IsNullOrEmpty(x.DeviceId))
+        .Select(x => x.DeviceId)
+        .Distinct()
+        .Count();
 }
 
 <div class="panel panel-flat">
@@ -32,7 +44,7 @@
             <div class="col-md-3">
                 <div class="panel bg-success-400">
                     <div class="panel-body text-center">
-                        <h3 class="no-margin">248</h3>
+                        <h3 class="no-margin">@totalPunchIn</h3>
                         <span>Total Punch In</span>
                     </div>
                 </div>
@@ -41,7 +53,7 @@
             <div class="col-md-3">
                 <div class="panel bg-danger-400">
                     <div class="panel-body text-center">
-                        <h3 class="no-margin">230</h3>
+                        <h3 class="no-margin">@totalPunchOut</h3>
                         <span>Total Punch Out</span>
                     </div>
                 </div>
@@ -50,7 +62,7 @@
             <div class="col-md-3">
                 <div class="panel bg-warning-400">
                     <div class="panel-body text-center">
-                        <h3 class="no-margin">12</h3>
+                        <h3 class="no-margin">@manualEntries</h3>
                         <span>Manual Entries</span>
                     </div>
                 </div>
@@ -59,7 +71,7 @@
             <div class="col-md-3">
                 <div class="panel bg-info-400">
                     <div class="panel-body text-center">
-                        <h3 class="no-margin">5</h3>
+                        <h3 class="no-margin">@deviceCount</h3>
                         <span>Devices</span>
                     </div>
                 </div>
@@ -167,7 +179,11 @@
 
                     </td>
 
-                    <td>@item.DeviceType</td>
+                    <td>
+                        @(!string.IsNullOrEmpty(item.DeviceName)
+                            ? item.DeviceName
+                            : item.DeviceType)
+                    </td>
 
                     <td>@item.OS</td>
 

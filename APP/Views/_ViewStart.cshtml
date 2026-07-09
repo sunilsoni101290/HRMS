@@ -1,3 +1,14 @@
-﻿@{
-    Layout = "_LayoutMain";
+﻿@using APP.Helpers
+@{
+    // Views are shared between the admin/HR DB-driven menu and the employee
+    // self-service portal (LeaveApplication/Create, Attendance/Create,
+    // EmployeeDocument, EmployeeTask, Employee/Details, etc.). Which chrome
+    // wraps them must depend on who is logged in - not be hardcoded to the
+    // admin layout - otherwise every self-service action (Apply Leave, Punch
+    // In/Out, My Profile, Documents, Tasks...) visually dumps the employee
+    // back into the Admin/HR shell instead of staying inside their own
+    // Employee Dashboard portal.
+    Layout = SessionHelper.IsAdminRole()
+        ? "_LayoutMain"
+        : "~/Views/Shared/EmployeeLayout/_EmployeeLayout.cshtml";
 }
