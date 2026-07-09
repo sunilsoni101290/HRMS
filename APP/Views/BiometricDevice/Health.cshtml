@@ -1,0 +1,142 @@
+@model List<BiometricDeviceHealthDto>
+
+@{
+    ViewData["Title"] = "Biometric Device Health";
+
+    var devices = Model ?? new List<BiometricDeviceHealthDto>();
+    var onlineCount = devices.Count(x => x.IsOnline);
+    var offlineCount = devices.Count(x => x.IsActive && !x.IsOnline);
+    var pendingTotal = devices.Sum(x => x.PendingPunchCount);
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-meter position-left"></i>
+            Biometric Device Health
+        </h5>
+
+        <div class="heading-elements">
+            <a asp-action="Index" class="btn btn-default btn-sm">
+                <i class="icon-arrow-left13 position-left"></i>
+                Back to Devices
+            </a>
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <p class="text-muted">
+            A device counts as <strong>Online</strong> when it's Active and has synced
+            (via the BiometricAgent pushing to /api/BiometricSync/ingest, or a manual Sync Now)
+            within the last 15 minutes. <strong>Pending</strong> punches are raw logs received
+            but not yet turned into Attendance records - a growing pending count with no recent
+            sync usually means AttendanceProcessorService hasn't run, or the punch's biometric
+            code has no EmployeeBiometricMapping.
+        </p>
+
+        <div class="row">
+
+            <div class="col-md-4">
+                <div class="panel bg-success-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">@onlineCount</h3>
+                        <span>Online</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="panel bg-danger-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">@offlineCount</h3>
+                        <span>Offline / Not Synced</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="panel bg-warning-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">@pendingTotal</h3>
+                        <span>Pending Punches (all devices)</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <table class="table table-hover">
+
+            <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>Device Name</th>
+                    <th>Code</th>
+                    <th>IP Address</th>
+                    <th>Last Sync</th>
+                    <th>Total Punches</th>
+                    <th>Pending</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @foreach (var item in devices)
+                {
+                    <tr>
+                        <td>
+                            @if (!item.IsActive)
+                            {
+                                <span class="label label-default">Disabled</span>
+                            }
+                            else if (item.IsOnline)
+                            {
+                                <span class="label label-success">Online</span>
+                            }
+                            else
+                            {
+                                <span class="label label-danger">Offline</span>
+                            }
+                        </td>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@item.DeviceId">@item.DeviceName</a>
+                        </td>
+                        <td>@item.DeviceCode</td>
+                        <td>@item.IPAddress</td>
+                        <td>
+                            @(item.LastSyncDate.HasValue
+                                ? item.LastSyncDate.Value.ToString("g")
+                                : "Never")
+                        </td>
+                        <td>@item.TotalPunchCount</td>
+                        <td>
+                            @if (item.PendingPunchCount > 0)
+                            {
+                                <span class="label label-warning">@item.PendingPunchCount</span>
+                            }
+                            else
+                            {
+                                <span>0</span>
+                            }
+                        </td>
+                    </tr>
+                }
+
+                @if (!devices.Any())
+                {
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">No biometric devices configured yet.</td>
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>

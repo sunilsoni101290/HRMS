@@ -16,6 +16,13 @@ namespace APP.Controllers
         private readonly IApiService _apiService;
         private string _tenantId;
         private string _userId;
+        private readonly string? _employeeId;
+
+        // Uploading, editing, deleting, and verifying documents is an
+        // Admin/HR function only. A plain employee may view and download
+        // their own documents but nothing more - enforced server-side here,
+        // not just by hiding buttons in the view.
+        private readonly bool _isAdmin;
 
         private static readonly string[] AllowedExtensions =
             { ".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx", ".xls", ".xlsx" };
@@ -25,15 +32,44 @@ namespace APP.Controllers
             _apiService = apiService;
             _tenantId = SessionHelper.GetActiveTenantId;
             _userId = SessionHelper.GetActiveUserId;
+            _employeeId = SessionHelper.GetActiveEmployeeId;
+            _isAdmin = SessionHelper.IsAdminRole();
         }
 
         #region Index / Details
 
         public async Task<IActionResult> Index()
         {
+            ViewBag.IsAdmin = _isAdmin;
             var model = await _apiService
                 .GetAsync<List<EmployeeDocumentDto>>("EmployeeDocument");
             return View(model);
+        }
+
+        /// <summary>
+        /// Self-service "my documents" list - reuses the Index view but
+        /// filters server-side to the logged-in user's own employee record,
+        /// so one employee can never browse another's uploaded documents.
+        /// </summary>
+        public async Task<IActionResult> MyDocuments()
+        {
+            ViewBag.IsAdmin = false;
+
+            if (string.IsNullOrEmpty(_employeeId))
+            {
+                ViewBag.NoEmployeeProfile = true;
+                return View("Index", new List<EmployeeDocumentDto>());
+            }
+
+            var model = await _apiService
+                .GetAsync<List<EmployeeDocumentDto>>("EmployeeDocument");
+
+            var mine = (model ?? new List<EmployeeDocumentDto>())
+                .Where(d => d.EmployeeId == _employeeId)
+                .ToList();
+
+            ViewBag.ListTitle = "My Documents";
+            return View("Index", mine);
         }
 
         public async Task<IActionResult> Details(string id)
@@ -45,6 +81,12 @@ namespace APP.Controllers
                 .GetAsync<EmployeeDocumentDto>($"EmployeeDocument/{id}");
 
             if (model == null) return NotFound();
+
+            // An employee may only view details of their own document.
+            if (!_isAdmin && model.EmployeeId != _employeeId)
+                return Forbid();
+
+            ViewBag.IsAdmin = _isAdmin;
             return View(model);
         }
 
@@ -55,6 +97,12 @@ namespace APP.Controllers
         [HttpGet]
         public async Task<IActionResult> Create()
         {
+            if (!_isAdmin)
+            {
+                TempData["GlobalError"] = "You don't have permission to upload documents.";
+                return RedirectToAction(nameof(MyDocuments));
+            }
+
             await BindDropdowns();
             return View(new EmployeeDocumentDto());
         }
@@ -63,6 +111,12 @@ namespace APP.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(EmployeeDocumentDto model)
         {
+            if (!_isAdmin)
+            {
+                TempData["GlobalError"] = "You don't have permission to upload documents.";
+                return RedirectToAction(nameof(MyDocuments));
+            }
+
             if (model.UploadFile == null || model.UploadFile.Length == 0)
                 ModelState.AddModelError(nameof(model.UploadFile), "Please select a file to upload.");
 
@@ -102,6 +156,12 @@ namespace APP.Controllers
         [HttpGet]
         public async Task<IActionResult> Edit(string id)
         {
+            if (!_isAdmin)
+            {
+                TempData["GlobalError"] = "You don't have permission to edit documents.";
+                return RedirectToAction(nameof(MyDocuments));
+            }
+
             if (string.IsNullOrWhiteSpace(id))
                 return RedirectToAction(nameof(Index));
 
@@ -118,6 +178,12 @@ namespace APP.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(string id, EmployeeDocumentDto model)
         {
+            if (!_isAdmin)
+            {
+                TempData["GlobalError"] = "You don't have permission to edit documents.";
+                return RedirectToAction(nameof(MyDocuments));
+            }
+
             if (!ModelState.IsValid)
             {
                 await BindDropdowns();
@@ -162,6 +228,12 @@ namespace APP.Controllers
 
         public async Task<IActionResult> Delete(string id)
         {
+            if (!_isAdmin)
+            {
+                TempData["GlobalError"] = "You don't have permission to delete documents.";
+                return RedirectToAction(nameof(MyDocuments));
+            }
+
             await _apiService.DeleteAsync($"EmployeeDocument/{id}");
             TempData["Success"] = "Employee document deleted successfully.";
             return RedirectToAction(nameof(Index));
@@ -174,6 +246,12 @@ namespace APP.Controllers
         [HttpPost]
         public async Task<IActionResult> Verify(string id, string? remarks)
         {
+            if (!_isAdmin)
+            {
+                TempData["GlobalError"] = "You don't have permission to verify documents.";
+                return RedirectToAction(nameof(MyDocuments));
+            }
+
             await _apiService.PostAsync<object>(
                 $"EmployeeDocument/{id}/verify?verifiedBy={_userId}&remarks={Uri.EscapeDataString(remarks ?? "")}",
                 new { });
@@ -184,6 +262,12 @@ namespace APP.Controllers
         [HttpPost]
         public async Task<IActionResult> UnVerify(string id)
         {
+            if (!_isAdmin)
+            {
+                TempData["GlobalError"] = "You don't have permission to unverify documents.";
+                return RedirectToAction(nameof(MyDocuments));
+            }
+
             await _apiService.PostAsync<object>(
                 $"EmployeeDocument/{id}/unverify", new { });
             TempData["Success"] = "Document unverified.";
@@ -202,6 +286,10 @@ namespace APP.Controllers
             if (dto == null || string.IsNullOrWhiteSpace(dto.FilePath))
                 return NotFound();
 
+            // An employee may only download their own document.
+            if (!_isAdmin && dto.EmployeeId != _employeeId)
+                return Forbid();
+
             var file = Path.Combine(
                 Directory.GetCurrentDirectory(), "wwwroot",
                 dto.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
@@ -218,6 +306,10 @@ namespace APP.Controllers
 
         public async Task<IActionResult> Expired()
         {
+            if (!_isAdmin)
+                return RedirectToAction(nameof(MyDocuments));
+
+            ViewBag.IsAdmin = true;
             var model = await _apiService
                 .GetAsync<List<EmployeeDocumentDto>>("EmployeeDocument/expired");
             ViewBag.ListTitle = "Expired Documents";
@@ -226,6 +318,10 @@ namespace APP.Controllers
 
         public async Task<IActionResult> Expiring(int days = 30)
         {
+            if (!_isAdmin)
+                return RedirectToAction(nameof(MyDocuments));
+
+            ViewBag.IsAdmin = true;
             var model = await _apiService
                 .GetAsync<List<EmployeeDocumentDto>>($"EmployeeDocument/expiring/{days}");
             ViewBag.ListTitle = $"Documents Expiring in {days} Days";

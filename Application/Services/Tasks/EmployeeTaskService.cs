@@ -34,7 +34,8 @@ namespace Application.Services.Tasks
                     EmployeeName = x.Employee != null ? x.Employee.FirstName + " " + x.Employee.LastName : "",
                     DueDate = x.DueDate,
                     Status = x.Status,
-                    Priority = x.Priority
+                    Priority = x.Priority,
+                    Remarks = x.Remarks
                 })
                 .ToListAsync();
             }
@@ -71,6 +72,7 @@ namespace Application.Services.Tasks
                 Priority = entity.Priority,
                 AssignedBy = entity.AssignedBy,
                 CompletedDate = entity.CompletedDate,
+                Remarks = entity.Remarks,
                 CompanyId = entity.CompanyId,
                 BranchId = entity.BranchId,
                 TenantId = entity.TenantId,
@@ -93,21 +95,21 @@ namespace Application.Services.Tasks
         {
             try
             {
-            var entity = new EmployeeTask
-            {
-                Id = IDManager.GetNewId(new EmployeeTask()),
-                Title = dto.Title,
-                Description = dto.Description,
-                EmployeeId = dto.EmployeeId,
-                DueDate = dto.DueDate,
-                Status = string.IsNullOrEmpty(dto.Status) ? "Pending" : dto.Status,
-                Priority = string.IsNullOrEmpty(dto.Priority) ? "Medium" : dto.Priority,
-                AssignedBy = dto.AssignedBy ?? dto.CreatedBy,
-                CompanyId = dto.CompanyId,
-                BranchId = dto.BranchId,
-                TenantId = dto.TenantId,
-                CreatedBy = dto.CreatedBy
-            };
+                var entity = new EmployeeTask
+                {
+                    Id = IDManager.GetNewId(new EmployeeTask()),
+                    Title = dto.Title,
+                    Description = dto.Description,
+                    EmployeeId = dto.EmployeeId,
+                    DueDate = dto.DueDate,
+                    Status = string.IsNullOrEmpty(dto.Status) ? "Pending" : dto.Status,
+                    Priority = string.IsNullOrEmpty(dto.Priority) ? "Medium" : dto.Priority,
+                    AssignedBy = dto.AssignedBy ?? dto.CreatedBy,
+                    CompanyId = dto.CompanyId,
+                    BranchId = dto.BranchId,
+                    TenantId = dto.TenantId,
+                    CreatedBy = dto.CreatedBy
+                };
 
             await _context.EmployeeTasks.AddAsync(entity);
             await _context.SaveChangesAsync();
@@ -140,6 +142,7 @@ namespace Application.Services.Tasks
             entity.DueDate = dto.DueDate;
             entity.Status = dto.Status;
             entity.Priority = dto.Priority;
+            entity.Remarks = dto.Remarks;
             entity.CompanyId = dto.CompanyId;
             entity.BranchId = dto.BranchId;
             entity.TenantId = dto.TenantId;
@@ -164,7 +167,7 @@ namespace Application.Services.Tasks
 
         #region Change Status
 
-        public async Task<string> ChangeStatusAsync(string id, string status, string userId)
+        public async Task<string> ChangeStatusAsync(string id, string status, string userId, string? remarks = null)
         {
             try
             {
@@ -177,6 +180,9 @@ namespace Application.Services.Tasks
             entity.Status = status;
             entity.ModifiedBy = userId;
             entity.ModifiedOn = DateTime.UtcNow;
+
+            if (remarks != null)
+                entity.Remarks = remarks;
 
             if (status == "Completed")
                 entity.CompletedDate = DateTime.UtcNow;

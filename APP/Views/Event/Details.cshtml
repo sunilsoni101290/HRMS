@@ -2,6 +2,7 @@
 
 @{
     ViewData["Title"] = "Event Details";
+    bool isAdmin = ViewBag.IsAdmin ?? true;
     string TimeVal(TimeSpan? t) => t.HasValue ? t.Value.ToString(@"hh\:mm") : "-";
 }
 
@@ -12,7 +13,10 @@
             <span class="label bg-primary" style="margin-left:8px;">@Model.TypeText</span>
         </h5>
         <div class="heading-elements">
-            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary btn-xs"><i class="icon-pencil7"></i> Edit</a>
+            @if (isAdmin)
+            {
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary btn-xs"><i class="icon-pencil7"></i> Edit</a>
+            }
             <a asp-action="Index" class="btn btn-default btn-xs"><i class="icon-arrow-left13"></i> Back</a>
         </div>
     </div>

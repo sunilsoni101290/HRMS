@@ -21,6 +21,10 @@ namespace APP.Models.DTOs
         public string PunchType { get; set; }
         public bool IsManual { get; set; }
 
+        // Biometric source (null for web/manual punches)
+        public string? DeviceId { get; set; }
+        public string? DeviceName { get; set; }
+
         public DateTime CreatedDate { get; set; }
     }
     public class DeviceInfo

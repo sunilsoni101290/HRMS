@@ -1,0 +1,184 @@
+@using APP.Helpers
+
+@{
+    var employeeName = SessionHelper.GetActiveFullName;
+    var designation = SessionHelper.GetActiveDesignation;
+    var employeeId = SessionHelper.GetActiveEmployeeId;
+
+    employeeName = string.IsNullOrWhiteSpace(employeeName) ? "Employee" : employeeName;
+
+    // Same dynamic photo the sidebar uses (fetched once in _EmployeeLayout.cshtml),
+    // falling back to the theme's placeholder rather than a missing image.
+    var photoUrl = ViewData["EmployeePhotoUrl"] as string;
+    var photoSrc = string.IsNullOrWhiteSpace(photoUrl)
+        ? Url.Content("~/global_assets/images/placeholders/placeholder.jpg")
+        : Url.Content(photoUrl);
+}
+<div class="navbar navbar-inverse navbar-employee">
+
+    <div class="navbar-header">
+
+        <a class="navbar-brand"
+           asp-controller="EmployeeDashboard"
+           asp-action="Index">
+
+            <img src="~/images/PT-06.png"
+                 alt="Logo"
+                 style="height:32px;display:inline-block;" />
+        </a>
+
+        <ul class="nav navbar-nav visible-xs-block">
+
+            <li>
+
+                <a class="sidebar-mobile-main-toggle">
+
+                    <i class="icon-paragraph-justify3"></i>
+
+                </a>
+
+            </li>
+
+        </ul>
+
+    </div>
+
+    <div class="navbar-collapse collapse">
+
+        <!-- Search -->
+
+        <form class="navbar-form navbar-left hidden-xs">
+
+            <div class="form-group has-feedback">
+
+                <input type="text"
+                       class="form-control"
+                       placeholder="Search..." />
+
+                <div class="form-control-feedback">
+
+                    <i class="icon-search4 text-size-base"></i>
+
+                </div>
+
+            </div>
+
+        </form>
+
+        <ul class="nav navbar-nav navbar-right">
+
+            <!-- Attendance -->
+
+            <li>
+
+                <a asp-controller="Attendance"
+                   asp-action="MyAttendance"
+                   title="My Attendance">
+
+                    <i class="icon-alarm"></i>
+
+                </a>
+
+            </li>
+
+            <!-- Notifications -->
+
+            <li>
+
+                <a asp-controller="Notification"
+                   asp-action="Index"
+                   title="Notifications">
+
+                    <i class="icon-bell2"></i>
+
+                </a>
+
+            </li>
+
+            <!-- Employee -->
+
+            <li class="dropdown dropdown-user">
+
+                <a href="#"
+                   class="dropdown-toggle"
+                   data-toggle="dropdown">
+
+                    <img src="@photoSrc"
+                         class="img-circle"
+                         alt="@employeeName">
+
+                    <span>
+
+                        @employeeName
+
+                    </span>
+
+                    <i class="caret"></i>
+
+                </a>
+
+                <ul class="dropdown-menu dropdown-menu-right">
+
+                    <li class="dropdown-header">
+
+                        <strong>@employeeName</strong>
+
+                        @if (!string.IsNullOrEmpty(designation))
+                        {
+                            <br />
+                            @designation
+                        }
+
+                    </li>
+
+                    <li>
+
+                        <a asp-controller="Employee"
+                           asp-action="Details"
+                           asp-route-id="@employeeId">
+
+                            <i class="icon-user-plus"></i>
+
+                            My Profile
+
+                        </a>
+
+                    </li>
+
+                    <li>
+
+                        <a asp-controller="Auth"
+                           asp-action="ChangePassword">
+
+                            <i class="icon-lock"></i>
+
+                            Change Password
+
+                        </a>
+
+                    </li>
+
+                    <li class="divider"></li>
+
+                    <li>
+
+                        <a asp-controller="Auth"
+                           asp-action="Logout">
+
+                            <i class="icon-switch2"></i>
+
+                            Logout
+
+                        </a>
+
+                    </li>
+
+                </ul>
+
+            </li>
+
+        </ul>
+
+    </div>
+
+</div>

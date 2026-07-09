@@ -43,6 +43,16 @@ namespace Domain.Entities
 
         public string? SerialNumber { get; set; }
         public DateTime? LastSyncDate { get; set; }
+
+        /// <summary>
+        /// Shared secret used by the on-site BiometricAgent (running on a machine
+        /// at the client's location) to authenticate punch pushes to
+        /// POST /api/BiometricSync/ingest. Not the same as Username/Password,
+        /// which are for the device's own admin login.
+        /// </summary>
+        [MaxLength(100)]
+        public string? DeviceKey { get; set; }
+
         public override string GetSequencePrefix()
             => "BDV";
     }

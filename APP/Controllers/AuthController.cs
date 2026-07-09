@@ -1,4 +1,5 @@
-﻿using APP.Helpers;
+﻿using APP.Attributes;
+using APP.Helpers;
 using APP.Models.Auth;
 using APP.Models.DTOs;
 using APP.Services.Interfaces;
@@ -73,6 +74,7 @@ namespace APP.Controllers
                     HttpContext.Session.SetString("RefreshToken", response.Data.RefreshToken);
                     HttpContext.Session.SetString("FullName", response.Data.FullName ?? "");
                     HttpContext.Session.SetString("UserId", response.Data.UserId);
+                    HttpContext.Session.SetString("EmployeeId", response.Data.EmployeeId ?? "");
                     HttpContext.Session.SetString("TenantId", response.Data.TenantId);
                     HttpContext.Session.SetString("Designation", response.Data.Designation ?? "");
                     HttpContext.Session.SetString("CompanyName", response.Data.CompanyName ?? "");
@@ -172,6 +174,57 @@ namespace APP.Controllers
                 return NotFound();
 
             return View(data);
+        }
+
+        #endregion
+
+        #region Change Password
+
+        // Available to every logged-in user - admin, HR, or self-service
+        // employee alike - to change their own password. The API endpoint
+        // always resolves "whose password" from the caller's own session
+        // token, never from anything posted here.
+
+        [JwtAuthorize]
+        [HttpGet]
+        public IActionResult ChangePassword()
+        {
+            return View(new ChangePasswordDto());
+        }
+
+        [JwtAuthorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ChangePassword(ChangePasswordDto model)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            try
+            {
+                var response = await _apiService
+                    .PostAsync<ChangePasswordDto, ApiResponse<object>>(
+                        "auth/change-password",
+                        model);
+
+                if (response != null && response.Success)
+                {
+                    TempData["Success"] = response.Message ?? "Password changed successfully.";
+                    return RedirectToAction(nameof(ChangePassword));
+                }
+
+                ModelState.AddModelError("", response?.Message ?? "Unable to change password.");
+            }
+            catch (ApiException ex)
+            {
+                ModelState.AddModelError("", GetErrorMessage(ex.ResponseContent));
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError("", ex.Message);
+            }
+
+            return View(model);
         }
 
         #endregion

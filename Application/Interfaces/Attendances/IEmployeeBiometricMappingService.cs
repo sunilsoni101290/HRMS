@@ -9,6 +9,12 @@ namespace Application.Interfaces.Attendances
     {
         Task<List<EmployeeBiometricMappingDto>>GetAllAsync();
 
+        Task<EmployeeBiometricMappingDto?>GetByIdAsync(string id);
+
         Task<EmployeeBiometricMappingDto>CreateAsync(EmployeeBiometricMappingDto dto);
+
+        Task<bool>UpdateAsync(EmployeeBiometricMappingDto dto);
+
+        Task<bool>DeleteAsync(string id);
     }
 }

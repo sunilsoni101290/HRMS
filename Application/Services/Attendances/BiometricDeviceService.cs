@@ -40,6 +40,9 @@ namespace Application.Services.Attendances
                     Password = x.Password,
                     Port = x.Port,
                     ApiUrl = x.ApiUrl,
+                    SerialNumber = x.SerialNumber,
+                    LastSyncDate = x.LastSyncDate,
+                    DeviceKey = x.DeviceKey,
                     IsActive = x.IsActive
                 }).ToListAsync();
             }
@@ -59,10 +62,20 @@ namespace Application.Services.Attendances
                 .Select(x => new BiometricDeviceDto
                 {
                     Id = x.Id,
+                    TenantId = x.TenantId,
+                    CompanyId = x.CompanyId,
+                    BranchId = x.BranchId,
                     DeviceName = x.DeviceName,
                     DeviceCode = x.DeviceCode,
                     IPAddress = x.IPAddress,
-                    Port = x.Port
+                    Username = x.Username,
+                    Password = x.Password,
+                    Port = x.Port,
+                    ApiUrl = x.ApiUrl,
+                    SerialNumber = x.SerialNumber,
+                    LastSyncDate = x.LastSyncDate,
+                    DeviceKey = x.DeviceKey,
+                    IsActive = x.IsActive
                 }).FirstOrDefaultAsync();
             }
             catch (Exception)
@@ -89,6 +102,11 @@ namespace Application.Services.Attendances
                 ApiUrl = dto.ApiUrl,
                 Username = dto.Username,
                 Password = dto.Password,
+                SerialNumber = dto.SerialNumber,
+                // Auto-generate the agent auth secret if the caller didn't supply one.
+                DeviceKey = string.IsNullOrWhiteSpace(dto.DeviceKey)
+                    ? Guid.NewGuid().ToString("N")
+                    : dto.DeviceKey,
                 IsActive = dto.IsActive,
                 CreatedBy = dto.CreatedBy,
                 CreatedOn = DateTime.UtcNow,
@@ -99,6 +117,9 @@ namespace Application.Services.Attendances
             await _db.SaveChangesAsync();
 
             dto.Id = entity.Id;
+            // Return the generated key so the caller can show/copy it once
+            // (it's needed to configure the BiometricAgent at the client site).
+            dto.DeviceKey = entity.DeviceKey;
 
             return dto;
             }
@@ -126,6 +147,11 @@ namespace Application.Services.Attendances
             entity.ApiUrl = dto.ApiUrl;
             entity.Username = dto.Username;
             entity.Password = dto.Password;
+            entity.SerialNumber = dto.SerialNumber;
+            // Only rotate the key when a new one is explicitly supplied, so a
+            // plain "save" from the edit screen doesn't invalidate the agent's key.
+            if (!string.IsNullOrWhiteSpace(dto.DeviceKey))
+                entity.DeviceKey = dto.DeviceKey;
             entity.IsActive = dto.IsActive;
             entity.CreatedBy = dto.CreatedBy;
             entity.ModifiedBy = dto.ModifiedBy;
@@ -211,6 +237,40 @@ namespace Application.Services.Attendances
             catch (Exception)
             {
                 return false;
+            }
+        }
+
+        public async Task<List<BiometricDeviceHealthDto>> GetHealthSummaryAsync()
+        {
+            try
+            {
+                var onlineCutoff = DateTime.UtcNow.AddMinutes(-15);
+
+                return await _db.BiometricDevices
+                    .Select(x => new BiometricDeviceHealthDto
+                    {
+                        DeviceId = x.Id,
+                        DeviceName = x.DeviceName,
+                        DeviceCode = x.DeviceCode,
+                        IPAddress = x.IPAddress,
+                        IsActive = x.IsActive,
+                        LastSyncDate = x.LastSyncDate,
+
+                        IsOnline = x.IsActive &&
+                            x.LastSyncDate != null &&
+                            x.LastSyncDate >= onlineCutoff,
+
+                        TotalPunchCount = _db.BiometricAttendanceLogs
+                            .Count(l => l.DeviceId == x.Id),
+
+                        PendingPunchCount = _db.BiometricAttendanceLogs
+                            .Count(l => l.DeviceId == x.Id && !l.IsProcessed)
+                    })
+                    .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<BiometricDeviceHealthDto>();
             }
         }
     }

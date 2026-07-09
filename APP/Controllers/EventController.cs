@@ -16,15 +16,22 @@ namespace APP.Controllers
         private string _tenantId;
         private string _userId;
 
+        // Creating/editing/deleting events is an Admin/HR function only -
+        // employees can browse them but not manage them, enforced
+        // server-side here, not just by hiding buttons in the view.
+        private readonly bool _isAdmin;
+
         public EventController(IApiService apiService)
         {
             _apiService = apiService;
             _tenantId = SessionHelper.GetActiveTenantId;
             _userId = SessionHelper.GetActiveUserId;
+            _isAdmin = SessionHelper.IsAdminRole();
         }
 
         public async Task<IActionResult> Index()
         {
+            ViewBag.IsAdmin = _isAdmin;
             var data = await _apiService.GetAsync<List<EventListDto>>("event");
             return View(data);
         }
@@ -32,6 +39,12 @@ namespace APP.Controllers
         [HttpGet]
         public async Task<IActionResult> Create()
         {
+            if (!_isAdmin)
+            {
+                TempData["GlobalError"] = "You don't have permission to create events.";
+                return RedirectToAction(nameof(Index));
+            }
+
             await LoadDropdowns();
             return View(new EventDto());
         }
@@ -39,6 +52,12 @@ namespace APP.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(EventDto dto)
         {
+            if (!_isAdmin)
+            {
+                TempData["GlobalError"] = "You don't have permission to create events.";
+                return RedirectToAction(nameof(Index));
+            }
+
             if (dto != null)
             {
                 dto.TenantId = _tenantId;
@@ -57,6 +76,7 @@ namespace APP.Controllers
         [HttpGet]
         public async Task<IActionResult> Details(string id)
         {
+            ViewBag.IsAdmin = _isAdmin;
             var data = await _apiService.GetAsync<EventDto>($"event/{id}");
             return View(data);
         }
@@ -64,6 +84,12 @@ namespace APP.Controllers
         [HttpGet]
         public async Task<IActionResult> Edit(string id)
         {
+            if (!_isAdmin)
+            {
+                TempData["GlobalError"] = "You don't have permission to edit events.";
+                return RedirectToAction(nameof(Index));
+            }
+
             var data = await _apiService.GetAsync<EventDto>($"event/{id}");
             await LoadDropdowns();
             return View("Create", data);
@@ -72,6 +98,12 @@ namespace APP.Controllers
         [HttpPost]
         public async Task<IActionResult> Edit(string id, EventDto dto)
         {
+            if (!_isAdmin)
+            {
+                TempData["GlobalError"] = "You don't have permission to edit events.";
+                return RedirectToAction(nameof(Index));
+            }
+
             if (dto != null)
             {
                 dto.TenantId = _tenantId;
@@ -90,6 +122,12 @@ namespace APP.Controllers
 
         public async Task<IActionResult> Delete(string id)
         {
+            if (!_isAdmin)
+            {
+                TempData["GlobalError"] = "You don't have permission to delete events.";
+                return RedirectToAction(nameof(Index));
+            }
+
             await _apiService.DeleteAsync($"event/{id}");
             return RedirectToAction(nameof(Index));
         }

@@ -15,20 +15,57 @@ namespace APP.Controllers
         private readonly IHttpContextAccessor _httpContextAccessor;
         private string _tenantId;
         private string _userId;
+
+        // The employee record linked to whoever is logged in. Punch actions
+        // always use this - never a value picked from a dropdown or posted
+        // from the client - so an employee can only ever punch themselves in/out.
+        private readonly string? _employeeId;
+        private readonly bool _isAdmin;
+
         public AttendanceController(IApiService apiService, IHttpContextAccessor httpContextAccessor)
         {
             _apiService = apiService;
             _tenantId = SessionHelper.GetActiveTenantId;
             _userId = SessionHelper.GetActiveUserId;
+            _employeeId = SessionHelper.GetActiveEmployeeId;
+            _isAdmin = SessionHelper.IsAdminRole();
             _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task<IActionResult> Index()
         {
-           
+            ViewBag.IsAdmin = _isAdmin;
             var data = await _apiService
                 .GetAsync<List<AttendanceDto>>($"attendance/get-all-attendance-list");
             return View(data);
+        }
+
+        /// <summary>
+        /// Self-service attendance history - reuses the same Index view/list
+        /// endpoint as the admin screen, but filters down to only the
+        /// logged-in user's own employee record server-side, so an employee
+        /// can never see anyone else's attendance from this page.
+        /// </summary>
+        public async Task<IActionResult> MyAttendance()
+        {
+            ViewBag.IsAdmin = false;
+
+            if (string.IsNullOrEmpty(_employeeId))
+            {
+                ViewBag.NoEmployeeProfile = true;
+                return View("Index", new List<AttendanceDto>());
+            }
+
+            var data = await _apiService
+                .GetAsync<List<AttendanceDto>>($"attendance/get-all-attendance-list");
+
+            var mine = (data ?? new List<AttendanceDto>())
+                .Where(a => a.EmployeeId == _employeeId)
+                .OrderByDescending(a => a.Date)
+                .ToList();
+
+            ViewBag.ListTitle = "My Attendance";
+            return View("Index", mine);
         }
 
         [HttpGet]
@@ -37,6 +74,27 @@ namespace APP.Controllers
             var data = await _apiService
                 .GetAsync<AttendanceCurrentStatusDto>(
                     $"attendance/current-status/{employeeId}");
+
+            return Json(data);
+        }
+
+        /// <summary>
+        /// Same as GetEmployeeAttendanceStatus, but always resolves the
+        /// employee from the logged-in session - the punch page calls this
+        /// instead, so nobody can query (or punch) on another employee's
+        /// behalf by tampering with a posted/querystring EmployeeId.
+        /// </summary>
+        [HttpGet]
+        public async Task<JsonResult> GetMyAttendanceStatus()
+        {
+            if (string.IsNullOrEmpty(_employeeId))
+            {
+                return Json(new { NoEmployeeProfile = true });
+            }
+
+            var data = await _apiService
+                .GetAsync<AttendanceCurrentStatusDto>(
+                    $"attendance/current-status/{_employeeId}");
 
             return Json(data);
         }
@@ -53,14 +111,29 @@ namespace APP.Controllers
         [HttpGet]
         public async Task<IActionResult> Create()
         {
-            await LoadDropdowns();
-            return View(new PunchRequestDto());
+            // No employee dropdown - the page always punches the
+            // logged-in user's own linked employee record.
+            ViewBag.NoEmployeeProfile = string.IsNullOrEmpty(_employeeId);
+            ViewBag.EmployeeDisplayName = SessionHelper.GetActiveFullName;
+
+            return View(new PunchRequestDto { EmployeeId = _employeeId });
         }
 
         [HttpPost]
         public async Task<IActionResult> SavePunch(PunchRequestDto dto,string PunchType)
         {
-            if (dto!=null && !string.IsNullOrEmpty(PunchType))
+            // Always punch as the logged-in user's own employee record -
+            // ignore whatever EmployeeId (if any) came from the client.
+            if (string.IsNullOrEmpty(_employeeId))
+            {
+                TempData["GlobalError"] = "Your login isn't linked to an employee profile, so you can't punch attendance.";
+                return RedirectToAction(nameof(Create));
+            }
+
+            dto ??= new PunchRequestDto();
+            dto.EmployeeId = _employeeId;
+
+            if (!string.IsNullOrEmpty(PunchType))
             {
                 string userAgent = Request.Headers["User-Agent"].ToString();
 
@@ -70,8 +143,6 @@ namespace APP.Controllers
                 dto.OS = device.OS;
                 dto.Browser = device.Browser;
                 dto.Version = device.Version;
-
-                await LoadDropdowns();
 
                 if (PunchType == "In")
                 {
@@ -115,23 +186,6 @@ namespace APP.Controllers
             }
             return RedirectToAction("Index");
         }
-
-        #region Load Dropdowns
-        private async Task LoadDropdowns()
-        {
-            // Employee
-            var employees = await _apiService
-                .GetAsync<List<DropdownDto>>($"dropdown/employee");
-
-            ViewBag.EmployeeList = new SelectList(
-                employees,
-                "Value",
-                "Text");
-
-            ViewBag.EmployeeNames = employees.ToDictionary(x => x.Value, x => x.Text);
-        }
-
-        #endregion
 
         #region Get Device Id
         public static DeviceInfo GetDeviceInfo(string userAgent)

@@ -10,6 +10,9 @@ namespace Application.DTOs.Attendances
 
         public string EmployeeId { get; set; }
 
+        /// <summary>Convenience field for list screens - not persisted.</summary>
+        public string? EmployeeName { get; set; }
+
         public string BiometricEmployeeCode { get; set; }
 
         public string? CardNumber { get; set; }

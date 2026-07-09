@@ -1,0 +1,163 @@
+﻿@using APP.Helpers
+@using APP.Models.DTOs
+@using APP.Services.Interfaces
+@inject IApiService apiService
+@{
+    Layout = null;
+
+    // Fetch the logged-in employee's real profile photo (if any) once here so
+    // both the navbar and sidebar partials can render it - avoids a hardcoded
+    // placeholder image and keeps a single source of truth per request.
+    var employeeId = SessionHelper.GetActiveEmployeeId;
+    string? employeePhotoUrl = null;
+
+    if (!string.IsNullOrEmpty(employeeId))
+    {
+        try
+        {
+            var emp = await apiService
+                .GetAsync<EmployeeListDto>($"Employee/get-employee-detail/{employeeId}");
+            employeePhotoUrl = emp?.FilePath;
+        }
+        catch
+        {
+            employeePhotoUrl = null;
+        }
+    }
+
+    ViewData["EmployeePhotoUrl"] = employeePhotoUrl;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8" />
+
+    <title>@ViewData["Title"] - Employee Self Service</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Google Font (matches the main admin layout) -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,300,100,500,700,900" rel="stylesheet" />
+
+    <!-- Limitless CSS -->
+    <link href="~/global_assets/css/icons/icomoon/styles.css" rel="stylesheet" />
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+
+    <link href="~/assets/css/bootstrap.min.css" rel="stylesheet" />
+
+    <link href="~/assets/css/core.min.css" rel="stylesheet" />
+
+    <link href="~/assets/css/components.min.css" rel="stylesheet" />
+
+    <link href="~/assets/css/colors.min.css" rel="stylesheet" />
+
+    <!-- ESS CSS -->
+    <link href="~/css/employee.css" rel="stylesheet" />
+
+    @RenderSection("Styles", false)
+
+</head>
+
+<body class="navbar-top">
+
+    @await Html.PartialAsync("~/Views/Shared/EmployeeLayout/_EmployeeNavbar.cshtml")
+
+    <div class="page-container">
+
+        <div class="page-content">
+
+            @await Html.PartialAsync("~/Views/Shared/EmployeeLayout/_EmployeeSidebar.cshtml")
+
+            <div class="content-wrapper">
+
+                <div class="page-header page-header-default">
+
+                    <div class="page-header-content">
+
+                        <div class="page-title">
+
+                            <h4>
+
+                                <i class="icon-arrow-left52 position-left"></i>
+
+                                <span class="text-semibold">
+
+                                    @(ViewData["Title"] ?? "My Dashboard")
+
+                                </span>
+
+                            </h4>
+
+                        </div>
+
+                        <div class="heading-elements">
+
+                            <div class="heading-btn-group">
+
+                                @await Html.PartialAsync("_AlertMessage")
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="breadcrumb-line">
+
+                        <ul class="breadcrumb">
+
+                            <li>
+
+                                <a asp-controller="EmployeeDashboard" asp-action="Index">
+
+                                    <i class="icon-home2 position-left"></i> Home
+
+                                </a>
+
+                            </li>
+
+                        </ul>
+
+                    </div>
+
+                </div>
+
+                <div class="content">
+
+                    @RenderBody()
+
+                </div>
+
+                <div class="footer text-muted">
+
+                    &copy; @DateTime.Now.Year HRMS Employee Self Service
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Core JS -->
+
+    <script src="~/global_assets/js/core/libraries/jquery.min.js"></script>
+
+    <script src="~/global_assets/js/core/libraries/bootstrap.min.js"></script>
+
+    <script src="~/global_assets/js/plugins/loaders/blockui.min.js"></script>
+
+    <script src="~/assets/js/app.js"></script>
+
+    <script src="~/js/employee.js"></script>
+
+    @RenderSection("Scripts", false)
+
+</body>
+
+</html>

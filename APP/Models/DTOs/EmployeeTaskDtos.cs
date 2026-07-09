@@ -32,6 +32,10 @@ namespace APP.Models.DTOs
         public string? AssignedBy { get; set; }
         public DateTime? CompletedDate { get; set; }
 
+        [MaxLength(500)]
+        [Display(Name = "Remarks")]
+        public string? Remarks { get; set; }
+
         public string? CompanyId { get; set; }
         public string? BranchId { get; set; }
 
@@ -50,5 +54,6 @@ namespace APP.Models.DTOs
         public DateTime? DueDate { get; set; }
         public string Status { get; set; }
         public string Priority { get; set; }
+        public string? Remarks { get; set; }
     }
 }

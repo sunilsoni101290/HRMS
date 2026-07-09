@@ -2,6 +2,9 @@
 
 @{
     ViewData["Title"] = "Apply Leave";
+    bool isAdmin = ViewBag.IsAdmin ?? true;
+    bool noEmployeeProfile = ViewBag.NoEmployeeProfile ?? false;
+    string employeeDisplayName = ViewBag.EmployeeDisplayName ?? "";
 }
 
 <div class="panel panel-flat">
@@ -42,16 +45,39 @@
 
                     <div class="form-group">
 
-                        <label asp-for="EmployeeId"></label>
+                        <label asp-for="EmployeeId">Employee</label>
 
-                        <select asp-for="EmployeeId"
-                                asp-items="ViewBag.EmployeeList"
-                                class="form-control">
-                            <option value="">Select Employee</option>
-                        </select>
+                        @if (isAdmin)
+                        {
+                            <select asp-for="EmployeeId"
+                                    asp-items="ViewBag.EmployeeList"
+                                    class="form-control">
+                                <option value="">Select Employee</option>
+                            </select>
 
-                        <span asp-validation-for="EmployeeId"
-                              class="text-danger"></span>
+                            <span asp-validation-for="EmployeeId"
+                                  class="text-danger"></span>
+                        }
+                        else
+                        {
+                            <!-- Self-service: always the logged-in employee, never a
+                                 pickable dropdown - the server ignores any other
+                                 value even if one were posted. -->
+                            <input type="text"
+                                   class="form-control bg-slate-100"
+                                   value="@employeeDisplayName"
+                                   readonly
+                                   disabled />
+
+                            <input asp-for="EmployeeId" type="hidden" />
+
+                            @if (noEmployeeProfile)
+                            {
+                                <span class="text-danger text-size-small">
+                                    Your login isn't linked to an employee profile - you can't apply leave.
+                                </span>
+                            }
+                        }
 
                     </div>
 
@@ -257,7 +283,8 @@
                 </a>
 
                 <button type="submit"
-                        class="btn bg-primary">
+                        class="btn bg-primary"
+                        @(noEmployeeProfile ? "disabled" : "")>
 
                     <i class="icon-checkmark4"></i>
                     Submit Leave

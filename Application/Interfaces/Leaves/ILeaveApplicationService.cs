@@ -46,5 +46,7 @@ namespace Application.Interfaces.Leaves
         Task<LeaveApprovalHistoryDetailDto>GetApprovalHistoryByIdAsync(string id);
 
         #endregion
+		
+		
     }
 }

@@ -17,16 +17,23 @@ namespace APP.Controllers
         private string _companyId;
         private string _userId;
 
+        // Publishing/editing/deleting announcements is an Admin/HR function
+        // only - employees can browse them but not manage them, enforced
+        // server-side here, not just by hiding buttons in the view.
+        private readonly bool _isAdmin;
+
         public AnnouncementController(IApiService apiService)
         {
             _apiService = apiService;
             _tenantId = SessionHelper.GetActiveTenantId;
             _companyId = SessionHelper.GetActiveCompanyId;
             _userId = SessionHelper.GetActiveUserId;
+            _isAdmin = SessionHelper.IsAdminRole();
         }
 
         public async Task<IActionResult> Index()
         {
+            ViewBag.IsAdmin = _isAdmin;
             var data = await _apiService.GetAsync<List<AnnouncementListDto>>("announcement");
             return View(data);
         }
@@ -34,6 +41,12 @@ namespace APP.Controllers
         [HttpGet]
         public async Task<IActionResult> Create()
         {
+            if (!_isAdmin)
+            {
+                TempData["GlobalError"] = "You don't have permission to create announcements.";
+                return RedirectToAction(nameof(Index));
+            }
+
             await LoadDropdowns();
             return View(new AnnouncementDto());
         }
@@ -41,6 +54,12 @@ namespace APP.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(AnnouncementDto dto)
         {
+            if (!_isAdmin)
+            {
+                TempData["GlobalError"] = "You don't have permission to create announcements.";
+                return RedirectToAction(nameof(Index));
+            }
+
             if (dto != null)
             {
                 dto.TenantId = _tenantId;
@@ -60,6 +79,7 @@ namespace APP.Controllers
         [HttpGet]
         public async Task<IActionResult> Details(string id)
         {
+            ViewBag.IsAdmin = _isAdmin;
             var data = await _apiService.GetAsync<AnnouncementDto>($"announcement/{id}");
             return View(data);
         }
@@ -67,6 +87,12 @@ namespace APP.Controllers
         [HttpGet]
         public async Task<IActionResult> Edit(string id)
         {
+            if (!_isAdmin)
+            {
+                TempData["GlobalError"] = "You don't have permission to edit announcements.";
+                return RedirectToAction(nameof(Index));
+            }
+
             var data = await _apiService.GetAsync<AnnouncementDto>($"announcement/{id}");
             await LoadDropdowns();
             return View("Create", data);
@@ -75,6 +101,12 @@ namespace APP.Controllers
         [HttpPost]
         public async Task<IActionResult> Edit(string id, AnnouncementDto dto)
         {
+            if (!_isAdmin)
+            {
+                TempData["GlobalError"] = "You don't have permission to edit announcements.";
+                return RedirectToAction(nameof(Index));
+            }
+
             if (dto != null)
             {
                 dto.TenantId = _tenantId;
@@ -94,6 +126,12 @@ namespace APP.Controllers
 
         public async Task<IActionResult> Delete(string id)
         {
+            if (!_isAdmin)
+            {
+                TempData["GlobalError"] = "You don't have permission to delete announcements.";
+                return RedirectToAction(nameof(Index));
+            }
+
             await _apiService.DeleteAsync($"announcement/{id}");
             return RedirectToAction(nameof(Index));
         }

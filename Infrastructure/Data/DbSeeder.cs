@@ -1231,7 +1231,7 @@ namespace Infrastructure.Data
                 leave.Id,
                 "bi bi-check-circle-fill",
                 AppFeatureType.Transaction,
-                63, canApprove: true);
+                64, canApprove: true);
 
             // =====================================================
             // PAYROLL
@@ -1350,6 +1350,21 @@ namespace Infrastructure.Data
             Def("Tasks", AppFeatureConstants.EMPLOYEE_TASK,
                 AppFeatureConstants.EMPLOYEE_TASK_CONTROLLER, AppFeatureConstants.EMPLOYEE_TASK_ACTION,
                 null, "bi bi-check2-square", AppFeatureType.Transaction, 3,
+                canAdd: true, canEdit: true, canDelete: true);
+
+            // ---------------- BIOMETRIC ATTENDANCE (children of the existing Attendance Management group) ----------------
+            Def("Biometric Devices", AppFeatureConstants.BIOMETRIC_DEVICE,
+                AppFeatureConstants.BIOMETRIC_DEVICE_CONTROLLER, AppFeatureConstants.BIOMETRIC_DEVICE_ACTION,
+                AppFeatureConstants.ATTENDANCE_MANAGEMENT, "bi bi-fingerprint", AppFeatureType.Master, 54,
+                canAdd: true, canEdit: true, canDelete: true);
+
+            Def("Device Health", AppFeatureConstants.BIOMETRIC_DEVICE_HEALTH,
+                AppFeatureConstants.BIOMETRIC_DEVICE_HEALTH_CONTROLLER, AppFeatureConstants.BIOMETRIC_DEVICE_HEALTH_ACTION,
+                AppFeatureConstants.ATTENDANCE_MANAGEMENT, "bi bi-heart-pulse-fill", AppFeatureType.Dashboard, 55);
+
+            Def("Employee Biometric Mapping", AppFeatureConstants.EMPLOYEE_BIOMETRIC_MAPPING,
+                AppFeatureConstants.EMPLOYEE_BIOMETRIC_MAPPING_CONTROLLER, AppFeatureConstants.EMPLOYEE_BIOMETRIC_MAPPING_ACTION,
+                AppFeatureConstants.ATTENDANCE_MANAGEMENT, "bi bi-person-vcard-fill", AppFeatureType.Master, 56,
                 canAdd: true, canEdit: true, canDelete: true);
 
             // ---------------- PAYROLL (ensure parent + children + fixes) ----------------

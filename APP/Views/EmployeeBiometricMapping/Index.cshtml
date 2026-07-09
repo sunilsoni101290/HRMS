@@ -1,0 +1,98 @@
+@model IEnumerable<EmployeeBiometricMappingDto>
+
+@{
+    ViewData["Title"] = "Employee Biometric Mapping";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-fingerprint position-left"></i>
+            Employee Biometric Mapping
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Create" class="btn bg-primary btn-sm">
+                <i class="icon-plus22 position-left"></i>
+                Map Employee
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <p class="text-muted">
+            Links an employee to the code their biometric device reports for
+            each punch. A punch whose code has no mapping here is stored but
+            never converted into an Attendance record.
+        </p>
+
+        <table class="table datatable-scroll-y table-hover">
+
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Biometric Employee Code</th>
+                    <th>Card Number</th>
+                    <th>Status</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.EmployeeName</td>
+                        <td><code>@item.BiometricEmployeeCode</code></td>
+                        <td>@item.CardNumber</td>
+                        <td>
+                            @if (item.IsActive)
+                            {
+                                <span class="label label-success">Active</span>
+                            }
+                            else
+                            {
+                                <span class="label label-danger">Inactive</span>
+                            }
+                        </td>
+                        <td class="text-center">
+
+                            <ul class="icons-list">
+
+                                <li>
+                                    <a asp-action="Edit"
+                                       asp-route-id="@item.Id"
+                                       title="Edit">
+                                        <i class="icon-pencil7"></i>
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a asp-action="Delete"
+                                       asp-route-id="@item.Id"
+                                       title="Delete"
+                                       onclick="return confirm('Remove this employee-to-device mapping?');">
+                                        <i class="icon-trash"></i>
+                                    </a>
+                                </li>
+
+                            </ul>
+
+                        </td>
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>

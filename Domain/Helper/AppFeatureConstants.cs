@@ -160,6 +160,18 @@ namespace Domain.Helper
         public const string SHIFT_CONTROLLER = "Shift";
         public const string SHIFT_ACTION = ACTION_INDEX;
 
+        public const string BIOMETRIC_DEVICE = "BIOMETRIC_DEVICE";
+        public const string BIOMETRIC_DEVICE_CONTROLLER = "BiometricDevice";
+        public const string BIOMETRIC_DEVICE_ACTION = ACTION_INDEX;
+
+        public const string BIOMETRIC_DEVICE_HEALTH = "BIOMETRIC_DEVICE_HEALTH";
+        public const string BIOMETRIC_DEVICE_HEALTH_CONTROLLER = "BiometricDevice";
+        public const string BIOMETRIC_DEVICE_HEALTH_ACTION = "Health";
+
+        public const string EMPLOYEE_BIOMETRIC_MAPPING = "EMPLOYEE_BIOMETRIC_MAPPING";
+        public const string EMPLOYEE_BIOMETRIC_MAPPING_CONTROLLER = "EmployeeBiometricMapping";
+        public const string EMPLOYEE_BIOMETRIC_MAPPING_ACTION = ACTION_INDEX;
+
         // =====================================================
         // LEAVE MANAGEMENT
         // =====================================================

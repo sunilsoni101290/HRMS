@@ -1154,6 +1154,14 @@ namespace Application.Services.Attendances
                     Location = x.Location,
                     IsManual = x.IsManual,
 
+                    DeviceId = x.DeviceId,
+                    DeviceName = x.DeviceId != null
+                        ? _db.BiometricDevices
+                            .Where(d => d.Id == x.DeviceId)
+                            .Select(d => d.DeviceName)
+                            .FirstOrDefault()
+                        : null,
+
                     CreatedDate = x.CreatedOn
                 })
                 .ToListAsync();
@@ -1194,6 +1202,14 @@ namespace Application.Services.Attendances
                     Location = x.Location,
 
                     IsManual = x.IsManual,
+
+                    DeviceId = x.DeviceId,
+                    DeviceName = x.DeviceId != null
+                        ? _db.BiometricDevices
+                            .Where(d => d.Id == x.DeviceId)
+                            .Select(d => d.DeviceName)
+                            .FirstOrDefault()
+                        : null,
 
                     CreatedDate = x.CreatedOn
                 })

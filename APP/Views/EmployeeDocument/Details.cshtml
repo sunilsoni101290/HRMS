@@ -2,6 +2,7 @@
 
 @{
     ViewData["Title"] = "Document Details";
+    bool isAdmin = ViewBag.IsAdmin ?? true;
 }
 
 <div class="panel panel-flat">
@@ -16,8 +17,15 @@
                 <a href="@Model.FilePath" target="_blank" class="btn btn-info btn-xs"><i class="icon-eye"></i> View</a>
                 <a asp-action="Download" asp-route-id="@Model.Id" class="btn btn-default btn-xs"><i class="icon-download"></i> Download</a>
             }
-            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary btn-xs"><i class="icon-pencil7"></i> Edit</a>
-            <a asp-action="Index" class="btn btn-default btn-xs"><i class="icon-arrow-left13"></i> Back</a>
+            @if (isAdmin)
+            {
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary btn-xs"><i class="icon-pencil7"></i> Edit</a>
+                <a asp-action="Index" class="btn btn-default btn-xs"><i class="icon-arrow-left13"></i> Back</a>
+            }
+            else
+            {
+                <a asp-action="MyDocuments" class="btn btn-default btn-xs"><i class="icon-arrow-left13"></i> Back</a>
+            }
         </div>
     </div>
     <div class="panel-body">

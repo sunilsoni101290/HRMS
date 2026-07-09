@@ -127,6 +127,7 @@ builder.Services.AddScoped<IAttendanceService, AttendanceService>();
 builder.Services.AddScoped<IBiometricDeviceService, BiometricDeviceService>();
 builder.Services.AddScoped<IBiometricSyncService,BiometricSyncService>();
 builder.Services.AddScoped<IAttendanceProcessorService,AttendanceProcessorService>();
+builder.Services.AddScoped<IEmployeeBiometricMappingService, EmployeeBiometricMappingService>();
 builder.Services.AddScoped<ILeaveTypeService, LeaveTypeService>();
 builder.Services.AddScoped<ILeaveBalanceService, LeaveBalanceService>();
 builder.Services.AddScoped<ILeaveApplicationService, LeaveApplicationService>();

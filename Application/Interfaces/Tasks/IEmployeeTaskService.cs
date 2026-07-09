@@ -8,7 +8,7 @@ namespace Application.Interfaces.Tasks
         Task<EmployeeTaskDto> GetByIdAsync(string id);
         Task<string> CreateAsync(EmployeeTaskDto dto);
         Task<string> UpdateAsync(string id, EmployeeTaskDto dto);
-        Task<string> ChangeStatusAsync(string id, string status, string userId);
+        Task<string> ChangeStatusAsync(string id, string status, string userId, string? remarks = null);
         Task<bool> DeleteAsync(string id);
     }
 }

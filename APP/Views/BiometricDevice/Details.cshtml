@@ -251,6 +251,43 @@
 
                     </tr>
 
+                    <tr>
+
+                        <th>
+                            Device Key
+                            <div class="text-muted font-size-sm">
+                                Used by the on-site BiometricAgent to authenticate
+                                punch pushes to /api/BiometricSync/ingest.
+                            </div>
+                        </th>
+
+                        <td>
+                            @if (!string.IsNullOrEmpty(Model.DeviceKey))
+                            {
+                                <code>@Model.DeviceKey</code>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Not set.</span>
+                            }
+                        </td>
+
+                    </tr>
+
+                    <tr>
+
+                        <th>
+                            Last Sync
+                        </th>
+
+                        <td>
+                            @(Model.LastSyncDate.HasValue
+                                ? Model.LastSyncDate.Value.ToString("g")
+                                : "Never")
+                        </td>
+
+                    </tr>
+
                 </tbody>
 
             </table>
@@ -270,21 +307,13 @@
 
             </a>
 
-            <a asp-action="SyncEmployees"
+            <a asp-action="SyncNow"
                asp-route-id="@Model.Id"
-               class="btn bg-warning">
+               class="btn bg-warning"
+               onclick="return confirm('Pull and process punches from this device now?');">
 
                 <i class="icon-sync"></i>
-                Sync Employees
-
-            </a>
-
-            <a asp-action="DownloadAttendance"
-               asp-route-id="@Model.Id"
-               class="btn bg-info">
-
-                <i class="icon-download"></i>
-                Download Attendance
+                Sync Now
 
             </a>
 

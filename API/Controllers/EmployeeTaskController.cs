@@ -49,9 +49,9 @@ namespace API.Controllers
         }
 
         [HttpPut("status/{id}")]
-        public async Task<IActionResult> ChangeStatus(string id, [FromQuery] string status, [FromQuery] string userId)
+        public async Task<IActionResult> ChangeStatus(string id, [FromQuery] string status, [FromQuery] string userId, [FromQuery] string? remarks = null)
         {
-            var result = await _service.ChangeStatusAsync(id, status, userId);
+            var result = await _service.ChangeStatusAsync(id, status, userId, remarks);
             return Ok(new { Message = $"Task marked {status}", Id = result });
         }
 

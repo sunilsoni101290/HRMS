@@ -3,17 +3,21 @@
 @{
     ViewData["Title"] = ViewBag.ListTitle ?? "Employee Documents";
     var today = DateTime.Today;
+    bool isAdmin = ViewBag.IsAdmin ?? true;
 }
 
 <div class="panel panel-flat">
 
     <div class="panel-heading">
         <h5 class="panel-title"><i class="icon-file-text2 position-left"></i> @ViewData["Title"]</h5>
-        <div class="heading-elements">
-            <a asp-action="Create" class="btn bg-primary"><i class="icon-plus22"></i> Upload Document</a>
-            <a asp-action="Expiring" class="btn btn-warning"><i class="icon-alarm"></i> Expiring</a>
-            <a asp-action="Expired" class="btn btn-danger"><i class="icon-warning22"></i> Expired</a>
-        </div>
+        @if (isAdmin)
+        {
+            <div class="heading-elements">
+                <a asp-action="Create" class="btn bg-primary"><i class="icon-plus22"></i> Upload Document</a>
+                <a asp-action="Expiring" class="btn btn-warning"><i class="icon-alarm"></i> Expiring</a>
+                <a asp-action="Expired" class="btn btn-danger"><i class="icon-warning22"></i> Expired</a>
+            </div>
+        }
     </div>
 
     <div class="panel-body">
@@ -79,23 +83,29 @@
                                 }
                             </td>
                             <td>
-                                @if (!item.IsVerified)
+                                @if (isAdmin)
                                 {
-                                    <form asp-action="Verify" asp-route-id="@item.Id" method="post" style="display:inline;">
-                                        <button type="submit" class="btn btn-success btn-icon" title="Verify"><i class="icon-checkmark3"></i></button>
-                                    </form>
-                                }
-                                else
-                                {
-                                    <form asp-action="UnVerify" asp-route-id="@item.Id" method="post" style="display:inline;">
-                                        <button type="submit" class="btn btn-warning btn-icon" title="Unverify"><i class="icon-cross2"></i></button>
-                                    </form>
+                                    @if (!item.IsVerified)
+                                    {
+                                        <form asp-action="Verify" asp-route-id="@item.Id" method="post" style="display:inline;">
+                                            <button type="submit" class="btn btn-success btn-icon" title="Verify"><i class="icon-checkmark3"></i></button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <form asp-action="UnVerify" asp-route-id="@item.Id" method="post" style="display:inline;">
+                                            <button type="submit" class="btn btn-warning btn-icon" title="Unverify"><i class="icon-cross2"></i></button>
+                                        </form>
+                                    }
                                 }
                                 <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-default btn-icon" title="View"><i class="icon-eye"></i></a>
-                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary btn-icon" title="Edit"><i class="icon-pencil7"></i></a>
-                                <a asp-action="Delete" asp-route-id="@item.Id"
-                                   onclick="return confirm('Delete this document?');"
-                                   class="btn btn-danger btn-icon" title="Delete"><i class="icon-trash"></i></a>
+                                @if (isAdmin)
+                                {
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary btn-icon" title="Edit"><i class="icon-pencil7"></i></a>
+                                    <a asp-action="Delete" asp-route-id="@item.Id"
+                                       onclick="return confirm('Delete this document?');"
+                                       class="btn btn-danger btn-icon" title="Delete"><i class="icon-trash"></i></a>
+                                }
                             </td>
                         </tr>
                         sr++;
