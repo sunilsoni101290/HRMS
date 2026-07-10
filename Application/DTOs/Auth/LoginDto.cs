@@ -26,6 +26,24 @@ namespace Application.DTOs.Auth
         public bool Success { get; set; }
         public string Message { get; set; } = "";
     }
+
+    // Self-service password reset with no email/SMS infrastructure in this
+    // system yet: identity is proven by matching BOTH the Username and the
+    // Email already on file for that account (rather than a raw user id,
+    // which would let anyone reset any account just by guessing an id).
+    public class ForgotPasswordDto
+    {
+        public string Username { get; set; }
+        public string Email { get; set; }
+        public string NewPassword { get; set; }
+    }
+
+    public class ForgotPasswordResultDto
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = "";
+    }
+
     public class UserListDto
     {
         public string Id { get; set; }

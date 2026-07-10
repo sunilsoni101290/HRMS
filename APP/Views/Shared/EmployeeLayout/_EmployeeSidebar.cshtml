@@ -20,7 +20,9 @@
     bool IsActive(string controller, string action) =>
         currentPath.StartsWith(Url.Content($"~/{controller}/{action}").ToLower());
     bool attendanceActive = IsActive("Attendance", "Create") || IsActive("Attendance", "MyAttendance");
-    bool leaveActive = IsActive("LeaveApplication", "Create") || IsActive("LeaveApplication", "EmployeeLeaves");
+    bool leaveActive = IsActive("LeaveApplication", "Create") ||
+                        IsActive("LeaveApplication", "EmployeeLeaves") ||
+                        IsActive("LeaveApplication", "MyApprovals");
 }
 
 <div class="sidebar sidebar-main">
@@ -144,6 +146,20 @@
                                    asp-route-employeeId="@employeeId">
 
                                     My Leave History
+
+                                </a>
+
+                            </li>
+
+                            <!-- Only meaningful for a Reporting Manager, Department
+                                 Head, or HR user - shows an empty queue for everyone
+                                 else, so it's always safe to show here. -->
+                            <li class="@(IsActive("LeaveApplication", "MyApprovals") ? "active" : "")">
+
+                                <a asp-controller="LeaveApplication"
+                                   asp-action="MyApprovals">
+
+                                    Pending My Approval
 
                                 </a>
 

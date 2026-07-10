@@ -20,6 +20,8 @@ namespace Application.Interfaces.Leaves
         Task<bool> ApplyLeaveAsync(ApplyLeaveRequestDto request);
         Task<bool> ApproveLeaveAsync(ApproveLeaveRequestDto request);
         Task<bool> RejectLeaveAsync(RejectLeaveRequestDto request);
+        Task<bool> SendBackLeaveAsync(SendBackLeaveRequestDto request);
+        Task<LeaveApplicationDto> ResubmitAsync(string id, ApplyLeaveRequestDto request, string resubmittedBy);
         Task<bool> CancelLeaveAsync(CancelLeaveRequestDto request);
 
         #endregion
@@ -27,6 +29,12 @@ namespace Application.Interfaces.Leaves
         #region Queries
         Task<List<LeaveApplicationDto>>GetEmployeeLeavesAsync(string employeeId);
         Task<List<LeaveApplicationDto>>GetPendingLeavesAsync();
+
+        // Leave requests currently awaiting action from this specific
+        // approver - Level 1/2 requests where they are the resolved
+        // Reporting Manager/Department Head, plus every Level 3 request if
+        // their role name contains "HR".
+        Task<List<LeaveApplicationDto>> GetPendingForApproverAsync(string? employeeId, string? roleName);
         Task<List<LeaveApplicationDto>>GetApprovedLeavesAsync();
         Task<List<LeaveApplicationDto>>GetRejectedLeavesAsync();
         Task<List<LeaveApplicationDto>>GetCancelledLeavesAsync();
@@ -44,6 +52,15 @@ namespace Application.Interfaces.Leaves
         Task<List<LeaveApprovalHistoryDetailDto>>GetApprovalHistoryAsync(string leaveApplicationId);
         Task<List<LeaveApprovalHistoryDetailDto>>GetAllApprovalHistoryAsync();
         Task<LeaveApprovalHistoryDetailDto>GetApprovalHistoryByIdAsync(string id);
+
+        #endregion
+
+        #region Day Calculation
+
+        // Counts only actual working days between fromDate and toDate -
+        // week-offs (e.g. Sat/Sun) and holidays configured for the tenant
+        // don't count against the employee's leave.
+        Task<decimal> CalculateTotalDaysAsync(DateTime fromDate, DateTime toDate, bool isHalfDay, string? tenantId);
 
         #endregion
 		

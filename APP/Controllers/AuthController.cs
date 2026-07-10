@@ -3,6 +3,7 @@ using APP.Helpers;
 using APP.Models.Auth;
 using APP.Models.DTOs;
 using APP.Services.Interfaces;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Newtonsoft.Json;
@@ -36,13 +37,28 @@ namespace APP.Controllers
             return View(data);
         }
 
+        // How long a "Remember Me" login stays silently renewable for. Must
+        // stay in sync with the RefreshToken.ExpiryDate window set when the
+        // token is issued in AuthService.GenerateAuthResponse (7 days) -
+        // there's no point remembering a refresh token on the client for
+        // longer than the server will actually honor it.
+        private static readonly TimeSpan RememberMeDuration = TimeSpan.FromDays(7);
+        private const string RememberedUsernameCookie = "RememberedUsername";
+        private const string RememberMeTokenCookie = "RememberMeToken";
+
         // =========================
         // LOGIN PAGE
         // =========================
         [HttpGet]
         public IActionResult Login()
         {
-            return View();
+            var rememberedUsername = Request.Cookies[RememberedUsernameCookie];
+
+            return View(new LoginDto
+            {
+                Username = rememberedUsername ?? string.Empty,
+                RememberMe = !string.IsNullOrEmpty(rememberedUsername)
+            });
         }
 
         // =========================
@@ -51,7 +67,7 @@ namespace APP.Controllers
         [HttpPost]
         public async Task<IActionResult> Login(LoginDto model)
         {
-            if (!ModelState.IsValid)
+            if (model==null)
                 return View(model);
 
             try
@@ -82,6 +98,8 @@ namespace APP.Controllers
                     HttpContext.Session.SetString("BranchId", response.Data.BranchId ?? "");
                     HttpContext.Session.SetString("RoleName", response.Data.RoleName ?? "");
 
+                    ApplyRememberMeCookies(model.Username, response.Data.RefreshToken, model.RememberMe);
+
                     // Role-based landing page
                     return SessionHelper.IsAdminRole(response.Data.RoleName)
                         ? RedirectToAction("Index", "Dashboard")
@@ -104,11 +122,53 @@ namespace APP.Controllers
             return View(model);
         }
 
+        // Sets or clears the two "Remember Me" cookies:
+        //  - RememberedUsername: plain, non-sensitive, only used to
+        //    pre-fill the Username field on the next visit.
+        //  - RememberMeToken: HttpOnly copy of the refresh token, used by
+        //    JwtAuthorizeAttribute to silently restore the session if the
+        //    server-side Session has expired (e.g. the browser was closed)
+        //    but the refresh token itself is still valid. Never readable
+        //    from client-side script, and never sent over plain HTTP.
+        private void ApplyRememberMeCookies(string username, string refreshToken, bool rememberMe)
+        {
+            if (rememberMe)
+            {
+                Response.Cookies.Append(RememberedUsernameCookie, username ?? string.Empty, new CookieOptions
+                {
+                    Expires = DateTimeOffset.UtcNow.Add(RememberMeDuration),
+                    HttpOnly = false,
+                    Secure = Request.IsHttps,
+                    SameSite = SameSiteMode.Lax
+                });
+
+                Response.Cookies.Append(RememberMeTokenCookie, refreshToken ?? string.Empty, new CookieOptions
+                {
+                    Expires = DateTimeOffset.UtcNow.Add(RememberMeDuration),
+                    HttpOnly = true,
+                    Secure = Request.IsHttps,
+                    SameSite = SameSiteMode.Lax
+                });
+            }
+            else
+            {
+                Response.Cookies.Delete(RememberedUsernameCookie);
+                Response.Cookies.Delete(RememberMeTokenCookie);
+            }
+        }
+
         // =========================
         // LOGOUT
         // =========================
         public async Task<IActionResult> Logout()
         {
+            // An explicit logout should kill the silent-relogin token even
+            // for a "remembered" login - otherwise JwtAuthorizeAttribute
+            // would just log the user straight back in on their next
+            // request. The username cookie is left alone as a convenience
+            // so it still pre-fills next time.
+            Response.Cookies.Delete(RememberMeTokenCookie);
+
             try
             {
                 // Get refresh token from session
@@ -137,6 +197,54 @@ namespace APP.Controllers
 
                 return RedirectToAction("Login");
             }
+        }
+
+        // =========================
+        // FORGOT PASSWORD
+        // =========================
+        // No email/SMS infrastructure exists in this system yet, so this is
+        // an identity-verified self-service reset: the user must know both
+        // their Username and the Email already on file for that account.
+        // The API re-verifies that match server-side before touching
+        // anything - this page never sends a raw user id.
+        [HttpGet]
+        public IActionResult ForgotPassword()
+        {
+            return View(new ForgotPasswordDto());
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ForgotPassword(ForgotPasswordDto model)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            try
+            {
+                var response = await _apiService
+                    .PostAsync<ForgotPasswordDto, ApiResponse<object>>(
+                        "auth/forgot-password",
+                        model);
+
+                if (response != null && response.Success)
+                {
+                    TempData["Success"] = response.Message ?? "Password reset successfully. Please log in with your new password.";
+                    return RedirectToAction(nameof(Login));
+                }
+
+                ModelState.AddModelError("", response?.Message ?? "Unable to reset password.");
+            }
+            catch (ApiException ex)
+            {
+                ModelState.AddModelError("", GetErrorMessage(ex.ResponseContent));
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError("", ex.Message);
+            }
+
+            return View(model);
         }
 
         public async Task<IActionResult> Register()

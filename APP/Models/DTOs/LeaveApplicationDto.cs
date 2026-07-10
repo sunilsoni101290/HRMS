@@ -59,6 +59,17 @@ namespace APP.Models.DTOs
         [StringLength(500)]
         public string? RejectedReason { get; set; }
 
+        // Multi-level approval chain (1 = Reporting Manager, 2 = Department
+        // Head, 3 = HR) - only meaningful while Status == Pending.
+        public int CurrentLevel { get; set; }
+
+        public string? CurrentLevelName { get; set; }
+
+        public string? CurrentApproverEmployeeId { get; set; }
+
+        [StringLength(500)]
+        public string? SendBackReason { get; set; }
+
         [StringLength(500)]
         public string? DocumentUrl { get; set; }
 
@@ -152,6 +163,19 @@ namespace APP.Models.DTOs
         public string TenantId { get; set; }
     }
 
+    public class SendBackLeaveRequestDto
+    {
+        [Required(ErrorMessage = "Leave Application is required")]
+        public string LeaveApplicationId { get; set; }
+
+        [Required(ErrorMessage = "Sent By is required")]
+        public string SentBackBy { get; set; }
+
+        [Required(ErrorMessage = "Please explain why this is being sent back.")]
+        [StringLength(500, ErrorMessage = "Reason cannot exceed 500 characters")]
+        public string Reason { get; set; }
+    }
+
     public class CancelLeaveRequestDto
     {
         [Required(ErrorMessage = "Leave Application is required")]
@@ -162,6 +186,11 @@ namespace APP.Models.DTOs
 
         public DateTime CancelledOn { get; set; }
         public string TenantId { get; set; }
+    }
+
+    public class TotalDaysResultDto
+    {
+        public decimal TotalDays { get; set; }
     }
 
     public class LeaveApplicationFilterRequestDto

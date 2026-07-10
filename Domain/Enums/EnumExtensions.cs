@@ -152,7 +152,8 @@ namespace Domain.Enums
             OnHold = 5,       // temporarily hold पर
 
             PartiallyApproved = 6, // multi-level approval में partially approve
-            ReSubmitted = 7        // reject के बाद फिर से submit
+            ReSubmitted = 7,       // reject के बाद फिर से submit
+            ReturnedToEmployee = 8 // an approver sent it back for correction - waiting on the employee, not an approver
         }
 
         public enum EmploymentType

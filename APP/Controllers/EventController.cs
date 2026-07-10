@@ -15,6 +15,7 @@ namespace APP.Controllers
         private readonly IApiService _apiService;
         private string _tenantId;
         private string _userId;
+        private string _companyId;
 
         // Creating/editing/deleting events is an Admin/HR function only -
         // employees can browse them but not manage them, enforced
@@ -26,6 +27,7 @@ namespace APP.Controllers
             _apiService = apiService;
             _tenantId = SessionHelper.GetActiveTenantId;
             _userId = SessionHelper.GetActiveUserId;
+            _companyId = SessionHelper.GetActiveCompanyId;
             _isAdmin = SessionHelper.IsAdminRole();
         }
 
@@ -62,10 +64,19 @@ namespace APP.Controllers
             {
                 dto.TenantId = _tenantId;
                 dto.CreatedBy = _userId;
+                dto.CompanyId = _companyId;
 
-                await _apiService.PostAsync<dynamic>("event", dto);
+                var result = await _apiService.PostAsync<dynamic>("event", dto);
 
-                TempData["Success"] = "Event created successfully.";
+                if (string.IsNullOrEmpty(result))
+                {
+                    TempData["Error"] = "Failed to create Event.";
+                }
+                else
+                {
+                    TempData["Success"] = "Event created successfully.";
+                }
+                
                 return RedirectToAction(nameof(Index));
             }
 

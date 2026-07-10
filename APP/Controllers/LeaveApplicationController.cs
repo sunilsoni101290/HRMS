@@ -43,6 +43,7 @@ namespace APP.Controllers
         public async Task<IActionResult> Index()
         {
             ViewBag.IsAdmin = _isAdmin;
+            SetApprovalViewBag();
             await LoadDropdowns();
             var data = await _apiService.GetAsync<List<LeaveApplicationDto>>("LeaveApplication");
 
@@ -58,6 +59,12 @@ namespace APP.Controllers
             ViewBag.EmployeeDisplayName = SessionHelper.GetActiveFullName;
             ViewBag.NoEmployeeProfile = !_isAdmin && string.IsNullOrEmpty(_employeeId);
 
+            // Self-service users can see up front (not just after a failed
+            // submit) that they already have a leave request awaiting
+            // approval, so the form can warn them and disable Submit instead
+            // of letting them fill the whole form only to be rejected.
+            ViewBag.HasPendingLeave = !_isAdmin && await EmployeeHasPendingLeave(_employeeId);
+
             return View(new ApplyLeaveRequestDto
             {
                 // Self-service users always apply for their own linked employee
@@ -66,6 +73,46 @@ namespace APP.Controllers
                 FromDate = DateTime.Today,
                 ToDate = DateTime.Today
             });
+        }
+
+        // Lets the Create view (admin's Employee dropdown included) ask,
+        // via AJAX, whether a given employee already has a leave request
+        // awaiting approval - so the alert/disabled Submit button can react
+        // live instead of only after a failed post.
+        [HttpGet]
+        public async Task<JsonResult> HasPendingLeave(string employeeId)
+        {
+            return Json(new { hasPending = await EmployeeHasPendingLeave(employeeId) });
+        }
+
+        // Lets the Create/Edit view ask, as the user picks From/To dates, how
+        // many days that range is actually worth - week-offs and holidays for
+        // the tenant don't count against leave balance, so this must match
+        // exactly what the server will persist on submit.
+        [HttpGet]
+        public async Task<JsonResult> CalculateTotalDays(DateTime fromDate, DateTime toDate, bool isHalfDay)
+        {
+            var url =
+                $"LeaveApplication/calculate-days?fromDate={fromDate:yyyy-MM-dd}" +
+                $"&toDate={toDate:yyyy-MM-dd}" +
+                $"&isHalfDay={isHalfDay}" +
+                $"&tenantId={Uri.EscapeDataString(_tenantId ?? string.Empty)}";
+
+            var result = await _apiService.GetAsync<TotalDaysResultDto>(url);
+
+            return Json(new { totalDays = result?.TotalDays ?? 0 });
+        }
+
+        private async Task<bool> EmployeeHasPendingLeave(string? employeeId)
+        {
+            if (string.IsNullOrEmpty(employeeId))
+                return false;
+
+            var leaves = await _apiService.GetAsync<List<LeaveApplicationDto>>(
+                $"LeaveApplication/employee/{employeeId}");
+
+            return leaves != null &&
+                leaves.Any(x => x.Status == EnumExtensions.ApprovalStatus.Pending);
         }
 
         [HttpPost]
@@ -135,19 +182,67 @@ namespace APP.Controllers
 
             #endregion
 
-            var result = await _apiService.PostAsync<ApplyLeaveRequestDto,LeaveApplicationDto>("LeaveApplication",model);
+            try
+            {
+                var result = await _apiService.PostAsync<ApplyLeaveRequestDto, LeaveApplicationDto>("LeaveApplication", model);
 
-            TempData["Success"] = "Leave applied successfully.";
+                if (result == null)
+                {
+                    TempData["GlobalError"] = "Unable to submit leave application.";
+                    return RedirectToAction(nameof(Create));
+                }
 
-            await LoadDropdowns();
+                TempData["Success"] = "Leave applied successfully.";
 
-            // Admin/HR land on the org-wide list; a self-service employee
-            // should stay inside their own portal and see their own history,
-            // not the shared admin list.
-            if (!_isAdmin)
-                return RedirectToAction(nameof(EmployeeLeaves), new { employeeId = _employeeId });
+                // Admin/HR land on the org-wide list; a self-service employee
+                // should stay inside their own portal and see their own history,
+                // not the shared admin list.
+                if (!_isAdmin)
+                    return RedirectToAction(nameof(EmployeeLeaves), new { employeeId = _employeeId });
 
-            return RedirectToAction(nameof(Index));
+                return RedirectToAction(nameof(Index));
+            }
+            catch (ApiException ex)
+            {
+                // e.g. "you already have a leave request awaiting approval" -
+                // a real business-rule rejection from the API, not a crash.
+                TempData["GlobalError"] = GetErrorMessage(ex.ResponseContent);
+                return RedirectToAction(nameof(Create));
+            }
+            catch (Exception ex)
+            {
+                TempData["GlobalError"] = ex.Message;
+                return RedirectToAction(nameof(Create));
+            }
+        }
+
+        private string GetErrorMessage(string json)
+        {
+            try
+            {
+                var obj = Newtonsoft.Json.Linq.JObject.Parse(json);
+
+                if (obj["Message"] != null)
+                    return obj["Message"]!.ToString();
+
+                if (obj["Errors"] is Newtonsoft.Json.Linq.JArray errors && errors.Count > 0)
+                    return errors[0]?.ToString();
+
+                if (obj["errors"] is Newtonsoft.Json.Linq.JObject validationErrors)
+                {
+                    foreach (var property in validationErrors.Properties())
+                    {
+                        if (property.Value is Newtonsoft.Json.Linq.JArray arr && arr.Count > 0)
+                            return arr[0]?.ToString();
+                    }
+                }
+
+                return "Unable to submit leave application.";
+            }
+            catch
+            {
+                return "Unable to submit leave application.";
+            }
         }
 
         [HttpGet]
@@ -158,6 +253,9 @@ namespace APP.Controllers
                     $"LeaveApplication/{id}");
 
             await LoadDropdowns();
+
+            ViewBag.IsAdmin = _isAdmin;
+            ViewBag.CurrentEmployeeId = _employeeId;
 
             return View(data);
         }
@@ -228,64 +326,267 @@ namespace APP.Controllers
 
         #region Workflow
 
+        // Approve/Reject/Send Back are no longer gated by "_isAdmin" - the
+        // API now enforces the real multi-level rule (Reporting Manager for
+        // Level 1, Department Head for Level 2, anyone with the HR role for
+        // Level 3) regardless of whether the acting user's own login role
+        // happens to be flagged admin. Any unauthorized attempt is rejected
+        // server-side with a clear message rather than a bare Forbid.
+
+        // Approve/Reject/Send Back can be triggered from more than one list
+        // (the org-wide admin Index, "My Leave History", or "Pending My
+        // Approval") - send the user back to whichever of those they acted
+        // from instead of always dropping them on MyApprovals. Falls back to
+        // MyApprovals only when there's no safe local page to return to.
+        private IActionResult RedirectBackOrToMyApprovals()
+        {
+            var referer = Request.Headers["Referer"].ToString();
+
+            if (!string.IsNullOrEmpty(referer) && Url.IsLocalUrl(referer))
+                return Redirect(referer);
+
+            return RedirectToAction(nameof(MyApprovals));
+        }
+
         [HttpPost]
         public async Task<IActionResult> Approve(
             ApproveLeaveRequestDto model)
         {
-            // Approving/rejecting leave is an Admin/HR function only - an
-            // employee must never be able to approve their own (or anyone
-            // else's) leave request just because the button happened to be
-            // reachable on their own history page.
-            if (!_isAdmin)
-                return Forbid();
-
             if (model == null)
-            {
-                return RedirectToAction(nameof(Index));
-            }
+                return RedirectToAction(nameof(MyApprovals));
 
             model.CreatedBy = _userId;
             model.ApprovedBy = _userId;
             model.TenantId = _tenantId;
 
-            var result =
-                await _apiService.PostAsync<
-                    ApproveLeaveRequestDto,
-                    bool>(
+            try
+            {
+                var result = await _apiService.PostAsync<ApproveLeaveRequestDto, bool>(
                     "LeaveApplication/approve",
                     model);
 
-            if (result)
+                TempData[result ? "Success" : "GlobalError"] = result
+                    ? "Leave application approved successfully."
+                    : "Unable to approve this leave request.";
+            }
+            catch (ApiException ex)
             {
-                TempData["Success"] = "Leave application approved successfully.";
+                TempData["GlobalError"] = GetErrorMessage(ex.ResponseContent);
+            }
+            catch (Exception ex)
+            {
+                TempData["GlobalError"] = ex.Message;
             }
 
-            return RedirectToAction(nameof(Index));
+            return RedirectBackOrToMyApprovals();
         }
 
         [HttpPost]
         public async Task<IActionResult> Reject(
             RejectLeaveRequestDto model)
         {
-            if (!_isAdmin)
-                return Forbid();
-
             model.RejectedBy = _userId;
             model.TenantId = _tenantId;
 
-            var result =
-                await _apiService.PostAsync<
-                    RejectLeaveRequestDto,
-                    bool>(
+            try
+            {
+                var result = await _apiService.PostAsync<RejectLeaveRequestDto, bool>(
                     "LeaveApplication/reject",
                     model);
 
-            if (result)
+                TempData[result ? "Success" : "GlobalError"] = result
+                    ? "Leave application rejected."
+                    : "Unable to reject this leave request.";
+            }
+            catch (ApiException ex)
             {
-                TempData["Error"] = "Leave application rejected successfully.";
+                TempData["GlobalError"] = GetErrorMessage(ex.ResponseContent);
+            }
+            catch (Exception ex)
+            {
+                TempData["GlobalError"] = ex.Message;
             }
 
-            return RedirectToAction(nameof(Index));
+            return RedirectBackOrToMyApprovals();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SendBack(
+            SendBackLeaveRequestDto model)
+        {
+            model.SentBackBy = _userId;
+
+            try
+            {
+                var result = await _apiService.PostAsync<SendBackLeaveRequestDto, bool>(
+                    "LeaveApplication/send-back",
+                    model);
+
+                TempData[result ? "Success" : "GlobalError"] = result
+                    ? "Leave application sent back to the employee."
+                    : "Unable to send this leave request back.";
+            }
+            catch (ApiException ex)
+            {
+                TempData["GlobalError"] = GetErrorMessage(ex.ResponseContent);
+            }
+            catch (Exception ex)
+            {
+                TempData["GlobalError"] = ex.Message;
+            }
+
+            return RedirectBackOrToMyApprovals();
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Resubmit(string id)
+        {
+            var data = await _apiService.GetAsync<LeaveApplicationDto>($"LeaveApplication/{id}");
+
+            if (data == null)
+                return NotFound();
+
+            if (data.EmployeeId != _employeeId && !_isAdmin)
+                return Forbid();
+
+            if (data.Status != EnumExtensions.ApprovalStatus.ReturnedToEmployee)
+            {
+                TempData["GlobalError"] = "Only a leave request that was sent back can be resubmitted.";
+                return RedirectToAction(nameof(EmployeeLeaves), new { employeeId = data.EmployeeId });
+            }
+
+            await LoadDropdowns();
+
+            ViewBag.IsAdmin = _isAdmin;
+            ViewBag.EmployeeDisplayName = data.EmployeeName;
+            ViewBag.SendBackReason = data.SendBackReason;
+
+            return View(new ApplyLeaveRequestDto
+            {
+                Id = data.Id,
+                EmployeeId = data.EmployeeId,
+                LeaveTypeId = data.LeaveTypeId,
+                FromDate = data.FromDate,
+                ToDate = data.ToDate,
+                IsHalfDay = data.IsHalfDay,
+                HalfDayType = data.HalfDayType,
+                Reason = data.Reason,
+                DocumentUrl = data.DocumentUrl
+            });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Resubmit(string id, ApplyLeaveRequestDto model)
+        {
+            if (model == null)
+            {
+                await LoadDropdowns();
+                ViewBag.IsAdmin = _isAdmin;
+                return View(model);
+            }
+
+            model.TenantId = _tenantId;
+
+            // Never trust a client-supplied EmployeeId for a self-service user -
+            // the hidden field in the Resubmit form is only a display
+            // convenience and is fully attacker-controlled in the browser.
+            // Always overwrite it with the one resolved from the caller's own
+            // session; the Application layer then verifies this actually
+            // matches the leave being resubmitted, so a self-service user
+            // can't resubmit (or claim) someone else's returned leave just by
+            // editing the posted value. Only admin/HR keep the posted value.
+            model.EmployeeId = _isAdmin
+                ? (model.EmployeeId ?? _employeeId ?? string.Empty)
+                : (_employeeId ?? string.Empty);
+
+            #region Upload Image
+
+            string uploadFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/LeaveDocument");
+
+            if (!Directory.Exists(uploadFolder))
+                Directory.CreateDirectory(uploadFolder);
+
+            if (model.UploadDocument != null && model.UploadDocument.Length > 0)
+            {
+                var extension = Path.GetExtension(model.UploadDocument.FileName).ToLower();
+                string fileName = DateTime.Now.Hour + DateTime.Now.Minute + DateTime.Now.Second + DateTime.Now.Millisecond + extension;
+                string filePath = Path.Combine(uploadFolder, fileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await model.UploadDocument.CopyToAsync(stream);
+                }
+
+                model.DocumentUrl = "/LeaveDocument/" + fileName;
+            }
+
+            #endregion
+
+            try
+            {
+                var result = await _apiService.PutAsync<ApplyLeaveRequestDto, LeaveApplicationDto>(
+                    $"LeaveApplication/{id}/resubmit?resubmittedBy={Uri.EscapeDataString(_userId ?? string.Empty)}",
+                    model);
+
+                if (result == null)
+                {
+                    TempData["GlobalError"] = "Unable to resubmit leave application.";
+                    return RedirectToAction(nameof(Resubmit), new { id });
+                }
+
+                TempData["Success"] = "Leave request resubmitted for approval.";
+
+                return _isAdmin
+                    ? RedirectToAction(nameof(Index))
+                    : RedirectToAction(nameof(EmployeeLeaves), new { employeeId = _employeeId });
+            }
+            catch (ApiException ex)
+            {
+                TempData["GlobalError"] = GetErrorMessage(ex.ResponseContent);
+                return RedirectToAction(nameof(Resubmit), new { id });
+            }
+            catch (Exception ex)
+            {
+                TempData["GlobalError"] = ex.Message;
+                return RedirectToAction(nameof(Resubmit), new { id });
+            }
+        }
+
+        // The queue of leave requests currently awaiting THIS logged-in
+        // user's action - as Reporting Manager (Level 1), Department Head
+        // (Level 2), or HR (Level 3). Available to anyone, admin or
+        // self-service, since org hierarchy is independent of login role.
+        [HttpGet]
+        public async Task<IActionResult> MyApprovals()
+        {
+            await LoadDropdowns();
+
+            ViewBag.IsAdmin = _isAdmin;
+            ViewBag.ListTitle = "Pending My Approval";
+            SetApprovalViewBag();
+
+            var roleName = SessionHelper.GetActiveRoleName;
+
+            var url =
+                $"LeaveApplication/pending-for-approver?employeeId={Uri.EscapeDataString(_employeeId ?? string.Empty)}" +
+                $"&roleName={Uri.EscapeDataString(roleName ?? string.Empty)}";
+
+            var data = await _apiService.GetAsync<List<LeaveApplicationDto>>(url);
+
+            return View("Index", data);
+        }
+
+        // Exposed to Index.cshtml so it can decide, per row, whether the
+        // Approve/Reject/Send Back buttons should be shown to the person
+        // currently viewing the list - the API still re-checks for real
+        // when a button is actually clicked, this is purely a UI convenience.
+        private void SetApprovalViewBag()
+        {
+            ViewBag.CurrentEmployeeId = _employeeId;
+
+            var roleName = SessionHelper.GetActiveRoleName ?? "";
+            ViewBag.IsHR = roleName.Contains("HR", StringComparison.OrdinalIgnoreCase);
         }
 
         [HttpPost]
@@ -327,6 +628,9 @@ namespace APP.Controllers
         [HttpGet]
         public async Task<IActionResult> Pending()
         {
+            ViewBag.IsAdmin = _isAdmin;
+            SetApprovalViewBag();
+
             var data =
                 await _apiService.GetAsync<List<LeaveApplicationDto>>(
                     "LeaveApplication/pending");
@@ -337,6 +641,9 @@ namespace APP.Controllers
         [HttpGet]
         public async Task<IActionResult> Approved()
         {
+            ViewBag.IsAdmin = _isAdmin;
+            SetApprovalViewBag();
+
             var data =
                 await _apiService.GetAsync<List<LeaveApplicationDto>>(
                     "LeaveApplication/approved");
@@ -347,6 +654,9 @@ namespace APP.Controllers
         [HttpGet]
         public async Task<IActionResult> Rejected()
         {
+            ViewBag.IsAdmin = _isAdmin;
+            SetApprovalViewBag();
+
             var data =
                 await _apiService.GetAsync<List<LeaveApplicationDto>>(
                     "LeaveApplication/rejected");
@@ -357,6 +667,9 @@ namespace APP.Controllers
         [HttpGet]
         public async Task<IActionResult> Cancelled()
         {
+            ViewBag.IsAdmin = _isAdmin;
+            SetApprovalViewBag();
+
             var data =
                 await _apiService.GetAsync<List<LeaveApplicationDto>>(
                     "LeaveApplication/cancelled");
@@ -380,6 +693,7 @@ namespace APP.Controllers
 
             ViewBag.IsAdmin = _isAdmin;
             ViewBag.ListTitle = _isAdmin ? "Leave Application Management" : "My Leave History";
+            SetApprovalViewBag();
 
             if (string.IsNullOrEmpty(employeeId))
                 return View("Index", new List<LeaveApplicationDto>());

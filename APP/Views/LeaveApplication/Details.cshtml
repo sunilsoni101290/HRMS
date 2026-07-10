@@ -1,5 +1,13 @@
 ﻿@model LeaveApplicationDto
 
+@{
+    bool isAdmin = ViewBag.IsAdmin ?? true;
+    string? currentEmployeeId = ViewBag.CurrentEmployeeId as string;
+    bool canResubmit =
+        Model.Status == EnumExtensions.ApprovalStatus.ReturnedToEmployee &&
+        (isAdmin || Model.EmployeeId == currentEmployeeId);
+}
+
 <div class="panel panel-flat">
 
     <div class="panel-heading">
@@ -17,7 +25,7 @@
                 Back
             </a>
 
-            @if (Model.Status == EnumExtensions.ApprovalStatus.Pending)
+            @if (Model.Status == EnumExtensions.ApprovalStatus.Pending && isAdmin)
             {
                 <a asp-action="Edit"
                    asp-route-id="@Model.Id"
@@ -26,7 +34,17 @@
                     Edit
                 </a>
             }
-            
+
+            @if (canResubmit)
+            {
+                <a asp-action="Resubmit"
+                   asp-route-id="@Model.Id"
+                   class="btn bg-orange">
+                    <i class="icon-redo2"></i>
+                    Edit &amp; Resubmit
+                </a>
+            }
+
         </div>
 
     </div>
@@ -38,6 +56,7 @@
         <div class="alert @(Model.Status == EnumExtensions.ApprovalStatus.Approved ? "alert-success" :
                             Model.Status == EnumExtensions.ApprovalStatus.Rejected ? "alert-danger" :
                             Model.Status == EnumExtensions.ApprovalStatus.Cancelled ? "alert-warning" :
+                            Model.Status == EnumExtensions.ApprovalStatus.ReturnedToEmployee ? "alert-warning" :
                             "alert-info")">
 
             <strong>Status :</strong>
@@ -45,6 +64,12 @@
             @if (Model.Status == EnumExtensions.ApprovalStatus.Pending)
             {
                 <span class="label bg-warning">Pending</span>
+                @if (!string.IsNullOrEmpty(Model.CurrentLevelName))
+                {
+                    <span class="text-muted">
+                        &nbsp;- awaiting @Model.CurrentLevelName approval
+                    </span>
+                }
             }
             else if (Model.Status == EnumExtensions.ApprovalStatus.Approved)
             {
@@ -54,9 +79,23 @@
             {
                 <span class="label bg-danger">Rejected</span>
             }
-            else
+            else if (Model.Status == EnumExtensions.ApprovalStatus.ReturnedToEmployee)
+            {
+                <span class="label bg-orange">Sent Back</span>
+                @if (!string.IsNullOrEmpty(Model.SendBackReason))
+                {
+                    <span class="text-muted">
+                        &nbsp;- @Model.SendBackReason
+                    </span>
+                }
+            }
+            else if (Model.Status == EnumExtensions.ApprovalStatus.Cancelled)
             {
                 <span class="label bg-grey">Cancelled</span>
+            }
+            else
+            {
+                <span class="label bg-grey">@Model.Status</span>
             }
 
         </div>

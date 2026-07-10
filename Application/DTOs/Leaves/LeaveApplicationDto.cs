@@ -64,6 +64,20 @@ namespace Application.DTOs.Leaves
         [StringLength(500)]
         public string? RejectedReason { get; set; }
 
+        // Multi-level approval chain (1 = Reporting Manager, 2 = Department
+        // Head, 3 = HR) - only meaningful while Status == Pending.
+        public int CurrentLevel { get; set; }
+
+        public string? CurrentLevelName { get; set; }
+
+        // The specific employee who can currently act, when the level maps
+        // to one (Level 1/2). Null for Level 3, which is role-based (any HR
+        // user) rather than tied to one person.
+        public string? CurrentApproverEmployeeId { get; set; }
+
+        [StringLength(500)]
+        public string? SendBackReason { get; set; }
+
         [StringLength(500)]
         public string? DocumentUrl { get; set; }
 
@@ -78,6 +92,8 @@ namespace Application.DTOs.Leaves
 
     public class ApplyLeaveRequestDto
     {
+        public string? TenantId { get; set; }
+
         public string? CompanyId { get; set; }
 
         public string? BranchId { get; set; }
@@ -145,6 +161,19 @@ namespace Application.DTOs.Leaves
         public string RejectedReason { get; set; }
 
         public DateTime RejectedOn { get; set; }
+    }
+
+    public class SendBackLeaveRequestDto
+    {
+        [Required(ErrorMessage = "Leave Application is required")]
+        public string LeaveApplicationId { get; set; }
+
+        [Required(ErrorMessage = "Sent By is required")]
+        public string SentBackBy { get; set; }
+
+        [Required(ErrorMessage = "Please explain why this is being sent back.")]
+        [StringLength(500, ErrorMessage = "Reason cannot exceed 500 characters")]
+        public string Reason { get; set; }
     }
 
     public class CancelLeaveRequestDto

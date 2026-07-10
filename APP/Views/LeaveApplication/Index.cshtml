@@ -2,6 +2,27 @@
 
 @{
     bool isAdmin = ViewBag.IsAdmin ?? true;
+
+    // Who is viewing this list right now - used to decide, per row, whether
+    // the Approve/Reject/Send Back buttons should even be shown. The API
+    // re-checks this for real when a button is clicked; this is only about
+    // not showing actions the viewer can't actually use.
+    string? currentEmployeeId = ViewBag.CurrentEmployeeId as string;
+    bool viewerIsHR = ViewBag.IsHR ?? false;
+
+    bool CanAct(LeaveApplicationDto item) =>
+        item.Status == EnumExtensions.ApprovalStatus.Pending &&
+        (
+            (item.CurrentLevel == 3 && viewerIsHR) ||
+            (item.CurrentLevel != 3 &&
+                !string.IsNullOrEmpty(item.CurrentApproverEmployeeId) &&
+                item.CurrentApproverEmployeeId == currentEmployeeId)
+        );
+
+    // Self-service: if the employee already has a leave request awaiting
+    // approval, don't let them jump straight into another Apply Leave form
+    // from here either - the server would reject it anyway.
+    bool hasPendingLeave = !isAdmin && Model.Any(x => x.Status == EnumExtensions.ApprovalStatus.Pending);
 }
 
 <div class="panel panel-flat">
@@ -14,10 +35,30 @@
         </h5>
 
         <div class="heading-elements">
-            <a asp-action="Create" class="btn bg-primary">
-                <i class="icon-plus22"></i>
-                Apply Leave
+
+            <a asp-action="MyApprovals" class="btn btn-default">
+                <i class="icon-checkmark4"></i>
+                Pending My Approval
             </a>
+
+            @if (hasPendingLeave)
+            {
+                <button type="button"
+                        class="btn bg-primary disabled"
+                        disabled
+                        data-popup="tooltip"
+                        title="You already have a leave request awaiting approval.">
+                    <i class="icon-plus22"></i>
+                    Apply Leave
+                </button>
+            }
+            else
+            {
+                <a asp-action="Create" class="btn bg-primary">
+                    <i class="icon-plus22"></i>
+                    Apply Leave
+                </a>
+            }
         </div>
 
     </div>
@@ -36,6 +77,7 @@
                 <th>To Date</th>
                 <th>Total Days</th>
                 <th>Status</th>
+                <th>Awaiting</th>
                 <th>Action</th>
             </tr>
         </thead>
@@ -74,9 +116,36 @@
                         {
                             <span class="label bg-danger">Rejected</span>
                         }
-                        else
+                        else if (item.Status == EnumExtensions.ApprovalStatus.ReturnedToEmployee)
+                        {
+                            <span class="label bg-orange">Sent Back</span>
+                        }
+                        else if (item.Status == EnumExtensions.ApprovalStatus.Cancelled)
                         {
                             <span class="label bg-grey">Cancelled</span>
+                        }
+                        else
+                        {
+                            <span class="label bg-grey">@item.Status</span>
+                        }
+
+                    </td>
+
+                    <td>
+
+                        @if (item.Status == EnumExtensions.ApprovalStatus.Pending)
+                        {
+                            <span class="label bg-slate-300">@item.CurrentLevelName</span>
+                        }
+                        else if (item.Status == EnumExtensions.ApprovalStatus.ReturnedToEmployee)
+                        {
+                            <span class="text-muted text-size-small" data-popup="tooltip" title="@item.SendBackReason">
+                                Employee
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">&mdash;</span>
                         }
 
                     </td>
@@ -95,43 +164,71 @@
 
                             </a>
 
-                            @if (item.Status == EnumExtensions.ApprovalStatus.Pending)
+                            @if (item.Status == EnumExtensions.ApprovalStatus.ReturnedToEmployee &&
+                                 (isAdmin || item.EmployeeId == currentEmployeeId))
                             {
-                                @if (isAdmin)
-                                {
-                                    <a asp-action="Edit"
-                                       asp-route-id="@item.Id"
-                                       class="btn btn-primary btn-icon"
-                                       data-popup="tooltip"
-                                       title="Edit">
+                                <a asp-action="Resubmit"
+                                   asp-route-id="@item.Id"
+                                   class="btn bg-orange btn-icon"
+                                   data-popup="tooltip"
+                                   title="Edit &amp; Resubmit">
 
-                                        <i class="icon-pencil7"></i>
+                                    <i class="icon-redo2"></i>
 
-                                    </a>
+                                </a>
+                            }
 
-                                    <button type="button"
-                                            class="btn btn-success btn-icon btnApprove"
-                                            data-id="@item.Id"
-                                            data-popup="tooltip"
-                                            title="Approve">
+                            @if (CanAct(item))
+                            {
+                                <button type="button"
+                                        class="btn btn-success btn-icon btnApprove"
+                                        data-id="@item.Id"
+                                        data-popup="tooltip"
+                                        title="Approve (@item.CurrentLevelName)">
 
-                                        <i class="icon-checkmark4"></i>
+                                    <i class="icon-checkmark4"></i>
 
-                                    </button>
-
-                                    <button type="button"
-                                            class="btn btn-danger btn-icon btnReject"
-                                            data-id="@item.Id"
-                                            data-popup="tooltip"
-                                            title="Reject">
-
-                                        <i class="icon-cross2"></i>
-
-                                    </button>
-                                }
+                                </button>
 
                                 <button type="button"
-                                        class="btn bg-warning btn-icon btnCancel"
+                                        class="btn btn-danger btn-icon btnReject"
+                                        data-id="@item.Id"
+                                        data-popup="tooltip"
+                                        title="Reject">
+
+                                    <i class="icon-cross2"></i>
+
+                                </button>
+
+                                <button type="button"
+                                        class="btn bg-warning btn-icon btnSendBack"
+                                        data-id="@item.Id"
+                                        data-popup="tooltip"
+                                        title="Send Back to Employee">
+
+                                    <i class="icon-undo2"></i>
+
+                                </button>
+                            }
+
+                            @if (isAdmin && item.Status == EnumExtensions.ApprovalStatus.Pending)
+                            {
+                                <a asp-action="Edit"
+                                   asp-route-id="@item.Id"
+                                   class="btn btn-primary btn-icon"
+                                   data-popup="tooltip"
+                                   title="Edit">
+
+                                    <i class="icon-pencil7"></i>
+
+                                </a>
+                            }
+
+                            @if (item.Status == EnumExtensions.ApprovalStatus.Pending &&
+                                 (isAdmin || item.EmployeeId == currentEmployeeId))
+                            {
+                                <button type="button"
+                                        class="btn bg-slate btn-icon btnCancel"
                                         data-id="@item.Id"
                                         data-popup="tooltip"
                                         title="Cancel">
@@ -140,6 +237,7 @@
 
                                 </button>
                             }
+
                             @if (isAdmin)
                             {
                                 <a asp-action="ApprovalHistory"
@@ -170,6 +268,8 @@
          model="new ApproveLeaveRequestDto()" />
 <partial name="_RejectModal"
          model="new RejectLeaveRequestDto()" />
+<partial name="_SendBackModal"
+         model="new SendBackLeaveRequestDto()" />
 <partial name="_CancelModal"
          model="new CancelLeaveRequestDto()" />
 
@@ -253,6 +353,16 @@
                 $('#RejectLeaveId').val(id);
 
                 $('#rejectModal').modal('show');
+
+            });
+
+            // Send Back
+            $(document).on('click', '.btnSendBack', function () {
+                var id = $(this).data('id');
+
+                $('#SendBackLeaveId').val(id);
+
+                $('#sendBackModal').modal('show');
 
             });
 

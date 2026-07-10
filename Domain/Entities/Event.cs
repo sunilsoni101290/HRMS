@@ -32,10 +32,10 @@ namespace Domain.Entities
         // Target Audience
         public bool IsForAll { get; set; } = true;
 
-        public string DepartmentId { get; set; }
+        public string? DepartmentId { get; set; }
         public virtual Department Department { get; set; }
 
-        public string RoleId { get; set; }
+        public string? RoleId { get; set; }
         public virtual Role Role { get; set; }
 
         // Reminder

@@ -108,7 +108,8 @@ namespace Application.Services.Tasks
                     CompanyId = dto.CompanyId,
                     BranchId = dto.BranchId,
                     TenantId = dto.TenantId,
-                    CreatedBy = dto.CreatedBy
+                    CreatedBy = dto.CreatedBy,
+                    Remarks = dto.Remarks
                 };
 
             await _context.EmployeeTasks.AddAsync(entity);
