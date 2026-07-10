@@ -164,7 +164,7 @@ namespace APP.Models.DTOs
 
         #region Passport Details 
         [Display(Name = "Passport #")]
-        public string PassportNumber { get; set; }
+        public string? PassportNumber { get; set; }
 
         [Display(Name = "Issue Date")]
         [DataType(DataType.Date)]
@@ -175,7 +175,7 @@ namespace APP.Models.DTOs
         public DateTime ExpiryDate { get; set; }
 
         [Display(Name = "Place Of Issue")]
-        public string PlaceOfIssue { get; set; }
+        public string? PlaceOfIssue { get; set; }
 
         [Display(Name = "Nationality")]
         public Nationality Nationality { get; set; } = Nationality.Indian;
@@ -272,6 +272,27 @@ namespace APP.Models.DTOs
                     new[] { nameof(ReportingManagerId) });
             }
         }
+    }
+
+    // ==============================
+    // Employee Import DTOs
+    // ==============================
+
+    public class EmployeeImportRowResult
+    {
+        public int RowNumber { get; set; }
+        public string? EmployeeCode { get; set; }
+        public string? EmployeeName { get; set; }
+        public bool Success { get; set; }
+        public string? Message { get; set; }
+    }
+
+    public class EmployeeImportResultDto
+    {
+        public int TotalRows { get; set; }
+        public int SuccessCount { get; set; }
+        public int FailureCount { get; set; }
+        public List<EmployeeImportRowResult> Rows { get; set; } = new();
     }
 
     // ==============================

@@ -1,4 +1,5 @@
 ﻿using Application.DTOs.Auth;
+using Application.DTOs.Employee;
 using Application.Interfaces.Auth;
 using Application.Services.Auth;
 using Application.Services.JWT_Token;
@@ -166,6 +167,25 @@ namespace API.Controllers
 
         #endregion
 
+        #region FORGOT PASSWORD
+
+        // Anonymous by design (a user who forgot their password isn't
+        // logged in) - identity is proven inside the service by requiring
+        // both the Username and the Email on file to match the same
+        // account, not by trusting anything else from the client.
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
+        {
+            var result = await _authService.ForgotPasswordAsync(dto.Username, dto.Email, dto.NewPassword);
+
+            if (!result.Success)
+                return BadRequest(new ApiResponse<object> { Success = false, Message = result.Message });
+
+            return Ok(new ApiResponse<object> { Success = true, Message = result.Message });
+        }
+
+        #endregion
+
 
         // ==============================
         // GET USER BY EMP ID
@@ -177,9 +197,21 @@ namespace API.Controllers
             var result = await _authService.GetUserDetailsByEmpIdAsync(empId);
 
             if (result == null)
-                return NotFound();
+            {
+                return Ok(new ApiResponse<UserListDto>
+                {
+                    Success = false,
+                    Message = "Employee has no linked user account.",
+                    Data = null
+                });
+            }
 
-            return Ok(result);
+            return Ok(new ApiResponse<UserListDto>
+            {
+                Success = true,
+                Message = "Success",
+                Data = result
+            });
         }
 
         [Authorize]

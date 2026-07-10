@@ -15,6 +15,28 @@ namespace APP.Models.DTOs
         public bool RememberMe { get; set; } = false;
     }
 
+    public class ForgotPasswordDto
+    {
+        [Required(ErrorMessage = "Username is required")]
+        public string Username { get; set; }
+
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Enter a valid email address")]
+        public string Email { get; set; }
+
+        [Required(ErrorMessage = "Please enter a new password.")]
+        [DataType(DataType.Password)]
+        [MinLength(6, ErrorMessage = "New password must be at least 6 characters.")]
+        [Display(Name = "New Password")]
+        public string NewPassword { get; set; }
+
+        [Required(ErrorMessage = "Please confirm your new password.")]
+        [DataType(DataType.Password)]
+        [Compare(nameof(NewPassword), ErrorMessage = "New password and confirmation do not match.")]
+        [Display(Name = "Confirm New Password")]
+        public string ConfirmPassword { get; set; }
+    }
+
     public class ChangePasswordDto
     {
         [Required(ErrorMessage = "Please enter your current password.")]

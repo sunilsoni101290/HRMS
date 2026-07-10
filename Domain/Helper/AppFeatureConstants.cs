@@ -64,6 +64,10 @@ namespace Domain.Helper
         public const string HOLIDAY_CONTROLLER = "Holiday";
         public const string HOLIDAY_ACTION = ACTION_INDEX;
 
+        public const string WEEKOFF = "Week Off";
+        public const string WEEKOFF_CONTROLLER = "WeekOff";
+        public const string WEEKOFF_ACTION = ACTION_INDEX;
+
         public const string FINANCIAL_YEAR = "FINANCIAL_YEAR";
         public const string FINANCIAL_YEAR_CONTROLLER = "FinancialYear";
         public const string FINANCIAL_YEAR_ACTION = ACTION_INDEX;

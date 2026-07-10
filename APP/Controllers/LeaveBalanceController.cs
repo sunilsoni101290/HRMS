@@ -188,7 +188,7 @@ namespace APP.Controllers
                 "LeaveBalance/allocate",
                 request);
 
-            return Json(result);
+            return RedirectToAction(nameof(Index));
         }
 
         #endregion
@@ -211,7 +211,7 @@ namespace APP.Controllers
                 "LeaveBalance/credit",
                 request);
 
-            return Json(result);
+            return RedirectToAction(nameof(Index));
         }
 
         #endregion
@@ -235,7 +235,7 @@ namespace APP.Controllers
                 "LeaveBalance/deduct",
                 request);
 
-            return Json(result);
+            return RedirectToAction(nameof(Index));
         }
 
         #endregion
@@ -259,7 +259,7 @@ namespace APP.Controllers
                 "LeaveBalance/carry-forward",
                 request);
 
-            return Json(result);
+            return RedirectToAction(nameof(Index));
         }
 
         #endregion

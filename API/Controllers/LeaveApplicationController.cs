@@ -41,9 +41,22 @@ namespace API.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] ApplyLeaveRequestDto request)
         {
-            var result = await _leaveApplicationService.CreateAsync(request);
+            try
+            {
+                var result = await _leaveApplicationService.CreateAsync(request);
 
-            return Ok(result);
+                if (result == null)
+                    return BadRequest(new { Message = "Unable to submit leave application." });
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                // Business-rule rejection (e.g. an already-pending leave
+                // request, or an invalid employee) - surface the real
+                // reason instead of a 500.
+                return BadRequest(new { Message = ex.Message });
+            }
         }
 
         [HttpPut("{id}")]
@@ -83,21 +96,77 @@ namespace API.Controllers
         [HttpPost("approve")]
         public async Task<IActionResult> ApproveLeave([FromBody] ApproveLeaveRequestDto request)
         {
-            var result =
-                await _leaveApplicationService
-                    .ApproveLeaveAsync(request);
-
-            return Ok(result);
+            try
+            {
+                var result = await _leaveApplicationService.ApproveLeaveAsync(request);
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
         }
 
         [HttpPost("reject")]
         public async Task<IActionResult> RejectLeave([FromBody] RejectLeaveRequestDto request)
         {
-            var result =
-                await _leaveApplicationService
-                    .RejectLeaveAsync(request);
+            try
+            {
+                var result = await _leaveApplicationService.RejectLeaveAsync(request);
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
 
-            return Ok(result);
+        [HttpPost("send-back")]
+        public async Task<IActionResult> SendBackLeave([FromBody] SendBackLeaveRequestDto request)
+        {
+            try
+            {
+                var result = await _leaveApplicationService.SendBackLeaveAsync(request);
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
+
+        [HttpPut("{id}/resubmit")]
+        public async Task<IActionResult> Resubmit(string id, [FromQuery] string resubmittedBy, [FromBody] ApplyLeaveRequestDto request)
+        {
+            try
+            {
+                var result = await _leaveApplicationService.ResubmitAsync(id, request, resubmittedBy);
+
+                if (result == null)
+                    return BadRequest(new { Message = "Unable to resubmit leave application." });
+
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
         }
 
         [HttpPost("cancel")]
@@ -108,6 +177,23 @@ namespace API.Controllers
                     .CancelLeaveAsync(request);
 
             return Ok(result);
+        }
+
+        #endregion
+
+        #region Day Calculation
+
+        [HttpGet("calculate-days")]
+        public async Task<IActionResult> CalculateDays(
+            [FromQuery] DateTime fromDate,
+            [FromQuery] DateTime toDate,
+            [FromQuery] bool isHalfDay,
+            [FromQuery] string? tenantId)
+        {
+            var totalDays = await _leaveApplicationService
+                .CalculateTotalDaysAsync(fromDate, toDate, isHalfDay, tenantId);
+
+            return Ok(new { totalDays });
         }
 
         #endregion
@@ -130,6 +216,16 @@ namespace API.Controllers
             var data =
                 await _leaveApplicationService
                     .GetPendingLeavesAsync();
+
+            return Ok(data);
+        }
+
+        [HttpGet("pending-for-approver")]
+        public async Task<IActionResult> GetPendingForApprover([FromQuery] string? employeeId, [FromQuery] string? roleName)
+        {
+            var data =
+                await _leaveApplicationService
+                    .GetPendingForApproverAsync(employeeId, roleName);
 
             return Ok(data);
         }

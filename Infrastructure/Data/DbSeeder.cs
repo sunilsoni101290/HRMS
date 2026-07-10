@@ -19,7 +19,8 @@ namespace Infrastructure.Data
             if (context == null) return;
 
             // Apply Pending Migrations
-            await context.Database.MigrateAsync();
+            //await context.Database.MigrateAsync();
+            context.Database.EnsureCreated();
 
             // =========================
             // 1. COUNTRY
@@ -995,9 +996,9 @@ namespace Infrastructure.Data
                 AppFeatureType.Master,
                 14, canAdd: true, canEdit: true);
 
-            Add("Holiday", AppFeatureConstants.HOLIDAY, AppFeatureConstants.HRMS,
-                AppFeatureConstants.HOLIDAY_CONTROLLER,
-                AppFeatureConstants.HOLIDAY_ACTION,
+            Add("Week Off", AppFeatureConstants.WEEKOFF, AppFeatureConstants.HRMS,
+                AppFeatureConstants.WEEKOFF_CONTROLLER,
+                AppFeatureConstants.WEEKOFF_ACTION,
                 master.Id,
                 "bi bi-calendar-event",
                 AppFeatureType.Master,

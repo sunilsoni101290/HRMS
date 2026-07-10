@@ -1,5 +1,13 @@
 ﻿@model EmployeeListDto
 
+@{
+    // This same view doubles as the org-wide "Employee Details" screen for
+    // admin/HR and as "My Profile" for a self-service employee. The Back
+    // button must not send a self-service user to the admin employee list
+    // (Employee/Index) - they have no access to it.
+    bool isAdmin = ViewBag.IsAdmin ?? true;
+}
+
 <div class="panel panel-flat">
     <div class="panel-heading">
 
@@ -7,19 +15,33 @@
 
             <i class="icon-user position-left"></i>
 
-            Employee Details
+            @(isAdmin ? "Employee Details" : "My Profile")
 
         </h5>
 
         <div class="heading-elements">
 
-            <a asp-action="Index"
-               class="btn btn-default">
+            @if (isAdmin)
+            {
+                <a asp-action="Index"
+                   class="btn btn-default">
 
-                <i class="icon-arrow-left13"></i>
-                Back
+                    <i class="icon-arrow-left13"></i>
+                    Back
 
-            </a>
+                </a>
+            }
+            else
+            {
+                <a asp-controller="EmployeeDashboard"
+                   asp-action="Index"
+                   class="btn btn-default">
+
+                    <i class="icon-arrow-left13"></i>
+                    Back to Dashboard
+
+                </a>
+            }
 
             <a asp-action="Edit"
                asp-route-id="@Model.Id"

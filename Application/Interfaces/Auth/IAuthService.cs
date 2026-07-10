@@ -19,5 +19,6 @@ namespace Application.Interfaces.Auth
         Task<UserListDto?> GetByIdAsync(string id);
         Task<UserListDto?> GetUserDetailsByEmpIdAsync(string empId);
         Task<ChangePasswordResultDto> ChangePasswordAsync(string userId, string oldPassword, string newPassword);
+        Task<ForgotPasswordResultDto> ForgotPasswordAsync(string username, string email, string newPassword);
     }
 }

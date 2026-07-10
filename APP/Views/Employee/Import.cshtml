@@ -1,0 +1,139 @@
+@model EmployeeImportResultDto
+
+@{
+    ViewData["Title"] = "Import Employees";
+    bool hasRows = Model != null && Model.Rows != null && Model.Rows.Any();
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-file-excel position-left"></i>
+            Import Employees
+        </h5>
+
+        <div class="heading-elements">
+            <a asp-action="Index" class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <ol class="text-size-small">
+            <li>Download the template below and fill one row per employee. Columns marked with * are required.</li>
+            <li>Use the exact Company / Department / Designation / Role names shown on the "Reference Data" sheet of the template.</li>
+            <li>The Reporting Manager column (optional) expects an existing employee's Employee Code, not a name.</li>
+        </ol>
+
+        <a asp-action="DownloadImportTemplate" class="btn bg-info">
+            <i class="icon-file-download position-left"></i>
+            Download Excel Template
+        </a>
+
+        <hr />
+
+        <form asp-action="Import" method="post" enctype="multipart/form-data">
+
+            <div class="row">
+
+                <div class="col-md-6">
+
+                    <div class="form-group">
+                        <label>Select filled Excel file (.xlsx)</label>
+                        <input type="file" name="file" class="file-input" accept=".xlsx,.xls" required />
+                    </div>
+
+                </div>
+
+            </div>
+
+            <button type="submit" class="btn bg-primary">
+                <i class="icon-upload3 position-left"></i>
+                Upload &amp; Import
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+@if (hasRows)
+{
+    <div class="row">
+
+        <div class="col-md-4">
+            <div class="panel panel-body bg-primary-400 text-center">
+                <h3 class="no-margin">@Model.TotalRows</h3>
+                <span>Total Rows</span>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="panel panel-body bg-success-400 text-center">
+                <h3 class="no-margin">@Model.SuccessCount</h3>
+                <span>Imported Successfully</span>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="panel panel-body bg-danger-400 text-center">
+                <h3 class="no-margin">@Model.FailureCount</h3>
+                <span>Failed</span>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="panel panel-flat">
+
+        <div class="panel-heading">
+            <h5 class="panel-title">Import Details</h5>
+        </div>
+
+        <table class="table table-bordered table-striped">
+
+            <thead>
+                <tr>
+                    <th width="70">Row #</th>
+                    <th>Employee Code</th>
+                    <th>Employee Name</th>
+                    <th width="110">Status</th>
+                    <th>Message</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @foreach (var row in Model.Rows)
+                {
+                    <tr>
+                        <td>@row.RowNumber</td>
+                        <td>@row.EmployeeCode</td>
+                        <td>@row.EmployeeName</td>
+                        <td>
+                            @if (row.Success)
+                            {
+                                <span class="label bg-success">Success</span>
+                            }
+                            else
+                            {
+                                <span class="label bg-danger">Failed</span>
+                            }
+                        </td>
+                        <td>@row.Message</td>
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+}

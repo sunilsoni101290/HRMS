@@ -30,19 +30,265 @@ namespace Application.Services.Leaves
             _leaveBalanceService = leaveBalanceService;
         }
 
+        #region Approval Chain Helpers
+
+        // Level 1 = Reporting Manager, Level 2 = Department Head (the
+        // employee holding the most senior Designation - lowest Level
+        // number - in that department, excluding the applicant themself),
+        // Level 3 = HR (role-based, not tied to one employee).
+
+        private static string GetLevelName(int level) => level switch
+        {
+            1 => "Reporting Manager",
+            2 => "Department Head",
+            3 => "HR",
+            _ => "Unknown"
+        };
+
+        private async Task<string?> GetDepartmentHeadIdAsync(string? departmentId, string applicantEmployeeId)
+        {
+            if (string.IsNullOrEmpty(departmentId))
+                return null;
+
+            return await _context.Employees
+                .Where(e =>
+                    e.DepartmentId == departmentId &&
+                    e.Id != applicantEmployeeId &&
+                    e.DesignationId != null)
+                .OrderBy(e => e.Designation.Level)
+                .Select(e => e.Id)
+                .FirstOrDefaultAsync();
+        }
+
+        // Bulk version for list screens - avoids one query per row by
+        // pre-computing, per department, the seniority-ordered employee
+        // list once and reusing it for every leave application in the list.
+        private async Task<Dictionary<string, List<(string EmployeeId, int Level)>>> BuildDepartmentSeniorityMapAsync()
+        {
+            var employees = await _context.Employees
+                .Where(x => x.DepartmentId != null && x.DesignationId != null)
+                .Select(x => new { x.Id, x.DepartmentId, x.Designation.Level })
+                .ToListAsync();
+
+            return employees
+                .GroupBy(x => x.DepartmentId!)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderBy(x => x.Level).Select(x => (x.Id, x.Level)).ToList());
+        }
+
+        private static string? GetDepartmentHeadIdFromMap(
+            Dictionary<string, List<(string EmployeeId, int Level)>> map,
+            string? departmentId,
+            string applicantEmployeeId)
+        {
+            if (string.IsNullOrEmpty(departmentId) || !map.TryGetValue(departmentId, out var list))
+                return null;
+
+            foreach (var entry in list)
+            {
+                if (entry.EmployeeId != applicantEmployeeId)
+                    return entry.EmployeeId;
+            }
+
+            return null;
+        }
+
+        private async Task<int> ResolveStartingLevelAsync(Employee employee)
+        {
+            if (!string.IsNullOrEmpty(employee.ReportingManagerId))
+                return 1;
+
+            var deptHead = await GetDepartmentHeadIdAsync(employee.DepartmentId, employee.Id);
+            return !string.IsNullOrEmpty(deptHead) ? 2 : 3;
+        }
+
+        private async Task<int> ResolveNextLevelAsync(int currentLevel, Employee employee)
+        {
+            if (currentLevel <= 1)
+            {
+                var deptHead = await GetDepartmentHeadIdAsync(employee.DepartmentId, employee.Id);
+                return !string.IsNullOrEmpty(deptHead) ? 2 : 3;
+            }
+
+            return 3;
+        }
+
+        // Resolves who is acting (their linked Employee + their role name)
+        // from the caller's own UserId - never trusted from client input -
+        // so authorization can't be spoofed by posting someone else's id.
+        private async Task<(string? EmployeeId, string? RoleName)> GetActingContextAsync(string userId)
+        {
+            var user = await _context.Users
+                .Include(x => x.UserRoles).ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(x => x.Id == userId);
+
+            var roleName = user?.UserRoles?
+                .Select(ur => ur.Role?.Name)
+                .FirstOrDefault(n => !string.IsNullOrEmpty(n));
+
+            return (user?.EmployeeId, roleName);
+        }
+
+        private async Task<bool> IsAuthorizedForLevelAsync(
+            LeaveApplication leave,
+            int level,
+            string? actingEmployeeId,
+            string? actingRoleName)
+        {
+            switch (level)
+            {
+                case 1:
+                    var l1 = leave.Employee?.ReportingManagerId;
+                    return !string.IsNullOrEmpty(l1) &&
+                           !string.IsNullOrEmpty(actingEmployeeId) &&
+                           l1 == actingEmployeeId;
+
+                case 2:
+                    var l2 = await GetDepartmentHeadIdAsync(leave.Employee?.DepartmentId, leave.EmployeeId);
+                    return !string.IsNullOrEmpty(l2) &&
+                           !string.IsNullOrEmpty(actingEmployeeId) &&
+                           l2 == actingEmployeeId;
+
+                case 3:
+                    return !string.IsNullOrEmpty(actingRoleName) &&
+                           actingRoleName.Contains("HR", StringComparison.OrdinalIgnoreCase);
+
+                default:
+                    return false;
+            }
+        }
+
+        private static LeaveApplicationDto AssembleDto(LeaveApplication x, string? currentApproverEmployeeId)
+        {
+            return new LeaveApplicationDto
+            {
+                Id = x.Id,
+
+                CompanyId = x.CompanyId,
+                BranchId = x.BranchId,
+
+                EmployeeId = x.EmployeeId,
+                EmployeeName = x.Employee != null ? $"{x.Employee.FirstName} {x.Employee.LastName}".Trim() : null,
+
+                LeaveTypeId = x.LeaveTypeId,
+                LeaveTypeName = x.LeaveType?.Name,
+
+                FromDate = x.FromDate,
+                ToDate = x.ToDate,
+
+                TotalDays = x.TotalDays,
+
+                IsHalfDay = x.IsHalfDay,
+                HalfDayType = x.HalfDayType,
+
+                Reason = x.Reason,
+
+                Status = x.Status,
+
+                ApprovedBy = x.ApprovedBy,
+                ApprovedDate = x.ApprovedDate,
+
+                RejectedReason = x.RejectedReason,
+
+                CurrentLevel = x.CurrentLevel,
+                CurrentLevelName = x.Status == ApprovalStatus.Pending ? GetLevelName(x.CurrentLevel) : null,
+                CurrentApproverEmployeeId = x.Status == ApprovalStatus.Pending ? currentApproverEmployeeId : null,
+                SendBackReason = x.SendBackReason,
+
+                DocumentUrl = x.DocumentUrl,
+
+                CreatedOn = x.CreatedOn,
+                CreatedBy = x.CreatedBy,
+
+                ModifiedOn = x.ModifiedOn,
+                ModifiedBy = x.ModifiedBy
+            };
+        }
+
+        private async Task<LeaveApplicationDto> AssembleDtoAsync(LeaveApplication x)
+        {
+            string? approverId = null;
+
+            if (x.Status == ApprovalStatus.Pending)
+            {
+                approverId = x.CurrentLevel switch
+                {
+                    1 => x.Employee?.ReportingManagerId,
+                    2 => await GetDepartmentHeadIdAsync(x.Employee?.DepartmentId, x.EmployeeId),
+                    _ => null
+                };
+            }
+
+            return AssembleDto(x, approverId);
+        }
+
+        private List<LeaveApplicationDto> AssembleDtoList(
+            List<LeaveApplication> entities,
+            Dictionary<string, List<(string EmployeeId, int Level)>> deptSeniorityMap)
+        {
+            var list = new List<LeaveApplicationDto>();
+
+            foreach (var x in entities)
+            {
+                string? approverId = null;
+
+                if (x.Status == ApprovalStatus.Pending)
+                {
+                    approverId = x.CurrentLevel switch
+                    {
+                        1 => x.Employee?.ReportingManagerId,
+                        2 => GetDepartmentHeadIdFromMap(deptSeniorityMap, x.Employee?.DepartmentId, x.EmployeeId),
+                        _ => null
+                    };
+                }
+
+                list.Add(AssembleDto(x, approverId));
+            }
+
+            return list;
+        }
+
+        #endregion
+
         #region CRUD
 
         public async Task<LeaveApplicationDto> CreateAsync(ApplyLeaveRequestDto request)
         {
+            // An employee must wait for their current leave request to be
+            // approved or rejected before they can submit another one -
+            // regardless of the dates chosen for the new request. Checked
+            // (and left to propagate, not swallowed by the catch below) so
+            // the caller can surface the real reason to the user instead of
+            // a generic failure.
+            bool hasPendingLeave = await _context.LeaveApplications
+                .AnyAsync(x =>
+                    x.EmployeeId == request.EmployeeId &&
+                    x.Status == ApprovalStatus.Pending);
+
+            if (hasPendingLeave)
+                throw new InvalidOperationException(
+                    "You already have a leave request awaiting approval. Please wait until it is approved or rejected before applying for another leave.");
+
+            var applicant = await _context.Employees.FirstOrDefaultAsync(x => x.Id == request.EmployeeId);
+
+            if (applicant == null)
+                throw new Exception("Employee not found.");
+
             try
             {
-            decimal totalDays = request.IsHalfDay
-                ? 0.5m
-                : (decimal)((request.ToDate.Date - request.FromDate.Date).Days + 1);
+            decimal totalDays = await CalculateTotalDaysAsync(
+                request.FromDate,
+                request.ToDate,
+                request.IsHalfDay,
+                request.TenantId);
+
+            int startingLevel = await ResolveStartingLevelAsync(applicant);
 
             var entity = new LeaveApplication
             {
                 Id=IDManager.GetNewId(new LeaveApplication()),
+                TenantId = request.TenantId,
                 CompanyId = request.CompanyId,
                 BranchId = request.BranchId,
 
@@ -60,6 +306,7 @@ namespace Application.Services.Leaves
                 Reason = request.Reason,
 
                 Status = ApprovalStatus.Pending,
+                CurrentLevel = startingLevel,
 
                 DocumentUrl = request.DocumentUrl,
 
@@ -71,7 +318,11 @@ namespace Application.Services.Leaves
 
             await _context.SaveChangesAsync();
 
-            await CreateApprovalHistoryAsync(entity.Id,request.CreatedBy, ApprovalStatus.Pending,"Leave Applied");
+            await CreateApprovalHistoryAsync(
+                entity.Id,
+                request.CreatedBy,
+                ApprovalStatus.Pending,
+                $"Leave Applied - awaiting {GetLevelName(startingLevel)} approval");
 
             return await GetByIdAsync(entity.Id);
             }
@@ -94,9 +345,11 @@ namespace Application.Services.Leaves
             if (entity.Status == ApprovalStatus.Approved)
                 throw new Exception("Approved leave cannot be modified.");
 
-            decimal totalDays = request.IsHalfDay
-                ? 0.5m
-                : (decimal)((request.ToDate.Date - request.FromDate.Date).Days + 1);
+            decimal totalDays = await CalculateTotalDaysAsync(
+                request.FromDate,
+                request.ToDate,
+                request.IsHalfDay,
+                request.TenantId ?? entity.TenantId);
 
             entity.CompanyId = request.CompanyId;
             entity.BranchId = request.BranchId;
@@ -154,54 +407,15 @@ namespace Application.Services.Leaves
         {
             try
             {
-            var data = await _context.LeaveApplications
+            var entity = await _context.LeaveApplications
                 .Include(x => x.Employee)
                 .Include(x => x.LeaveType)
-                .Where(x => x.Id == id)
-                .Select(x => new LeaveApplicationDto
-                {
-                    Id = x.Id,
+                .FirstOrDefaultAsync(x => x.Id == id);
 
-                    CompanyId = x.CompanyId,
-                    BranchId = x.BranchId,
-
-                    EmployeeId = x.EmployeeId,
-                    EmployeeName = x.Employee.FirstName + " " + x.Employee.LastName,
-
-                    LeaveTypeId = x.LeaveTypeId,
-                    LeaveTypeName = x.LeaveType.Name,
-
-                    FromDate = x.FromDate,
-                    ToDate = x.ToDate,
-
-                    TotalDays = x.TotalDays,
-
-                    IsHalfDay = x.IsHalfDay,
-                    HalfDayType = x.HalfDayType,
-
-                    Reason = x.Reason,
-
-                    Status = x.Status,
-
-                    ApprovedBy = x.ApprovedBy,
-                    ApprovedDate = x.ApprovedDate,
-
-                    RejectedReason = x.RejectedReason,
-
-                    DocumentUrl = x.DocumentUrl,
-
-                    CreatedOn = x.CreatedOn,
-                    CreatedBy = x.CreatedBy,
-
-                    ModifiedOn = x.ModifiedOn,
-                    ModifiedBy = x.ModifiedBy
-                })
-                .FirstOrDefaultAsync();
-
-            if (data == null)
+            if (entity == null)
                 throw new Exception("Leave application not found.");
 
-            return data;
+            return await AssembleDtoAsync(entity);
             }
             catch (Exception)
             {
@@ -213,49 +427,15 @@ namespace Application.Services.Leaves
         {
             try
             {
-            return await _context.LeaveApplications
+            var entities = await _context.LeaveApplications
                 .Include(x => x.Employee)
                 .Include(x => x.LeaveType)
                 .OrderByDescending(x => x.CreatedOn)
-                .Select(x => new LeaveApplicationDto
-                {
-                    Id = x.Id,
-
-                    CompanyId = x.CompanyId,
-                    BranchId = x.BranchId,
-
-                    EmployeeId = x.EmployeeId,
-                    EmployeeName = x.Employee.FirstName+" "+ x.Employee.LastName,
-
-                    LeaveTypeId = x.LeaveTypeId,
-                    LeaveTypeName = x.LeaveType.Name,
-
-                    FromDate = x.FromDate,
-                    ToDate = x.ToDate,
-
-                    TotalDays = x.TotalDays,
-
-                    IsHalfDay = x.IsHalfDay,
-                    HalfDayType = x.HalfDayType,
-
-                    Reason = x.Reason,
-
-                    Status = x.Status,
-
-                    ApprovedBy = x.ApprovedBy,
-                    ApprovedDate = x.ApprovedDate,
-
-                    RejectedReason = x.RejectedReason,
-
-                    DocumentUrl = x.DocumentUrl,
-
-                    CreatedOn = x.CreatedOn,
-                    CreatedBy = x.CreatedBy,
-
-                    ModifiedOn = x.ModifiedOn,
-                    ModifiedBy = x.ModifiedBy
-                })
                 .ToListAsync();
+
+            var deptMap = await BuildDepartmentSeniorityMapAsync();
+
+            return AssembleDtoList(entities, deptMap);
             }
             catch (Exception)
             {
@@ -271,9 +451,11 @@ namespace Application.Services.Leaves
         {
             try
             {
-            decimal totalDays = request.IsHalfDay
-                ? 0.5m
-                : (decimal)((request.ToDate.Date - request.FromDate.Date).Days + 1);
+            decimal totalDays = await CalculateTotalDaysAsync(
+                request.FromDate,
+                request.ToDate,
+                request.IsHalfDay,
+                request.TenantId);
 
             // Check Leave Balance
             var leaveBalance =
@@ -304,6 +486,7 @@ namespace Application.Services.Leaves
             var entity = new LeaveApplication
             {
                 Id = IDManager.GetNewId(new LeaveApplication()),
+                TenantId = request.TenantId,
                 CompanyId = request.CompanyId,
                 BranchId = request.BranchId,
 
@@ -344,10 +527,9 @@ namespace Application.Services.Leaves
 
         public async Task<bool> ApproveLeaveAsync(ApproveLeaveRequestDto request)
         {
-            try
-            {
             var leave =
                 await _context.LeaveApplications
+                    .Include(x => x.Employee)
                     .FirstOrDefaultAsync(x =>
                         x.Id == request.LeaveApplicationId);
 
@@ -358,26 +540,59 @@ namespace Application.Services.Leaves
                 throw new Exception(
                     "Only pending leave can be approved.");
 
-            var deductLeaveReq = new LeaveAdjustmentRequestDto()
+            var (actingEmployeeId, actingRoleName) = await GetActingContextAsync(request.ApprovedBy);
+
+            if (!await IsAuthorizedForLevelAsync(leave, leave.CurrentLevel, actingEmployeeId, actingRoleName))
+                throw new UnauthorizedAccessException(
+                    $"You are not authorized to approve this leave at the {GetLevelName(leave.CurrentLevel)} level.");
+
+            try
             {
-                EmployeeId = leave.EmployeeId,
-                LeaveTypeId = leave.LeaveTypeId,
-                Days = leave.TotalDays
-            };
+            if (leave.CurrentLevel >= 3)
+            {
+                // Final level - actually deduct the balance and close it out.
+                var deductLeaveReq = new LeaveAdjustmentRequestDto()
+                {
+                    EmployeeId = leave.EmployeeId,
+                    LeaveTypeId = leave.LeaveTypeId,
+                    Days = leave.TotalDays
+                };
 
-            await _leaveBalanceService.DeductLeaveAsync(deductLeaveReq);
+                await _leaveBalanceService.DeductLeaveAsync(deductLeaveReq);
 
-            leave.Status = ApprovalStatus.Approved;
+                leave.Status = ApprovalStatus.Approved;
 
-            leave.ApprovedBy = request.ApprovedBy;
-            leave.ApprovedDate = DateTime.UtcNow;
+                leave.ApprovedBy = request.ApprovedBy;
+                leave.ApprovedDate = DateTime.UtcNow;
 
-            leave.ModifiedOn = DateTime.UtcNow;
-            leave.ModifiedBy = request.ApprovedBy;
+                leave.ModifiedOn = DateTime.UtcNow;
+                leave.ModifiedBy = request.ApprovedBy;
 
-            await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync();
 
-            await CreateApprovalHistoryAsync(request.LeaveApplicationId, request.ApprovedBy, ApprovalStatus.Approved, request.Remarks);
+                await CreateApprovalHistoryAsync(
+                    request.LeaveApplicationId,
+                    request.ApprovedBy,
+                    ApprovalStatus.Approved,
+                    request.Remarks ?? $"Approved by {GetLevelName(leave.CurrentLevel)} - fully approved.");
+            }
+            else
+            {
+                int approvedAtLevel = leave.CurrentLevel;
+
+                leave.CurrentLevel = await ResolveNextLevelAsync(leave.CurrentLevel, leave.Employee);
+
+                leave.ModifiedOn = DateTime.UtcNow;
+                leave.ModifiedBy = request.ApprovedBy;
+
+                await _context.SaveChangesAsync();
+
+                await CreateApprovalHistoryAsync(
+                    request.LeaveApplicationId,
+                    request.ApprovedBy,
+                    ApprovalStatus.Approved,
+                    request.Remarks ?? $"Approved by {GetLevelName(approvedAtLevel)} - forwarded to {GetLevelName(leave.CurrentLevel)}.");
+            }
 
             return true;
             }
@@ -389,10 +604,9 @@ namespace Application.Services.Leaves
 
         public async Task<bool> RejectLeaveAsync(RejectLeaveRequestDto request)
         {
-            try
-            {
             var leave =
                 await _context.LeaveApplications
+                    .Include(x => x.Employee)
                     .FirstOrDefaultAsync(x =>
                         x.Id == request.LeaveApplicationId);
 
@@ -402,6 +616,16 @@ namespace Application.Services.Leaves
             if (leave.Status != ApprovalStatus.Pending)
                 throw new Exception(
                     "Only pending leave can be rejected.");
+
+            var (actingEmployeeId, actingRoleName) = await GetActingContextAsync(request.RejectedBy);
+
+            if (!await IsAuthorizedForLevelAsync(leave, leave.CurrentLevel, actingEmployeeId, actingRoleName))
+                throw new UnauthorizedAccessException(
+                    $"You are not authorized to reject this leave at the {GetLevelName(leave.CurrentLevel)} level.");
+
+            try
+            {
+            int rejectedAtLevel = leave.CurrentLevel;
 
             leave.Status = ApprovalStatus.Rejected;
 
@@ -415,13 +639,125 @@ namespace Application.Services.Leaves
 
             await _context.SaveChangesAsync();
 
-            await CreateApprovalHistoryAsync(request.LeaveApplicationId, request.RejectedBy, ApprovalStatus.Rejected, request.RejectedReason);
+            await CreateApprovalHistoryAsync(
+                request.LeaveApplicationId,
+                request.RejectedBy,
+                ApprovalStatus.Rejected,
+                $"Rejected by {GetLevelName(rejectedAtLevel)}: {request.RejectedReason}");
 
             return true;
             }
             catch (Exception)
             {
                 return false;
+            }
+        }
+
+        public async Task<bool> SendBackLeaveAsync(SendBackLeaveRequestDto request)
+        {
+            var leave =
+                await _context.LeaveApplications
+                    .Include(x => x.Employee)
+                    .FirstOrDefaultAsync(x =>
+                        x.Id == request.LeaveApplicationId);
+
+            if (leave == null)
+                throw new Exception("Leave application not found.");
+
+            if (leave.Status != ApprovalStatus.Pending)
+                throw new Exception(
+                    "Only pending leave can be sent back.");
+
+            var (actingEmployeeId, actingRoleName) = await GetActingContextAsync(request.SentBackBy);
+
+            if (!await IsAuthorizedForLevelAsync(leave, leave.CurrentLevel, actingEmployeeId, actingRoleName))
+                throw new UnauthorizedAccessException(
+                    $"You are not authorized to act on this leave at the {GetLevelName(leave.CurrentLevel)} level.");
+
+            try
+            {
+            int sentBackFromLevel = leave.CurrentLevel;
+
+            leave.Status = ApprovalStatus.ReturnedToEmployee;
+            leave.SendBackReason = request.Reason;
+
+            leave.ModifiedOn = DateTime.UtcNow;
+            leave.ModifiedBy = request.SentBackBy;
+
+            await _context.SaveChangesAsync();
+
+            await CreateApprovalHistoryAsync(
+                request.LeaveApplicationId,
+                request.SentBackBy,
+                ApprovalStatus.ReturnedToEmployee,
+                $"Sent back by {GetLevelName(sentBackFromLevel)}: {request.Reason}");
+
+            return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        // The employee edits and resubmits a leave that was sent back to
+        // them - this restarts the approval chain from the top (Level 1),
+        // it does not resume from wherever it was sent back from.
+        public async Task<LeaveApplicationDto> ResubmitAsync(string id, ApplyLeaveRequestDto request, string resubmittedBy)
+        {
+            var leave =
+                await _context.LeaveApplications
+                    .Include(x => x.Employee)
+                    .FirstOrDefaultAsync(x => x.Id == id);
+
+            if (leave == null)
+                throw new Exception("Leave application not found.");
+
+            if (leave.Status != ApprovalStatus.ReturnedToEmployee)
+                throw new Exception("Only a leave request that was sent back can be resubmitted.");
+
+            if (leave.EmployeeId != request.EmployeeId)
+                throw new UnauthorizedAccessException("You can only resubmit your own leave request.");
+
+            try
+            {
+            decimal totalDays = await CalculateTotalDaysAsync(
+                request.FromDate,
+                request.ToDate,
+                request.IsHalfDay,
+                request.TenantId ?? leave.TenantId);
+
+            leave.LeaveTypeId = request.LeaveTypeId;
+            leave.FromDate = request.FromDate;
+            leave.ToDate = request.ToDate;
+            leave.TotalDays = totalDays;
+            leave.IsHalfDay = request.IsHalfDay;
+            leave.HalfDayType = request.HalfDayType;
+            leave.Reason = request.Reason;
+
+            if (!string.IsNullOrWhiteSpace(request.DocumentUrl))
+                leave.DocumentUrl = request.DocumentUrl;
+
+            leave.Status = ApprovalStatus.Pending;
+            leave.CurrentLevel = await ResolveStartingLevelAsync(leave.Employee);
+            leave.SendBackReason = null;
+
+            leave.ModifiedOn = DateTime.UtcNow;
+            leave.ModifiedBy = resubmittedBy;
+
+            await _context.SaveChangesAsync();
+
+            await CreateApprovalHistoryAsync(
+                leave.Id,
+                resubmittedBy,
+                ApprovalStatus.Pending,
+                $"Resubmitted by employee - awaiting {GetLevelName(leave.CurrentLevel)} approval");
+
+            return await GetByIdAsync(leave.Id);
+            }
+            catch (Exception)
+            {
+                return null;
             }
         }
 
@@ -474,172 +810,97 @@ namespace Application.Services.Leaves
 
         public async Task<List<LeaveApplicationDto>>GetEmployeeLeavesAsync(string employeeId)
         {
-            return await _context.LeaveApplications
+            var entities = await _context.LeaveApplications
                 .Include(x => x.Employee)
                 .Include(x => x.LeaveType)
                 .Where(x => x.EmployeeId == employeeId)
                 .OrderByDescending(x => x.CreatedOn)
-                .Select(x => new LeaveApplicationDto
-                {
-                    Id = x.Id,
-
-                    CompanyId = x.CompanyId,
-                    BranchId = x.BranchId,
-
-                    EmployeeId = x.EmployeeId,
-                    EmployeeName = x.Employee.FirstName + " " + x.Employee.LastName,
-
-                    LeaveTypeId = x.LeaveTypeId,
-                    LeaveTypeName = x.LeaveType.Name,
-
-                    FromDate = x.FromDate,
-                    ToDate = x.ToDate,
-
-                    TotalDays = x.TotalDays,
-
-                    IsHalfDay = x.IsHalfDay,
-                    HalfDayType = x.HalfDayType,
-
-                    Reason = x.Reason,
-
-                    Status = x.Status,
-
-                    ApprovedBy = x.ApprovedBy,
-                    ApprovedDate = x.ApprovedDate,
-
-                    RejectedReason = x.RejectedReason,
-
-                    DocumentUrl = x.DocumentUrl,
-
-                    CreatedOn = x.CreatedOn
-                })
                 .ToListAsync();
+
+            var deptMap = await BuildDepartmentSeniorityMapAsync();
+
+            return AssembleDtoList(entities, deptMap);
         }
 
         public async Task<List<LeaveApplicationDto>>GetPendingLeavesAsync()
         {
-            return await _context.LeaveApplications
+            var entities = await _context.LeaveApplications
                 .Include(x => x.Employee)
                 .Include(x => x.LeaveType)
                 .Where(x => x.Status == ApprovalStatus.Pending)
                 .OrderByDescending(x => x.CreatedOn)
-                .Select(x => new LeaveApplicationDto
-                {
-                    Id = x.Id,
-
-                    EmployeeId = x.EmployeeId,
-                    EmployeeName = x.Employee.FirstName + " " + x.Employee.LastName,
-
-                    LeaveTypeId = x.LeaveTypeId,
-                    LeaveTypeName = x.LeaveType.Name,
-
-                    FromDate = x.FromDate,
-                    ToDate = x.ToDate,
-
-                    TotalDays = x.TotalDays,
-
-                    Status = x.Status,
-
-                    Reason = x.Reason,
-
-                    CreatedOn = x.CreatedOn
-                })
                 .ToListAsync();
+
+            var deptMap = await BuildDepartmentSeniorityMapAsync();
+
+            return AssembleDtoList(entities, deptMap);
+        }
+
+        public async Task<List<LeaveApplicationDto>> GetPendingForApproverAsync(string? employeeId, string? roleName)
+        {
+            bool isHr = !string.IsNullOrEmpty(roleName) && roleName.Contains("HR", StringComparison.OrdinalIgnoreCase);
+
+            var pending = await _context.LeaveApplications
+                .Include(x => x.Employee)
+                .Include(x => x.LeaveType)
+                .Where(x => x.Status == ApprovalStatus.Pending)
+                .OrderBy(x => x.CreatedOn)
+                .ToListAsync();
+
+            var deptMap = await BuildDepartmentSeniorityMapAsync();
+
+            var mine = pending.Where(x =>
+                x.CurrentLevel == 1
+                    ? !string.IsNullOrEmpty(employeeId) && x.Employee?.ReportingManagerId == employeeId
+                    : x.CurrentLevel == 2
+                        ? !string.IsNullOrEmpty(employeeId) &&
+                          GetDepartmentHeadIdFromMap(deptMap, x.Employee?.DepartmentId, x.EmployeeId) == employeeId
+                        : isHr)
+                .ToList();
+
+            return AssembleDtoList(mine, deptMap);
         }
 
         public async Task<List<LeaveApplicationDto>>GetApprovedLeavesAsync()
         {
-            return await _context.LeaveApplications
+            var entities = await _context.LeaveApplications
                 .Include(x => x.Employee)
                 .Include(x => x.LeaveType)
                 .Where(x => x.Status == ApprovalStatus.Approved)
                 .OrderByDescending(x => x.ApprovedDate)
-                .Select(x => new LeaveApplicationDto
-                {
-                    Id = x.Id,
-
-                    EmployeeId = x.EmployeeId,
-                    EmployeeName = x.Employee.FirstName + " " + x.Employee.LastName,
-
-                    LeaveTypeId = x.LeaveTypeId,
-                    LeaveTypeName = x.LeaveType.Name,
-
-                    FromDate = x.FromDate,
-                    ToDate = x.ToDate,
-
-                    TotalDays = x.TotalDays,
-
-                    Status = x.Status,
-
-                    ApprovedBy = x.ApprovedBy,
-                    ApprovedDate = x.ApprovedDate,
-
-                    CreatedOn = x.CreatedOn
-                })
                 .ToListAsync();
+
+            var deptMap = await BuildDepartmentSeniorityMapAsync();
+
+            return AssembleDtoList(entities, deptMap);
         }
 
         public async Task<List<LeaveApplicationDto>>GetRejectedLeavesAsync()
         {
-            return await _context.LeaveApplications
+            var entities = await _context.LeaveApplications
                 .Include(x => x.Employee)
                 .Include(x => x.LeaveType)
                 .Where(x => x.Status == ApprovalStatus.Rejected)
                 .OrderByDescending(x => x.ApprovedDate)
-                .Select(x => new LeaveApplicationDto
-                {
-                    Id = x.Id,
-
-                    EmployeeId = x.EmployeeId,
-                    EmployeeName = x.Employee.FirstName + " " + x.Employee.LastName,
-
-                    LeaveTypeId = x.LeaveTypeId,
-                    LeaveTypeName = x.LeaveType.Name,
-
-                    FromDate = x.FromDate,
-                    ToDate = x.ToDate,
-
-                    TotalDays = x.TotalDays,
-
-                    Status = x.Status,
-
-                    RejectedReason = x.RejectedReason,
-
-                    ApprovedBy = x.ApprovedBy,
-                    ApprovedDate = x.ApprovedDate
-                })
                 .ToListAsync();
+
+            var deptMap = await BuildDepartmentSeniorityMapAsync();
+
+            return AssembleDtoList(entities, deptMap);
         }
 
         public async Task<List<LeaveApplicationDto>>GetCancelledLeavesAsync()
         {
-            return await _context.LeaveApplications
+            var entities = await _context.LeaveApplications
                 .Include(x => x.Employee)
                 .Include(x => x.LeaveType)
                 .Where(x => x.Status == ApprovalStatus.Cancelled)
                 .OrderByDescending(x => x.ModifiedOn)
-                .Select(x => new LeaveApplicationDto
-                {
-                    Id = x.Id,
-
-                    EmployeeId = x.EmployeeId,
-                    EmployeeName = x.Employee.FirstName + " " + x.Employee.LastName,
-
-                    LeaveTypeId = x.LeaveTypeId,
-                    LeaveTypeName = x.LeaveType.Name,
-
-                    FromDate = x.FromDate,
-                    ToDate = x.ToDate,
-
-                    TotalDays = x.TotalDays,
-
-                    Status = x.Status,
-
-                    CreatedOn = x.CreatedOn,
-
-                    ModifiedOn = x.ModifiedOn
-                })
                 .ToListAsync();
+
+            var deptMap = await BuildDepartmentSeniorityMapAsync();
+
+            return AssembleDtoList(entities, deptMap);
         }
 
         public async Task<List<LeaveApplicationDto>>GetFilteredAsync(LeaveApplicationFilterRequestDto request)
@@ -679,43 +940,13 @@ namespace Application.Services.Leaves
                     x.ToDate.Date <= request.ToDate.Value.Date);
             }
 
-            return await query
+            var entities = await query
                 .OrderByDescending(x => x.CreatedOn)
-                .Select(x => new LeaveApplicationDto
-                {
-                    Id = x.Id,
-
-                    CompanyId = x.CompanyId,
-                    BranchId = x.BranchId,
-
-                    EmployeeId = x.EmployeeId,
-                    EmployeeName = x.Employee.FirstName+" "+ x.Employee.LastName,
-
-                    LeaveTypeId = x.LeaveTypeId,
-                    LeaveTypeName = x.LeaveType.Name,
-
-                    FromDate = x.FromDate,
-                    ToDate = x.ToDate,
-
-                    TotalDays = x.TotalDays,
-
-                    IsHalfDay = x.IsHalfDay,
-                    HalfDayType = x.HalfDayType,
-
-                    Reason = x.Reason,
-
-                    Status = x.Status,
-
-                    ApprovedBy = x.ApprovedBy,
-                    ApprovedDate = x.ApprovedDate,
-
-                    RejectedReason = x.RejectedReason,
-
-                    DocumentUrl = x.DocumentUrl,
-
-                    CreatedOn = x.CreatedOn
-                })
                 .ToListAsync();
+
+            var deptMap = await BuildDepartmentSeniorityMapAsync();
+
+            return AssembleDtoList(entities, deptMap);
         }
 
         #endregion
@@ -983,6 +1214,44 @@ namespace Application.Services.Leaves
 
             await _context.SaveChangesAsync();
         }
+        #endregion
+
+        #region Day Calculation
+
+        // Counts only actual working days between fromDate and toDate -
+        // a day is excluded if it's a configured week-off (e.g. Sat/Sun)
+        // or a holiday for the tenant, so leave taken across a weekend or
+        // a public holiday doesn't burn extra leave balance for those
+        // non-working days.
+        public async Task<decimal> CalculateTotalDaysAsync(DateTime fromDate, DateTime toDate, bool isHalfDay, string? tenantId)
+        {
+            if (isHalfDay)
+                return 0.5m;
+
+            if (toDate.Date < fromDate.Date)
+                return 0m;
+
+            if (string.IsNullOrEmpty(tenantId))
+            {
+                // No tenant to check week-offs/holidays against - fall back
+                // to plain calendar days rather than silently returning 0.
+                return (decimal)((toDate.Date - fromDate.Date).Days + 1);
+            }
+
+            decimal totalDays = 0m;
+
+            for (var date = fromDate.Date; date <= toDate.Date; date = date.AddDays(1))
+            {
+                bool isWeekOff = await _weekOffService.IsWeekOff(date, tenantId);
+                bool isHoliday = await _weekOffService.IsHoliday(date, tenantId);
+
+                if (!isWeekOff && !isHoliday)
+                    totalDays += 1;
+            }
+
+            return totalDays;
+        }
+
         #endregion
 
     }

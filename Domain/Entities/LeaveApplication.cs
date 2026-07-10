@@ -33,13 +33,22 @@ namespace Domain.Entities
         public string? Reason { get; set; }
 
         // Status
-        public ApprovalStatus Status { get; set; } //Enum = Pending / Approved / Rejected / Cancelled
+        public ApprovalStatus Status { get; set; } //Enum = Pending / Approved / Rejected / Cancelled / ReturnedToEmployee
+
+        // Multi-level approval: 1 = Reporting Manager, 2 = Department Head,
+        // 3 = HR. Only meaningful while Status == Pending - tracks whose
+        // turn it currently is in the chain.
+        public int CurrentLevel { get; set; } = 1;
 
         // Approval
         public string? ApprovedBy { get; set; }
         public DateTime? ApprovedDate { get; set; }
 
         public string? RejectedReason { get; set; }
+
+        // Set when an approver sends the request back to the employee for
+        // correction instead of approving/rejecting outright.
+        public string? SendBackReason { get; set; }
 
         // Attachment
         public string? DocumentUrl { get; set; }

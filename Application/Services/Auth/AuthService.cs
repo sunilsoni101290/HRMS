@@ -625,5 +625,57 @@ namespace Application.Services.Auth
                 return new ChangePasswordResultDto { Success = false, Message = "Something went wrong while changing the password." };
             }
         }
+
+        // ==============================
+        // 🔑 FORGOT PASSWORD (self-service, no email/SMS infra yet)
+        // ==============================
+        // Identity is verified server-side by requiring BOTH the Username
+        // and the Email already on file to match the same account - never
+        // trust a client-supplied user id here, and never reveal which of
+        // the two fields was wrong (that would let an attacker enumerate
+        // valid usernames/emails one field at a time).
+        public async Task<ForgotPasswordResultDto> ForgotPasswordAsync(string username, string email, string newPassword)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(email))
+                    return new ForgotPasswordResultDto { Success = false, Message = "Username and email are required." };
+
+                if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 6)
+                    return new ForgotPasswordResultDto { Success = false, Message = "New password must be at least 6 characters." };
+
+                var user = await _db.Users.FirstOrDefaultAsync(x =>
+                    x.Username.ToLower() == username.Trim().ToLower() &&
+                    x.Email.ToLower() == email.Trim().ToLower());
+
+                if (user == null)
+                    return new ForgotPasswordResultDto { Success = false, Message = "We couldn't find an account matching that username and email." };
+
+                if (!user.IsActive)
+                    return new ForgotPasswordResultDto { Success = false, Message = "This account is inactive. Please contact your administrator." };
+
+                if (BCrypt.Net.BCrypt.Verify(newPassword, user.PasswordHash))
+                    return new ForgotPasswordResultDto { Success = false, Message = "New password must be different from the current password." };
+
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword, workFactor: 12);
+
+                // A successful self-service reset is a reasonable moment to
+                // also clear any lockout, so a locked-out user isn't left
+                // stuck after proving who they are.
+                user.IsLocked = false;
+                user.AccessFailedCount = 0;
+                user.LockoutEnd = null;
+
+                user.ModifiedOn = DateTime.UtcNow;
+
+                await _db.SaveChangesAsync();
+
+                return new ForgotPasswordResultDto { Success = true, Message = "Password reset successfully. You can now log in with your new password." };
+            }
+            catch (Exception)
+            {
+                return new ForgotPasswordResultDto { Success = false, Message = "Something went wrong while resetting the password." };
+            }
+        }
     }
 }

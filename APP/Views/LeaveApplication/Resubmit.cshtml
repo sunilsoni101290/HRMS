@@ -1,11 +1,10 @@
-﻿@model ApplyLeaveRequestDto
+@model ApplyLeaveRequestDto
 
 @{
-    ViewData["Title"] = "Apply Leave";
+    ViewData["Title"] = "Resubmit Leave";
     bool isAdmin = ViewBag.IsAdmin ?? true;
-    bool noEmployeeProfile = ViewBag.NoEmployeeProfile ?? false;
-    bool hasPendingLeave = ViewBag.HasPendingLeave ?? false;
     string employeeDisplayName = ViewBag.EmployeeDisplayName ?? "";
+    string? sendBackReason = ViewBag.SendBackReason as string;
 }
 
 <div class="panel panel-flat">
@@ -13,8 +12,8 @@
     <div class="panel-heading">
 
         <h5 class="panel-title">
-            <i class="icon-calendar-plus position-left"></i>
-            Apply Leave
+            <i class="icon-redo2 position-left"></i>
+            Resubmit Leave Request
         </h5>
 
         <div class="heading-elements">
@@ -31,19 +30,24 @@
 
     <div class="panel-body">
 
-        <form asp-action="Create"
+        <div class="alert bg-orange-300 alert-styled-left">
+            <span class="text-semibold">This request was sent back for correction.</span>
+            @if (!string.IsNullOrEmpty(sendBackReason))
+            {
+                <div>Reason: @sendBackReason</div>
+            }
+            Update the details below and resubmit - approval will restart from the first approver.
+        </div>
+
+        <form asp-action="Resubmit"
+              asp-route-id="@Model.Id"
               method="post"
               enctype="multipart/form-data">
 
             <div asp-validation-summary="ModelOnly"
                  class="alert alert-danger"></div>
 
-            <div id="pendingLeaveAlert"
-                 class="alert alert-warning alert-styled-left"
-                 style="@(hasPendingLeave ? "" : "display:none;")">
-                <span class="text-semibold">You already have a leave request awaiting approval.</span>
-                Please wait until it is approved, rejected, or cancelled before applying for another leave.
-            </div>
+            <input asp-for="Id" type="hidden" />
 
             <!-- Employee Information -->
 
@@ -53,39 +57,17 @@
 
                     <div class="form-group">
 
-                        <label asp-for="EmployeeId">Employee</label>
+                        <label>Employee</label>
 
-                        @if (isAdmin)
-                        {
-                            <select asp-for="EmployeeId"
-                                    asp-items="ViewBag.EmployeeList"
-                                    class="form-control">
-                                <option value="">Select Employee</option>
-                            </select>
+                        <!-- Who the leave belongs to never changes on resubmit -
+                             not editable here, even for admin. -->
+                        <input type="text"
+                               class="form-control bg-slate-100"
+                               value="@employeeDisplayName"
+                               readonly
+                               disabled />
 
-                            <span asp-validation-for="EmployeeId"
-                                  class="text-danger"></span>
-                        }
-                        else
-                        {
-                            <!-- Self-service: always the logged-in employee, never a
-                                 pickable dropdown - the server ignores any other
-                                 value even if one were posted. -->
-                            <input type="text"
-                                   class="form-control bg-slate-100"
-                                   value="@employeeDisplayName"
-                                   readonly
-                                   disabled />
-
-                            <input asp-for="EmployeeId" type="hidden" />
-
-                            @if (noEmployeeProfile)
-                            {
-                                <span class="text-danger text-size-small">
-                                    Your login isn't linked to an employee profile - you can't apply leave.
-                                </span>
-                            }
-                        }
+                        <input asp-for="EmployeeId" type="hidden" />
 
                     </div>
 
@@ -111,15 +93,6 @@
                 </div>
 
             </div>
-
-            <!-- Leave Balance -->
-            <div class="alert bg-info-300 alert-styled-left">
-                <span id="leaveBalanceInfo">
-                    Available Leave Balance : <strong>0 Days</strong>
-                </span>
-            </div>
-
-            <input type="hidden" id="AvailableBalance" />
 
             <!-- Leave Dates -->
 
@@ -204,7 +177,7 @@
             <!-- Half Day -->
 
             <div id="halfDaySection"
-                 style="display:none;">
+                 style="@(Model.IsHalfDay ? "" : "display:none;")">
 
                 <div class="row">
 
@@ -270,9 +243,24 @@
 
                     <div class="col-md-6">
 
+                        @if (!string.IsNullOrEmpty(Model.DocumentUrl))
+                        {
+                            <div class="mb-10">
+                                <a href="@Model.DocumentUrl" target="_blank">
+                                    <i class="icon-attachment"></i>
+                                    View current document
+                                </a>
+                            </div>
+                        }
+
                         <input type="file"
                                name="UploadDocument"
                                class="file-input" />
+
+                        <span class="text-muted text-size-small">
+                            Leave empty to keep the existing document.
+                        </span>
+
                     </div>
 
                 </div>
@@ -291,12 +279,10 @@
                 </a>
 
                 <button type="submit"
-                        id="btnSubmitLeave"
-                        class="btn bg-primary"
-                        @((noEmployeeProfile || hasPendingLeave) ? "disabled" : "")>
+                        class="btn bg-orange">
 
-                    <i class="icon-checkmark4"></i>
-                    Submit Leave
+                    <i class="icon-redo2"></i>
+                    Resubmit for Approval
 
                 </button>
 
@@ -340,10 +326,8 @@
             });
 
             // Total Days must match what the server will actually save -
-            // week-offs (e.g. Sat/Sun) and configured holidays inside the
-            // chosen range don't count as leave, so the count is asked from
-            // the server (same logic used on submit) instead of a plain
-            // calendar-day difference.
+            // week-offs and configured holidays inside the chosen range
+            // don't count as leave.
             function calculateDays() {
 
                 var fromDate = $("#FromDate").val();
@@ -383,145 +367,6 @@
 
         });
 
-                    $(document).ready(function () {
-
-            $("#EmployeeId, #LeaveTypeId").on("change", function () {
-
-                loadLeaveBalance();
-
-            });
-
-            @if (isAdmin)
-            {
-                <text>
-                $("#EmployeeId").on("change", function () {
-
-                    checkPendingLeave();
-
-                });
-                </text>
-            }
-
-        });
-
-        function checkPendingLeave() {
-
-            var employeeId = $("#EmployeeId").val();
-
-            if (!employeeId) {
-
-                $("#pendingLeaveAlert").hide();
-                $("#btnSubmitLeave").prop("disabled", false);
-
-                return;
-            }
-
-            $.ajax({
-
-                url: '@Url.Action("HasPendingLeave", "LeaveApplication")',
-                type: 'GET',
-                dataType: 'json',
-
-                data: {
-                    employeeId: employeeId
-                },
-
-                success: function (response) {
-
-                    if (response.hasPending) {
-
-                        $("#pendingLeaveAlert").show();
-                        $("#btnSubmitLeave").prop("disabled", true);
-
-                    } else {
-
-                        $("#pendingLeaveAlert").hide();
-                        $("#btnSubmitLeave").prop("disabled", false);
-
-                    }
-
-                }
-
-            });
-
-        }
-
-        function loadLeaveBalance() {
-
-            var employeeId = $("#EmployeeId").val();
-            var leaveTypeId = $("#LeaveTypeId").val();
-
-            if (!employeeId || !leaveTypeId) {
-
-                $("#leaveBalanceInfo").html(
-                    'Available Leave Balance : <strong>0 Days</strong>'
-                );
-
-                return;
-            }
-
-            $.ajax({
-
-                url: '@Url.Action("EmployeeBalance", "LeaveBalance")',
-                type: 'GET',
-                dataType: 'json',
-
-                data: {
-                    employeeId: employeeId,
-                    leaveTypeId: leaveTypeId
-                },
-
-                beforeSend: function () {
-
-                    $("#leaveBalanceInfo").html(
-                        '<i class="icon-spinner2 spinner"></i> Loading balance...'
-                    );
-
-                },
-
-                success: function (response) {
-
-                    console.log("Response:", response);
-
-                    var balance = 0;
-
-                    // Case 1
-                    if (response.balance !== undefined) {
-                        balance = response.balance;
-                    }
-
-                    // Case 2
-                    else if (response.Balance !== undefined) {
-                        balance = response.Balance;
-                    }
-
-                    // Case 3
-                    else if (response.success && response.balance !== undefined) {
-                        balance = response.balance;
-                    }
-
-                    $("#leaveBalanceInfo").html(
-                        'Available Leave Balance : <strong class="text-white">' +
-                        balance +
-                        ' Days</strong>'
-                    );
-
-                    $("#AvailableBalance").val(balance);
-                },
-
-                error: function (xhr, status, error) {
-
-                    console.log(xhr.responseText);
-
-                    $("#leaveBalanceInfo").html(
-                        '<span class="text-danger">Unable to load balance</span>'
-                    );
-
-                }
-
-            });
-
-        }
     </script>
 
 }
