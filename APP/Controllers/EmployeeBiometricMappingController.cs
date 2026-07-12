@@ -1,3 +1,4 @@
+using APP.Attributes;
 using APP.Helpers;
 using APP.Models.DTOs;
 using APP.Services.Interfaces;
@@ -12,6 +13,7 @@ namespace APP.Controllers
     /// through a form, instead of writing directly to the database. Required
     /// before any punch - real or test - can turn into an Attendance record.
     /// </summary>
+    [JwtAuthorize]
     public class EmployeeBiometricMappingController : Controller
     {
         private readonly IApiService _apiService;

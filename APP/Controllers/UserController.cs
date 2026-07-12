@@ -88,12 +88,25 @@ namespace APP.Controllers
             return View("Create", dto);
         }
 
+        // The admin never types or sees the user's real password - a fresh
+        // one is generated server-side and shown here exactly once via
+        // TempData, which is cleared after this single redirect renders.
         [HttpPost]
-        public async Task<IActionResult> ResetPassword(string id, string newPassword)
+        public async Task<IActionResult> ResetPassword(string id)
         {
-            await _apiService.PutAsync<dynamic>(
-                $"user/reset-password/{id}?newPassword={Uri.EscapeDataString(newPassword ?? "")}", new { });
-            TempData["Success"] = "Password reset successfully.";
+            try
+            {
+                dynamic result = await _apiService.PutAsync<dynamic>($"user/reset-password/{id}", new { });
+                string newPassword = result?.newPassword ?? result?.NewPassword;
+
+                TempData["Success"] = "Password reset successfully.";
+                TempData["NewPassword"] = newPassword;
+            }
+            catch (Exception)
+            {
+                TempData["GlobalError"] = "Failed to reset password.";
+            }
+
             return RedirectToAction(nameof(Index));
         }
 

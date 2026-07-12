@@ -1,0 +1,86 @@
+@model IEnumerable<APP.Models.DTOs.FaqItemDto>
+
+@{
+    ViewData["Title"] = "FAQ / Knowledge Base";
+    bool isAdmin = ViewBag.IsAdmin ?? false;
+    var groups = (Model ?? new List<APP.Models.DTOs.FaqItemDto>())
+        .OrderBy(x => x.Category).ThenBy(x => x.DisplayOrder)
+        .GroupBy(x => x.Category);
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title"><i class="icon-question position-left"></i> Frequently Asked Questions</h5>
+        <div class="heading-elements">
+            @if (isAdmin)
+            {
+                <a asp-action="Index" class="btn btn-default"><i class="icon-cog3"></i> Manage FAQ</a>
+            }
+            <a asp-controller="SupportTicket" asp-action="Create" class="btn bg-primary"><i class="icon-support"></i> Raise a Ticket</a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-5">
+                <input type="text" id="searchInput" class="form-control" placeholder="Search FAQs..." />
+            </div>
+        </div>
+    </div>
+
+    <div class="panel-body" id="faqContainer">
+        @if (groups.Any())
+        {
+            int groupIndex = 0;
+            foreach (var group in groups)
+            {
+                groupIndex++;
+                <h6 class="text-semibold m-t-20">@group.Key</h6>
+                <div class="panel-group" id="faqAccordion@(groupIndex)">
+                    @{ int itemIndex = 0; }
+                    @foreach (var item in group)
+                    {
+                        itemIndex++;
+                        var panelId = $"faq-{groupIndex}-{itemIndex}";
+
+                        <div class="panel panel-white faq-item">
+                            <div class="panel-heading">
+                                <h6 class="panel-title">
+                                    <a data-toggle="collapse" data-parent="#faqAccordion@(groupIndex)" href="#@panelId" class="text-default">
+                                        <i class="icon-plus22 position-left"></i>
+                                        @item.Question
+                                    </a>
+                                </h6>
+                            </div>
+                            <div id="@panelId" class="panel-collapse collapse">
+                                <div class="panel-body" style="white-space: pre-wrap;">@item.Answer</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        }
+        else
+        {
+            <div class="text-center text-muted" style="padding:30px;">
+                <i class="icon-question" style="font-size:32px;"></i><br />
+                No FAQs published yet. Still have a question? <a asp-controller="SupportTicket" asp-action="Create">Raise a ticket</a>.
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $("#searchInput").on("keyup", function () {
+                var value = $(this).val().toLowerCase();
+                $(".faq-item").each(function () {
+                    var match = $(this).text().toLowerCase().indexOf(value) > -1;
+                    $(this).toggle(match);
+                });
+            });
+        });
+    </script>
+}

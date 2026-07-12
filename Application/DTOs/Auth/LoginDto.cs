@@ -9,6 +9,13 @@ namespace Application.DTOs.Auth
         public string Username { get; set; }
         public string Password { get; set; }
         public string IpAddress { get; set; }
+
+        // Populated by the APP layer from the HTTP request (User-Agent
+        // header) before this DTO is posted to the API - purely
+        // informational, used only to enrich the LoginHistory row.
+        public string? DeviceInfo { get; set; }
+        public string? Browser { get; set; }
+        public string? OS { get; set; }
     }
 
     public class ChangePAsswordDto

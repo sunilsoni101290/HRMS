@@ -51,6 +51,23 @@ namespace APP.Models.DTOs
         public bool IsESICApplicable { get; set; }
     }
 
+    public class SalaryComponentImportRowResult
+    {
+        public int RowNumber { get; set; }
+        public string? Code { get; set; }
+        public string? Name { get; set; }
+        public bool Success { get; set; }
+        public string? Message { get; set; }
+    }
+
+    public class SalaryComponentImportResultDto
+    {
+        public int TotalRows { get; set; }
+        public int SuccessCount { get; set; }
+        public int FailureCount { get; set; }
+        public List<SalaryComponentImportRowResult> Rows { get; set; } = new();
+    }
+
     // ==============================
     // Salary Structure
     // ==============================

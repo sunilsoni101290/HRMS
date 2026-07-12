@@ -105,6 +105,15 @@ namespace APP.Controllers
                 $"attendance/get-attendance-detail/{id}"
             );
 
+            if (data == null)
+                return NotFound();
+
+            // A self-service user can only ever open their own attendance
+            // records from "My Attendance" - never a colleague's, even by
+            // guessing/tampering with the id in the URL.
+            if (!_isAdmin && data.EmployeeId != _employeeId)
+                return Forbid();
+
             return View(data);
         }
 

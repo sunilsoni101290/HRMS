@@ -1,4 +1,5 @@
-﻿using APP.Helpers;
+﻿using APP.Attributes;
+using APP.Helpers;
 using APP.Models.DTOs;
 using APP.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace APP.Controllers
 {
+    [JwtAuthorize]
     public class AttendanceLogController : Controller
     {
         private readonly IApiService _apiService;

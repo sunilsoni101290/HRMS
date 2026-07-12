@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace Application.DTOs.Users
@@ -23,10 +24,10 @@ namespace Application.DTOs.Users
         [Display(Name = "Password")]
         public string? Password { get; set; }
 
-        [Required(ErrorMessage = "Role is required.")]
-        [Display(Name = "Role")]
-        public string RoleId { get; set; }
-        public string? RoleName { get; set; }
+        [Required(ErrorMessage = "At least one role is required.")]
+        [Display(Name = "Roles")]
+        public List<string> RoleIds { get; set; } = new();
+        public string? RoleNames { get; set; }
 
         [Display(Name = "Company")]
         public string? CompanyId { get; set; }

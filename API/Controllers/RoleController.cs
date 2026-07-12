@@ -1,46 +1,91 @@
-﻿using Domain.Entities;
-using Infrastructure;
-using Microsoft.AspNetCore.Http;
+using Application.DTOs.Roles;
+using Application.Interfaces.Roles;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
 {
-    [Route("api/[controller]")]
+    #region Role API
+
     [ApiController]
+    [Route("api/role")]
+    [Authorize]
     public class RoleController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IRoleService _service;
 
-        public RoleController(ApplicationDbContext context)
+        public RoleController(IRoleService service)
         {
-            _context = context;
+            _service = service;
         }
 
-        [HttpPost("create-roles")]
-        public async Task<IActionResult> Create(Role role)
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
         {
-            _context.Roles.Add(role);
-            await _context.SaveChangesAsync();
+            var data = await _service.GetAllAsync();
+            return Ok(data);
+        }
 
-            return Ok(role);
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(string id)
+        {
+            var data = await _service.GetByIdAsync(id);
+            if (data == null) return NotFound();
+            return Ok(data);
+        }
+
+        [HttpGet("{id}/detail")]
+        public async Task<IActionResult> GetDetail(string id)
+        {
+            var data = await _service.GetDetailAsync(id);
+            if (data == null) return NotFound();
+            return Ok(data);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] RoleDto dto)
+        {
+            var id = await _service.CreateAsync(dto);
+            if (id == null)
+                return BadRequest(new { Message = "A role with this name already exists, or the request was invalid." });
+
+            return Ok(new { Message = "Role Created Successfully", Id = id });
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(string id, [FromBody] RoleDto dto)
+        {
+            var result = await _service.UpdateAsync(id, dto);
+            if (result == null) return NotFound();
+            return Ok(new { Message = "Role Updated Successfully", Id = result });
+        }
+
+        [HttpPut("toggle-active/{id}")]
+        public async Task<IActionResult> ToggleActive(string id)
+        {
+            var result = await _service.ToggleActiveAsync(id);
+            if (!result) return NotFound();
+            return Ok(new { Success = result });
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(string id)
+        {
+            var result = await _service.DeleteAsync(id);
+            if (!result)
+                return BadRequest(new { Message = "Role not found, or it still has users assigned to it." });
+
+            return Ok(new { Message = "Role Deleted Successfully" });
         }
 
         [HttpPost("assign-permissions")]
-        public async Task<IActionResult> AssignPermissions(string roleId, List<string> permissionIds)
+        public async Task<IActionResult> AssignPermissions([FromBody] AssignRolePermissionsRequestDto request)
         {
-            var existing = _context.RolePermissions.Where(x => x.RoleId == roleId);
-            _context.RolePermissions.RemoveRange(existing);
-
-            var newPermissions = permissionIds.Select(pid => new RolePermission
-            {
-                RoleId = roleId,
-                PermissionId = pid
-            });
-
-            _context.RolePermissions.AddRange(newPermissions);
-            await _context.SaveChangesAsync();
-
-            return Ok("Permissions Assigned");
+            var result = await _service.AssignPermissionsAsync(request);
+            if (!result) return BadRequest(new { Message = "Unable to assign permissions. Role not found." });
+            return Ok(new { Message = "Permissions Assigned Successfully" });
         }
     }
+
+    #endregion
 }

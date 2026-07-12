@@ -23,6 +23,10 @@
     bool leaveActive = IsActive("LeaveApplication", "Create") ||
                         IsActive("LeaveApplication", "EmployeeLeaves") ||
                         IsActive("LeaveApplication", "MyApprovals");
+    bool helpSupportActive = IsActive("SupportTicket", "MyTickets") ||
+                              IsActive("SupportTicket", "Create") ||
+                              IsActive("SupportTicket", "Details") ||
+                              IsActive("Faq", "Browse");
 }
 
 <div class="sidebar sidebar-main">
@@ -215,6 +219,57 @@
                             <i class="icon-bell2"></i>
                             <span>Notifications</span>
                         </a>
+                    </li>
+
+                    <!-- Help & Support -->
+
+                    <li class="has-children @(helpSupportActive ? "active" : "")">
+
+                        <a href="#">
+
+                            <i class="bi bi-ticket-detailed-fill"></i>
+
+                            <span> Help &amp; Support</span>
+
+                        </a>
+
+                        <ul style="@(helpSupportActive ? "display:block;" : "")">
+
+                            <li class="@(IsActive("SupportTicket", "MyTickets") ? "active" : "")">
+
+                                <a asp-controller="SupportTicket"
+                                   asp-action="MyTickets">
+
+                                    My Tickets
+
+                                </a>
+
+                            </li>
+
+                            <li class="@(IsActive("SupportTicket", "Create") ? "active" : "")">
+
+                                <a asp-controller="SupportTicket"
+                                   asp-action="Create">
+
+                                    Raise Ticket
+
+                                </a>
+
+                            </li>
+
+                            <li class="@(IsActive("Faq", "Browse") ? "active" : "")">
+
+                                <a asp-controller="Faq"
+                                   asp-action="Browse">
+
+                                    FAQ
+
+                                </a>
+
+                            </li>
+
+                        </ul>
+
                     </li>
 
                 </ul>

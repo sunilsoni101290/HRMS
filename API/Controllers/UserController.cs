@@ -48,11 +48,17 @@ namespace API.Controllers
             return Ok(new { Message = "User Updated Successfully", Id = result });
         }
 
+        // The server always generates the new password - it is never
+        // accepted from the caller and never stored/shown again after this
+        // one response.
         [HttpPut("reset-password/{id}")]
-        public async Task<IActionResult> ResetPassword(string id, [FromQuery] string newPassword)
+        public async Task<IActionResult> ResetPassword(string id)
         {
-            var result = await _service.ResetPasswordAsync(id, newPassword);
-            return Ok(new { Success = result });
+            var newPassword = await _service.ResetPasswordAsync(id);
+            if (newPassword == null)
+                return NotFound(new { Message = "User not found." });
+
+            return Ok(new { Success = true, NewPassword = newPassword });
         }
 
         [HttpPut("toggle-active/{id}")]

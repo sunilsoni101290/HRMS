@@ -1,0 +1,77 @@
+@model APP.Models.DTOs.FaqItemDto
+
+@{
+    ViewData["Title"] = "FAQ Item";
+    bool isEdit = !string.IsNullOrEmpty(Model?.Id);
+}
+
+<form asp-action="@(isEdit ? "Edit" : "Create")" asp-controller="Faq" asp-route-id="@Model?.Id" method="post">
+
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="TenantId" type="hidden" />
+    <input asp-for="CreatedBy" type="hidden" />
+
+    <div class="panel panel-flat">
+
+        <div class="panel-heading">
+            <h5 class="panel-title">
+                <i class="icon-question position-left"></i>
+                @(isEdit ? "Edit FAQ Item" : "Add FAQ Item")
+            </h5>
+            <div class="heading-elements">
+                <a asp-action="Index" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
+            </div>
+        </div>
+
+        <div class="panel-body">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="form-group">
+                        <label asp-for="Category"></label> <span class="text-danger">*</span>
+                        <input asp-for="Category" class="form-control" placeholder="e.g. Leave, Payroll, IT" />
+                        <span asp-validation-for="Category" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label asp-for="DisplayOrder"></label>
+                        <input asp-for="DisplayOrder" type="number" class="form-control" />
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group" style="margin-top:28px;">
+                        <label class="checkbox-inline">
+                            <input asp-for="IsActive" type="checkbox" /> Published
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Question"></label> <span class="text-danger">*</span>
+                <input asp-for="Question" class="form-control" placeholder="Frequently asked question" />
+                <span asp-validation-for="Question" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Answer"></label> <span class="text-danger">*</span>
+                <textarea asp-for="Answer" class="form-control" rows="6" placeholder="Write the answer..."></textarea>
+                <span asp-validation-for="Answer" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="panel-footer text-right">
+            <button type="submit" class="btn bg-primary"><i class="icon-floppy-disk"></i> @(isEdit ? "Update" : "Save")</button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    <partial name="_ValidationScriptsPartial" />
+}

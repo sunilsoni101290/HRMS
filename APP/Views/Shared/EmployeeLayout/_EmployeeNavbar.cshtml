@@ -16,15 +16,20 @@
 }
 <div class="navbar navbar-inverse navbar-employee">
 
-    <div class="navbar-header">
+    <div class="navbar-header" style="margin-top: 5px;">
 
         <a class="navbar-brand"
            asp-controller="EmployeeDashboard"
            asp-action="Index">
 
-            <img src="~/images/PT-06.png"
-                 alt="Logo"
-                 style="height:32px;display:inline-block;" />
+            <span class="brand-logo-panel">
+                <img src="~/images/PT-03.png" style="height:39px;" alt="Prosaec Total" />
+            </span>
+            <span class="brand-divider"></span>
+            <span class="brand-title">
+                HRMS 
+                <small>Employee Self Service</small>
+            </span>
         </a>
 
         <ul class="nav navbar-nav visible-xs-block">
@@ -47,7 +52,7 @@
 
         <!-- Search -->
 
-        <form class="navbar-form navbar-left hidden-xs">
+        @* <form class="navbar-form navbar-left hidden-xs">
 
             <div class="form-group has-feedback">
 
@@ -63,7 +68,7 @@
 
             </div>
 
-        </form>
+        </form> *@
 
         <ul class="nav navbar-nav navbar-right">
 

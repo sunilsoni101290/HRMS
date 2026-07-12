@@ -32,12 +32,23 @@
             .HttpContext?.Session?.GetString("CompanyName");
 
         // Admins / HR / Managers land on the admin Dashboard; everyone else on the
-        // Employee self-service dashboard. Unknown/empty defaults to admin (safe).
+        // Employee self-service dashboard.
+        //
+        // Unknown/empty role name defaults to NOT admin. This used to default to
+        // true ("safe" per the old comment), but that was actually a fail-open
+        // bug: a session with a missing/unreadable RoleName would silently be
+        // treated as a full admin, which is the opposite of safe now that
+        // self-service users are restricted to a small allowlist of pages
+        // (see EssRestrictionAttribute) - an unrecognized role must fail closed
+        // (most restricted), not open (most privileged).
         public static bool IsAdminRole(string? roleName = null)
         {
             var r = (roleName ?? GetActiveRoleName ?? "").Trim().ToLowerInvariant();
-            if (string.IsNullOrEmpty(r)) return true;
-            return r.Contains("admin") || r.Contains("manager");
+            if (string.IsNullOrEmpty(r)) return false;
+            // "configurator" covers the System Configurator role - an
+            // application-management account that must never be funneled
+            // into the ESS restriction filter alongside plain employees.
+            return r.Contains("admin") || r.Contains("manager") || r.Contains("configurator");
         }
     }
 }

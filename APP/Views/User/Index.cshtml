@@ -86,14 +86,26 @@
     </div>
 </div>
 
-<!-- Reset password form (submitted via JS prompt) -->
+<!-- Reset password form - the server always generates the new password;
+     no plaintext password is ever typed by the admin or stored anywhere. -->
 <form id="resetForm" asp-action="ResetPassword" method="post" style="display:none;">
     <input type="hidden" name="id" id="resetId" />
-    <input type="hidden" name="newPassword" id="resetPwd" />
 </form>
 
 @section Scripts {
-    @if (TempData["Success"] != null)
+    @if (TempData["NewPassword"] != null)
+    {
+        <script>
+            $(function(){
+                swal({
+                    title: "Password Reset",
+                    text: "New temporary password (share this with the employee now - it will not be shown again):\n\n@TempData["NewPassword"]",
+                    type: "success"
+                });
+            });
+        </script>
+    }
+    else if (TempData["Success"] != null)
     {
         <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
     }
@@ -108,11 +120,8 @@
 
             $(".resetBtn").on("click", function () {
                 var id = $(this).data("id");
-                var pwd = prompt("Enter new password (min 6 characters):");
-                if (pwd == null) return;
-                if (pwd.length < 6) { alert("Password must be at least 6 characters."); return; }
+                if (!confirm("Generate a new temporary password for this user? Their current password will stop working immediately.")) return;
                 $("#resetId").val(id);
-                $("#resetPwd").val(pwd);
                 $("#resetForm").submit();
             });
         });

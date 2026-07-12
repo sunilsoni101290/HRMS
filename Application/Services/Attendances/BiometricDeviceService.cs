@@ -190,49 +190,39 @@ namespace Application.Services.Attendances
             }
         }
 
-        //public bool TestConnection(string ipAddress, int port)
-        //{
-        //    CZKEM device = new CZKEM();
-
-        //    bool isConnected = device.Connect_Net(ipAddress, port);
-
-        //    if (isConnected)
-        //    {
-        //        device.Disconnect();
-        //        return true;
-        //    }
-
-        //    return false;
-        //}
-
+        /// <summary>
+        /// "Connection" here means: is the on-site BiometricAgent still
+        /// successfully reaching this device and pushing punches to us?
+        ///
+        /// This deliberately does NOT ping/connect to device.IPAddress from
+        /// the API server. That IP is on the client's private LAN, behind
+        /// their router/firewall - the whole reason BiometricAgent exists is
+        /// that the API generally *cannot* reach it directly. A ping from a
+        /// cloud-hosted API would just time out for every device, even
+        /// healthy ones, and report false negatives.
+        ///
+        /// Instead, use the same signal as GetHealthSummaryAsync: whether
+        /// LastSyncDate (updated by BiometricSyncService.IngestPunchesAsync
+        /// each time the agent successfully pushes) is recent. That proves
+        /// the full chain - device, agent, client network, and API - is
+        /// actually working end-to-end, which is a more meaningful test than
+        /// a bare ping could ever be.
+        /// </summary>
         public async Task<bool>
             TestConnectionAsync(string id)
         {
             try
             {
-            var device = await _db.BiometricDevices
-                .FirstOrDefaultAsync(x => x.Id == id);
+                var device = await _db.BiometricDevices
+                    .FirstOrDefaultAsync(x => x.Id == id);
 
-            if (device == null)
-                return false;
+                if (device == null || !device.IsActive)
+                    return false;
 
-            try
-            {
-                using var ping =
-                    new System.Net.NetworkInformation.Ping();
+                var onlineCutoff = DateTime.UtcNow.AddMinutes(-15);
 
-                var result =
-                    await ping.SendPingAsync(
-                        device.IPAddress);
-
-                return result.Status ==
-                       System.Net.NetworkInformation
-                       .IPStatus.Success;
-            }
-            catch
-            {
-                return false;
-            }
+                return device.LastSyncDate != null &&
+                       device.LastSyncDate >= onlineCutoff;
             }
             catch (Exception)
             {

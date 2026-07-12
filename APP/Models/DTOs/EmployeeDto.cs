@@ -168,11 +168,11 @@ namespace APP.Models.DTOs
 
         [Display(Name = "Issue Date")]
         [DataType(DataType.Date)]
-        public DateTime IssueDate { get; set; }
+        public DateTime? IssueDate { get; set; }
 
         [Display(Name = "Expiry Date")]
         [DataType(DataType.Date)]
-        public DateTime ExpiryDate { get; set; }
+        public DateTime? ExpiryDate { get; set; }
 
         [Display(Name = "Place Of Issue")]
         public string? PlaceOfIssue { get; set; }

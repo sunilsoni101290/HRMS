@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialMigration : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -249,6 +249,29 @@ namespace Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ErrorLogs", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "FaqItems",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CompanyId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Category = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Question = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
+                    Answer = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    DisplayOrder = table.Column<int>(type: "int", nullable: false),
+                    TenantId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_FaqItems", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -1009,6 +1032,7 @@ namespace Infrastructure.Migrations
                     Password = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     SerialNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     LastSyncDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DeviceKey = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
                     CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
@@ -1229,8 +1253,8 @@ namespace Infrastructure.Migrations
                     EventType = table.Column<int>(type: "int", nullable: false),
                     OrganizedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     IsForAll = table.Column<bool>(type: "bit", nullable: false),
-                    DepartmentId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    RoleId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    DepartmentId = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    RoleId = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     SendReminder = table.Column<bool>(type: "bit", nullable: false),
                     ReminderBeforeMinutes = table.Column<int>(type: "int", nullable: true),
                     CompanyId = table.Column<string>(type: "nvarchar(max)", nullable: false),
@@ -1289,10 +1313,10 @@ namespace Infrastructure.Migrations
                     JoiningDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ConfirmationDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     RelievingDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    PassportNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    IssueDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    ExpiryDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    PlaceOfIssue = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PassportNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IssueDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ExpiryDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    PlaceOfIssue = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Nationality = table.Column<int>(type: "int", nullable: false),
                     PassportStatus = table.Column<int>(type: "int", nullable: false),
                     CountryId = table.Column<string>(type: "nvarchar(450)", nullable: true),
@@ -1758,6 +1782,7 @@ namespace Infrastructure.Migrations
                     Priority = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     AssignedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CompletedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Remarks = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     CompanyId = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     BranchId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     TenantId = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -1828,9 +1853,11 @@ namespace Infrastructure.Migrations
                     HalfDayType = table.Column<int>(type: "int", nullable: false),
                     Reason = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Status = table.Column<int>(type: "int", nullable: false),
+                    CurrentLevel = table.Column<int>(type: "int", nullable: false),
                     ApprovedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ApprovedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     RejectedReason = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SendBackReason = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     DocumentUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     TenantId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
@@ -1993,6 +2020,42 @@ namespace Infrastructure.Migrations
                     table.PrimaryKey("PK_SalaryStructures", x => x.Id);
                     table.ForeignKey(
                         name: "FK_SalaryStructures_Employees_EmployeeId",
+                        column: x => x.EmployeeId,
+                        principalTable: "Employees",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "SupportTickets",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CompanyId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    BranchId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    EmployeeId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Subject = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Category = table.Column<int>(type: "int", nullable: false),
+                    Priority = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    AttachmentUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    AssignedToUserId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ResolvedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ResolvedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    TenantId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SupportTickets", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_SupportTickets_Employees_EmployeeId",
                         column: x => x.EmployeeId,
                         principalTable: "Employees",
                         principalColumn: "Id",
@@ -2250,6 +2313,33 @@ namespace Infrastructure.Migrations
                         name: "FK_SalaryDetails_SalaryStructures_SalaryStructureId",
                         column: x => x.SalaryStructureId,
                         principalTable: "SalaryStructures",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "SupportTicketReplies",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    SupportTicketId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    RepliedByUserId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Message = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    TenantId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SupportTicketReplies", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_SupportTicketReplies_SupportTickets_SupportTicketId",
+                        column: x => x.SupportTicketId,
+                        principalTable: "SupportTickets",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -3027,6 +3117,16 @@ namespace Infrastructure.Migrations
                 column: "CountryId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_SupportTicketReplies_SupportTicketId",
+                table: "SupportTicketReplies",
+                column: "SupportTicketId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SupportTickets_EmployeeId",
+                table: "SupportTickets",
+                column: "EmployeeId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_TenantFeatures_AppFeatureId",
                 table: "TenantFeatures",
                 column: "AppFeatureId");
@@ -3152,6 +3252,9 @@ namespace Infrastructure.Migrations
                 name: "EventParticipants");
 
             migrationBuilder.DropTable(
+                name: "FaqItems");
+
+            migrationBuilder.DropTable(
                 name: "FinancialYears");
 
             migrationBuilder.DropTable(
@@ -3209,6 +3312,9 @@ namespace Infrastructure.Migrations
                 name: "Subscriptions");
 
             migrationBuilder.DropTable(
+                name: "SupportTicketReplies");
+
+            migrationBuilder.DropTable(
                 name: "TenantFeatures");
 
             migrationBuilder.DropTable(
@@ -3252,6 +3358,9 @@ namespace Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "SalaryStructures");
+
+            migrationBuilder.DropTable(
+                name: "SupportTickets");
 
             migrationBuilder.DropTable(
                 name: "AppFeatures");

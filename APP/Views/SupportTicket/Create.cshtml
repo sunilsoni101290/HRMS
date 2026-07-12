@@ -1,0 +1,61 @@
+@model APP.Models.DTOs.CreateSupportTicketRequestDto
+
+@{
+    ViewData["Title"] = "Raise Support Ticket";
+}
+
+<form asp-action="Create" asp-controller="SupportTicket" method="post">
+
+    <div class="panel panel-flat">
+
+        <div class="panel-heading">
+            <h5 class="panel-title"><i class="icon-support position-left"></i> Raise a Support Ticket</h5>
+            <div class="heading-elements">
+                <a asp-action="MyTickets" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
+            </div>
+        </div>
+
+        <div class="panel-body">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <div class="form-group">
+                <label asp-for="Subject"></label> <span class="text-danger">*</span>
+                <input asp-for="Subject" class="form-control" placeholder="Briefly describe the issue" />
+                <span asp-validation-for="Subject" class="text-danger"></span>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="Category"></label>
+                        <select asp-for="Category" asp-items="ViewBag.CategoryList" class="form-control"></select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="Priority"></label>
+                        <select asp-for="Priority" asp-items="ViewBag.PriorityList" class="form-control"></select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Description"></label> <span class="text-danger">*</span>
+                <textarea asp-for="Description" class="form-control" rows="6" placeholder="Explain the issue in detail..."></textarea>
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="panel-footer text-right">
+            <button type="submit" class="btn bg-primary"><i class="icon-paperplane"></i> Submit Ticket</button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    @if (TempData["GlobalError"] != null)
+    {
+        <script>$(function(){ swal({ title:"Error", text:"@TempData["GlobalError"]", type:"error" }); });</script>
+    }
+    <partial name="_ValidationScriptsPartial" />
+}

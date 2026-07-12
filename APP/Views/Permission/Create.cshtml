@@ -1,0 +1,106 @@
+@model APP.Models.DTOs.PermissionDto
+
+@{
+    ViewData["Title"] = "Permission";
+    bool isEdit = !string.IsNullOrEmpty(Model?.Id);
+}
+
+<form asp-action="@(isEdit ? "Edit" : "Create")" asp-controller="Permission" asp-route-id="@Model?.Id" method="post">
+
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="CreatedBy" type="hidden" />
+
+    <div class="panel panel-flat">
+
+        <div class="panel-heading">
+            <h5 class="panel-title">
+                <i class="icon-key position-left"></i>
+                @(isEdit ? "Edit Permission" : "Add Permission")
+            </h5>
+            <div class="heading-elements">
+                <a asp-action="Index" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
+            </div>
+        </div>
+
+        <div class="panel-body">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="Name"></label> <span class="text-danger">*</span>
+                        <input asp-for="Name" class="form-control" placeholder="e.g. Create Invoice" />
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="Code"></label>
+                        @if (isEdit)
+                        {
+                            <input asp-for="Code" class="form-control" readonly />
+                            <small class="text-muted">Code can't be changed after creation.</small>
+                        }
+                        else
+                        {
+                            <input asp-for="Code" class="form-control" placeholder="Auto-generated if left blank" />
+                        }
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="DisplayOrder"></label>
+                        <input asp-for="DisplayOrder" type="number" class="form-control" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="Module"></label> <span class="text-danger">*</span>
+                        <select asp-for="Module" asp-items="ViewBag.ModuleList" class="form-control">
+                            <option value="">Select Module</option>
+                        </select>
+                        <span asp-validation-for="Module" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="FeatureId"></label> <span class="text-danger">*</span>
+                        <select asp-for="FeatureId" asp-items="ViewBag.FeatureList" class="form-control">
+                            <option value="">Select Feature</option>
+                        </select>
+                        <span asp-validation-for="FeatureId" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="Action"></label> <span class="text-danger">*</span>
+                        <select asp-for="Action" asp-items="ViewBag.ActionList" class="form-control">
+                            <option value="">Select Action</option>
+                        </select>
+                        <span asp-validation-for="Action" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Description"></label>
+                <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+            </div>
+        </div>
+
+        <div class="panel-footer text-right">
+            <button type="submit" class="btn bg-primary"><i class="icon-floppy-disk"></i> @(isEdit ? "Update" : "Save")</button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    @if (TempData["GlobalError"] != null)
+    {
+        <script>$(function(){ swal({ title:"Error", text:"@TempData["GlobalError"]", type:"error" }); });</script>
+    }
+    <partial name="_ValidationScriptsPartial" />
+}

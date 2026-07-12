@@ -176,6 +176,15 @@ builder.Services.AddScoped<Application.Interfaces.Dashboard.IEmployeeDashboardSe
 // ===================== User Management =====================
 builder.Services.AddScoped<Application.Interfaces.Users.IUserService, Application.Services.Users.UserService>();
 
+// ===================== Help & Support =====================
+builder.Services.AddScoped<Application.Interfaces.Support.ISupportTicketService, Application.Services.Support.SupportTicketService>();
+builder.Services.AddScoped<Application.Interfaces.Support.IFaqService, Application.Services.Support.FaqService>();
+
+// ===================== Security (Role / Permission) =====================
+builder.Services.AddScoped<Application.Interfaces.Roles.IRoleService, Application.Services.Roles.RoleService>();
+builder.Services.AddScoped<Application.Interfaces.Permissions.IPermissionService, Application.Services.Permissions.PermissionService>();
+builder.Services.AddScoped<Application.Interfaces.LoginHistory.ILoginHistoryService, Application.Services.LoginHistory.LoginHistoryService>();
+
 
 builder.Services.AddHttpClient();
 
