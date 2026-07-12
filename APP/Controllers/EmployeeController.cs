@@ -622,6 +622,7 @@ namespace APP.Controllers
 
             var companies = await _apiService.GetAsync<List<DropdownDto>>("dropdown/company") ?? new();
             var departments = await _apiService.GetAsync<List<DropdownDto>>("dropdown/department") ?? new();
+            var designations = await _apiService.GetAsync<List<DesignationListDto>>("designation") ?? new();
             var roles = await _apiService.GetAsync<List<DropdownDto>>("dropdown/role") ?? new();
 
             using var workbook = new XLWorkbook();
@@ -692,6 +693,7 @@ namespace APP.Controllers
             WriteList(4, "Gender", Enum.GetNames(typeof(EnumExtensions.Gender)));
             WriteList(5, "Marital Status", Enum.GetNames(typeof(EnumExtensions.MaritalStatus)));
             WriteList(6, "Employment Type", Enum.GetNames(typeof(EnumExtensions.EmploymentType)));
+            WriteList(7, "Designation", designations.Select(x => $"{x.Name} ({x.DepartmentName})"));
 
             refSheet.Columns().AdjustToContents();
 

@@ -1,4 +1,5 @@
 ﻿using Application.DTOs.Auth;
+using Application.DTOs.LoginHistory;
 using Application.Interfaces.Auth;
 using Application.Interfaces.JWT_TOKEN;
 using Domain.Entities;
@@ -11,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
+using static Domain.Enums.EnumExtensions;
 
 namespace Application.Services.Auth
 {
@@ -71,107 +73,286 @@ namespace Application.Services.Auth
         // ==============================
         // 🔐 LOGIN
         // ==============================
+        public async Task<ApiResponse<AuthResponse>> LoginAsync(LoginDto dto)
+        {
+            var response = new ApiResponse<AuthResponse>();
 
-        public async Task<AuthResponse> LoginAsync(LoginDto dto)
+            try
+            {
+                var user = await _db.Users
+                    .Include(x => x.Employee)
+                        .ThenInclude(x => x.Designation)
+                    .Include(x => x.UserRoles)
+                        .ThenInclude(x => x.Role)
+                    .Include(x => x.Company)
+                    .Include(x => x.Branch)
+                    .FirstOrDefaultAsync(x => x.Username == dto.Username);
+
+                if (user == null)
+                {
+                    response.Message = "Invalid username.";
+                    return response;
+                }
+
+                // User inactive
+                if (!user.IsActive)
+                {
+                    await RecordLoginHistoryAsync(new LoginHistoryListDto
+                    {
+                        TenantId = user.TenantId,
+                        UserId = user.Id,
+                        LoginStatus = LoginStatus.Failed,
+                        FailureReason = "Account inactive",
+                        IPAddress = dto.IpAddress,
+                        DeviceInfo = dto.DeviceInfo,
+                        Browser = dto.Browser,
+                        OS = dto.OS
+                    });
+                    response.Message = "Your account is inactive.";
+                    return response;
+                }
+
+                // Locked
+                if (user.IsLocked)
+                {
+                    if (user.LockoutEnd.HasValue &&
+                        user.LockoutEnd > DateTime.UtcNow)
+                    {
+                        var remaining =
+                            (int)Math.Ceiling(
+                                (user.LockoutEnd.Value - DateTime.UtcNow).TotalMinutes);
+
+                        await RecordLoginHistoryAsync(new LoginHistoryListDto
+                        {
+                            TenantId = user.TenantId,
+                            UserId = user.Id,
+                            LoginStatus = LoginStatus.Locked,
+                            FailureReason = $"Account locked, {remaining} minute(s) remaining",
+                            IPAddress = dto.IpAddress,
+                            DeviceInfo = dto.DeviceInfo,
+                            Browser = dto.Browser,
+                            OS = dto.OS,
+                            IsSuspicious = true
+                        });
+
+                        response.Message =
+                            $"Account is locked. Try again after {remaining} minute(s).";
+
+                        return response;
+                    }
+
+                    user.IsLocked = false;
+                    user.AccessFailedCount = 0;
+                    user.LockoutEnd = null;
+
+                    await _db.SaveChangesAsync();
+                }
+
+                bool validPassword = BCrypt.Net.BCrypt.Verify(
+                    dto.Password,
+                    user.PasswordHash);
+
+                if (!validPassword)
+                {
+                    user.AccessFailedCount++;
+
+                    if (user.AccessFailedCount >= 5)
+                    {
+                        user.IsLocked = true;
+                        user.LockoutEnd = DateTime.UtcNow.AddMinutes(30);
+                    }
+
+                    await _db.SaveChangesAsync();
+
+                    await RecordLoginHistoryAsync(new LoginHistoryListDto
+                    {
+                        TenantId = user.TenantId,
+                        UserId = user.Id,
+                        LoginStatus = LoginStatus.Failed,
+                        FailureReason = $"Invalid password (attempt {user.AccessFailedCount}/5)",
+                        IPAddress = dto.IpAddress,
+                        DeviceInfo = dto.DeviceInfo,
+                        Browser = dto.Browser,
+                        OS = dto.OS,
+                        IsSuspicious = user.AccessFailedCount >= 3
+                    });
+
+                    response.Message =
+                        $"Invalid password. Attempt {user.AccessFailedCount}/5";
+
+                    return response;
+                }
+
+                user.AccessFailedCount = 0;
+                user.IsLocked = false;
+                user.LockoutEnd = null;
+                user.LastLoginDate = DateTime.UtcNow;
+                user.LastLoginIP = dto.IpAddress;
+
+                await _db.SaveChangesAsync();
+
+                await RecordLoginHistoryAsync(new LoginHistoryListDto
+                {
+                    TenantId = user.TenantId,
+                    UserId = user.Id,
+                    LoginStatus = LoginStatus.Success,
+                    IPAddress = dto.IpAddress,
+                    DeviceInfo = dto.DeviceInfo,
+                    Browser = dto.Browser,
+                    OS = dto.OS,
+                    FailureReason="Login Sucess"
+                });
+
+                response.Success = true;
+                response.Message = "Login successful.";
+                response.Data = await GenerateAuthResponse(user);
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                response.Success = false;
+                response.Message = "Login failed.";
+                response.Errors.Add(ex.Message);
+
+                return response;
+            }
+        }
+
+        // ==============================
+        // 🕓 LOGIN HISTORY
+        // ==============================
+        private async Task RecordLoginHistoryAsync(LoginHistoryListDto loginHistory)
         {
             try
             {
-            // Get User
-            var user = await _db.Users
-                .Include(x => x.Employee)
-                    .ThenInclude(x => x.Designation)
-                .Include(x => x.UserRoles)
-                    .ThenInclude(x => x.Role)
-                .Include(x => x.Company)
-                .Include(x => x.Branch)
-                .FirstOrDefaultAsync(x => x.Username == dto.Username);
-
-            // User Not Found
-            if (user == null)
-                throw new Exception("Invalid Username");
-
-            // ================================
-            // CHECK USER LOCKED
-            // ================================
-
-            if (user.IsLocked)
-            {
-                // Still Locked
-                if (user.LockoutEnd.HasValue &&
-                    user.LockoutEnd > DateTime.UtcNow)
+                var history = new Domain.Entities.LoginHistory
                 {
-                    var remainingMinutes =
-                        (user.LockoutEnd.Value - DateTime.UtcNow).Minutes;
+                    Id = IDManager.GetNewId(new Domain.Entities.LoginHistory()),
+                    TenantId = loginHistory.TenantId,
+                    UserId = loginHistory.UserId,
+                    SessionId = Guid.NewGuid().ToString(),
+                    LoginTime = DateTime.UtcNow,
+                    LoginStatus = loginHistory.LoginStatus,
+                    FailureReason = loginHistory.FailureReason,
+                    IPAddress = loginHistory.IPAddress,
+                    OS= loginHistory.OS,
+                    DeviceInfo=loginHistory.DeviceInfo,
+                    Browser= loginHistory.Browser,
+                    IsSuspicious = loginHistory.IsSuspicious,
+                    CreatedOn = DateTime.UtcNow,
+                    CreatedBy = loginHistory.UserId
+                };
 
-                    throw new Exception(
-                        $"Account Temporarily Locked\n. Try again after {remainingMinutes} minutes.");
-                }
-
-                // Unlock Automatically
-                user.IsLocked = false;
-                user.AccessFailedCount = 0;
-                user.LockoutEnd = null;
-
-                _db.Users.Update(user);
+                await _db.LoginHistories.AddAsync(history);
                 await _db.SaveChangesAsync();
             }
-
-            // ================================
-            // VERIFY PASSWORD
-            // ================================
-
-            bool isValidPassword = BCrypt.Net.BCrypt.Verify(
-                dto.Password,
-                user.PasswordHash);
-
-            // ================================
-            // INVALID PASSWORD
-            // ================================
-
-            if (!isValidPassword)
+            catch
             {
-                user.AccessFailedCount += 1;
-
-                // Max Attempt = 5
-                if (user.AccessFailedCount >= 5)
-                {
-                    user.IsLocked = true;
-
-                    // Lock For 30 Minutes
-                    user.LockoutEnd = DateTime.UtcNow.AddMinutes(30);
-                }
-
-                _db.Users.Update(user);
-
-                await _db.SaveChangesAsync();
-
-                throw new Exception(
-                    $"Invalid Password. Attempt {user.AccessFailedCount}/5");
-            }
-
-            // ================================
-            // LOGIN SUCCESS
-            // ================================
-
-            user.AccessFailedCount = 0;
-            user.IsLocked = false;
-            user.LockoutEnd = null;
-
-            user.LastLoginDate = DateTime.UtcNow;
-            user.LastLoginIP = dto.IpAddress;
-
-            _db.Users.Update(user);
-
-            await _db.SaveChangesAsync();
-
-            // Generate Token Response
-            return await GenerateAuthResponse(user);
-            }
-            catch (Exception)
-            {
-                return null;
+                // Login history is best-effort - never let a logging
+                // failure block or fail the actual login attempt.
             }
         }
+        //public async Task<AuthResponse> LoginAsync(LoginDto dto)
+        //{
+        //    try
+        //    {
+        //    // Get User
+        //    var user = await _db.Users
+        //        .Include(x => x.Employee)
+        //            .ThenInclude(x => x.Designation)
+        //        .Include(x => x.UserRoles)
+        //            .ThenInclude(x => x.Role)
+        //        .Include(x => x.Company)
+        //        .Include(x => x.Branch)
+        //        .FirstOrDefaultAsync(x => x.Username == dto.Username);
+
+        //    // User Not Found
+        //    if (user == null)
+        //        throw new Exception("Invalid Username");
+
+        //    // ================================
+        //    // CHECK USER LOCKED
+        //    // ================================
+
+        //    if (user.IsLocked)
+        //    {
+        //        // Still Locked
+        //        if (user.LockoutEnd.HasValue &&
+        //            user.LockoutEnd > DateTime.UtcNow)
+        //        {
+        //            var remainingMinutes =
+        //                (user.LockoutEnd.Value - DateTime.UtcNow).Minutes;
+
+        //            throw new Exception(
+        //                $"Account Temporarily Locked\n. Try again after {remainingMinutes} minutes.");
+        //        }
+
+        //        // Unlock Automatically
+        //        user.IsLocked = false;
+        //        user.AccessFailedCount = 0;
+        //        user.LockoutEnd = null;
+
+        //        _db.Users.Update(user);
+        //        await _db.SaveChangesAsync();
+        //    }
+
+        //    // ================================
+        //    // VERIFY PASSWORD
+        //    // ================================
+
+        //    bool isValidPassword = BCrypt.Net.BCrypt.Verify(
+        //        dto.Password,
+        //        user.PasswordHash);
+
+        //    // ================================
+        //    // INVALID PASSWORD
+        //    // ================================
+
+        //    if (!isValidPassword)
+        //    {
+        //        user.AccessFailedCount += 1;
+
+        //        // Max Attempt = 5
+        //        if (user.AccessFailedCount >= 5)
+        //        {
+        //            user.IsLocked = true;
+
+        //            // Lock For 30 Minutes
+        //            user.LockoutEnd = DateTime.UtcNow.AddMinutes(30);
+        //        }
+
+        //        _db.Users.Update(user);
+
+        //        await _db.SaveChangesAsync();
+
+        //        throw new Exception(
+        //            $"Invalid Password. Attempt {user.AccessFailedCount}/5");
+        //    }
+
+        //    // ================================
+        //    // LOGIN SUCCESS
+        //    // ================================
+
+        //    user.AccessFailedCount = 0;
+        //    user.IsLocked = false;
+        //    user.LockoutEnd = null;
+
+        //    user.LastLoginDate = DateTime.UtcNow;
+        //    user.LastLoginIP = dto.IpAddress;
+
+        //    _db.Users.Update(user);
+
+        //    await _db.SaveChangesAsync();
+
+        //    // Generate Token Response
+        //    return await GenerateAuthResponse(user);
+        //    }
+        //    catch (Exception)
+        //    {
+        //        return null;
+        //    }
+        //}
 
         // ==============================
         // 🔄 REFRESH TOKEN
@@ -202,20 +383,50 @@ namespace Application.Services.Auth
         {
             try
             {
-            var token = _db.RefreshTokens
-                .FirstOrDefault(x => x.Token == refreshToken);
+                var token = _db.RefreshTokens
+                    .FirstOrDefault(x => x.Token == refreshToken);
 
-            if (token == null)
-                return false;
+                if (token == null)
+                    return false;
 
-            token.IsRevoked = true;
-            await _db.SaveChangesAsync();
+                token.IsRevoked = true;
+                await _db.SaveChangesAsync();
 
-            return true;
+                await RecordLogoutAsync(token.UserId);
+
+                return true;
             }
             catch (Exception)
             {
                 return false;
+            }
+        }
+
+        // Stamps LogoutTime on the most recent still-open (LogoutTime ==
+        // null) Successful LoginHistory row for this user - best-effort,
+        // same as RecordLoginHistoryAsync, so a logging hiccup never
+        // blocks an actual logout.
+        private async Task RecordLogoutAsync(string userId)
+        {
+            try
+            {
+                var openSession = await _db.LoginHistories
+                    .Where(x => !x.IsDeleted
+                        && x.UserId == userId
+                        && x.LoginStatus == LoginStatus.Success
+                        && x.LogoutTime == null)
+                    .OrderByDescending(x => x.LoginTime)
+                    .FirstOrDefaultAsync();
+
+                if (openSession == null)
+                    return;
+
+                openSession.LogoutTime = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+            }
+            catch
+            {
+                // Best-effort - never let this block the actual logout.
             }
         }
 

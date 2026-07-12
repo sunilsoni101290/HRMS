@@ -75,10 +75,10 @@ namespace Domain.Entities
         public DateTime? RelievingDate { get; set; }
 
         #region Passport Details 
-        public string PassportNumber { get; set; }
-        public DateTime IssueDate { get; set; }
-        public DateTime ExpiryDate { get; set; }
-        public string PlaceOfIssue { get; set; }
+        public string? PassportNumber { get; set; }
+        public DateTime? IssueDate { get; set; }
+        public DateTime? ExpiryDate { get; set; }
+        public string? PlaceOfIssue { get; set; }
 
         [Display(Name = "Nationality")]
         public Nationality Nationality { get; set; } = Nationality.Indian;

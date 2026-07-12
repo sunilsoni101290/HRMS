@@ -68,11 +68,10 @@
                 <div class="row">
                     <div class="col-md-4">
                         <div class="form-group">
-                            <label asp-for="RoleId"></label> <span class="text-danger">*</span>
-                            <select asp-for="RoleId" asp-items="ViewBag.RoleList" class="form-control">
-                                <option value="">Select Role</option>
-                            </select>
-                            <span asp-validation-for="RoleId" class="text-danger"></span>
+                            <label asp-for="RoleIds"></label> <span class="text-danger">*</span>
+                            <select asp-for="RoleIds" asp-items="ViewBag.RoleList" class="form-control" multiple size="4"></select>
+                            <span asp-validation-for="RoleIds" class="text-danger"></span>
+                            <small class="text-muted">Hold Ctrl (Cmd on Mac) to select more than one role.</small>
                         </div>
                     </div>
                     <div class="col-md-4">

@@ -37,6 +37,12 @@ namespace Domain.Enums
             Unmarried = 2,
             Divorced=3
         }
+        public enum LoginStatus
+        {
+            Success = 1,
+            Failed = 2,
+            Locked = 3
+        }
         public enum SalaryComponentType
         {
             Earning = 1,
@@ -524,6 +530,34 @@ namespace Domain.Enums
             ESICDocument = 27,
 
             Other = 99
+        }
+
+        // Help & Support - ticket workflow.
+        public enum TicketCategory
+        {
+            Technical = 1,
+            HR = 2,
+            Payroll = 3,
+            Leave = 4,
+            IT = 5,
+            General = 6,
+            Other = 7
+        }
+
+        public enum TicketPriority
+        {
+            Low = 1,
+            Medium = 2,
+            High = 3,
+            Urgent = 4
+        }
+
+        public enum TicketStatus
+        {
+            Open = 1,
+            InProgress = 2,
+            Resolved = 3,
+            Closed = 4
         }
     }
 

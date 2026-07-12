@@ -1,4 +1,5 @@
-﻿using APP.Helpers;
+﻿using APP.Attributes;
+using APP.Helpers;
 using APP.Models.DTOs;
 using APP.Services.Interfaces;
 using Humanizer;
@@ -8,6 +9,7 @@ using System.ComponentModel.Design;
 
 namespace APP.Controllers
 {
+    [JwtAuthorize]
     public class LocationController : Controller
     {
         private readonly IApiService _apiService;

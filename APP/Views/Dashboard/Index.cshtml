@@ -1,1072 +1,498 @@
-﻿
+
 @using APP.Models;
 @model DashboardKpiDto
 
 @{
-	ViewBag.Title = "Dashboard";
+    ViewBag.Title = "Dashboard";
+
+    string greeting = DateTime.Now.Hour switch
+    {
+        < 12 => "Good Morning",
+        < 17 => "Good Afternoon",
+        _ => "Good Evening"
+    };
+
+    var fullName = SessionHelper.GetActiveFullName;
 }
 
-<div class="row">
+<!-- ================= Welcome / Overview strip ================= -->
+<div class="ent-welcome-strip">
+    <div class="ent-welcome-text">
+        <h4>@greeting@(string.IsNullOrWhiteSpace(fullName) ? "" : ", " + fullName.Split(' ')[0])</h4>
+        <p>@DateTime.Now.ToString("dddd, dd MMMM yyyy") &bull; Here's what's happening across your organization today.</p>
+    </div>
+    <div class="ent-welcome-chips">
+        <div class="ent-chip">
+            <span class="ent-chip-value">@Model.TotalCompanies</span>
+            <span class="ent-chip-label">Companies</span>
+        </div>
+        <div class="ent-chip">
+            <span class="ent-chip-value">@Model.TotalBranches</span>
+            <span class="ent-chip-label">Branches</span>
+        </div>
+        <div class="ent-chip">
+            <span class="ent-chip-value">@(Model.TodayBirthdays + Model.TodayWorkAnniversaries)</span>
+            <span class="ent-chip-label">Celebrations Today</span>
+        </div>
+    </div>
+</div>
 
-    <!-- Total Employees -->
-    <div class="col-md-3">
-        <div class="panel panel-body bg-primary-400">
-            <div class="media no-margin">
-                <div class="media-left media-middle">
-                    <i class="icon-users icon-3x opacity-75"></i>
-                </div>
-                <div class="media-body text-right">
-                    <h3 class="no-margin">@Model.TotalEmployees</h3>
-                    <span class="text-uppercase text-size-mini">
-                        Total Employees
-                    </span>
-                </div>
+<!-- ================= KPI Cards ================= -->
+<div class="row ent-kpi-row">
+
+    <div class="col-md-3 col-sm-6">
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-blue"><i class="icon-users"></i></div>
+            <div class="ent-kpi-body">
+                <h3>@Model.TotalEmployees</h3>
+                <span>Total Employees</span>
             </div>
         </div>
     </div>
 
-    <!-- Active Employees -->
-    <div class="col-md-3">
-        <div class="panel panel-body bg-success-400">
-            <div class="media no-margin">
-                <div class="media-left media-middle">
-                    <i class="icon-user-check icon-3x opacity-75"></i>
-                </div>
-                <div class="media-body text-right">
-                    <h3 class="no-margin">@Model.ActiveEmployees</h3>
-                    <span class="text-uppercase text-size-mini">
-                        Active Employees
-                    </span>
-                </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-green"><i class="icon-user-check"></i></div>
+            <div class="ent-kpi-body">
+                <h3>@Model.ActiveEmployees</h3>
+                <span>Active Employees</span>
             </div>
         </div>
     </div>
 
-    <!-- New Joiners -->
-    <div class="col-md-3">
-        <div class="panel panel-body bg-indigo-400">
-            <div class="media no-margin">
-                <div class="media-left media-middle">
-                    <i class="icon-user-plus icon-3x opacity-75"></i>
-                </div>
-                <div class="media-body text-right">
-                    <h3 class="no-margin">@Model.NewJoiners</h3>
-                    <span class="text-uppercase text-size-mini">
-                        New Joiners
-                    </span>
-                </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-indigo"><i class="icon-user-plus"></i></div>
+            <div class="ent-kpi-body">
+                <h3>@Model.NewJoiners</h3>
+                <span>New Joiners</span>
             </div>
         </div>
     </div>
 
-    <!-- Resigned Employees -->
-    <div class="col-md-3">
-        <div class="panel panel-body bg-danger-400">
-            <div class="media no-margin">
-                <div class="media-left media-middle">
-                    <i class="icon-user-minus icon-3x opacity-75"></i>
-                </div>
-                <div class="media-body text-right">
-                    <h3 class="no-margin">@Model.ResignedEmployees</h3>
-                    <span class="text-uppercase text-size-mini">
-                        Resigned
-                    </span>
-                </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-red"><i class="icon-user-minus"></i></div>
+            <div class="ent-kpi-body">
+                <h3>@Model.ResignedEmployees</h3>
+                <span>Resigned</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-teal"><i class="icon-checkmark-circle"></i></div>
+            <div class="ent-kpi-body">
+                <h3>@Model.PresentToday</h3>
+                <span>Present Today</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-orange"><i class="icon-cross2"></i></div>
+            <div class="ent-kpi-body">
+                <h3>@Model.AbsentToday</h3>
+                <span>Absent Today</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-purple"><i class="icon-calendar3"></i></div>
+            <div class="ent-kpi-body">
+                <h3>@Model.OnLeaveToday</h3>
+                <span>On Leave</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-pink"><i class="icon-hour-glass"></i></div>
+            <div class="ent-kpi-body">
+                <h3>@Model.PendingApprovals</h3>
+                <span>Pending Approvals</span>
             </div>
         </div>
     </div>
 
 </div>
 
+<!-- ================= Main Body: 2 column ================= -->
 <div class="row">
 
-    <!-- Present Today -->
-    <div class="col-md-3">
-        <div class="panel panel-body bg-teal-400">
-            <div class="media no-margin">
-                <div class="media-left media-middle">
-                    <i class="icon-checkmark-circle icon-3x opacity-75"></i>
-                </div>
-                <div class="media-body text-right">
-                    <h3 class="no-margin">@Model.PresentToday</h3>
-                    <span class="text-uppercase text-size-mini">
-                        Present Today
-                    </span>
+    <!-- ===== LEFT COLUMN ===== -->
+    <div class="col-lg-8">
+
+        <!-- Headcount by Department -->
+        <div class="panel panel-flat ent-panel">
+            <div class="panel-heading">
+                <h6 class="panel-title"><i class="icon-users4 position-left"></i> Headcount by Department</h6>
+                <div class="heading-elements">
+                    <span class="badge bg-primary">@Model.DepartmentDashboard?.TotalEmployees Employees</span>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Absent Today -->
-    <div class="col-md-3">
-        <div class="panel panel-body bg-warning-400">
-            <div class="media no-margin">
-                <div class="media-left media-middle">
-                    <i class="icon-cross2 icon-3x opacity-75"></i>
-                </div>
-                <div class="media-body text-right">
-                    <h3 class="no-margin">@Model.AbsentToday</h3>
-                    <span class="text-uppercase text-size-mini">
-                        Absent Today
-                    </span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Late Arrivals -->
-    <div class="col-md-3">
-        <div class="panel panel-body bg-orange-400">
-            <div class="media no-margin">
-                <div class="media-left media-middle">
-                    <i class="icon-alarm icon-3x opacity-75"></i>
-                </div>
-                <div class="media-body text-right">
-                    <h3 class="no-margin">@Model.LateArrivals</h3>
-                    <span class="text-uppercase text-size-mini">
-                        Late Arrivals
-                    </span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- On Leave -->
-    <div class="col-md-3">
-        <div class="panel panel-body bg-purple-400">
-            <div class="media no-margin">
-                <div class="media-left media-middle">
-                    <i class="icon-calendar3 icon-3x opacity-75"></i>
-                </div>
-                <div class="media-body text-right">
-                    <h3 class="no-margin">@Model.OnLeaveToday</h3>
-                    <span class="text-uppercase text-size-mini">
-                        On Leave
-                    </span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-</div>
-
-<div class="row">
-
-    <!-- Open Positions -->
-    <div class="col-md-6">
-        <div class="panel panel-body bg-blue-400">
-            <div class="media no-margin">
-                <div class="media-left media-middle">
-                    <i class="icon-briefcase icon-3x opacity-75"></i>
-                </div>
-                <div class="media-body text-right">
-                    <h3 class="no-margin">@Model.OpenPositions</h3>
-                    <span class="text-uppercase text-size-mini">
-                        Open Positions
-                    </span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Pending Approvals -->
-    <div class="col-md-6">
-        <div class="panel panel-body bg-pink-400">
-            <div class="media no-margin">
-                <div class="media-left media-middle">
-                    <i class="icon-hour-glass icon-3x opacity-75"></i>
-                </div>
-                <div class="media-body text-right">
-                    <h3 class="no-margin">@Model.PendingApprovals</h3>
-                    <span class="text-uppercase text-size-mini">
-                        Pending Approvals
-                    </span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-</div>
-
-<!-- Recent Leave Requests -->
-<div class="panel panel-flat">
-
-    <div class="panel-heading">
-        <h6 class="panel-title">
-            <i class="icon-airplane3 position-left"></i>
-            Recent Leave Requests
-        </h6>
-
-        <div class="heading-elements">
-            <span class="badge bg-warning">
-                @Model.PendingRequests
-            </span>
-        </div>
-    </div>
-
-    <!-- Summary -->
-    <div class="table-responsive">
-        <table class="table table-xlg text-nowrap">
-            <tbody>
-                <tr>
-
-                    <td class="col-md-4">
-                        <div class="media-left media-middle">
-                            <a href="#" class="btn border-warning text-warning btn-flat btn-rounded btn-icon">
-                                <i class="icon-airplane3"></i>
-                            </a>
-                        </div>
-
-                        <div class="media-left">
-                            <h5 class="text-semibold no-margin">
-                                @Model.TotalRequests
-                                <small class="display-block">
-                                    Total Requests
-                                </small>
-                            </h5>
-                        </div>
-                    </td>
-
-                    <td class="col-md-3">
-                        <div class="media-left media-middle">
-                            <a href="#" class="btn border-success text-success btn-flat btn-rounded btn-icon">
-                                <i class="icon-checkmark3"></i>
-                            </a>
-                        </div>
-
-                        <div class="media-left">
-                            <h5 class="text-semibold no-margin">
-                                @Model.ApprovedRequests
-                                <small class="display-block">
-                                    Approved
-                                </small>
-                            </h5>
-                        </div>
-                    </td>
-
-                    <td class="col-md-3">
-                        <div class="media-left media-middle">
-                            <a href="#" class="btn border-danger text-danger btn-flat btn-rounded btn-icon">
-                                <i class="icon-cross2"></i>
-                            </a>
-                        </div>
-
-                        <div class="media-left">
-                            <h5 class="text-semibold no-margin">
-                                @Model.RejectedRequests
-                                <small class="display-block">
-                                    Rejected
-                                </small>
-                            </h5>
-                        </div>
-                    </td>
-
-                    <td class="text-right">
-                        <a href="#" class="btn bg-primary">
-                            View All
-                        </a>
-                    </td>
-
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Leave Requests List -->
-    <div class="table-responsive">
-
-        <table class="table text-nowrap">
-
-            <thead>
-                <tr>
-                    <th style="width:70px">Date</th>
-                    <th>Employee</th>
-                    <th>Leave Type</th>
-                    <th>Duration</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-
-            <tbody>
-
-                <tr class="active border-double">
-                    <td colspan="4">Pending Approval</td>
-
-                    <td class="text-right">
-                        <span class="badge bg-warning">
-                            @Model.PendingRequests
-                        </span>
-                    </td>
-                </tr>
-
-                @foreach (var item in Model.RecentLeaveRequests)
-                {
-                    <tr>
-
-                        <td>
-                            <h6 class="no-margin">
-                                @item.FromDate.ToString("dd")
-                                <small class="display-block">
-                                    @item.FromDate.ToString("MMM").ToUpper()
-                                </small>
-                            </h6>
-                        </td>
-
-                        <td>
-                            <div class="media-left">
-                                <img src="@(string.IsNullOrEmpty(item.EmployeePhoto))"
-                                     class="img-circle img-xs" />
-                            </div>
-
-                            <div class="media-body">
-                                <span class="text-semibold">
-                                    @item.EmployeeName
-                                </span>
-
-                                <div class="text-muted text-size-small">
-                                    @item.Designation
-                                </div>
-                            </div>
-                        </td>
-
-                        <td>
-                            @item.LeaveType
-                        </td>
-
-                        <td>
-                            @item.TotalDays Day@(item.TotalDays > 1 ? "s" : "")
-                        </td>
-
-                        <td>
-
-                            @switch (item.Status)
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-md-5">
+                        <canvas id="deptChart" height="220"></canvas>
+                    </div>
+                    <div class="col-md-7">
+                        <div class="ent-dept-legend">
+                            @if (Model.DepartmentDashboard != null && Model.DepartmentDashboard.Departments.Any())
                             {
-                                case EnumExtensions.ApprovalStatus.Pending:
-                                    <span class="label bg-warning">Pending</span>
-                                    break;
-
-                                case EnumExtensions.ApprovalStatus.Approved:
-                                    <span class="label bg-success">Approved</span>
-                                    break;
-
-                                case EnumExtensions.ApprovalStatus.Rejected:
-                                    <span class="label bg-danger">Rejected</span>
-                                    break;
-
-                                case EnumExtensions.ApprovalStatus.OnHold:
-                                    <span class="label bg-info">On Hold</span>
-                                    break;
-                            }
-
-                        </td>
-
-                    </tr>
-                }
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-</div>
-<!-- /Recent Leave Requests -->
-
-<!-- Upcoming Events -->
-<div class="panel panel-flat">
-
-    <div class="panel-heading">
-        <h6 class="panel-title">
-            <i class="icon-calendar3 position-left"></i>
-            Upcoming Events
-        </h6>
-
-        <div class="heading-elements">
-            <span class="badge bg-primary">
-                @Model.UpcomingEvents.TotalUpcomingEvents @Html.Raw("Upcoming")
-            </span>
-        </div>
-    </div>
-
-    <!-- Summary -->
-    <div class="table-responsive">
-        <table class="table table-xlg text-nowrap">
-            <tbody>
-                <tr>
-
-                    <td class="col-md-4">
-                        <div class="media-left media-middle">
-                            <a href="#" class="btn border-primary text-primary btn-flat btn-rounded btn-icon">
-                                <i class="icon-calendar"></i>
-                            </a>
-                        </div>
-
-                        <div class="media-left">
-                            <h5 class="text-semibold no-margin">
-                                @Model.UpcomingEvents.TotalUpcomingEvents @Html.Raw("Upcoming")
-                                <small class="display-block">
-                                    Total Upcoming Events
-                                </small>
-                            </h5>
-                        </div>
-                    </td>
-
-                    <td class="col-md-3">
-                        <div class="media-left media-middle">
-                            <a href="#" class="btn border-success text-success btn-flat btn-rounded btn-icon">
-                                <i class="icon-gift"></i>
-                            </a>
-                        </div>
-
-                        <div class="media-left">
-                            <h5 class="text-semibold no-margin">
-                                @Model.UpcomingEvents.BirthdayCount
-                                <small class="display-block">
-                                    Birthdays
-                                </small>
-                            </h5>
-                        </div>
-                    </td>
-
-                    <td class="col-md-3">
-                        <div class="media-left media-middle">
-                            <a href="#" class="btn border-danger text-danger btn-flat btn-rounded btn-icon">
-                                <i class="icon-flag3"></i>
-                            </a>
-                        </div>
-
-                        <div class="media-left">
-                            <h5 class="text-semibold no-margin">
-                                @Model.UpcomingEvents.HolidayCount
-                                <small class="display-block">
-                                    Holidays
-                                </small>
-                            </h5>
-                        </div>
-                    </td>
-
-                    <td class="col-md-2 text-right">
-                        <a href="#" class="btn bg-primary">
-                            View Calendar
-                        </a>
-                    </td>
-
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Event List -->
-    <div class="table-responsive">
-
-        <table class="table text-nowrap">
-
-            <tbody>
-
-                <tr class="active border-double">
-                    <td colspan="4">
-                        Today's Events
-                    </td>
-
-                    <td class="text-right">
-                        <span class="badge bg-success">
-                            @Model.UpcomingEvents.TodayEventCount
-                        </span>
-                    </td>
-                </tr>
-
-                @foreach (var item in Model.UpcomingEvents.Events)
-                {
-                    <tr>
-                        <td width="70">
-
-                            <h5 class="text-@item.Color no-margin">
-
-                                @item.EventDate.ToString("dd")
-
-                                <small class="display-block">
-                                    @item.EventDate.ToString("MMM").ToUpper()
-                                </small>
-
-                            </h5>
-
-                        </td>
-
-                        <td width="60">
-
-                            <a class="btn bg-@item.Color btn-rounded btn-icon btn-xs">
-                                <i class="@item.Icon"></i>
-                            </a>
-
-                        </td>
-
-                        <td>
-
-                            <div class="text-semibold">
-                                @item.Title
-                            </div>
-
-                            <span class="text-muted">
-                                @(string.IsNullOrWhiteSpace(item.Department)
-                                    ? item.Description
-                                    : item.Department)
-                            </span>
-
-                        </td>
-
-                        <td>
-
-                            @{
-                                string css = item.EventType switch
+                                foreach (var item in Model.DepartmentDashboard.Departments)
                                 {
-                                    "Birthday" => "success",
-                                    "Holiday" => "danger",
-                                    "Meeting" => "primary",
-                                    "Training" => "warning",
-                                    "Celebration" => "success",
-                                    _ => "info"
-                                };
-                            }
-
-                            <span class="label bg-@css">
-                                @item.EventType
-                            </span>
-
-                        </td>
-
-                        <td class="text-right">
-
-                            @if (item.EventDate.Date == DateTime.Today)
-                            {
-                                <span class="text-success text-semibold">
-                                    Today
-                                </span>
-                            }
-                            else if (item.StartTime.HasValue)
-                            {
-                                @item.StartTime.Value.ToString(@"hh\:mm")
+                                    <div class="ent-dept-row">
+                                        <div class="ent-dept-label">
+                                            <span class="ent-dot bg-@item.Color"></span>
+                                            @item.DepartmentName
+                                        </div>
+                                        <div class="ent-dept-progress">
+                                            <div class="progress">
+                                                <div class="progress-bar bg-@item.Color" style="width:@item.Percentage%"></div>
+                                            </div>
+                                        </div>
+                                        <div class="ent-dept-count">@item.EmployeeCount <small>(@item.Percentage.ToString("0.#")%)</small></div>
+                                    </div>
+                                }
                             }
                             else
                             {
-                                @item.EventDate.ToString("ddd")
+                                <p class="text-muted">No department data available.</p>
                             }
-
-                        </td>
-
-                    </tr>
-                }
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-</div>
-<!-- /Upcoming Events -->
-
-<!-- Upcoming Birthdays -->
-<div class="panel panel-flat">
-
-    <div class="panel-heading">
-        <h6 class="panel-title">
-            <i class="icon-gift position-left"></i>
-            Upcoming Birthdays
-        </h6>
-
-        <div class="heading-elements">
-            <span class="badge bg-success">
-                @Model.BirthdayDashboard?.BirthdaysThisMonth @Html.Raw("This Month")
-            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
+        <!-- /Headcount -->
+
+        <!-- Recent Leave Requests -->
+        <div class="panel panel-flat ent-panel">
+            <div class="panel-heading">
+                <h6 class="panel-title"><i class="icon-airplane3 position-left"></i> Recent Leave Requests</h6>
+                <div class="heading-elements">
+                    <span class="badge bg-warning">@Model.PendingRequests Pending</span>
+                </div>
+            </div>
+
+            <div class="ent-stat-strip">
+                <div class="ent-stat"><h5>@Model.TotalRequests</h5><span>Total</span></div>
+                <div class="ent-stat text-success"><h5>@Model.ApprovedRequests</h5><span>Approved</span></div>
+                <div class="ent-stat text-danger"><h5>@Model.RejectedRequests</h5><span>Rejected</span></div>
+                <div class="ent-stat text-warning"><h5>@Model.PendingRequests</h5><span>Pending</span></div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover text-nowrap">
+                    <thead>
+                        <tr>
+                            <th style="width:70px">Date</th>
+                            <th>Employee</th>
+                            <th>Leave Type</th>
+                            <th>Duration</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.RecentLeaveRequests != null && Model.RecentLeaveRequests.Any())
+                        {
+                            foreach (var item in Model.RecentLeaveRequests)
+                            {
+                                <tr>
+                                    <td>
+                                        <h6 class="no-margin">
+                                            @item.FromDate.ToString("dd")
+                                            <small class="display-block">@item.FromDate.ToString("MMM").ToUpper()</small>
+                                        </h6>
+                                    </td>
+                                    <td>
+                                        <span class="text-semibold">@item.EmployeeName</span>
+                                        <div class="text-muted text-size-small">@item.Designation</div>
+                                    </td>
+                                    <td>@item.LeaveType</td>
+                                    <td>@item.TotalDays Day@(item.TotalDays > 1 ? "s" : "")</td>
+                                    <td>
+                                        @switch (item.Status)
+                                        {
+                                            case EnumExtensions.ApprovalStatus.Pending:
+                                                <span class="label bg-warning">Pending</span>
+                                                break;
+                                            case EnumExtensions.ApprovalStatus.Approved:
+                                                <span class="label bg-success">Approved</span>
+                                                break;
+                                            case EnumExtensions.ApprovalStatus.Rejected:
+                                                <span class="label bg-danger">Rejected</span>
+                                                break;
+                                            case EnumExtensions.ApprovalStatus.OnHold:
+                                                <span class="label bg-info">On Hold</span>
+                                                break;
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr><td colspan="5" class="text-center text-muted" style="padding:20px;">No recent leave requests.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!-- /Recent Leave Requests -->
+
     </div>
+    <!-- ===== /LEFT COLUMN ===== -->
 
-    <!-- Summary -->
-    <div class="table-responsive">
-        <table class="table table-xlg text-nowrap">
-            <tbody>
-                <tr>
+    <!-- ===== RIGHT COLUMN ===== -->
+    <div class="col-lg-4">
 
-                    <td class="col-md-4">
-                        <div class="media-left media-middle">
-                            <a href="#" class="btn border-success text-success btn-flat btn-rounded btn-icon">
-                                <i class="icon-gift"></i>
-                            </a>
-                        </div>
+        <!-- Announcements -->
+        <div class="panel panel-flat ent-panel">
+            <div class="panel-heading">
+                <h6 class="panel-title"><i class="icon-megaphone position-left"></i> Announcements</h6>
+                <div class="heading-elements">
+                    <span class="badge bg-primary">@Model.AnnouncementDashboard?.ActiveAnnouncements</span>
+                </div>
+            </div>
+            <ul class="ent-feed-list">
+                @if (Model.AnnouncementDashboard != null && Model.AnnouncementDashboard.Announcements.Any())
+                {
+                    foreach (var item in Model.AnnouncementDashboard.Announcements.Take(5))
+                    {
+                        <li>
+                            <span class="ent-feed-icon bg-@item.Color"><i class="@item.Icon"></i></span>
+                            <div class="ent-feed-body">
+                                <div class="text-semibold">@item.Title</div>
+                                <span class="text-muted text-size-small">@item.Description</span>
+                            </div>
+                        </li>
+                    }
+                }
+                else
+                {
+                    <li class="text-muted text-center" style="padding:15px 0;">No active announcements.</li>
+                }
+            </ul>
+            <div class="panel-footer text-center">
+                <a asp-controller="Announcement" asp-action="Index">View All Announcements</a>
+            </div>
+        </div>
 
-                        <div class="media-left">
-                            <h5 class="text-semibold no-margin">
-                                @Model.BirthdayDashboard?.BirthdaysThisMonth
-                                <small class="display-block">
-                                    Birthdays This Month
-                                </small>
-                            </h5>
-                        </div>
-                    </td>
+        <!-- Upcoming Events -->
+        <div class="panel panel-flat ent-panel">
+            <div class="panel-heading">
+                <h6 class="panel-title"><i class="icon-calendar3 position-left"></i> Upcoming Events</h6>
+                <div class="heading-elements">
+                    <span class="badge bg-info">@Model.UpcomingEvents?.TotalUpcomingEvents</span>
+                </div>
+            </div>
+            <ul class="ent-feed-list">
+                @if (Model.UpcomingEvents != null && Model.UpcomingEvents.Events.Any())
+                {
+                    foreach (var item in Model.UpcomingEvents.Events.Take(5))
+                    {
+                        <li>
+                            <span class="ent-feed-icon bg-@item.Color"><i class="@item.Icon"></i></span>
+                            <div class="ent-feed-body">
+                                <div class="text-semibold">@item.Title</div>
+                                <span class="text-muted text-size-small">
+                                    @item.EventDate.ToString("dd MMM") &bull; @(string.IsNullOrWhiteSpace(item.Department) ? item.EventType : item.Department)
+                                </span>
+                            </div>
+                        </li>
+                    }
+                }
+                else
+                {
+                    <li class="text-muted text-center" style="padding:15px 0;">No upcoming events.</li>
+                }
+            </ul>
+            <div class="panel-footer text-center">
+                <a asp-controller="Event" asp-action="Index">View Calendar</a>
+            </div>
+        </div>
 
-                    <td class="col-md-3">
-                        <div class="media-left media-middle">
-                            <a href="#" class="btn border-primary text-primary btn-flat btn-rounded btn-icon">
-                                <i class="icon-calendar"></i>
-                            </a>
-                        </div>
-
-                        <div class="media-left">
-                            <h5 class="text-semibold no-margin">
-                                @Model.BirthdayDashboard?.BirthdaysToday
-                                <small class="display-block">
-                                    Today
-                                </small>
-                            </h5>
-                        </div>
-                    </td>
-
-                    <td class="col-md-3">
-                        <div class="media-left media-middle">
-                            <a href="#" class="btn border-warning text-warning btn-flat btn-rounded btn-icon">
-                                <i class="icon-cake"></i>
-                            </a>
-                        </div>
-
-                        <div class="media-left">
-                            <h5 class="text-semibold no-margin">
-                                @Model.BirthdayDashboard?.BirthdaysThisWeek
-                                <small class="display-block">
-                                    This Week
-                                </small>
-                            </h5>
-                        </div>
-                    </td>
-
-                    <td class="text-right">
-                        <a href="#" class="btn bg-success">
-                            View All
-                        </a>
-                    </td>
-
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Birthday List -->
-    <div class="table-responsive">
-        <table class="table text-nowrap">
-
-            <tbody>
-
-                <tr class="active border-double">
-                    <td colspan="4">
-                        Today's Birthdays
-                    </td>
-
-                    <td class="text-right">
-                        <span class="badge bg-success">
-                            @Model.BirthdayDashboard?.BirthdaysToday
-                        </span>
-                    </td>
-                </tr>
-
+        <!-- Upcoming Birthdays -->
+        <div class="panel panel-flat ent-panel">
+            <div class="panel-heading">
+                <h6 class="panel-title"><i class="icon-gift position-left"></i> Upcoming Birthdays</h6>
+                <div class="heading-elements">
+                    <span class="badge bg-success">@Model.BirthdayDashboard?.BirthdaysThisMonth</span>
+                </div>
+            </div>
+            <ul class="ent-feed-list">
                 @if (Model.BirthdayDashboard != null && Model.BirthdayDashboard.Birthdays.Any())
                 {
-                    foreach (var item in Model.BirthdayDashboard.Birthdays)
+                    foreach (var item in Model.BirthdayDashboard.Birthdays.Take(5))
                     {
-                        <tr>
-
-                            <td width="70">
-
-                                <h5 class="@(item.DaysLeft == 0 ? "text-success" : "text-primary") no-margin">
-
-                                    @item.Birthday.ToString("dd")
-
-                                </h5>
-
-                                <small>
-                                    @item.Birthday.ToString("MMM").ToUpper()
-                                </small>
-
-                            </td>
-
-                            <td width="60">
-
-                                <img src="@(string.IsNullOrWhiteSpace(item.Photo)
-                                    ? "/Content/images/user.png"
-                                    : item.Photo)"
-                                     class="img-circle img-xs" />
-
-                            </td>
-
-                            <td>
-
-                                <div class="text-semibold">
-
-                                    @item.EmployeeName
-
-                                </div>
-
-                                <span class="text-muted">
-
-                                    @item.Designation
-
-                                </span>
-
-                            </td>
-
-                            <td>
-
+                        <li>
+                            <img src="@(string.IsNullOrWhiteSpace(item.Photo) ? Url.Content("~/global_assets/images/placeholders/placeholder.jpg") : item.Photo)"
+                                 class="img-circle ent-feed-avatar" alt="@item.EmployeeName" />
+                            <div class="ent-feed-body">
+                                <div class="text-semibold">@item.EmployeeName</div>
+                                <span class="text-muted text-size-small">@item.Designation</span>
+                            </div>
+                            <span class="ent-feed-right">
                                 @if (item.DaysLeft == 0)
                                 {
-                                    <span class="label bg-success">
-                                        Birthday
-                                    </span>
-                                }
-                                else
-                                {
-                                    <span class="label bg-primary">
-                                        Upcoming
-                                    </span>
-                                }
-
-                            </td>
-
-                            <td class="text-right">
-
-                                @if (item.DaysLeft == 0)
-                                {
-                                    <span style="font-size:16px;">🎂 Today</span>
+                                    <span class="label bg-success">Today</span>
                                 }
                                 else if (item.DaysLeft == 1)
                                 {
-                                    <span>Tomorrow</span>
+                                    <span class="label bg-primary">Tomorrow</span>
                                 }
                                 else
                                 {
-                                    <span>@item.DaysLeft Days</span>
+                                    <span class="text-muted text-size-small">@item.DaysLeft days</span>
                                 }
-
-                            </td>
-
-                        </tr>
+                            </span>
+                        </li>
                     }
                 }
-            </tbody>
-        </table>
-    </div>
-
-</div>
-<!-- /Upcoming Birthdays -->
-
-<!-- Announcements -->
-<div class="panel panel-flat">
-
-    <div class="panel-heading">
-        <h6 class="panel-title">
-            <i class="icon-megaphone position-left"></i>
-            Announcements
-        </h6>
-
-        <div class="heading-elements">
-            <span class="badge bg-primary">
-                @Model.AnnouncementDashboard?.ActiveAnnouncements @Html.Raw("Active")
-            </span>
-        </div>
-    </div>
-
-    <!-- Summary -->
-    <div class="table-responsive">
-        <table class="table table-xlg text-nowrap">
-            <tbody>
-                <tr>
-
-                    <td class="col-md-4">
-                        <div class="media-left media-middle">
-                            <a href="#" class="btn border-primary text-primary btn-flat btn-rounded btn-icon">
-                                <i class="icon-megaphone"></i>
-                            </a>
-                        </div>
-
-                        <div class="media-left">
-                            <h5 class="text-semibold no-margin">
-                                @Model.AnnouncementDashboard?.ActiveAnnouncements
-                                <small class="display-block">
-                                    Active Announcements
-                                </small>
-                            </h5>
-                        </div>
-                    </td>
-
-                    <td class="col-md-3">
-                        <div class="media-left media-middle">
-                            <a href="#" class="btn border-success text-success btn-flat btn-rounded btn-icon">
-                                <i class="icon-newspaper"></i>
-                            </a>
-                        </div>
-
-                        <div class="media-left">
-                            <h5 class="text-semibold no-margin">
-                                @Model.AnnouncementDashboard?.ThisWeekAnnouncements
-                                <small class="display-block">
-                                    This Week
-                                </small>
-                            </h5>
-                        </div>
-                    </td>
-
-                    <td class="col-md-3">
-                        <div class="media-left media-middle">
-                            <a href="#" class="btn border-warning text-warning btn-flat btn-rounded btn-icon">
-                                <i class="icon-bell2"></i>
-                            </a>
-                        </div>
-
-                        <div class="media-left">
-                            <h5 class="text-semibold no-margin">
-                                @Model.AnnouncementDashboard?.HighPriorityAnnouncements
-                                <small class="display-block">
-                                    High Priority
-                                </small>
-                            </h5>
-                        </div>
-                    </td>
-
-                    <td class="text-right">
-                        <a href="#" class="btn bg-primary">
-                            View All
-                        </a>
-                    </td>
-
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Announcement List -->
-    <div class="table-responsive">
-        <table class="table text-nowrap">
-
-            <tbody>
-
-                <tr class="active border-double">
-                    <td colspan="4">
-                        Latest Announcements
-                    </td>
-
-                    <td class="text-right">
-                        <span class="badge bg-primary">
-                            @Model.AnnouncementDashboard?.ActiveAnnouncements
-                        </span>
-                    </td>
-                </tr>
-
-                @if (Model.AnnouncementDashboard != null && Model.AnnouncementDashboard.Announcements.Any())
+                else
                 {
-                    foreach (var item in Model.AnnouncementDashboard.Announcements)
-                    {
-                        <tr>
-
-                            <td width="70">
-
-                                <h5 class="text-@item.Color no-margin">
-                                    @item.StartDate.ToString("dd")
-                                </h5>
-
-                                <small>
-                                    @item.StartDate.ToString("MMM").ToUpper()
-                                </small>
-
-                            </td>
-
-                            <td width="60">
-
-                                <span class="btn bg-@item.Color btn-rounded btn-icon btn-xs">
-                                    <i class="@item.Icon"></i>
-                                </span>
-
-                            </td>
-
-                            <td>
-
-                                <div class="text-semibold">
-                                    @item.Title
-                                </div>
-
-                                <span class="text-muted">
-                                    @item.Description
-                                </span>
-
-                            </td>
-
-                            <td>
-
-                                @{
-                                    string labelCss = item.Priority switch
-                                    {
-                                        EnumExtensions.AnnouncementPriority.High => "danger",
-                                        EnumExtensions.AnnouncementPriority.Medium => "warning",
-                                        _ => "primary"
-                                    };
-                                }
-
-                                <span class="label bg-@labelCss">
-                                    @item.Type
-                                </span>
-
-                            </td>
-
-                            <td class="text-right">
-                                @item.Department
-                            </td>
-
-                        </tr>
-                    }
+                    <li class="text-muted text-center" style="padding:15px 0;">No upcoming birthdays.</li>
                 }
-
-            </tbody>
-
-        </table>
-    </div>
-
-</div>
-<!-- /Announcements -->
-
-<!-- Headcount by Department -->
-<div class="panel panel-flat">
-
-    <div class="panel-heading">
-        <h6 class="panel-title">
-            <i class="icon-users4 position-left"></i>
-            Headcount by Department
-        </h6>
-
-        <div class="heading-elements">
-            <span class="badge bg-primary">
-                @Model.DepartmentDashboard?.TotalEmployees Employees
-            </span>
+            </ul>
         </div>
+
     </div>
-
-    <!-- Summary -->
-    <div class="table-responsive">
-        <table class="table table-xlg text-nowrap">
-            <tbody>
-                <tr>
-
-                    <td class="col-md-4">
-                        <div class="media-left media-middle">
-                            <a href="#" class="btn border-primary text-primary btn-flat btn-rounded btn-icon">
-                                <i class="icon-users4"></i>
-                            </a>
-                        </div>
-
-                        <div class="media-left">
-                            <h5 class="text-semibold no-margin">
-                                @Model.DepartmentDashboard?.TotalEmployees
-                                <small class="display-block">
-                                    Total Employees
-                                </small>
-                            </h5>
-                        </div>
-                    </td>
-
-                    <td class="col-md-3">
-                        <div class="media-left media-middle">
-                            <a href="#" class="btn border-success text-success btn-flat btn-rounded btn-icon">
-                                <i class="icon-office"></i>
-                            </a>
-                        </div>
-
-                        <div class="media-left">
-                            <h5 class="text-semibold no-margin">
-                                @Model.DepartmentDashboard?.TotalDepartments
-                                <small class="display-block">
-                                    Departments
-                                </small>
-                            </h5>
-                        </div>
-                    </td>
-
-                    <td class="col-md-3">
-                        <div class="media-left media-middle">
-                            <a href="#" class="btn border-warning text-warning btn-flat btn-rounded btn-icon">
-                                <i class="icon-user-plus"></i>
-                            </a>
-                        </div>
-
-                        <div class="media-left">
-                            <h5 class="text-semibold no-margin">
-                                @Model.DepartmentDashboard?.NewJoiners
-                                <small class="display-block">
-                                    New Joiners
-                                </small>
-                            </h5>
-                        </div>
-                    </td>
-
-                    <td class="text-right">
-                        <a href="#" class="btn bg-primary">
-                            View Report
-                        </a>
-                    </td>
-
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Department List -->
-    <div class="table-responsive">
-        <table class="table text-nowrap">
-
-            <thead>
-                <tr>
-                    <th>Department</th>
-                    <th>Headcount</th>
-                    <th>Percentage</th>
-                    <th style="width:200px;">Distribution</th>
-                </tr>
-            </thead>
-
-            <tbody>
-
-                @if (Model.DepartmentDashboard != null && Model.DepartmentDashboard.Departments.Any())
-                {
-                    foreach (var item in Model.DepartmentDashboard.Departments)
-                    {
-                        <tr>
-
-                            <td>
-                                <span class="text-semibold">
-                                    @item.DepartmentName
-                                </span>
-                            </td>
-
-                            <td>
-                                <span class="badge bg-@item.Color">
-                                    @item.EmployeeCount
-                                </span>
-                            </td>
-
-                            <td>
-                                @item.Percentage.ToString("0.##")%
-                            </td>
-
-                            <td style="width:200px;">
-
-                                <div class="progress">
-                                    <div class="progress-bar bg-@item.Color"
-                                         style="width:@item.Percentage%">
-                                    </div>
-                                </div>
-
-                            </td>
-
-                        </tr>
-                    }
-                }
-            </tbody>
-
-        </table>
-    </div>
+    <!-- ===== /RIGHT COLUMN ===== -->
 
 </div>
-<!-- /Headcount by Department -->
+
+<style>
+    /* ---------- Welcome strip ---------- */
+    .ent-welcome-strip {
+        background: linear-gradient(120deg, #1b2a4a, #22365f 60%, #2b4270);
+        border-radius: 8px;
+        padding: 22px 26px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 16px;
+        box-shadow: 0 4px 14px rgba(27,42,74,.18);
+    }
+    .ent-welcome-text h4 { color: #fff; margin: 0 0 4px; font-weight: 600; }
+    .ent-welcome-text p { color: #b9c4dc; margin: 0; font-size: 13px; }
+    .ent-welcome-chips { display: flex; gap: 14px; }
+    .ent-chip {
+        background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
+        border-radius: 8px; padding: 8px 18px; text-align: center; min-width: 92px;
+    }
+    .ent-chip-value { display: block; color: #fff; font-size: 19px; font-weight: 700; }
+    .ent-chip-label { display: block; color: #9fb0d1; font-size: 10.5px; text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+
+    /* ---------- KPI cards ---------- */
+    .ent-kpi-row { margin-bottom: 4px; }
+    .ent-kpi-card {
+        background: #fff; border-radius: 8px; padding: 18px 18px;
+        display: flex; align-items: center; gap: 14px;
+        box-shadow: 0 1px 3px rgba(20,30,60,.08);
+        border: 1px solid #edf0f5;
+        margin-bottom: 20px;
+        transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .ent-kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(20,30,60,.12); }
+    .ent-kpi-icon {
+        width: 48px; height: 48px; border-radius: 10px; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center; font-size: 20px; color: #fff;
+    }
+    .ent-icon-blue   { background: linear-gradient(135deg,#4e9cff,#2b6fd9); }
+    .ent-icon-green  { background: linear-gradient(135deg,#4cd39b,#1fa876); }
+    .ent-icon-indigo { background: linear-gradient(135deg,#8a7bff,#5c4de0); }
+    .ent-icon-red    { background: linear-gradient(135deg,#ff8a8a,#e5484d); }
+    .ent-icon-teal   { background: linear-gradient(135deg,#3ecbc8,#1f9d9a); }
+    .ent-icon-orange { background: linear-gradient(135deg,#ffb04e,#e08b1f); }
+    .ent-icon-purple { background: linear-gradient(135deg,#c084fc,#9333ea); }
+    .ent-icon-pink   { background: linear-gradient(135deg,#ff7bb0,#e0447e); }
+    .ent-kpi-body h3 { margin: 0; font-size: 24px; font-weight: 700; color: #1b2a4a; line-height: 1; }
+    .ent-kpi-body span { color: #8896ad; font-size: 11.5px; text-transform: uppercase; letter-spacing: .4px; }
+
+    /* ---------- Panels ---------- */
+    .ent-panel { border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(20,30,60,.06); }
+
+    /* Department legend */
+    .ent-dept-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; }
+    .ent-dept-label { flex: 0 0 130px; font-size: 12.5px; color: #45526b; display: flex; align-items: center; }
+    .ent-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 7px; }
+    .ent-dept-progress { flex: 1; }
+    .ent-dept-progress .progress { height: 8px; margin: 0; border-radius: 4px; }
+    .ent-dept-count { flex: 0 0 80px; text-align: right; font-size: 12.5px; font-weight: 600; color: #1b2a4a; }
+    .ent-dept-count small { font-weight: 400; color: #8896ad; }
+
+    /* Stat strip */
+    .ent-stat-strip { display: flex; border-top: 1px solid #eef1f6; border-bottom: 1px solid #eef1f6; }
+    .ent-stat { flex: 1; text-align: center; padding: 14px 8px; border-right: 1px solid #eef1f6; }
+    .ent-stat:last-child { border-right: none; }
+    .ent-stat h5 { margin: 0 0 2px; font-size: 20px; font-weight: 700; }
+    .ent-stat span { font-size: 11px; text-transform: uppercase; letter-spacing: .4px; color: #8896ad; }
+
+    /* Feed lists (announcements / events / birthdays) */
+    .ent-feed-list { list-style: none; margin: 0; padding: 4px 0; }
+    .ent-feed-list > li {
+        display: flex; align-items: center; gap: 12px; padding: 10px 18px;
+        border-bottom: 1px solid #f4f6f9;
+    }
+    .ent-feed-list > li:last-child { border-bottom: none; }
+    .ent-feed-icon {
+        width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px;
+    }
+    .ent-feed-avatar { width: 34px; height: 34px; object-fit: cover; flex-shrink: 0; }
+    .ent-feed-body { flex: 1; min-width: 0; }
+    .ent-feed-body .text-semibold { font-size: 13px; }
+    .ent-feed-right { flex-shrink: 0; }
+</style>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <script>
+        (function () {
+            var labels = [];
+            var values = [];
+            var colorMap = {
+                primary: '#4e9cff', success: '#4cd39b', danger: '#ff6b6b', warning: '#ffb04e',
+                info: '#3ecbc8', indigo: '#8a7bff', purple: '#c084fc', pink: '#ff7bb0',
+                teal: '#1f9d9a', orange: '#e08b1f', slate: '#8896ad', default: '#8896ad'
+            };
+            var colors = [];
+
+            @if (Model.DepartmentDashboard != null && Model.DepartmentDashboard.Departments.Any())
+            {
+                foreach (var item in Model.DepartmentDashboard.Departments)
+                {
+                    @:labels.push(@Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(item.DepartmentName)));
+                    @:values.push(@item.EmployeeCount);
+                    @:colors.push(colorMap[@Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(item.Color))] || colorMap.default);
+                }
+            }
+
+            var ctx = document.getElementById('deptChart');
+            if (ctx && labels.length > 0) {
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: { legend: { display: false } },
+                        cutout: '62%'
+                    }
+                });
+            }
+        })();
+    </script>
+}

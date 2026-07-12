@@ -1,0 +1,91 @@
+@model IEnumerable<APP.Models.DTOs.FaqItemDto>
+
+@{
+    ViewData["Title"] = "Manage FAQ";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title"><i class="icon-question position-left"></i> Manage FAQ / Knowledge Base</h5>
+        <div class="heading-elements">
+            <a asp-action="Browse" class="btn btn-default"><i class="icon-eye"></i> View Public Page</a>
+            <a asp-action="Create" class="btn bg-primary"><i class="icon-plus22"></i> Add FAQ</a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-4">
+                <input type="text" id="searchInput" class="form-control" placeholder="Search FAQ..." />
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-striped">
+            <thead>
+                <tr>
+                    <th width="50">#</th>
+                    <th>Category</th>
+                    <th>Question</th>
+                    <th width="90">Order</th>
+                    <th width="100">Status</th>
+                    <th width="170">Action</th>
+                </tr>
+            </thead>
+            <tbody id="dataTable">
+                @{ int sr = 1; }
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model.OrderBy(x => x.Category).ThenBy(x => x.DisplayOrder))
+                    {
+                        <tr>
+                            <td>@sr</td>
+                            <td>@item.Category</td>
+                            <td>@item.Question</td>
+                            <td>@item.DisplayOrder</td>
+                            <td>
+                                <span class="label @(item.IsActive ? "bg-success" : "bg-grey")">@(item.IsActive ? "Published" : "Hidden")</span>
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary btn-icon" title="Edit"><i class="icon-pencil7"></i></a>
+                                    <a asp-action="ToggleActive" asp-route-id="@item.Id" class="btn btn-default btn-icon" title="@(item.IsActive ? "Unpublish" : "Publish")"><i class="icon-@(item.IsActive ? "eye-blocked2" : "eye")"></i></a>
+                                    <a asp-action="Delete" asp-route-id="@item.Id"
+                                       onclick="return confirm('Delete this FAQ item?');"
+                                       class="btn btn-danger btn-icon" title="Delete"><i class="icon-trash"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                        sr++;
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="6" class="text-center text-muted" style="padding:30px;"><i class="icon-question" style="font-size:32px;"></i><br />No FAQ items found.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    <script>
+        $(function () {
+            $("#searchInput").on("keyup", function () {
+                var value = $(this).val().toLowerCase();
+                $("#dataTable tr").filter(function () {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+                });
+            });
+        });
+    </script>
+    <style>
+        .btn-icon { width: 34px; }
+    </style>
+}

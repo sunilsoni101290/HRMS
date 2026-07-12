@@ -13,6 +13,13 @@ namespace APP.Models.DTOs
         public string Password { get; set; }
         public string IpAddress { get; set; } = string.Empty;
         public bool RememberMe { get; set; } = false;
+
+        // Populated server-side (from the request's User-Agent header) in
+        // AuthController.Login just before posting to the API - not user
+        // input, so no [Required]/validation attributes.
+        public string? DeviceInfo { get; set; }
+        public string? Browser { get; set; }
+        public string? OS { get; set; }
     }
 
     public class ForgotPasswordDto
@@ -55,6 +62,8 @@ namespace APP.Models.DTOs
         [Compare(nameof(NewPassword), ErrorMessage = "New password and confirmation do not match.")]
         [Display(Name = "Confirm New Password")]
         public string ConfirmPassword { get; set; }
+
+        public string UserId { get; set; }
     }
 
     public class UserListDto

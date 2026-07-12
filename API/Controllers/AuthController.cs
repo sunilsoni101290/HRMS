@@ -53,7 +53,7 @@ namespace API.Controllers
                 {
                     Success = true,
                     Message = "Login Successful",
-                    Data = result
+                    Data = result.Data
                 });
             }
             catch (Exception ex)
@@ -149,13 +149,13 @@ namespace API.Controllers
         [HttpPost("change-password")]
         public async Task<IActionResult> ChangePassword(ChangePAsswordDto model)
         {
-            var userId = User.FindFirst("UserId")?.Value;
+            //var userId = User.FindFirst("UserId")?.Value;
 
-            if (string.IsNullOrEmpty(userId))
+            if (string.IsNullOrEmpty(model.UserId))
                 return Unauthorized();
 
             var result = await _authService.ChangePasswordAsync(
-                userId,
+                model.UserId,
                 model.OldPassword,
                 model.NewPassword);
 

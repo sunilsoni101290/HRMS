@@ -394,8 +394,24 @@ namespace Infrastructure.Data
                     CreatedBy = "System"
                 };
 
+                // System Configurator sits alongside the CEO at the top of
+                // the org - they own application/master-data configuration,
+                // independent of the HR reporting hierarchy.
+                var systemConfigurator = new Designation
+                {
+                    Id = IDManager.GetNewId(new Designation()),
+                    Name = "System Configurator",
+                    Code = "SYS-CFG",
+                    TenantId = tenantId,
+                    CompanyId = companyId,
+                    DepartmentId = itDept.Id,
+                    Level = 1,
+                    MinSalary = 90000,
+                    CreatedBy = "System"
+                };
+
                 await context.Designations.AddRangeAsync(
-                    ceo, hrManager, hrExecutive, itManager, developer
+                    ceo, hrManager, hrExecutive, itManager, developer, systemConfigurator
                 );
 
                 await context.SaveChangesAsync();
@@ -443,14 +459,18 @@ namespace Infrastructure.Data
             // =========================
             // 10. EMPLOYEE
             // =========================
+            // Production deployment: exactly 2 default employee records,
+            // one per default login account (Admin, System Configurator).
+            // No sample HR/developer employees are seeded - the client adds
+            // their real workforce after go-live via the Employee module
+            // (or the bulk Excel import).
             if (!context.Employees.Any())
             {
                 var hrDept = await context.Departments.FirstOrDefaultAsync(x => x.Code == "HR");
                 var itDept = await context.Departments.FirstOrDefaultAsync(x => x.Code == "IT");
 
                 var ceoDesg = await context.Designations.FirstOrDefaultAsync(x => x.Code == "CEO");
-                var hrMgrDesg = await context.Designations.FirstOrDefaultAsync(x => x.Code == "HR-MGR");
-                var devDesg = await context.Designations.FirstOrDefaultAsync(x => x.Code == "DEV");
+                var sysCfgDesg = await context.Designations.FirstOrDefaultAsync(x => x.Code == "SYS-CFG");
 
                 var defaultShift = await context.Shifts.FirstOrDefaultAsync();
                 var india = await context.Countries.FirstOrDefaultAsync(x => x.Name == "India");
@@ -460,22 +480,25 @@ namespace Infrastructure.Data
                     hrDept == null ||
                     itDept == null ||
                     ceoDesg == null ||
-                    hrMgrDesg == null ||
-                    devDesg == null ||
+                    sysCfgDesg == null ||
                     defaultShift == null)
                 {
                     throw new Exception("Required master data not found.");
                 }
 
-                // ================= CEO =================
+                // ================= Admin =================
+                // NOTE FOR DEPLOYMENT: update Email/Phone to the client's
+                // real administrator details, and change the default
+                // password (see the Admin user below) immediately after
+                // first login.
 
-                var ceo = new Employee
+                var admin = new Employee
                 {
                     Id = IDManager.GetNewId(new Employee()),
                     EmployeeCode = "EMP001",
 
-                    FirstName = "Sunil",
-                    LastName = "Soni",
+                    FirstName = "Admin",
+                    LastName = "User",
 
                     TenantId = tenantId,
                     CompanyId = companyId,
@@ -488,143 +511,72 @@ namespace Infrastructure.Data
 
                     ShiftId = defaultShift.Id,
 
-                    DateOfBirth = new DateTime(1980, 5, 10),
-
                     Gender = Gender.Male,
-                    MaritalStatus = MaritalStatus.Married,
+                    MaritalStatus = MaritalStatus.Unmarried,
 
                     Phone = "9000000001",
-                    Email = "sunil.soni190@gmail.com",
+                    Email = "admin@yourcompany.com",
 
                     Address = "Mumbai",
                     Pincode = "400001",
 
-                    PANNumber = "ABCDE1234F",
-                    AadharNumber = "123412341234",
-
-                    JoiningDate = DateTime.UtcNow.AddYears(-5),
-                    ConfirmationDate = DateTime.UtcNow.AddYears(-5).AddMonths(6),
+                    JoiningDate = DateTime.UtcNow,
 
                     EmploymentType = EmploymentType.Permanent,
 
-                    PassportNumber = "N1234567",
-                    IssueDate = new DateTime(2022, 1, 1),
-                    ExpiryDate = new DateTime(2032, 1, 1),
-                    PlaceOfIssue = "Mumbai",
-
                     Nationality = Nationality.Indian,
-                    PassportStatus = PassportStatus.Active,
 
                     CountryId = india?.Id,
 
                     CreatedBy = "System"
                 };
 
-                // ================= HR Manager =================
+                // ================= System Configurator =================
+                // Owns application/master-data setup (roles, app features,
+                // company/branch/department structure, salary components,
+                // etc.) - kept separate from the Admin account so day-to-day
+                // configuration work is auditable under its own login.
 
-                var hrManager = new Employee
+                var systemConfigurator = new Employee
                 {
                     Id = IDManager.GetNewId(new Employee()),
                     EmployeeCode = "EMP002",
 
-                    FirstName = "Neha",
-                    LastName = "Verma",
+                    FirstName = "System",
+                    LastName = "Configurator",
 
                     TenantId = tenantId,
                     CompanyId = companyId,
-
-                    DepartmentId = hrDept.Id,
-                    DesignationId = hrMgrDesg.Id,
-
-                    ReportingManagerId = ceo.Id,
-
-                    ShiftId = defaultShift.Id,
-
-                    DateOfBirth = new DateTime(1990, 8, 15),
-
-                    Gender = Gender.Female,
-                    MaritalStatus = MaritalStatus.Unmarried,
-
-                    Phone = "9000000002",
-                    Email = "hr@company.com",
-
-                    Address = "Mumbai",
-                    Pincode = "400001",
-
-                    PANNumber = "PQRSX2345L",
-                    AadharNumber = "234523452345",
-
-                    JoiningDate = DateTime.UtcNow.AddYears(-3),
-                    ConfirmationDate = DateTime.UtcNow.AddYears(-3).AddMonths(6),
-
-                    EmploymentType = EmploymentType.Permanent,
-
-                    PassportNumber = "N2345678",
-                    IssueDate = new DateTime(2021, 3, 15),
-                    ExpiryDate = new DateTime(2031, 3, 15),
-                    PlaceOfIssue = "Mumbai",
-
-                    Nationality = Nationality.Indian,
-                    PassportStatus = PassportStatus.Active,
-
-                    CountryId = india?.Id,
-
-                    CreatedBy = "System"
-                };
-
-                // ================= Developer =================
-
-                var developer = new Employee
-                {
-                    Id = IDManager.GetNewId(new Employee()),
-                    EmployeeCode = "EMP003",
-
-                    FirstName = "Rahul",
-                    LastName = "Patel",
-
-                    TenantId = tenantId,
-                    CompanyId = companyId,
+                    BranchId = null,
 
                     DepartmentId = itDept.Id,
-                    DesignationId = devDesg.Id,
+                    DesignationId = sysCfgDesg.Id,
 
-                    ReportingManagerId = hrManager.Id,
+                    ReportingManagerId = null,
 
                     ShiftId = defaultShift.Id,
-
-                    DateOfBirth = new DateTime(1998, 2, 20),
 
                     Gender = Gender.Male,
                     MaritalStatus = MaritalStatus.Unmarried,
 
-                    Phone = "9000000003",
-                    Email = "developer@company.com",
+                    Phone = "9000000002",
+                    Email = "sysconfig@yourcompany.com",
 
-                    Address = "Pune",
-                    Pincode = "411001",
+                    Address = "Mumbai",
+                    Pincode = "400001",
 
-                    PANNumber = "LMNOP6789Q",
-                    AadharNumber = "345634563456",
-
-                    JoiningDate = DateTime.UtcNow.AddYears(-1),
-                    ConfirmationDate = DateTime.UtcNow.AddMonths(-6),
+                    JoiningDate = DateTime.UtcNow,
 
                     EmploymentType = EmploymentType.Permanent,
 
-                    PassportNumber = "N3456789",
-                    IssueDate = new DateTime(2023, 5, 1),
-                    ExpiryDate = new DateTime(2033, 5, 1),
-                    PlaceOfIssue = "Pune",
-
                     Nationality = Nationality.Indian,
-                    PassportStatus = PassportStatus.Active,
 
                     CountryId = india?.Id,
 
                     CreatedBy = "System"
                 };
 
-                await context.Employees.AddRangeAsync(ceo, hrManager, developer);
+                await context.Employees.AddRangeAsync(admin, systemConfigurator);
                 await context.SaveChangesAsync();
             }
 
@@ -663,10 +615,23 @@ namespace Infrastructure.Data
                     new Role
                     {
                         Id = IDManager.GetNewId(new Role()),
-                        Name = "Super Admin",
+                        Name = "Admin",
                         Code = ConstantHelper.SUPER_ADMIN,
                         TenantId = tenantId,
                         Description = "Full system access",
+                        CreatedBy="System"
+                    },
+                    // Manages application/master-data configuration (roles,
+                    // app features, org structure, salary components, etc.)
+                    // - granted every permission alongside Admin, see
+                    // ReconcilePermissionsAsync below.
+                    new Role
+                    {
+                        Id = IDManager.GetNewId(new Role()),
+                        Name = "System Configurator",
+                        Code = ConstantHelper.SYSTEM_CONFIGURATOR,
+                        TenantId = tenantId,
+                        Description = "Manages application configuration and master data",
                         CreatedBy="System"
                     },
                     new Role
@@ -698,19 +663,30 @@ namespace Infrastructure.Data
                 var roles = await context.Roles.ToListAsync();
                 var permissions = await context.Permissions.ToListAsync();
 
-                var superAdmin = roles.First(x => x.Code == "SUPER_ADMIN");
+                var superAdmin = roles.First(x => x.Code == ConstantHelper.SUPER_ADMIN);
+                var systemConfigurator = roles.First(x => x.Code == ConstantHelper.SYSTEM_CONFIGURATOR);
                 var hrManager = roles.First(x => x.Code == "HR_MANAGER");
                 var employee = roles.First(x => x.Code == "EMPLOYEE");
 
                 var rolePermissions = new List<RolePermission>();
 
-                // 👑 Super Admin → All Permissions
+                // 👑 Admin + System Configurator → All Permissions (both are
+                // full application-management accounts).
                 foreach (var perm in permissions)
                 {
                     rolePermissions.Add(new RolePermission
                     {
                         Id = IDManager.GetNewId(new RolePermission()),
                         RoleId = superAdmin.Id,
+                        PermissionId = perm.Id,
+                        IsAllowed = true,
+                        CreatedBy = "System"
+                    });
+
+                    rolePermissions.Add(new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = systemConfigurator.Id,
                         PermissionId = perm.Id,
                         IsAllowed = true,
                         CreatedBy = "System"
@@ -755,67 +731,110 @@ namespace Infrastructure.Data
                 await context.SaveChangesAsync();
             }
 
+            // =========================
+            // 11. USERS (production defaults)
+            // =========================
+            // Exactly 2 login accounts are seeded, one per default
+            // employee: Admin and System Configurator.
+            //
+            // ⚠️ DEPLOYMENT: change both default passwords immediately
+            // after first login - these are placeholder credentials only.
             if (!context.Users.Any())
             {
-                var hrManagerEmp = await context.Employees
-                .FirstOrDefaultAsync(x => x.EmployeeCode == "EMP002");
+                var adminEmp = await context.Employees.FirstOrDefaultAsync(x => x.EmployeeCode == "EMP001");
+                var sysCfgEmp = await context.Employees.FirstOrDefaultAsync(x => x.EmployeeCode == "EMP002");
 
-                if (hrManagerEmp == null)
-                    throw new Exception("HR Manager not found");
+                if (adminEmp == null || sysCfgEmp == null)
+                    throw new Exception("Default employees not found");
 
-                // 🔐 Password Hash (use your hashing service ideally)
-                var password = "Admin@123";
-                var passwordHash = BCrypt.Net.BCrypt.HashPassword(password);
-
-                var user = new User
+                var users = new List<User>
                 {
+                    new User
+                    {
+                        Id = IDManager.GetNewId(new User()),
+                        Username = "admin",
+                        Email = "admin@yourcompany.com",
+                        PhoneNumber = "9000000001",
 
-                    Id = IDManager.GetNewId(new User()),
-                    Username = "hrmanager48",
-                    Email = "hr@system.com",
-                    PhoneNumber = "9999999999",
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"),
 
-                    PasswordHash = passwordHash,
-                    
-                    EmployeeId = hrManagerEmp.Id,
+                        EmployeeId = adminEmp.Id,
 
-                    EmailConfirmed = true,
-                    PhoneConfirmed = true,
+                        EmailConfirmed = true,
+                        PhoneConfirmed = true,
 
-                    TenantId = tenantId,
-                    CompanyId = companyId,
-                    BranchId = null,
+                        TenantId = tenantId,
+                        CompanyId = companyId,
+                        BranchId = null,
 
-                    IsLocked = false,
-                    AccessFailedCount = 0,
+                        IsLocked = false,
+                        AccessFailedCount = 0,
 
-                    LastLoginIP = "Unknown" ,
+                        LastLoginIP = "Unknown",
 
+                        CreatedBy = "System"
+                    },
+                    new User
+                    {
+                        Id = IDManager.GetNewId(new User()),
+                        Username = "sysconfig",
+                        Email = "sysconfig@yourcompany.com",
+                        PhoneNumber = "9000000002",
 
-                    CreatedBy = "System"
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("SysConfig@123"),
+
+                        EmployeeId = sysCfgEmp.Id,
+
+                        EmailConfirmed = true,
+                        PhoneConfirmed = true,
+
+                        TenantId = tenantId,
+                        CompanyId = companyId,
+                        BranchId = null,
+
+                        IsLocked = false,
+                        AccessFailedCount = 0,
+
+                        LastLoginIP = "Unknown",
+
+                        CreatedBy = "System"
+                    }
                 };
 
-                await context.Users.AddAsync(user);
+                await context.Users.AddRangeAsync(users);
                 await context.SaveChangesAsync();
             }
 
             if (!context.UserRoles.Any())
             {
-                var user = await context.Users.FirstOrDefaultAsync(x => x.Username == "hrmanager48");
-                var role = await context.Roles.FirstOrDefaultAsync(x => x.Code == "HR_MANAGER");
+                var adminUser = await context.Users.FirstOrDefaultAsync(x => x.Username == "admin");
+                var sysCfgUser = await context.Users.FirstOrDefaultAsync(x => x.Username == "sysconfig");
 
-                if (user == null || role == null)
-                    throw new Exception("User or Role not found");
+                var adminRole = await context.Roles.FirstOrDefaultAsync(x => x.Code == ConstantHelper.SUPER_ADMIN);
+                var sysCfgRole = await context.Roles.FirstOrDefaultAsync(x => x.Code == ConstantHelper.SYSTEM_CONFIGURATOR);
 
-                var userRole = new UserRole
+                if (adminUser == null || sysCfgUser == null || adminRole == null || sysCfgRole == null)
+                    throw new Exception("Default users or roles not found");
+
+                var userRoles = new List<UserRole>
                 {
-                    Id = IDManager.GetNewId(new UserRole()),
-                    UserId = user.Id,
-                    RoleId = role.Id,
-                    CreatedBy="System"
+                    new UserRole
+                    {
+                        Id = IDManager.GetNewId(new UserRole()),
+                        UserId = adminUser.Id,
+                        RoleId = adminRole.Id,
+                        CreatedBy = "System"
+                    },
+                    new UserRole
+                    {
+                        Id = IDManager.GetNewId(new UserRole()),
+                        UserId = sysCfgUser.Id,
+                        RoleId = sysCfgRole.Id,
+                        CreatedBy = "System"
+                    }
                 };
 
-                await context.UserRoles.AddAsync(userRole);
+                await context.UserRoles.AddRangeAsync(userRoles);
                 await context.SaveChangesAsync();
             }
 
@@ -1467,6 +1486,46 @@ namespace Infrastructure.Data
                 AppFeatureConstants.NOTIFICATION_CONTROLLER, AppFeatureConstants.NOTIFICATION_ACTION,
                 AppFeatureConstants.COMMUNICATION, "bi bi-bell-fill", AppFeatureType.Transaction, 103);
 
+            // ---------------- HELP & SUPPORT ----------------
+            Def("Help & Support", AppFeatureConstants.HELP_SUPPORT, "", "",
+                null, "bi bi-life-preserver", AppFeatureType.Transaction, 110);
+
+            // Points at the admin-only "manage all tickets" screen
+            // (SupportTicket/Index) - self-service employees reach their
+            // own tickets via the ESS sidebar (SupportTicket/MyTickets)
+            // instead, since Index is blocked for them by EssRestriction.
+            Def("Support Tickets", AppFeatureConstants.SUPPORT_TICKET,
+                AppFeatureConstants.SUPPORT_TICKET_CONTROLLER, AppFeatureConstants.SUPPORT_TICKET_ACTION,
+                AppFeatureConstants.HELP_SUPPORT, "bi bi-ticket-detailed-fill", AppFeatureType.Transaction, 111,
+                canAdd: true, canDelete: false);
+
+            // Points at the admin "manage FAQ" screen (Faq/Index) -
+            // everyone (including self-service) reaches the public list via
+            // the ESS sidebar / Faq/Browse instead.
+            Def("FAQ / Knowledge Base", AppFeatureConstants.FAQ,
+                AppFeatureConstants.FAQ_CONTROLLER, AppFeatureConstants.FAQ_ACTION,
+                AppFeatureConstants.HELP_SUPPORT, "bi bi-question-circle-fill", AppFeatureType.Master, 112,
+                canAdd: true, canEdit: true, canDelete: true);
+
+            // Security / Role / Permission menu items already exist from the
+            // initial one-time seed above (see the "SECURITY" region) - just
+            // make sure Permission also gets a Delete permission generated,
+            // since the original seed only granted canEdit.
+            Def("Permissions", AppFeatureConstants.PERMISSION,
+                AppFeatureConstants.PERMISSION_CONTROLLER, AppFeatureConstants.PERMISSION_ACTION,
+                AppFeatureConstants.SECURITY, "bi bi-key-fill", AppFeatureType.Security, 23,
+                canAdd: true, canEdit: true, canDelete: true);
+
+            // Feature Maintenance (AppFeatures screen) never had a menu entry
+            // of its own - the controller/views have existed for a while but
+            // were only reachable by typing the URL directly. Added here
+            // (rather than the one-time seed above) so it also backfills
+            // onto databases that were already seeded before this existed.
+            Def("Feature Maintenance", AppFeatureConstants.APP_FEATURE,
+                AppFeatureConstants.APP_FEATURE_CONTROLLER, AppFeatureConstants.APP_FEATURE_ACTION,
+                AppFeatureConstants.SECURITY, "bi bi-diagram-3", AppFeatureType.Security, 25,
+                canAdd: true, canEdit: true, canDelete: true);
+
             // ---------------- RECONCILE (upsert by Code) ----------------
             var existing = await context.AppFeatures.ToListAsync();
 
@@ -1525,7 +1584,9 @@ namespace Infrastructure.Data
         // 🔐 IDEMPOTENT PERMISSION RECONCILE
         //    - generates View/Create/Edit/Delete/Approve/Export/Print
         //      permissions per screen feature (driven by its Can* flags)
-        //    - grants every permission to the Super Admin role
+        //    - grants every permission to the Super Admin and System
+        //      Configurator roles (both are full application-management
+        //      accounts; new features should never silently lock them out)
         //    Safe to run on every startup.
         // =====================================================
         public static async Task ReconcilePermissionsAsync(
@@ -1584,34 +1645,40 @@ namespace Infrastructure.Data
                 await context.SaveChangesAsync();
             }
 
-            // Super Admin → every permission (fills the gaps for new features)
-            var superAdmin = await context.Roles
-                .FirstOrDefaultAsync(r => r.Code == ConstantHelper.SUPER_ADMIN);
+            // Super Admin + System Configurator → every permission (fills
+            // the gaps for new features on every startup).
+            var fullAccessRoles = await context.Roles
+                .Where(r => r.Code == ConstantHelper.SUPER_ADMIN || r.Code == ConstantHelper.SYSTEM_CONFIGURATOR)
+                .ToListAsync();
 
-            if (superAdmin != null)
+            if (fullAccessRoles.Count > 0)
             {
                 var allPermissionIds = await context.Permissions
                     .Select(p => p.Id)
                     .ToListAsync();
 
-                var linked = (await context.RolePermissions
-                        .Where(rp => rp.RoleId == superAdmin.Id)
-                        .Select(rp => rp.PermissionId)
-                        .ToListAsync())
-                    .ToHashSet();
+                var newLinks = new List<RolePermission>();
 
-                var newLinks = allPermissionIds
-                    .Where(pid => !linked.Contains(pid))
-                    .Select(pid => new RolePermission
-                    {
-                        Id = IDManager.GetNewId(new RolePermission()),
-                        RoleId = superAdmin.Id,
-                        PermissionId = pid,
-                        IsAllowed = true,
-                        CreatedBy = "System",
-                        CreatedOn = DateTime.UtcNow
-                    })
-                    .ToList();
+                foreach (var role in fullAccessRoles)
+                {
+                    var linked = (await context.RolePermissions
+                            .Where(rp => rp.RoleId == role.Id)
+                            .Select(rp => rp.PermissionId)
+                            .ToListAsync())
+                        .ToHashSet();
+
+                    newLinks.AddRange(allPermissionIds
+                        .Where(pid => !linked.Contains(pid))
+                        .Select(pid => new RolePermission
+                        {
+                            Id = IDManager.GetNewId(new RolePermission()),
+                            RoleId = role.Id,
+                            PermissionId = pid,
+                            IsAllowed = true,
+                            CreatedBy = "System",
+                            CreatedOn = DateTime.UtcNow
+                        }));
+                }
 
                 if (newLinks.Count > 0)
                 {

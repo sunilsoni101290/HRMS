@@ -110,6 +110,50 @@
 			float: right; margin-top: 3px; opacity: .6; transition: transform .2s ease;
 		}
 		.navigation-main > li.has-children.active > a:after { transform: rotate(90deg); }
+
+		/* ---------- Enterprise top navbar ---------- */
+		.navbar.navbar-inverse.navbar-enterprise {
+			background: linear-gradient(90deg, #16233f, #1b2a4a 55%, #203258);
+			border: none;
+			box-shadow: 0 2px 10px rgba(0,0,0,.18);
+			min-height: 58px;
+		}
+		.navbar-enterprise .navbar-header { display: flex; align-items: center; }
+		.navbar-enterprise .navbar-brand {
+			display: flex; align-items: center; height: 58px; padding: 0 20px 0 18px;
+		}
+		.navbar-enterprise .brand-logo-panel {
+			background: #fff; border-radius: 7px; padding: 6px 14px;
+			display: inline-flex; align-items: center; box-shadow: 0 1px 4px rgba(0,0,0,.15);
+		}
+		.navbar-enterprise .brand-logo-panel img { height: 26px; display: block; }
+		.navbar-enterprise .brand-divider {
+			width: 1px; height: 26px; background: rgba(255,255,255,.18); margin: 0 4px 0 18px;
+		}
+		.navbar-enterprise .brand-title {
+			color: #eef2fa; font-size: 15px; font-weight: 600; letter-spacing: .2px; margin-left: 14px;
+			display: flex; flex-direction: column; line-height: 1.15;
+		}
+		.navbar-enterprise .brand-title small {
+			color: #93a3c4; font-size: 10.5px; font-weight: 400; letter-spacing: .8px; text-transform: uppercase;
+		}
+		.navbar-enterprise .sidebar-control { color: #cfd8e6 !important; }
+		.navbar-enterprise .sidebar-control:hover { color: #fff !important; }
+		.navbar-enterprise .dropdown-user > .dropdown-toggle {
+			display: flex; align-items: center; padding: 10px 18px !important; color: #eef2fa !important;
+		}
+		.navbar-enterprise .dropdown-user .user-avatar-circle {
+			width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg,#4e9cff,#2b6fd9);
+			color: #fff; display: inline-flex; align-items: center; justify-content: center;
+			font-size: 13px; font-weight: 700; margin-right: 10px; flex-shrink: 0;
+		}
+		.navbar-enterprise .dropdown-user .user-meta { display: flex; flex-direction: column; line-height: 1.2; text-align: left; }
+		.navbar-enterprise .dropdown-user .user-meta small { color: #93a3c4; font-size: 11px; font-weight: 400; }
+		.navbar-enterprise .dropdown-user.open .dropdown-toggle,
+		.navbar-enterprise .dropdown-user > .dropdown-toggle:hover { background: rgba(255,255,255,.06); }
+		.navbar-enterprise .dropdown-menu { border: none; box-shadow: 0 6px 24px rgba(0,0,0,.18); border-radius: 6px; overflow: hidden; }
+		.navbar-enterprise .dropdown-menu > li > a { padding: 9px 16px; font-size: 13px; }
+		.navbar-enterprise .dropdown-menu > li > a > i { margin-right: 8px; opacity: .75; }
 	</style>
 	<!-- /global stylesheets -->
 	<!-- Core JS files -->
@@ -152,9 +196,18 @@
 <body>
 
 	<!-- Main navbar -->
-	<div class="navbar navbar-inverse">
-		<div class="navbar-header">
-			<a class="navbar-brand" href="index.html"><img src="~/images/PT-06.png" style="height: 35px;margin-top:0px;" alt=""></a>
+	<div class="navbar navbar-inverse navbar-enterprise">
+		<div class="navbar-header" style="margin-top:5px;">
+			<a class="navbar-brand" asp-controller="Dashboard" asp-action="Index">
+				<span class="brand-logo-panel">
+					<img src="~/images/PT-03.png" style="height:39px;" alt="Prosaec Total" />
+				</span>
+				<span class="brand-divider"></span>
+				<span class="brand-title">
+					HRMS Suite
+					<small>Prosaec Total</small>
+				</span>
+			</a>
 
 			<ul class="nav navbar-nav visible-xs-block">
 				<li><a data-toggle="collapse" data-target="#navbar-mobile"><i class="icon-tree5"></i></a></li>
@@ -168,11 +221,14 @@
 			</ul>
 			<div class="navbar-right">
 				<ul class="nav navbar-nav">
-					
+
 					<li class="dropdown dropdown-user">
 						<a class="dropdown-toggle" data-toggle="dropdown">
-							@* <img src="../../../../global_assets/images/placeholders/placeholder.jpg" alt=""> *@
-							<span>@fullName , @designation</span>
+							<span class="user-avatar-circle">@(string.IsNullOrWhiteSpace(fullName) ? "?" : fullName.Trim().Substring(0, 1).ToUpper())</span>
+							<span class="user-meta">
+								@fullName
+								<small>@designation</small>
+							</span>
 							<i class="caret"></i>
 						</a>
 
@@ -185,6 +241,7 @@
 								<a asp-controller="Auth"
 								   asp-action="ChangePassword"><i class="icon-lock"></i> Change Password</a>
 							</li>
+							<li class="divider"></li>
 							<li>
 								<a asp-controller="Auth"
 								   asp-action="Logout"><i class="icon-switch2"></i> Logout</a>

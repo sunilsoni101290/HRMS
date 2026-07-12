@@ -431,9 +431,9 @@
 
                                     <td>
 
-                                        @(Model.IssueDate == DateTime.MinValue
+                                        @(Model.IssueDate == null
                                             ? "-"
-                                            : Model.IssueDate.ToString("dd-MMM-yyyy"))
+                                            : Model.IssueDate.Value.ToString("dd-MMM-yyyy"))
 
                                     </td>
 
@@ -447,9 +447,9 @@
 
                                     <td>
 
-                                        @(Model.ExpiryDate == DateTime.MinValue
+                                        @(Model.ExpiryDate == null
                                             ? "-"
-                                            : Model.ExpiryDate.ToString("dd-MMM-yyyy"))
+                                            : Model.ExpiryDate.Value.ToString("dd-MMM-yyyy"))
 
                                     </td>
 

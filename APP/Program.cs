@@ -1,3 +1,4 @@
+using APP.Attributes;
 using APP.Models;
 using APP.Services.Implementations;
 using APP.Services.Interfaces;
@@ -6,7 +7,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorPages();
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    // Global gate so a self-service employee can never reach an admin/HR
+    // page by URL, even if a specific controller forgot to add its own
+    // guard - see EssRestrictionAttribute for the allow/deny lists.
+    options.Filters.Add<EssRestrictionAttribute>();
+});
 
 builder.Services.AddSession();
 

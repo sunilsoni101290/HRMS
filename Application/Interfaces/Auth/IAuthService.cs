@@ -12,7 +12,8 @@ namespace Application.Interfaces.Auth
         Task<User> GetUserDetailByIdAsync(string id); // Only for update scenario
         Task<User> GettUserDetailByUsernameAsync(string username);
         Task<bool> UpdateUserAsync(User user);
-        Task<AuthResponse> LoginAsync(LoginDto dto);
+        //Task<AuthResponse> LoginAsync(LoginDto dto);
+        Task<ApiResponse<AuthResponse>> LoginAsync(LoginDto dto);
         Task<AuthResponse> RefreshTokenAsync(string refreshToken);
         Task<bool> LogoutAsync(string refreshToken);
         Task<List<UserListDto>> GetAllAsync();

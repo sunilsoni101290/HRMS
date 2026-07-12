@@ -194,6 +194,8 @@
 
 			<form asp-action="Login" asp-controller="Auth" method="POST" autocomplete="off">
 
+				<input asp-for="IpAddress" type="hidden" />
+
 				<div class="form-group has-feedback has-feedback-left">
 					<input type="text" asp-for="Username" class="form-control" placeholder="Username" autofocus>
 					<div class="form-control-feedback">

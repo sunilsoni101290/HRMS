@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
+using static Domain.Enums.EnumExtensions;
 
 namespace Domain.Entities
 {
@@ -24,10 +25,10 @@ namespace Domain.Entities
         public DateTime LoginTime { get; set; }
         public DateTime? LogoutTime { get; set; }
 
-        public string LoginStatus { get; set; }
+        public LoginStatus LoginStatus { get; set; }
         // Success / Failed / Locked
 
-        public string FailureReason { get; set; }
+        public string? FailureReason { get; set; }
 
         // Network Info
         public string IPAddress { get; set; }
@@ -36,8 +37,8 @@ namespace Domain.Entities
         public string OS { get; set; }         // Windows, Android
 
         // Location (Optional)
-        public string Country { get; set; }
-        public string City { get; set; }
+        public string? Country { get; set; }
+        public string? City { get; set; }
 
         // Security
         public bool IsSuspicious { get; set; } // e.g. multiple failed attempts

@@ -3,6 +3,7 @@ using APP.Helpers;
 using APP.Models.Auth;
 using APP.Models.DTOs;
 using APP.Services.Interfaces;
+using Humanizer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -53,9 +54,16 @@ namespace APP.Controllers
         public IActionResult Login()
         {
             var rememberedUsername = Request.Cookies[RememberedUsernameCookie];
+            
+            // Get Client IP
+            string localIP = Dns.GetHostEntry(Dns.GetHostName())
+                .AddressList
+                .FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork)?
+                .ToString();
 
             return View(new LoginDto
             {
+                IpAddress=localIP,
                 Username = rememberedUsername ?? string.Empty,
                 RememberMe = !string.IsNullOrEmpty(rememberedUsername)
             });
@@ -67,60 +75,159 @@ namespace APP.Controllers
         [HttpPost]
         public async Task<IActionResult> Login(LoginDto model)
         {
-            if (model==null)
+            if (!ModelState.IsValid)
                 return View(model);
 
             try
             {
-                string localIP = Dns.GetHostEntry(Dns.GetHostName())
-                    .AddressList
-                    .FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork)?
-                    .ToString();
+                // Enrich with request-derived info for LoginHistory - none
+                // of this is user input, so it's set here rather than bound
+                // from the posted form.
 
-                model.IpAddress = localIP;
+                model.IpAddress = model.IpAddress;
 
-                var response = await _apiService
-                    .PostAsync<LoginDto, ApiResponse<AuthResponse>>(
-                        "auth/login",
-                        model);
+                var userAgent = Request.Headers["User-Agent"].ToString();
+                var (browser, os, deviceInfo) = UserAgentHelper.Parse(userAgent);
+                model.Browser = browser;
+                model.OS = os;
+                model.DeviceInfo = deviceInfo;
 
-                if (response != null && response.Success)
+                var response = await _apiService.PostAsync<LoginDto, ApiResponse<AuthResponse>>(
+                    "auth/login",
+                    model);
+
+                // API did not return anything
+                if (response == null)
                 {
-                    HttpContext.Session.SetString("AccessToken", response.Data.AccessToken);
-                    HttpContext.Session.SetString("RefreshToken", response.Data.RefreshToken);
-                    HttpContext.Session.SetString("FullName", response.Data.FullName ?? "");
-                    HttpContext.Session.SetString("UserId", response.Data.UserId);
-                    HttpContext.Session.SetString("EmployeeId", response.Data.EmployeeId ?? "");
-                    HttpContext.Session.SetString("TenantId", response.Data.TenantId);
-                    HttpContext.Session.SetString("Designation", response.Data.Designation ?? "");
-                    HttpContext.Session.SetString("CompanyName", response.Data.CompanyName ?? "");
-                    HttpContext.Session.SetString("CompanyId", response.Data.CompanyId ?? "");
-                    HttpContext.Session.SetString("BranchId", response.Data.BranchId ?? "");
-                    HttpContext.Session.SetString("RoleName", response.Data.RoleName ?? "");
-
-                    ApplyRememberMeCookies(model.Username, response.Data.RefreshToken, model.RememberMe);
-
-                    // Role-based landing page
-                    return SessionHelper.IsAdminRole(response.Data.RoleName)
-                        ? RedirectToAction("Index", "Dashboard")
-                        : RedirectToAction("Index", "EmployeeDashboard");
+                    TempData["GlobalError"] = "Unable to connect to the server.";
+                    return View(model);
                 }
 
-                TempData["GlobalError"] = response?.Message ?? "Login failed.";
+                // Login Failed
+                if (!response.Success)
+                {
+                    TempData["GlobalError"] = response.Message;
+
+                    if (response.Errors != null && response.Errors.Any())
+                    {
+                        foreach (var error in response.Errors)
+                        {
+                            ModelState.AddModelError(string.Empty, error);
+                        }
+                    }
+
+                    return View(model);
+                }
+
+                // Safety check
+                if (response.Data == null)
+                {
+                    TempData["GlobalError"] = "Login response is invalid.";
+                    return View(model);
+                }
+
+                // Store Session
+                HttpContext.Session.SetString("AccessToken", response.Data.AccessToken ?? "");
+                HttpContext.Session.SetString("RefreshToken", response.Data.RefreshToken ?? "");
+                HttpContext.Session.SetString("FullName", response.Data.FullName ?? "");
+                HttpContext.Session.SetString("UserId", response.Data.UserId ?? "");
+                HttpContext.Session.SetString("EmployeeId", response.Data.EmployeeId ?? "");
+                HttpContext.Session.SetString("TenantId", response.Data.TenantId ?? "");
+                HttpContext.Session.SetString("Designation", response.Data.Designation ?? "");
+                HttpContext.Session.SetString("CompanyName", response.Data.CompanyName ?? "");
+                HttpContext.Session.SetString("CompanyId", response.Data.CompanyId ?? "");
+                HttpContext.Session.SetString("BranchId", response.Data.BranchId ?? "");
+                HttpContext.Session.SetString("RoleName", response.Data.RoleName ?? "");
+
+                // Remember Me
+                ApplyRememberMeCookies(
+                    model.Username,
+                    response.Data.RefreshToken ?? "",
+                    model.RememberMe);
+
+                // Redirect based on role
+                if (SessionHelper.IsAdminRole(response.Data.RoleName))
+                    return RedirectToAction("Index", "Dashboard");
+
+                return RedirectToAction("Index", "EmployeeDashboard");
             }
             catch (ApiException ex)
             {
-                var errorMessage = GetErrorMessage(ex.ResponseContent);
-
-                TempData["GlobalError"] = errorMessage;
+                TempData["GlobalError"] = GetErrorMessage(ex.ResponseContent);
+            }
+            catch (HttpRequestException)
+            {
+                TempData["GlobalError"] = "Unable to connect to the API server.";
+            }
+            catch (TaskCanceledException)
+            {
+                TempData["GlobalError"] = "The request timed out. Please try again.";
             }
             catch (Exception ex)
             {
-                TempData["GlobalError"] = ex.Message;
+                // Log ex here
+                TempData["GlobalError"] = "An unexpected error occurred. Please try again.";
             }
 
             return View(model);
         }
+        //[HttpPost]
+        //public async Task<IActionResult> Login(LoginDto model)
+        //{
+        //    if (model==null)
+        //        return View(model);
+
+        //    try
+        //    {
+        //        string localIP = Dns.GetHostEntry(Dns.GetHostName())
+        //            .AddressList
+        //            .FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork)?
+        //            .ToString();
+
+        //        model.IpAddress = localIP;
+
+        //        var response = await _apiService
+        //            .PostAsync<LoginDto, ApiResponse<AuthResponse>>(
+        //                "auth/login",
+        //                model);
+
+        //        if (response != null && response.Success)
+        //        {
+        //            HttpContext.Session.SetString("AccessToken", response.Data.AccessToken);
+        //            HttpContext.Session.SetString("RefreshToken", response.Data.RefreshToken);
+        //            HttpContext.Session.SetString("FullName", response.Data.FullName ?? "");
+        //            HttpContext.Session.SetString("UserId", response.Data.UserId);
+        //            HttpContext.Session.SetString("EmployeeId", response.Data.EmployeeId ?? "");
+        //            HttpContext.Session.SetString("TenantId", response.Data.TenantId);
+        //            HttpContext.Session.SetString("Designation", response.Data.Designation ?? "");
+        //            HttpContext.Session.SetString("CompanyName", response.Data.CompanyName ?? "");
+        //            HttpContext.Session.SetString("CompanyId", response.Data.CompanyId ?? "");
+        //            HttpContext.Session.SetString("BranchId", response.Data.BranchId ?? "");
+        //            HttpContext.Session.SetString("RoleName", response.Data.RoleName ?? "");
+
+        //            ApplyRememberMeCookies(model.Username, response.Data.RefreshToken, model.RememberMe);
+
+        //            // Role-based landing page
+        //            return SessionHelper.IsAdminRole(response.Data.RoleName)
+        //                ? RedirectToAction("Index", "Dashboard")
+        //                : RedirectToAction("Index", "EmployeeDashboard");
+        //        }
+
+        //        TempData["GlobalError"] = response?.Message ?? "Login failed.";
+        //    }
+        //    catch (ApiException ex)
+        //    {
+        //        var errorMessage = GetErrorMessage(ex.ResponseContent);
+
+        //        TempData["GlobalError"] = errorMessage;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        TempData["GlobalError"] = ex.Message;
+        //    }
+
+        //    return View(model);
+        //}
 
         // Sets or clears the two "Remember Me" cookies:
         //  - RememberedUsername: plain, non-sensitive, only used to
@@ -296,8 +403,9 @@ namespace APP.Controllers
         [JwtAuthorize]
         [HttpGet]
         public IActionResult ChangePassword()
-        {
-            return View(new ChangePasswordDto());
+        {   
+
+            return View(new ChangePasswordDto() { UserId =_userId });
         }
 
         [JwtAuthorize]
@@ -426,5 +534,6 @@ namespace APP.Controllers
                 return "An error occurred.";
             }
         }
+        
     }
 }

@@ -94,6 +94,10 @@ namespace Domain.Helper
         public const string LOGIN_HISTORY_CONTROLLER = "LoginHistory";
         public const string LOGIN_HISTORY_ACTION = ACTION_INDEX;
 
+        public const string APP_FEATURE = "APP_FEATURE";
+        public const string APP_FEATURE_CONTROLLER = "AppFeatures";
+        public const string APP_FEATURE_ACTION = ACTION_INDEX;
+
         // =====================================================
         // EMPLOYEE MANAGEMENT
         // =====================================================
@@ -314,5 +318,19 @@ namespace Domain.Helper
         public const string NOTIFICATION_LOG = "NOTIFICATION_LOG";
         public const string NOTIFICATION_LOG_CONTROLLER = "NotificationLog";
         public const string NOTIFICATION_LOG_ACTION = ACTION_INDEX;
+
+        // =====================================================
+        // HELP & SUPPORT
+        // =====================================================
+
+        public const string HELP_SUPPORT = "HELP_SUPPORT";
+
+        public const string SUPPORT_TICKET = "SUPPORT_TICKET";
+        public const string SUPPORT_TICKET_CONTROLLER = "SupportTicket";
+        public const string SUPPORT_TICKET_ACTION = ACTION_INDEX;
+
+        public const string FAQ = "FAQ";
+        public const string FAQ_CONTROLLER = "Faq";
+        public const string FAQ_ACTION = ACTION_INDEX;
     }
 }

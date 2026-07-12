@@ -9,7 +9,10 @@ namespace Application.Interfaces.Users
         Task<UserDto> GetByIdAsync(string id);
         Task<string> CreateAsync(UserDto dto);
         Task<string> UpdateAsync(string id, UserDto dto);
-        Task<bool> ResetPasswordAsync(string id, string newPassword);
+        // Returns the newly generated temporary password (shown once by the
+        // caller), or null if the user wasn't found. Never accepts a
+        // caller-supplied password - the server always generates it.
+        Task<string> ResetPasswordAsync(string id);
         Task<bool> ToggleActiveAsync(string id);
         Task<bool> ToggleLockAsync(string id);
         Task<bool> DeleteAsync(string id);

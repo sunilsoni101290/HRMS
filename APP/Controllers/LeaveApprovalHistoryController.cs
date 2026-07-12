@@ -1,4 +1,5 @@
-﻿using APP.Helpers;
+﻿using APP.Attributes;
+using APP.Helpers;
 using APP.Models.DTOs;
 using APP.Services.Interfaces;
 using Domain.Entities;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace APP.Controllers
 {
+    [JwtAuthorize]
     public class LeaveApprovalHistoryController : Controller
     {
         private readonly IApiService _apiService;

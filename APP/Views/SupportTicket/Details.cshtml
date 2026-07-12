@@ -1,0 +1,124 @@
+@model APP.Models.DTOs.SupportTicketDto
+
+@{
+    ViewData["Title"] = "Ticket Details";
+    bool isAdmin = ViewBag.IsAdmin ?? false;
+    var statusList = ViewBag.StatusList as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>;
+
+    string StatusLabel(int s) => s switch
+    {
+        1 => "bg-warning",
+        2 => "bg-info",
+        3 => "bg-success",
+        4 => "bg-grey",
+        _ => "bg-grey"
+    };
+
+    string PriorityLabel(int p) => p switch
+    {
+        1 => "bg-slate",
+        2 => "bg-info",
+        3 => "bg-warning",
+        4 => "bg-danger",
+        _ => "bg-grey"
+    };
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title"><i class="icon-support position-left"></i> @Model.Subject</h5>
+        <div class="heading-elements">
+            <a asp-action="@(isAdmin ? "Index" : "MyTickets")" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-8">
+                @if (isAdmin)
+                {
+                    <p><strong>Raised By:</strong> @Model.EmployeeName <span class="text-muted">(@Model.EmployeeCode)</span></p>
+                }
+                <p><strong>Category:</strong> @Model.CategoryText</p>
+                <p><strong>Priority:</strong> <span class="label @PriorityLabel(Model.Priority)">@Model.PriorityText</span></p>
+                <p><strong>Raised On:</strong> @Model.CreatedOn.ToString("dd MMM yyyy, hh:mm tt")</p>
+                @if (Model.ResolvedDate != null)
+                {
+                    <p><strong>Resolved On:</strong> @Model.ResolvedDate.Value.ToString("dd MMM yyyy, hh:mm tt")</p>
+                }
+                <hr />
+                <p style="white-space: pre-wrap;">@Model.Description</p>
+            </div>
+            <div class="col-md-4 text-right">
+                <span class="label @StatusLabel(Model.Status)" style="font-size:14px; padding:8px 14px;">@Model.StatusText</span>
+
+                @if (isAdmin)
+                {
+                    <form asp-action="UpdateStatus" asp-controller="SupportTicket" method="post" class="m-t-15">
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <div class="form-group">
+                            <label>Change Status</label>
+                            <select name="status" class="form-control" asp-items="statusList"></select>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block"><i class="icon-checkmark3"></i> Update Status</button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="panel-footer">
+        <h6 class="text-semibold"><i class="icon-bubbles4 position-left"></i> Conversation (@Model.Replies.Count)</h6>
+
+        <div class="ticket-thread">
+            @if (Model.Replies != null && Model.Replies.Any())
+            {
+                foreach (var reply in Model.Replies)
+                {
+                    <div class="thread-item @(reply.IsSupportReply ? "thread-support" : "thread-employee")">
+                        <div class="thread-meta">
+                            <strong>@reply.RepliedByName</strong>
+                            @if (reply.IsSupportReply)
+                            {
+                                <span class="label bg-primary">Support</span>
+                            }
+                            <span class="text-muted">- @reply.CreatedOn.ToString("dd MMM yyyy, hh:mm tt")</span>
+                        </div>
+                        <div class="thread-message">@reply.Message</div>
+                    </div>
+                }
+            }
+            else
+            {
+                <p class="text-muted">No replies yet.</p>
+            }
+        </div>
+
+        <form asp-action="Reply" asp-controller="SupportTicket" method="post" class="m-t-15">
+            <input type="hidden" name="id" value="@Model.Id" />
+            <div class="form-group">
+                <textarea name="message" class="form-control" rows="3" placeholder="Write a reply..." required></textarea>
+            </div>
+            <button type="submit" class="btn bg-primary"><i class="icon-paperplane"></i> Send Reply</button>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    @if (TempData["GlobalError"] != null)
+    {
+        <script>$(function(){ swal({ title:"Error", text:"@TempData["GlobalError"]", type:"error" }); });</script>
+    }
+    <style>
+        .thread-item { padding: 10px 15px; border-radius: 4px; margin-bottom: 10px; background: #f5f5f5; }
+        .thread-support { background: #eef4ff; border-left: 3px solid #2196F3; }
+        .thread-employee { background: #f5f5f5; border-left: 3px solid #999; }
+        .thread-meta { font-size: 12px; margin-bottom: 4px; }
+        .thread-message { white-space: pre-wrap; }
+    </style>
+}

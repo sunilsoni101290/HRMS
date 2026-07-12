@@ -1,0 +1,101 @@
+@model IEnumerable<APP.Models.DTOs.RoleListDto>
+
+@{
+    ViewData["Title"] = "Role Management";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title"><i class="icon-shield2 position-left"></i> Role Management</h5>
+        <div class="heading-elements">
+            <a asp-action="Create" class="btn bg-primary"><i class="icon-plus22"></i> Add Role</a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-4">
+                <input type="text" id="searchInput" class="form-control" placeholder="Search roles..." />
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-striped">
+            <thead>
+                <tr>
+                    <th width="50">#</th>
+                    <th>Role Name</th>
+                    <th>Code</th>
+                    <th>Description</th>
+                    <th width="100">Users</th>
+                    <th width="110">Permissions</th>
+                    <th width="100">Status</th>
+                    <th width="200">Action</th>
+                </tr>
+            </thead>
+            <tbody id="dataTable">
+                @{ int sr = 1; }
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@sr</td>
+                            <td><strong>@item.Name</strong></td>
+                            <td><span class="label bg-slate-400">@item.Code</span></td>
+                            <td>@(item.Description ?? "-")</td>
+                            <td><span class="badge bg-info">@item.UserCount</span></td>
+                            <td><span class="badge bg-primary">@item.PermissionCount</span></td>
+                            <td><span class="label @(item.IsActive ? "bg-success" : "bg-grey")">@(item.IsActive ? "Active" : "Inactive")</span></td>
+                            <td>
+                                <div class="btn-group">
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-default btn-icon" title="View Permissions"><i class="icon-eye"></i></a>
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary btn-icon" title="Edit"><i class="icon-pencil7"></i></a>
+                                    <form asp-action="ToggleActive" asp-route-id="@item.Id" method="post" style="display:inline;">
+                                        <button type="submit" class="btn @(item.IsActive ? "btn-warning" : "btn-success") btn-icon" title="@(item.IsActive ? "Deactivate" : "Activate")">
+                                            <i class="@(item.IsActive ? "icon-blocked" : "icon-checkmark3")"></i>
+                                        </button>
+                                    </form>
+                                    <a asp-action="Delete" asp-route-id="@item.Id"
+                                       onclick="return confirm('Delete this role? This only works if no users are assigned to it.');"
+                                       class="btn btn-danger btn-icon" title="Delete"><i class="icon-trash"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                        sr++;
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="8" class="text-center text-muted" style="padding:30px;"><i class="icon-shield2" style="font-size:32px;"></i><br />No roles found.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    @if (TempData["GlobalError"] != null)
+    {
+        <script>$(function(){ swal({ title:"Error", text:"@TempData["GlobalError"]", type:"error" }); });</script>
+    }
+    <script>
+        $(function () {
+            $("#searchInput").on("keyup", function () {
+                var value = $(this).val().toLowerCase();
+                $("#dataTable tr").filter(function () {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+                });
+            });
+        });
+    </script>
+    <style>
+        .btn-icon { width: 34px; }
+    </style>
+}

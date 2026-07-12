@@ -1,5 +1,6 @@
 ﻿using Application.DTOs;
 using Domain.Entities;
+using Domain.Helper;
 using Infrastructure;
 using System;
 using Microsoft.EntityFrameworkCore;
@@ -320,7 +321,7 @@ namespace Application.Services.Masters
 
         // ======================================================
         // GET MENU (role-based)
-        //   - Super Admin  → full menu
+        //   - Super Admin / System Configurator → full menu
         //   - No roles     → full menu (avoids lock-out during rollout)
         //   - Otherwise    → only features the role can View, plus the
         //                    parent groups that still have a visible child
@@ -350,7 +351,9 @@ namespace Application.Services.Masters
                 .Select(r => r.Code)
                 .ToListAsync();
 
-            if (roleCodes.Contains("SUPER_ADMIN") || roleCodes.Contains("HR_MANAGER"))
+            if (roleCodes.Contains(ConstantHelper.SUPER_ADMIN) ||
+                roleCodes.Contains(ConstantHelper.HR_MANAGER) ||
+                roleCodes.Contains(ConstantHelper.SYSTEM_CONFIGURATOR))
                 return all;
 
             // Feature codes this user is allowed to view

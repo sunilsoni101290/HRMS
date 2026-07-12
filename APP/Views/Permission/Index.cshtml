@@ -1,0 +1,101 @@
+@model IEnumerable<APP.Models.DTOs.PermissionListDto>
+
+@{
+    ViewData["Title"] = "Permission Management";
+    var groups = (Model ?? new List<APP.Models.DTOs.PermissionListDto>())
+        .GroupBy(x => x.Module)
+        .OrderBy(g => g.Key);
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title"><i class="icon-key position-left"></i> Permission Management</h5>
+        <div class="heading-elements">
+            <a asp-action="Create" class="btn bg-primary"><i class="icon-plus22"></i> Add Permission</a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-4">
+                <input type="text" id="searchInput" class="form-control" placeholder="Search permissions..." />
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-striped">
+            <thead>
+                <tr>
+                    <th width="50">#</th>
+                    <th>Module</th>
+                    <th>Feature</th>
+                    <th>Action</th>
+                    <th>Name</th>
+                    <th>Code</th>
+                    <th width="90">Roles</th>
+                    <th width="140">Action</th>
+                </tr>
+            </thead>
+            <tbody id="dataTable">
+                @{ int sr = 1; }
+                @if (groups.Any())
+                {
+                    foreach (var group in groups)
+                    {
+                        foreach (var item in group.OrderBy(x => x.FeatureName).ThenBy(x => x.Action))
+                        {
+                            <tr>
+                                <td>@sr</td>
+                                <td><span class="label bg-slate-400">@item.Module</span></td>
+                                <td>@(item.FeatureName ?? item.FeatureId)</td>
+                                <td><span class="label bg-info">@item.Action</span></td>
+                                <td>@item.Name</td>
+                                <td><code>@item.Code</code></td>
+                                <td><span class="badge bg-primary">@item.RoleCount</span></td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary btn-icon" title="Edit"><i class="icon-pencil7"></i></a>
+                                        <a asp-action="Delete" asp-route-id="@item.Id"
+                                           onclick="return confirm('Delete this permission? It will be removed from every role that has it.');"
+                                           class="btn btn-danger btn-icon" title="Delete"><i class="icon-trash"></i></a>
+                                    </div>
+                                </td>
+                            </tr>
+                            sr++;
+                        }
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="8" class="text-center text-muted" style="padding:30px;"><i class="icon-key" style="font-size:32px;"></i><br />No permissions found.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    @if (TempData["GlobalError"] != null)
+    {
+        <script>$(function(){ swal({ title:"Error", text:"@TempData["GlobalError"]", type:"error" }); });</script>
+    }
+    <script>
+        $(function () {
+            $("#searchInput").on("keyup", function () {
+                var value = $(this).val().toLowerCase();
+                $("#dataTable tr").filter(function () {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+                });
+            });
+        });
+    </script>
+    <style>
+        .btn-icon { width: 34px; }
+    </style>
+}

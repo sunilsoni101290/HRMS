@@ -80,11 +80,15 @@ namespace APP.Models.DTOs
         public string? EmploymentType { get; set; }
         public string? FilePath { get; set; }
 
-        #region Passport Details 
-        public string PassportNumber { get; set; }
-        public DateTime IssueDate { get; set; }
-        public DateTime ExpiryDate { get; set; }
-        public string PlaceOfIssue { get; set; }
+        #region Passport Details
+        // Nullable - a default/seeded employee (e.g. Admin, System
+        // Configurator) may have no passport on file at all, and the API
+        // legitimately returns null for these. Non-nullable DateTime here
+        // used to crash deserialization outright for any such employee.
+        public string? PassportNumber { get; set; }
+        public DateTime? IssueDate { get; set; }
+        public DateTime? ExpiryDate { get; set; }
+        public string? PlaceOfIssue { get; set; }
 
         [Display(Name = "Nationality")]
         public Nationality Nationality { get; set; } = Nationality.Indian;

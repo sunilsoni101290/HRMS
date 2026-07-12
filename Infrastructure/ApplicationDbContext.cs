@@ -136,6 +136,13 @@ namespace Infrastructure
 
         #endregion
 
+        #region 🎫 HELP & SUPPORT
+        public DbSet<SupportTicket> SupportTickets { get; set; }
+        public DbSet<SupportTicketReply> SupportTicketReplies { get; set; }
+        public DbSet<FaqItem> FaqItems { get; set; }
+
+        #endregion
+
         #region 🔥 MODEL CONFIGURATION
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
