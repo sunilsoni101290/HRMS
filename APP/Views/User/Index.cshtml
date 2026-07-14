@@ -55,7 +55,7 @@
                             <td>
                                 <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary btn-icon" title="Edit"><i class="icon-pencil7"></i></a>
 
-                                <button type="button" class="btn btn-info btn-icon resetBtn" data-id="@item.Id" title="Reset Password"><i class="icon-key"></i></button>
+                                <button type="button" class="btn btn-info btn-icon resetBtn" data-id="@item.Id" data-username="@item.Username" title="Reset Password"><i class="icon-key"></i></button>
 
                                 <form asp-action="ToggleActive" asp-route-id="@item.Id" method="post" style="display:inline;">
                                     <button type="submit" class="btn @(item.IsActive ? "btn-warning" : "btn-success") btn-icon" title="@(item.IsActive ? "Deactivate" : "Activate")">
@@ -86,11 +86,45 @@
     </div>
 </div>
 
-<!-- Reset password form - the server always generates the new password;
-     no plaintext password is ever typed by the admin or stored anywhere. -->
-<form id="resetForm" asp-action="ResetPassword" method="post" style="display:none;">
-    <input type="hidden" name="id" id="resetId" />
-</form>
+<!-- Reset Password modal. Admin can either type a specific new password or
+     leave it blank to have the server generate a random one - either way,
+     the password is only ever visible in the response shown right after
+     submitting; nothing plaintext is ever stored. -->
+<div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-labelledby="resetPasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form id="resetForm" asp-action="ResetPassword" method="post">
+            <input type="hidden" name="id" id="resetId" />
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h5 class="modal-title" id="resetPasswordModalLabel">Reset Password</h5>
+                </div>
+                <div class="modal-body">
+                    <p>Set a new password for <strong id="resetUsername"></strong>. Their current password stops working immediately once you submit.</p>
+
+                    <div class="form-group">
+                        <label for="newPasswordInput" class="control-label">New Password</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="newPasswordInput" name="newPassword"
+                                   placeholder="Leave blank to auto-generate" minlength="6" />
+                            <span class="input-group-btn">
+                                <button type="button" class="btn btn-default" id="generatePasswordBtn" title="Generate a random password">
+                                    <i class="icon-loop2"></i> Generate
+                                </button>
+                            </span>
+                        </div>
+                        <span class="help-block">At least 6 characters. Leave blank to have the system generate one.</span>
+                        <div class="text-danger" id="newPasswordError" style="display:none;">Password must be at least 6 characters.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-info" id="resetSubmitBtn">Reset Password</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
 
 @section Scripts {
     @if (TempData["NewPassword"] != null)
@@ -99,7 +133,7 @@
             $(function(){
                 swal({
                     title: "Password Reset",
-                    text: "New temporary password (share this with the employee now - it will not be shown again):\n\n@TempData["NewPassword"]",
+                    text: "New password (share this with the employee now - it will not be shown again):\n\n@TempData["NewPassword"]",
                     type: "success"
                 });
             });
@@ -120,9 +154,47 @@
 
             $(".resetBtn").on("click", function () {
                 var id = $(this).data("id");
-                if (!confirm("Generate a new temporary password for this user? Their current password will stop working immediately.")) return;
+                var username = $(this).data("username");
+
                 $("#resetId").val(id);
-                $("#resetForm").submit();
+                $("#resetUsername").text(username);
+                $("#newPasswordInput").val("");
+                $("#newPasswordError").hide();
+
+                // This project ships Bootstrap 3.3.7 (jQuery plugin API),
+                // not Bootstrap 5 - "new bootstrap.Modal(...)" doesn't exist
+                // here and was throwing "bootstrap.Modal is not a
+                // constructor", which killed this handler before it ever
+                // opened anything.
+                $("#resetPasswordModal").modal("show");
+            });
+
+            function randomPassword(length) {
+                var chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@@#$%";
+                var result = "";
+                for (var i = 0; i < length; i++) {
+                    result += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                return result;
+            }
+
+            $("#generatePasswordBtn").on("click", function () {
+                $("#newPasswordInput").val(randomPassword(10));
+                $("#newPasswordError").hide();
+            });
+
+            $("#resetForm").on("submit", function (e) {
+                var val = $("#newPasswordInput").val();
+                if (val.length > 0 && val.length < 6) {
+                    e.preventDefault();
+                    $("#newPasswordError").show();
+                    return false;
+                }
+
+                if (!confirm("Reset this user's password now? Their current password will stop working immediately.")) {
+                    e.preventDefault();
+                    return false;
+                }
             });
         });
     </script>

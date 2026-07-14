@@ -258,6 +258,13 @@ namespace Application.DTOs.Employee
         public string? SortDirection { get; set; } = "desc";
     }
 
+    // Request body for EmployeeController.UpdatePhoto (API) - deliberately
+    // just the one field, see IEmployeeService.UpdatePhotoAsync.
+    public class UpdateEmployeePhotoRequest
+    {
+        public string FilePath { get; set; }
+    }
+
     public class EmployeeListDto
     {
         public string Id { get; set; }

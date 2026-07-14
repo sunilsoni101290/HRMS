@@ -13,9 +13,55 @@ builder.Services.AddControllersWithViews(options =>
     // page by URL, even if a specific controller forgot to add its own
     // guard - see EssRestrictionAttribute for the allow/deny lists.
     options.Filters.Add<EssRestrictionAttribute>();
-});
 
-builder.Services.AddSession();
+    // Global safety net so a genuinely-expired session (refresh token
+    // fully expired or revoked) always lands the user on a clean Login
+    // page with a friendly message, instead of the generic /Home/Error
+    // page an unhandled UnauthorizedAccessException from ApiService would
+    // otherwise hit - see ApiSessionExpiredFilter.
+    options.Filters.Add<ApiSessionExpiredFilter>();
+})
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = null;
+    });
+
+// Session is backed by IDistributedCache - AddSession() does NOT register
+// one for you, and without it the session store either silently falls
+// back to per-process memory with no persistence guarantees, or throws
+// once something actually touches Session. Registered explicitly so this
+// is never left to implicit/undocumented framework behavior. (For a
+// multi-instance/load-balanced production deployment, swap this for
+// AddStackExchangeRedisCache/AddDistributedSqlServerCache so a session
+// survives hitting a different server instance - single-server in-memory
+// is fine for this app's current deployment.)
+builder.Services.AddDistributedMemoryCache();
+
+// Default AddSession() uses a 20-minute sliding IdleTimeout, which was
+// silently logging users out of the ERP after 20 minutes of inactivity
+// (e.g. reading a report, being in a meeting) even though nothing about
+// that should count as "logging out". Extended to match the server-side
+// RefreshToken lifetime (30 days, see AuthService.GenerateAuthResponse /
+// Jwt:RefreshTokenExpiryDays) so the session store itself isn't the thing
+// kicking people out - the refresh-token flow in JwtAuthorizeAttribute is
+// what actually governs how long a login stays valid, and an explicit
+// Logout is what ends it.
+//
+// Cookie.MaxAge is just as important as IdleTimeout: without it, ASP.NET
+// Core issues the session cookie as a browser-session cookie (no
+// Expires/Max-Age at all), which the browser deletes the moment it's
+// closed - regardless of how long the *server-side* session would have
+// stayed valid. That's what made "close and reopen the browser" behave
+// like an explicit logout even though nothing revoked the session.
+// Setting MaxAge makes it a real persistent cookie.
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromDays(30);
+    options.Cookie.IsEssential = true;
+    options.Cookie.HttpOnly = true;
+    options.Cookie.MaxAge = TimeSpan.FromDays(30);
+    options.Cookie.SameSite = SameSiteMode.Lax;
+});
 
 builder.Services.AddHttpContextAccessor();
 
@@ -27,12 +73,6 @@ builder.Services.AddHttpClient<IApiService, ApiService>(client =>
 
 builder.Services.Configure<AppSettings>(
     builder.Configuration.GetSection("AppSettings"));
-
-builder.Services.AddControllersWithViews()
-    .AddJsonOptions(options =>
-    {
-        options.JsonSerializerOptions.PropertyNamingPolicy = null;
-    });
 
 var app = builder.Build();
 

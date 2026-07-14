@@ -51,8 +51,8 @@ namespace API.Controllers
 
                 return Ok(new ApiResponse<AuthResponse>
                 {
-                    Success = true,
-                    Message = "Login Successful",
+                    Success = result.Success,
+                    Message = result.Message,
                     Data = result.Data
                 });
             }
@@ -71,17 +71,35 @@ namespace API.Controllers
             }
         }
 
+        // [FromBody] is required here: both callers (APP's JwtAuthorizeAttribute
+        // silent-relogin path and ApiService's 401 retry path) POST the token
+        // as a JSON body { "RefreshToken": "..." }. A bare `string
+        // refreshToken` parameter binds from the query string by default for
+        // simple types, so without [FromBody] this always received null,
+        // RefreshTokenAsync always threw "Invalid refresh token", and every
+        // caller's silent-refresh attempt always failed - forcing a redirect
+        // to Login as soon as the access token was no longer in Session
+        // (e.g. after its normal 60-minute expiry), which showed up as
+        // "logged out on every page refresh".
         [HttpPost("refresh-token")]
-        public async Task<IActionResult> Refresh(string refreshToken)
+        public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequestDto request)
         {
-            var result = await _authService.RefreshTokenAsync(refreshToken);
+            var result = await _authService.RefreshTokenAsync(request?.RefreshToken);
+
+            if (result == null)
+                return Unauthorized(new ApiResponse<AuthResponse>
+                {
+                    Success = false,
+                    Message = "Invalid or expired refresh token."
+                });
+
             return Ok(result);
         }
 
         [HttpPost("logout")]
-        public async Task<IActionResult> Logout(string refreshToken)
+        public async Task<IActionResult> Logout([FromBody] RefreshTokenRequestDto request)
         {
-            var result = await _authService.LogoutAsync(refreshToken);
+            var result = await _authService.LogoutAsync(request?.RefreshToken);
             return Ok(result);
         }
 

@@ -4,6 +4,7 @@ using APP.Models.DTOs;
 using APP.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Newtonsoft.Json.Linq;
 
 namespace APP.Controllers
 {
@@ -88,19 +89,42 @@ namespace APP.Controllers
             return View("Create", dto);
         }
 
-        // The admin never types or sees the user's real password - a fresh
-        // one is generated server-side and shown here exactly once via
-        // TempData, which is cleared after this single redirect renders.
+        // newPassword comes from the admin-typed field in the Reset
+        // Password modal. If left blank, the API falls back to generating
+        // a random one server-side. Either way the password is shown here
+        // exactly once via TempData, which is cleared after this single
+        // redirect renders - it is never persisted or retrievable again.
         [HttpPost]
-        public async Task<IActionResult> ResetPassword(string id)
+        public async Task<IActionResult> ResetPassword(string id, string newPassword)
         {
             try
             {
-                dynamic result = await _apiService.PutAsync<dynamic>($"user/reset-password/{id}", new { });
-                string newPassword = result?.newPassword ?? result?.NewPassword;
+                dynamic result = await _apiService.PutAsync<dynamic>(
+                    $"user/reset-password/{id}",
+                    new ResetPasswordRequest { UserId = id, NewPassword = newPassword });
+
+                string resultPassword = result?.newPassword ?? result?.NewPassword;
 
                 TempData["Success"] = "Password reset successfully.";
-                TempData["NewPassword"] = newPassword;
+                TempData["NewPassword"] = resultPassword;
+            }
+            catch (ApiException ex)
+            {
+                TempData["GlobalError"] = GetErrorMessage(ex.ResponseContent);
+            }
+            catch (ApplicationException ex)
+            {
+                // ApiService.PutAsync -> HandleResponse throws
+                // ApplicationException($"Bad Request (400): {json}") for a
+                // 400 response - e.g. the "password must be at least 6
+                // characters" validation error. Strip the prefix so
+                // GetErrorMessage gets clean JSON to parse.
+                const string prefix = "Bad Request (400): ";
+                var json = ex.Message.StartsWith(prefix)
+                    ? ex.Message.Substring(prefix.Length)
+                    : ex.Message;
+
+                TempData["GlobalError"] = GetErrorMessage(json);
             }
             catch (Exception)
             {
@@ -165,6 +189,31 @@ namespace APP.Controllers
             var branches = await _apiService.GetAsync<List<DropdownDto>>($"dropdown/branch/{companyId}");
             var result = branches.Select(x => new { value = x.Value, text = x.Text });
             return Json(result);
+        }
+
+        // Pulls the "Message" (or first Errors entry) out of the API's
+        // error body - e.g. "New password must be at least 6 characters."
+        // from ResetPassword - instead of showing the generic
+        // "Failed to reset password." for validation failures the admin
+        // actually needs to see and correct.
+        private string GetErrorMessage(string json)
+        {
+            try
+            {
+                var obj = JObject.Parse(json);
+
+                if (obj["Message"] != null)
+                    return obj["Message"]!.ToString();
+
+                if (obj["Errors"] is JArray errors && errors.Count > 0)
+                    return errors[0]?.ToString();
+
+                return "An error occurred.";
+            }
+            catch
+            {
+                return "An error occurred.";
+            }
         }
     }
 

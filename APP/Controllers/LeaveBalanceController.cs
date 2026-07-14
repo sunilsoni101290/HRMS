@@ -188,6 +188,11 @@ namespace APP.Controllers
                 "LeaveBalance/allocate",
                 request);
 
+            if (result)
+            {
+                TempData["Success"] = "leave balance allocated successfully.";
+            }
+
             return RedirectToAction(nameof(Index));
         }
 

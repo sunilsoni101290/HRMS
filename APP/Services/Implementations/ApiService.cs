@@ -1,4 +1,4 @@
-﻿using APP.Helpers;
+using APP.Helpers;
 using APP.Models.Auth;
 using APP.Models.DTOs;
 using APP.Services.Interfaces;
@@ -6,7 +6,6 @@ using Newtonsoft.Json;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
-using System.Text.Json.Serialization;
 
 namespace APP.Services.Implementations
 {
@@ -35,13 +34,55 @@ namespace APP.Services.Implementations
                 .Session
                 .GetString("AccessToken");
 
-            if (!string.IsNullOrEmpty(token))
-            {
-                _httpClient.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue(
-                        "Bearer",
-                        token);
-            }
+            _httpClient.DefaultRequestHeaders.Authorization =
+                !string.IsNullOrEmpty(token)
+                    ? new AuthenticationHeaderValue("Bearer", token)
+                    : null;
+        }
+
+        private static StringContent BuildJsonContent(object data)
+        {
+            var jsonData = JsonConvert.SerializeObject(data);
+            return new StringContent(jsonData, Encoding.UTF8, "application/json");
+        }
+
+        // Sends the request built by sendRequest and, if the API responds
+        // with 401 (access token rejected - expired, revoked, or otherwise
+        // invalid), silently refreshes the token ONCE via the refresh-token
+        // flow and retries the SAME request with the new token attached.
+        //
+        // This replaces the previous behaviour where a 401 always threw an
+        // exception straight back to the caller - even when the refresh
+        // itself succeeded - because no controller action ever caught that
+        // exception and retried. A successful silent refresh still looked
+        // like a hard logout to the user (the "sometimes logged out after
+        // calling an API" symptom). Now the retry happens transparently
+        // and the caller only ever sees the final response.
+        //
+        // If the retried request also comes back 401, or the refresh call
+        // itself fails, the refresh token is genuinely no longer valid
+        // (expired past its window, or revoked by an explicit Logout
+        // elsewhere) - HandleResponse throws UnauthorizedAccessException
+        // in that case, which ApiSessionExpiredFilter turns into a clean
+        // redirect to Login instead of a raw error page.
+        private async Task<HttpResponseMessage> SendWithAutoRefreshAsync(
+            Func<Task<HttpResponseMessage>> sendRequest)
+        {
+            AddAuthorizationHeader();
+
+            var response = await sendRequest();
+
+            if (response.StatusCode != HttpStatusCode.Unauthorized)
+                return response;
+
+            var refreshed = await RefreshSessionTokenAsync();
+
+            if (!refreshed)
+                return response;
+
+            AddAuthorizationHeader();
+
+            return await sendRequest();
         }
 
         #endregion
@@ -49,16 +90,13 @@ namespace APP.Services.Implementations
         #region GET
         public async Task<TResponse> GetAsync<TResponse>(string url)
         {
-            AddAuthorizationHeader();
-
-            var response = await _httpClient.GetAsync(url);
+            var response = await SendWithAutoRefreshAsync(() => _httpClient.GetAsync(url));
 
             return await HandleResponse<TResponse>(response);
         }
-        public async Task<TResponse> GetAsync<TRequest, TResponse>(string url,TRequest data)
-        {
-            AddAuthorizationHeader();
 
+        public async Task<TResponse> GetAsync<TRequest, TResponse>(string url, TRequest data)
+        {
             if (data != null)
             {
                 var queryString = string.Join("&",
@@ -71,121 +109,72 @@ namespace APP.Services.Implementations
                 url = $"{url}?{queryString}";
             }
 
-            var response = await _httpClient.GetAsync(url);
+            var response = await SendWithAutoRefreshAsync(() => _httpClient.GetAsync(url));
 
             return await HandleResponse<TResponse>(response);
         }
         #endregion
 
         #region POST
-        public async Task<TResponse> PostAsync<TRequest, TResponse>(string url,TRequest data)
+        public async Task<TResponse> PostAsync<TRequest, TResponse>(string url, TRequest data)
         {
-            AddAuthorizationHeader();
-
-            var jsonData = JsonConvert.SerializeObject(data);
-
-            var content = new StringContent(
-                jsonData,
-                Encoding.UTF8,
-                "application/json");
-
-            var response = await _httpClient.PostAsync(
-                url,
-                content);
+            var response = await SendWithAutoRefreshAsync(
+                () => _httpClient.PostAsync(url, BuildJsonContent(data)));
 
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
 
+                if (response.StatusCode == HttpStatusCode.Unauthorized)
+                    throw new UnauthorizedAccessException("Session expired. Please login again.");
+
                 throw new ApiException(
-                "API Error",
-                (int)response.StatusCode,
-                errorContent);
+                    "API Error",
+                    (int)response.StatusCode,
+                    errorContent);
             }
 
             return await HandleResponse<TResponse>(response);
         }
-        
-        public async Task<T> PostAsync<T>(string url,object data)
+
+        public async Task<T> PostAsync<T>(string url, object data)
         {
-            AddAuthorizationHeader();
+            var response = await SendWithAutoRefreshAsync(
+                () => _httpClient.PostAsync(url, BuildJsonContent(data)));
 
-            var jsonData =
-                JsonConvert.SerializeObject(data);
-
-            var content = new StringContent(
-                jsonData,
-                Encoding.UTF8,
-                "application/json");
-
-            var response =
-                await _httpClient.PostAsync(
-                    url,
-                    content);
-
-            //Read Response
-            var responseContent =
-                await response.Content.ReadAsStringAsync();
-
-            //====================================
-            //SUCCESS
-            //====================================
-
+            // Success
             if (response.IsSuccessStatusCode)
             {
                 return await HandleResponse<T>(response);
             }
 
-            //====================================
-            //ERROR
-            //====================================
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+                throw new UnauthorizedAccessException("Session expired. Please login again.");
 
-            var errorResponse =
-                JsonConvert.DeserializeObject<
-                    ApiResponse<object>>(responseContent);
+            var responseContent = await response.Content.ReadAsStringAsync();
 
-            throw new Exception(errorResponse.Message);
+            var errorResponse = JsonConvert.DeserializeObject<ApiResponse<object>>(responseContent);
+
+            throw new Exception(
+                errorResponse?.Message ?? $"HTTP {(int)response.StatusCode} - {response.ReasonPhrase}");
         }
         #endregion
 
         #region PUT
-        public async Task<TResponse> PutAsync<TRequest, TResponse>(string url,TRequest data)
+        public async Task<TResponse> PutAsync<TRequest, TResponse>(string url, TRequest data)
         {
-            AddAuthorizationHeader();
-
-            var jsonData = JsonConvert.SerializeObject(data);
-
-            var content = new StringContent(
-                jsonData,
-                Encoding.UTF8,
-                "application/json");
-
-            var response = await _httpClient.PutAsync(
-                url,
-                content);
+            var response = await SendWithAutoRefreshAsync(
+                () => _httpClient.PutAsync(url, BuildJsonContent(data)));
 
             return await HandleResponse<TResponse>(response);
         }
-        
-        public async Task<T> PutAsync<T>(string url,object data)
+
+        public async Task<T> PutAsync<T>(string url, object data)
         {
-            AddAuthorizationHeader();
-
-            var jsonData =
-                JsonConvert.SerializeObject(data);
-
-            var content = new StringContent(
-                jsonData,
-                Encoding.UTF8,
-                "application/json");
-
-            var response =
-                await _httpClient.PutAsync(
-                    url,
-                    content);
+            var response = await SendWithAutoRefreshAsync(
+                () => _httpClient.PutAsync(url, BuildJsonContent(data)));
 
             return await HandleResponse<T>(response);
-            
         }
         #endregion
 
@@ -193,9 +182,7 @@ namespace APP.Services.Implementations
 
         public async Task<bool> DeleteAsync(string url)
         {
-            AddAuthorizationHeader();
-
-            var response = await _httpClient.DeleteAsync(url);
+            var response = await SendWithAutoRefreshAsync(() => _httpClient.DeleteAsync(url));
 
             if (response.IsSuccessStatusCode)
             {
@@ -203,6 +190,9 @@ namespace APP.Services.Implementations
             }
 
             var errorContent = await response.Content.ReadAsStringAsync();
+
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+                throw new UnauthorizedAccessException("Session expired. Please login again.");
 
             throw new ApiException(
                 "Delete request failed",
@@ -239,19 +229,16 @@ namespace APP.Services.Implementations
                 }
             }
 
-            // Unauthorized
+            // By the time we get here, SendWithAutoRefreshAsync has already
+            // attempted a silent refresh-and-retry for a 401 - if we're
+            // still seeing Unauthorized, the refresh token itself is
+            // genuinely no longer valid (fully expired, or revoked by an
+            // explicit Logout elsewhere) and there's nothing left to do but
+            // send the user back to Login.
             if (response.StatusCode == HttpStatusCode.Unauthorized)
             {
-                bool refreshed = await RefreshTokenAsync();
-
-                if (!refreshed)
-                {
-                    throw new UnauthorizedAccessException(
-                        "Session expired. Please login again.");
-                }
-
                 throw new UnauthorizedAccessException(
-                    "Access token refreshed. Please retry the request.");
+                    "Session expired. Please login again.");
             }
 
             // Bad Request
@@ -287,56 +274,14 @@ namespace APP.Services.Implementations
                 $"HTTP {(int)response.StatusCode} - {response.ReasonPhrase}\n{json}");
         }
 
-        //private async Task<T> HandleResponse<T>(HttpResponseMessage response)
-        //{
-        //    var json = await response.Content.ReadAsStringAsync();
-
-        //    // Unauthorized
-        //    if (response.StatusCode == HttpStatusCode.Unauthorized)
-        //    {
-        //        bool refreshed = await RefreshTokenAsync();
-
-        //        if (!refreshed)
-        //        {
-        //            throw new Exception(
-        //                "Session expired. Please login again.");
-        //        }
-
-        //        throw new Exception(
-        //            "Token refreshed. Retry request.");
-        //    }
-
-        //    // Other Errors
-        //    if (!response.IsSuccessStatusCode)
-        //    {
-        //        throw new Exception(json);
-        //    }
-
-        //    // Empty Response
-        //    if (string.IsNullOrWhiteSpace(json))
-        //    {
-        //        return default(T);
-        //    }
-
-        //    try
-        //    {
-        //        return JsonConvert.DeserializeObject<T>(json);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        throw new Exception(
-        //            $"JSON Deserialize Error\n" +
-        //            $"Type: {typeof(T).Name}\n" +
-        //            $"JSON: {json}\n" +
-        //            $"Message: {ex.Message}");
-        //    }
-        //}
-
         #endregion
 
         #region REFRESH TOKEN
 
-        private async Task<bool> RefreshTokenAsync()
+        // Renamed from RefreshTokenAsync to avoid any confusion with the
+        // API's own /auth/refresh-token endpoint path string used below -
+        // this is the APP-side helper that calls it and updates Session.
+        private async Task<bool> RefreshSessionTokenAsync()
         {
             try
             {
@@ -350,19 +295,12 @@ namespace APP.Services.Implementations
                 if (string.IsNullOrEmpty(refreshToken))
                     return false;
 
-                var request = new
-                {
-                    RefreshToken = refreshToken
-                };
+                var content = BuildJsonContent(new { RefreshToken = refreshToken });
 
-                var jsonData =
-                    JsonConvert.SerializeObject(request);
-
-                var content = new StringContent(
-                    jsonData,
-                    Encoding.UTF8,
-                    "application/json");
-
+                // Deliberately uses a bare HttpClient call (not
+                // SendWithAutoRefreshAsync) - refreshing the token can't
+                // itself depend on the token being valid, and this
+                // endpoint doesn't require [Authorize] on the API side.
                 var response =
                     await _httpClient.PostAsync(
                         "auth/refresh-token",
@@ -379,6 +317,9 @@ namespace APP.Services.Implementations
                     JsonConvert.DeserializeObject<AuthResponse>(
                         json);
 
+                if (authResponse == null || string.IsNullOrEmpty(authResponse.AccessToken))
+                    return false;
+
                 // Save new tokens
                 session.SetString(
                     "AccessToken",
@@ -386,7 +327,7 @@ namespace APP.Services.Implementations
 
                 session.SetString(
                     "RefreshToken",
-                    authResponse.RefreshToken);
+                    authResponse.RefreshToken ?? refreshToken);
 
                 return true;
             }
