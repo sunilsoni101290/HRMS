@@ -1,864 +1,1408 @@
-﻿@model EmployeeListDto
+@model EmployeeListDto
 
 @{
     // This same view doubles as the org-wide "Employee Details" screen for
-    // admin/HR and as "My Profile" for a self-service employee. The Back
+    // admin/HR (unchanged tabbed layout, Edit button) and as the
+    // read-only "My Profile" screen for a self-service employee (modern
+    // card layout below, no editing anywhere except the photo). The Back
     // button must not send a self-service user to the admin employee list
     // (Employee/Index) - they have no access to it.
     bool isAdmin = ViewBag.IsAdmin ?? true;
 }
 
-<div class="panel panel-flat">
-    <div class="panel-heading">
+@if (isAdmin)
+{
+    <style>
+        .empdetail-hero {
+            background: linear-gradient(120deg, #1b2a4a, #22365f 60%, #2b4270);
+            border-radius: 12px;
+            padding: 28px 28px 24px;
+            color: #fff;
+            box-shadow: 0 8px 24px rgba(20,30,60,.16);
+            margin-bottom: 20px;
+        }
 
-        <h5 class="panel-title">
+        .empdetail-toolbar {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
 
-            <i class="icon-user position-left"></i>
+        .empdetail-photo {
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid rgba(255,255,255,.85);
+            box-shadow: 0 4px 14px rgba(0,0,0,.25);
+            background: #fff;
+        }
 
-            @(isAdmin ? "Employee Details" : "My Profile")
+        .empdetail-name {
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0 0 2px;
+        }
 
-        </h5>
+        .empdetail-role {
+            color: #c7d3ea;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
 
-        <div class="heading-elements">
+        .empdetail-code {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,255,255,.12);
+            border: 1px solid rgba(255,255,255,.25);
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
 
-            @if (isAdmin)
+        .empdetail-quickinfo {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 16px;
+        }
+
+        .empdetail-quickinfo .qi-pill {
+            background: rgba(255,255,255,.08);
+            border: 1px solid rgba(255,255,255,.18);
+            border-radius: 8px;
+            padding: 7px 14px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            color: #e8edf7;
+        }
+
+        .empdetail-quickinfo .qi-pill i {
+            font-size: 14px;
+            opacity: .85;
+        }
+
+        .empdetail-tabs {
+            border: none;
+            gap: 6px;
+            margin-bottom: 0;
+        }
+
+        .empdetail-tabs > li {
+            margin-bottom: 0;
+        }
+
+        .empdetail-tabs > li > a {
+            border: 1px solid #e5e9f2 !important;
+            border-radius: 8px !important;
+            margin-right: 6px;
+            color: #5b6680;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 9px 16px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .empdetail-tabs > li.active > a,
+        .empdetail-tabs > li.active > a:hover,
+        .empdetail-tabs > li.active > a:focus {
+            background: #4e9cff !important;
+            border-color: #4e9cff !important;
+            color: #fff !important;
+        }
+
+        .empdetail-section-body {
+            background: #fff;
+            border: 1px solid #eef0f4;
+            border-top: none;
+            border-radius: 0 0 10px 10px;
+            padding: 20px 22px 6px;
+        }
+
+        .empdetail-field {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .empdetail-field-icon {
+            flex-shrink: 0;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: #eaf2ff;
+            color: #4e9cff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .empdetail-field-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .4px;
+            color: #9aa5b8;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .empdetail-field-value {
+            font-size: 13.5px;
+            color: #2c3548;
+            font-weight: 500;
+            word-break: break-word;
+        }
+    </style>
+
+    <div class="empdetail-toolbar">
+
+        <a asp-action="Index" class="btn btn-default">
+            <i class="icon-arrow-left13"></i>
+            Back
+        </a>
+
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn bg-primary">
+            <i class="icon-pencil7"></i>
+            Edit
+        </a>
+
+    </div>
+
+    <div class="empdetail-hero">
+
+        <div class="row">
+
+            <div class="col-md-3 text-center">
+
+                @if (!string.IsNullOrEmpty(Model.FilePath))
+                {
+                    <img src="@Model.FilePath" class="empdetail-photo" alt="@Model.FirstName @Model.LastName" />
+                }
+                else
+                {
+                    <img src="~/images/no-image.png" class="empdetail-photo" alt="@Model.FirstName @Model.LastName" />
+                }
+
+            </div>
+
+            <div class="col-md-9">
+
+                <div class="empdetail-name">@Model.FirstName @Model.LastName</div>
+
+                <div class="empdetail-role">
+                    @(string.IsNullOrWhiteSpace(Model.DesignationName) ? "Employee" : Model.DesignationName)
+                    @(string.IsNullOrWhiteSpace(Model.DepartmentName) ? "" : " · " + Model.DepartmentName)
+                </div>
+
+                <span class="empdetail-code">
+                    <i class="bi bi-person-badge"></i>
+                    @Model.EmployeeCode
+                </span>
+
+                <div class="empdetail-quickinfo">
+
+                    <div class="qi-pill">
+                        <i class="bi bi-building"></i>
+                        @(string.IsNullOrWhiteSpace(Model.CompanyName) ? "-" : Model.CompanyName)
+                    </div>
+
+                    <div class="qi-pill">
+                        <i class="bi bi-signpost-split"></i>
+                        @(string.IsNullOrWhiteSpace(Model.BrnachName) ? "-" : Model.BrnachName)
+                    </div>
+
+                    <div class="qi-pill">
+                        <i class="bi bi-envelope"></i>
+                        @(string.IsNullOrWhiteSpace(Model.Email) ? "-" : Model.Email)
+                    </div>
+
+                    <div class="qi-pill">
+                        <i class="bi bi-telephone"></i>
+                        @(string.IsNullOrWhiteSpace(Model.Phone) ? "-" : Model.Phone)
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <ul class="nav nav-tabs empdetail-tabs">
+        <li class="active">
+            <a href="#personal" data-toggle="tab">
+                <i class="bi bi-person-vcard"></i>
+                Personal
+            </a>
+        </li>
+
+        <li>
+            <a href="#organization" data-toggle="tab">
+                <i class="bi bi-diagram-3"></i>
+                Organization
+            </a>
+        </li>
+
+        <li>
+            <a href="#contact" data-toggle="tab">
+                <i class="bi bi-telephone-outbound"></i>
+                Contact
+            </a>
+        </li>
+
+        <li>
+            <a href="#kyc" data-toggle="tab">
+                <i class="bi bi-shield-check"></i>
+                KYC
+            </a>
+        </li>
+        <li>
+            <a href="#Passport" data-toggle="tab">
+                <i class="bi bi-passport"></i>
+                Passport
+            </a>
+        </li>
+
+        <li>
+            <a href="#employment" data-toggle="tab">
+                <i class="bi bi-briefcase"></i>
+                Employment
+            </a>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+
+        <div class="tab-pane active empdetail-section-body" id="personal">
+
+            <div class="row">
+
+                <div class="col-md-3">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-person"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">First Name</div>
+                            <div class="empdetail-field-value">@(string.IsNullOrWhiteSpace(Model.FirstName) ? "-" : Model.FirstName)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-person"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Last Name</div>
+                            <div class="empdetail-field-value">@(string.IsNullOrWhiteSpace(Model.LastName) ? "-" : Model.LastName)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-gender-ambiguous"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Gender</div>
+                            <div class="empdetail-field-value">@(string.IsNullOrWhiteSpace(Model.Gender) ? "-" : Model.Gender)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-cake2"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Date Of Birth</div>
+                            <div class="empdetail-field-value">@(Model.DateOfBirth?.ToString("dd-MMM-yyyy") ?? "-")</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-heart"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Marital Status</div>
+                            <div class="empdetail-field-value">@(string.IsNullOrWhiteSpace(Model.MaritalStatus) ? "-" : Model.MaritalStatus)</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="tab-pane empdetail-section-body" id="organization">
+
+            <div class="row">
+
+                <div class="col-md-3">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-building"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Company</div>
+                            <div class="empdetail-field-value">@(string.IsNullOrWhiteSpace(Model.CompanyName) ? "-" : Model.CompanyName)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-signpost-split"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Branch</div>
+                            <div class="empdetail-field-value">@(string.IsNullOrWhiteSpace(Model.BrnachName) ? "-" : Model.BrnachName)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-diagram-2"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Department</div>
+                            <div class="empdetail-field-value">@(string.IsNullOrWhiteSpace(Model.DepartmentName) ? "-" : Model.DepartmentName)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-award"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Designation</div>
+                            <div class="empdetail-field-value">@(string.IsNullOrWhiteSpace(Model.DesignationName) ? "-" : Model.DesignationName)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-person-workspace"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Reporting Manager</div>
+                            <div class="empdetail-field-value">@(string.IsNullOrWhiteSpace(Model.ReportingManagerName) ? "-" : Model.ReportingManagerName)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-clock-history"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Shift</div>
+                            <div class="empdetail-field-value">@(string.IsNullOrWhiteSpace(Model.ShiftName) ? "-" : Model.ShiftName)</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="tab-pane empdetail-section-body" id="contact">
+
+            <div class="row">
+
+                <div class="col-md-4">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-telephone"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Phone</div>
+                            <div class="empdetail-field-value">@(string.IsNullOrWhiteSpace(Model.Phone) ? "-" : Model.Phone)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-envelope"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Email</div>
+                            <div class="empdetail-field-value">@(string.IsNullOrWhiteSpace(Model.Email) ? "-" : Model.Email)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-person-lines-fill"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Emergency Contact</div>
+                            <div class="empdetail-field-value">@(string.IsNullOrWhiteSpace(Model.EmergencyContact) ? "-" : Model.EmergencyContact)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-8">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-geo-alt"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Address</div>
+                            <div class="empdetail-field-value">@(string.IsNullOrWhiteSpace(Model.Address) ? "-" : Model.Address)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-mailbox"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Pincode</div>
+                            <div class="empdetail-field-value">@(string.IsNullOrWhiteSpace(Model.Pincode) ? "-" : Model.Pincode)</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="tab-pane empdetail-section-body" id="kyc">
+
+            <div class="row">
+
+                <div class="col-md-4">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-credit-card-2-front"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">PAN Number</div>
+                            <div class="empdetail-field-value">@(string.IsNullOrWhiteSpace(Model.PANNumber) ? "-" : Model.PANNumber)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-card-text"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Aadhar Number</div>
+                            <div class="empdetail-field-value">@(string.IsNullOrWhiteSpace(Model.AadharNumber) ? "-" : Model.AadharNumber)</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="tab-pane empdetail-section-body" id="Passport">
+
+            <div class="row">
+
+                <div class="col-md-4">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-upc-scan"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Passport Number</div>
+                            <div class="empdetail-field-value">@(string.IsNullOrWhiteSpace(Model.PassportNumber) ? "-" : Model.PassportNumber)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-flag"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Nationality</div>
+                            <div class="empdetail-field-value">@Model.Nationality</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-info-circle"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Passport Status</div>
+                            <div class="empdetail-field-value">
+
+                                @if (Model.PassportStatus == EnumExtensions.PassportStatus.Active)
+                                {
+                                    <span class="label bg-success">@Model.PassportStatus</span>
+                                }
+                                else if (Model.PassportStatus == EnumExtensions.PassportStatus.Applied)
+                                {
+                                    <span class="label bg-warning">@Model.PassportStatus</span>
+                                }
+                                else if (Model.PassportStatus == EnumExtensions.PassportStatus.Expired ||
+                                    Model.PassportStatus == EnumExtensions.PassportStatus.Cancelled)
+                                {
+                                    <span class="label bg-danger">@Model.PassportStatus</span>
+                                }
+                                else
+                                {
+                                    <span class="label bg-grey">@Model.PassportStatus</span>
+                                }
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-globe2"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Issuing Country</div>
+                            <div class="empdetail-field-value">@(string.IsNullOrWhiteSpace(Model.CountryName) ? "-" : Model.CountryName)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-calendar-check"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Issue Date</div>
+                            <div class="empdetail-field-value">@(Model.IssueDate?.ToString("dd-MMM-yyyy") ?? "-")</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-calendar-x"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Expiry Date</div>
+                            <div class="empdetail-field-value">@(Model.ExpiryDate?.ToString("dd-MMM-yyyy") ?? "-")</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-geo"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Place Of Issue</div>
+                            <div class="empdetail-field-value">@(string.IsNullOrWhiteSpace(Model.PlaceOfIssue) ? "-" : Model.PlaceOfIssue)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-file-earmark-pdf"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Passport Document</div>
+                            <div class="empdetail-field-value">
+
+                                @if (!string.IsNullOrWhiteSpace(Model.PassportFilePath))
+                                {
+                                    <a asp-action="ViewPassport"
+                                       asp-route-employeeId="@Model.Id"
+                                       target="_blank"
+                                       class="btn bg-primary btn-sm">
+                                        <i class="icon-file-eye"></i>
+                                        View
+                                    </a>
+
+                                    <a asp-action="DownloadPassport"
+                                       asp-route-employeeId="@Model.Id"
+                                       download
+                                       class="btn bg-success btn-sm">
+                                        <i class="icon-download"></i>
+                                        Download
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">
+                                        <i class="icon-file-empty"></i>
+                                        Not Uploaded
+                                    </span>
+                                }
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="tab-pane empdetail-section-body" id="employment">
+
+            <div class="row">
+
+                <div class="col-md-3">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-box-arrow-in-right"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Joining Date</div>
+                            <div class="empdetail-field-value">@(Model.JoiningDate?.ToString("dd-MMM-yyyy") ?? "-")</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-patch-check"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Confirmation Date</div>
+                            <div class="empdetail-field-value">@(Model.ConfirmationDate?.ToString("dd-MMM-yyyy") ?? "-")</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-box-arrow-right"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Relieving Date</div>
+                            <div class="empdetail-field-value">@(Model.RelievingDate?.ToString("dd-MMM-yyyy") ?? "-")</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-file-earmark-person"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Employment Type</div>
+                            <div class="empdetail-field-value">@(string.IsNullOrWhiteSpace(Model.EmploymentType) ? "-" : Model.EmploymentType)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-envelope"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Email</div>
+                            <div class="empdetail-field-value">@(string.IsNullOrWhiteSpace(Model.Email) ? "-" : Model.Email)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="empdetail-field">
+                        <div class="empdetail-field-icon"><i class="bi bi-telephone"></i></div>
+                        <div>
+                            <div class="empdetail-field-label">Phone</div>
+                            <div class="empdetail-field-value">@(string.IsNullOrWhiteSpace(Model.Phone) ? "-" : Model.Phone)</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+}
+else
+{
+    @* =====================================================
+       MY PROFILE - self-service, fully read-only.
+       Modern card-based layout. The ONLY interactive element on this
+       whole page is the "Upload Profile Image" button, which opens a
+       modal to replace the photo - every other field below is plain
+       text, never an input.
+       ===================================================== *@
+
+    <style>
+        .myprofile-hero {
+            background: linear-gradient(135deg, #1b2a4a 0%, #203258 55%, #2a3f6b 100%);
+            border-radius: 12px;
+            padding: 36px 28px 28px;
+            color: #fff;
+            box-shadow: 0 8px 28px rgba(27,42,74,.18);
+            margin-bottom: 22px;
+        }
+
+        .myprofile-photo-wrap {
+            position: relative;
+            width: 132px;
+            height: 132px;
+            margin: 0 auto 16px;
+        }
+
+        .myprofile-photo-wrap img {
+            width: 132px;
+            height: 132px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid rgba(255,255,255,.85);
+            box-shadow: 0 4px 16px rgba(0,0,0,.25);
+            background: #fff;
+        }
+
+        .myprofile-name {
+            font-size: 21px;
+            font-weight: 600;
+            margin: 4px 0 2px;
+            text-align: center;
+        }
+
+        .myprofile-role {
+            text-align: center;
+            color: #c7d3ea;
+            font-size: 13.5px;
+            margin-bottom: 14px;
+        }
+
+        .myprofile-code {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,255,255,.12);
+            border: 1px solid rgba(255,255,255,.25);
+            color: #fff;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 12.5px;
+            font-weight: 500;
+            letter-spacing: .3px;
+        }
+
+        .myprofile-quickinfo {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 18px;
+        }
+
+        .myprofile-quickinfo .qi-pill {
+            background: rgba(255,255,255,.08);
+            border: 1px solid rgba(255,255,255,.18);
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 12.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #e8edf7;
+        }
+
+        .myprofile-quickinfo .qi-pill i {
+            font-size: 15px;
+            opacity: .85;
+        }
+
+        .btn-upload-photo {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            background: #fff;
+            color: #1b2a4a;
+            border: none;
+            border-radius: 22px;
+            padding: 8px 20px;
+            font-size: 13px;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(0,0,0,.15);
+            transition: all .15s ease;
+        }
+
+        .btn-upload-photo:hover {
+            background: #eef2fa;
+            color: #1b2a4a;
+            transform: translateY(-1px);
+        }
+
+        .myprofile-section {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 1px 4px rgba(0,0,0,.06);
+            border: 1px solid #eef0f4;
+            margin-bottom: 22px;
+            overflow: hidden;
+        }
+
+        .myprofile-section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 20px;
+            border-bottom: 1px solid #f0f2f6;
+            background: #fafbfd;
+        }
+
+        .myprofile-section-header i {
+            font-size: 17px;
+            color: #4e9cff;
+            background: #eaf2ff;
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .myprofile-section-header h6 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #263047;
+        }
+
+        .myprofile-section-body {
+            padding: 18px 20px 6px;
+        }
+
+        .profile-field {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .profile-field-icon {
+            flex-shrink: 0;
+            width: 30px;
+            height: 30px;
+            border-radius: 7px;
+            background: #f4f6fa;
+            color: #7a869c;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+        }
+
+        .profile-field-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .4px;
+            color: #9aa5b8;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .profile-field-value {
+            font-size: 13.5px;
+            color: #2c3548;
+            font-weight: 500;
+            word-break: break-word;
+        }
+
+        #uploadPhotoPreview {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #eef0f4;
+            margin: 0 auto 14px;
+            display: block;
+            background: #f4f6fa;
+        }
+    </style>
+
+    <div class="myprofile-hero">
+
+        <div class="myprofile-photo-wrap">
+
+            @if (!string.IsNullOrEmpty(Model.FilePath))
             {
-                <a asp-action="Index"
-                   class="btn btn-default">
-
-                    <i class="icon-arrow-left13"></i>
-                    Back
-
-                </a>
+                <img src="@Model.FilePath" alt="@Model.FirstName @Model.LastName" />
             }
             else
             {
-                <a asp-controller="EmployeeDashboard"
-                   asp-action="Index"
-                   class="btn btn-default">
-
-                    <i class="icon-arrow-left13"></i>
-                    Back to Dashboard
-
-                </a>
+                <img src="~/images/no-image.png" alt="@Model.FirstName @Model.LastName" />
             }
 
-            <a asp-action="Edit"
-               asp-route-id="@Model.Id"
-               class="btn bg-primary">
+        </div>
 
-                <i class="icon-pencil7"></i>
-                Edit
+        <div class="myprofile-name">@Model.FirstName @Model.LastName</div>
 
-            </a>
+        <div class="myprofile-role">
+            @(string.IsNullOrWhiteSpace(Model.DesignationName) ? "Employee" : Model.DesignationName)
+            @(string.IsNullOrWhiteSpace(Model.DepartmentName) ? "" : " · " + Model.DepartmentName)
+        </div>
 
+        <div class="text-center">
+            <span class="myprofile-code">
+                <i class="bi bi-person-badge"></i>
+                @Model.EmployeeCode
+            </span>
+        </div>
+
+        <div class="myprofile-quickinfo">
+
+            <div class="qi-pill">
+                <i class="bi bi-building"></i>
+                @(string.IsNullOrWhiteSpace(Model.CompanyName) ? "-" : Model.CompanyName)
+            </div>
+
+            <div class="qi-pill">
+                <i class="bi bi-diagram-3"></i>
+                @(string.IsNullOrWhiteSpace(Model.BrnachName) ? "-" : Model.BrnachName)
+            </div>
+
+            <div class="qi-pill">
+                <i class="bi bi-envelope"></i>
+                @(string.IsNullOrWhiteSpace(Model.Email) ? "-" : Model.Email)
+            </div>
+
+            <div class="qi-pill">
+                <i class="bi bi-telephone"></i>
+                @(string.IsNullOrWhiteSpace(Model.Phone) ? "-" : Model.Phone)
+            </div>
+
+        </div>
+
+        <div class="text-center" style="margin-top:20px;">
+            <button type="button"
+                    class="btn-upload-photo"
+                    data-toggle="modal"
+                    data-target="#uploadPhotoModal">
+                <i class="bi bi-camera"></i>
+                Upload Profile Image
+            </button>
         </div>
 
     </div>
 
-    <div class="panel-body">
-        <div class="row">
+    <div class="row">
 
-            <div class="col-md-3 text-center">
+        <div class="col-md-6">
 
-                @if (!string.IsNullOrEmpty(Model.FilePath))
-                {
-                    <img src="@Model.FilePath"
-                         class="img-circle img-responsive"
-                         style="width:150px;height:150px;object-fit:cover;margin:auto;" />
-                }
-                else
-                {
-                    <img src="~/images/no-image.png"
-                         class="img-circle img-responsive"
-                         style="width:150px;height:150px;margin:auto;" />
-                }
-
-                <h4 class="mt-15">
-
-                    @Model.FirstName @Model.LastName
-
-                </h4>
-
-                <span class="label bg-primary">
-
-                    @Model.EmployeeCode
-
-                </span>
-
+            <div class="myprofile-section">
+                <div class="myprofile-section-header">
+                    <i class="bi bi-person-vcard"></i>
+                    <h6>Personal Information</h6>
+                </div>
+                <div class="myprofile-section-body">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-person"></i></div>
+                                <div>
+                                    <div class="profile-field-label">First Name</div>
+                                    <div class="profile-field-value">@(string.IsNullOrWhiteSpace(Model.FirstName) ? "-" : Model.FirstName)</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-person"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Last Name</div>
+                                    <div class="profile-field-value">@(string.IsNullOrWhiteSpace(Model.LastName) ? "-" : Model.LastName)</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-gender-ambiguous"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Gender</div>
+                                    <div class="profile-field-value">@(string.IsNullOrWhiteSpace(Model.Gender) ? "-" : Model.Gender)</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-cake2"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Date of Birth</div>
+                                    <div class="profile-field-value">@(Model.DateOfBirth?.ToString("dd-MMM-yyyy") ?? "-")</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-heart"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Marital Status</div>
+                                    <div class="profile-field-value">@(string.IsNullOrWhiteSpace(Model.MaritalStatus) ? "-" : Model.MaritalStatus)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="col-md-9">
-
-                <div class="row">
-
-                    <div class="col-md-4">
-
-                        <div class="panel bg-primary-400">
-
-                            <div class="panel-body">
-
-                                <h3 class="no-margin">
-                                    @Model.CompanyName
-                                </h3>
-
-                                Company
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    <div class="col-md-4">
-
-                        <div class="panel bg-success-400">
-
-                            <div class="panel-body">
-
-                                <h3 class="no-margin">
-                                    @Model.DepartmentName
-                                </h3>
-
-                                Department
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    <div class="col-md-4">
-
-                        <div class="panel bg-warning-400">
-
-                            <div class="panel-body">
-
-                                <h3 class="no-margin">
-                                    @Model.DesignationName
-                                </h3>
-
-                                Designation
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
+            <div class="myprofile-section">
+                <div class="myprofile-section-header">
+                    <i class="bi bi-telephone-outbound"></i>
+                    <h6>Contact Information</h6>
                 </div>
+                <div class="myprofile-section-body">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-telephone"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Phone</div>
+                                    <div class="profile-field-value">@(string.IsNullOrWhiteSpace(Model.Phone) ? "-" : Model.Phone)</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-envelope"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Email</div>
+                                    <div class="profile-field-value">@(string.IsNullOrWhiteSpace(Model.Email) ? "-" : Model.Email)</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-person-lines-fill"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Emergency Contact</div>
+                                    <div class="profile-field-value">@(string.IsNullOrWhiteSpace(Model.EmergencyContact) ? "-" : Model.EmergencyContact)</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-mailbox"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Pincode</div>
+                                    <div class="profile-field-value">@(string.IsNullOrWhiteSpace(Model.Pincode) ? "-" : Model.Pincode)</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-12">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-geo-alt"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Address</div>
+                                    <div class="profile-field-value">@(string.IsNullOrWhiteSpace(Model.Address) ? "-" : Model.Address)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
+            <div class="myprofile-section">
+                <div class="myprofile-section-header">
+                    <i class="bi bi-shield-check"></i>
+                    <h6>KYC Information</h6>
+                </div>
+                <div class="myprofile-section-body">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-credit-card-2-front"></i></div>
+                                <div>
+                                    <div class="profile-field-label">PAN Number</div>
+                                    <div class="profile-field-value">@(string.IsNullOrWhiteSpace(Model.PANNumber) ? "-" : Model.PANNumber)</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-card-text"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Aadhar Number</div>
+                                    <div class="profile-field-value">@(string.IsNullOrWhiteSpace(Model.AadharNumber) ? "-" : Model.AadharNumber)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
         </div>
 
-        <hr />
-        <ul class="nav nav-tabs nav-tabs-highlight">
-            <li class="active">
-                <a href="#personal" data-toggle="tab">
-                    Personal Information
-                </a>
-            </li>
+        <div class="col-md-6">
 
-            <li>
-                <a href="#organization" data-toggle="tab">
-                    Organization Information
-                </a>
-            </li>
-
-            <li>
-                <a href="#contact" data-toggle="tab">
-                    Contact Information
-                </a>
-            </li>
-
-            <li>
-                <a href="#kyc" data-toggle="tab">
-                    KYC Information
-                </a>
-            </li>
-            <li>
-                <a href="#Passport" data-toggle="tab">
-                    Passport Information
-                </a>
-            </li>
-
-            <li>
-                <a href="#employment" data-toggle="tab">
-                    Employment Information
-                </a>
-            </li>
-        </ul>
-
-        <div class="tab-content">
-
-            <div class="tab-pane active" id="personal">
-
-                <div class="row">
-
-                    <div class="col-md-3">
-                        <label class="text-semibold">First Name</label>
-                        <p>@Model.FirstName</p>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="text-semibold">Last Name</label>
-                        <p>@Model.LastName</p>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="text-semibold">Gender</label>
-                        <p>@Model.Gender</p>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="text-semibold">Date Of Birth</label>
-                        <p>@Model.DateOfBirth?.ToString("dd-MMM-yyyy")</p>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="text-semibold">Marital Status</label>
-                        <p>@Model.MaritalStatus</p>
-                    </div>
-
+            <div class="myprofile-section">
+                <div class="myprofile-section-header">
+                    <i class="bi bi-diagram-3"></i>
+                    <h6>Organization Information</h6>
                 </div>
-
+                <div class="myprofile-section-body">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-building"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Company</div>
+                                    <div class="profile-field-value">@(string.IsNullOrWhiteSpace(Model.CompanyName) ? "-" : Model.CompanyName)</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-signpost-split"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Branch</div>
+                                    <div class="profile-field-value">@(string.IsNullOrWhiteSpace(Model.BrnachName) ? "-" : Model.BrnachName)</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-diagram-2"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Department</div>
+                                    <div class="profile-field-value">@(string.IsNullOrWhiteSpace(Model.DepartmentName) ? "-" : Model.DepartmentName)</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-award"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Designation</div>
+                                    <div class="profile-field-value">@(string.IsNullOrWhiteSpace(Model.DesignationName) ? "-" : Model.DesignationName)</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-person-workspace"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Reporting Manager</div>
+                                    <div class="profile-field-value">@(string.IsNullOrWhiteSpace(Model.ReportingManagerName) ? "-" : Model.ReportingManagerName)</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-clock-history"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Shift</div>
+                                    <div class="profile-field-value">@(string.IsNullOrWhiteSpace(Model.ShiftName) ? "-" : Model.ShiftName)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="tab-pane" id="organization">
-
-                <div class="row">
-
-                    <div class="col-md-3">
-                        <label class="text-semibold">Company</label>
-                        <p>@Model.CompanyName</p>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="text-semibold">Branch</label>
-                        <p>@Model.BrnachName</p>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="text-semibold">Department</label>
-                        <p>@Model.DepartmentName</p>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="text-semibold">Designation</label>
-                        <p>@Model.DesignationName</p>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="text-semibold">Reporting Manager</label>
-                        <p>@Model.ReportingManagerName</p>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="text-semibold">Shift</label>
-                        <p>@Model.ShiftName</p>
-                    </div>
-
+            <div class="myprofile-section">
+                <div class="myprofile-section-header">
+                    <i class="bi bi-briefcase"></i>
+                    <h6>Employment Information</h6>
                 </div>
-
-            </div>
-            <div class="tab-pane" id="contact">
-
-                <div class="row">
-
-                    <div class="col-md-4">
-                        <label class="text-semibold">Phone</label>
-                        <p>@Model.Phone</p>
+                <div class="myprofile-section-body">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-box-arrow-in-right"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Joining Date</div>
+                                    <div class="profile-field-value">@(Model.JoiningDate?.ToString("dd-MMM-yyyy") ?? "-")</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-patch-check"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Confirmation Date</div>
+                                    <div class="profile-field-value">@(Model.ConfirmationDate?.ToString("dd-MMM-yyyy") ?? "-")</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-box-arrow-right"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Relieving Date</div>
+                                    <div class="profile-field-value">@(Model.RelievingDate?.ToString("dd-MMM-yyyy") ?? "-")</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-file-earmark-person"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Employment Type</div>
+                                    <div class="profile-field-value">@(string.IsNullOrWhiteSpace(Model.EmploymentType) ? "-" : Model.EmploymentType)</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-
-                    <div class="col-md-4">
-                        <label class="text-semibold">Email</label>
-                        <p>@Model.Email</p>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="text-semibold">Emergency Contact</label>
-                        <p>@Model.EmergencyContact</p>
-                    </div>
-
-                    <div class="col-md-12">
-                        <label class="text-semibold">Address</label>
-                        <p>@Model.Address</p>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="text-semibold">Pincode</label>
-                        <p>@Model.Pincode</p>
-                    </div>
-
                 </div>
-
             </div>
-            <div class="tab-pane" id="kyc">
 
-                <div class="row">
-
-                    <div class="col-md-4">
-                        <label class="text-semibold">PAN Number</label>
-                        <p>@Model.PANNumber</p>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="text-semibold">Aadhar Number</label>
-                        <p>@Model.AadharNumber</p>
-                    </div>
-
+            <div class="myprofile-section">
+                <div class="myprofile-section-header">
+                    <i class="bi bi-passport"></i>
+                    <h6>Passport Information</h6>
                 </div>
-
-            </div>
-            <div class="tab-pane" id="Passport">
-                <!-- Passport Information -->
-
-                <div class="panel panel-flat">
-
-                    <div class="panel-heading">
-
-                        <h6 class="panel-title">
-
-                            <i class="icon-airplane3 position-left"></i>
-
-                            Passport Information
-
-                        </h6>
-
-                    </div>
-
-                    <div class="panel-body">
-
-                        <table class="table table-bordered table-striped">
-
-                            <tbody>
-
-                                <tr>
-
-                                    <th width="250">
-                                        Passport Number
-                                    </th>
-
-                                    <td>
-
-                                        @(string.IsNullOrWhiteSpace(Model.PassportNumber)
-                                            ? "-"
-                                            : Model.PassportNumber)
-
-                                    </td>
-
-                                </tr>
-
-                                <tr>
-
-                                    <th>
-                                        Nationality
-                                    </th>
-
-                                    <td>
-
-                                        @Model.Nationality
-
-                                    </td>
-
-                                </tr>
-
-                                <tr>
-
-                                    <th>
-                                        Passport Status
-                                    </th>
-
-                                    <td>
-
-                                        @if (Model.PassportStatus == EnumExtensions.PassportStatus.Active)
-                                        {
-                                            <span class="label bg-success">
-                                                @Model.PassportStatus
-                                            </span>
-                                        }
-                                        else if (Model.PassportStatus == EnumExtensions.PassportStatus.Applied)
-                                        {
-                                            <span class="label bg-warning">
-                                                @Model.PassportStatus
-                                            </span>
-                                        }
-                                        else if (Model.PassportStatus == EnumExtensions.PassportStatus.Expired)
-                                        {
-                                            <span class="label bg-danger">
-                                                @Model.PassportStatus
-                                            </span>
-                                        }
-                                        else if (Model.PassportStatus == EnumExtensions.PassportStatus.Cancelled)
-                                        {
-                                            <span class="label bg-danger">
-                                                @Model.PassportStatus
-                                            </span>
-                                        }
-                                        else
-                                        {
-                                            <span class="label bg-grey">
-                                                @Model.PassportStatus
-                                            </span>
-                                        }
-
-                                    </td>
-
-                                </tr>
-
-                                <tr>
-
-                                    <th>
-                                        Passport Issuing Country
-                                    </th>
-
-                                    <td>
-
-                                        @(string.IsNullOrWhiteSpace(Model.CountryName)
-                                            ? "-"
-                                            : Model.CountryName)
-
-                                    </td>
-
-                                </tr>
-
-                                <tr>
-
-                                    <th>
-                                        Issue Date
-                                    </th>
-
-                                    <td>
-
-                                        @(Model.IssueDate == null
-                                            ? "-"
-                                            : Model.IssueDate.Value.ToString("dd-MMM-yyyy"))
-
-                                    </td>
-
-                                </tr>
-
-                                <tr>
-
-                                    <th>
-                                        Expiry Date
-                                    </th>
-
-                                    <td>
-
-                                        @(Model.ExpiryDate == null
-                                            ? "-"
-                                            : Model.ExpiryDate.Value.ToString("dd-MMM-yyyy"))
-
-                                    </td>
-
-                                </tr>
-
-                                <tr>
-
-                                    <th>
-                                        Place Of Issue
-                                    </th>
-
-                                    <td>
-
-                                        @(string.IsNullOrWhiteSpace(Model.PlaceOfIssue)
-                                            ? "-"
-                                            : Model.PlaceOfIssue)
-
-                                    </td>
-
-                                </tr>
-
-                                <tr>
-
-                                    <th>
-                                        Passport Document
-                                    </th>
-
-                                    <td>
-
+                <div class="myprofile-section-body">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-upc-scan"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Passport Number</div>
+                                    <div class="profile-field-value">@(string.IsNullOrWhiteSpace(Model.PassportNumber) ? "-" : Model.PassportNumber)</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-flag"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Nationality</div>
+                                    <div class="profile-field-value">@Model.Nationality</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-info-circle"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Passport Status</div>
+                                    <div class="profile-field-value">@Model.PassportStatus</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-globe2"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Issuing Country</div>
+                                    <div class="profile-field-value">@(string.IsNullOrWhiteSpace(Model.CountryName) ? "-" : Model.CountryName)</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-calendar-check"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Issue Date</div>
+                                    <div class="profile-field-value">@(Model.IssueDate?.ToString("dd-MMM-yyyy") ?? "-")</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-calendar-x"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Expiry Date</div>
+                                    <div class="profile-field-value">@(Model.ExpiryDate?.ToString("dd-MMM-yyyy") ?? "-")</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-geo"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Place of Issue</div>
+                                    <div class="profile-field-value">@(string.IsNullOrWhiteSpace(Model.PlaceOfIssue) ? "-" : Model.PlaceOfIssue)</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="profile-field">
+                                <div class="profile-field-icon"><i class="bi bi-file-earmark-pdf"></i></div>
+                                <div>
+                                    <div class="profile-field-label">Passport Document</div>
+                                    <div class="profile-field-value">
                                         @if (!string.IsNullOrWhiteSpace(Model.PassportFilePath))
                                         {
-                                            <a asp-action="ViewPassport"
-                                               asp-route-employeeId="@Model.Id"
-                                               target="_blank"
-                                               class="btn bg-primary btn-sm">
-
-                                                <i class="icon-file-eye"></i>
-
-                                                View Passport
-
-                                            </a>
-
-                                            <a asp-action="DownloadPassport"
-                                               asp-route-employeeId="@Model.Id"
-                                               download
-                                               class="btn bg-success btn-sm">
-
-                                                <i class="icon-download"></i>
-
-                                                Download
-
+                                            <a asp-action="ViewPassport" asp-route-employeeId="@Model.Id" target="_blank">
+                                                <i class="bi bi-eye"></i> View
                                             </a>
                                         }
                                         else
                                         {
-                                            <span class="text-muted">
-
-                                                <i class="icon-file-empty"></i>
-
-                                                Not Uploaded
-
-                                            </span>
+                                            <span class="text-muted">Not Uploaded</span>
                                         }
-
-                                    </td>
-
-                                </tr>
-
-                            </tbody>
-
-                        </table>
-
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-
                 </div>
             </div>
-            <div class="tab-pane" id="employment">
-
-                <div class="row">
-
-                    <div class="col-md-3">
-                        <label class="text-semibold">Joining Date</label>
-                        <p>@Model.JoiningDate?.ToString("dd-MMM-yyyy")</p>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="text-semibold">Confirmation Date</label>
-                        <p>@Model.ConfirmationDate?.ToString("dd-MMM-yyyy")</p>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="text-semibold">Relieving Date</label>
-                        <p>@Model.RelievingDate?.ToString("dd-MMM-yyyy")</p>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="text-semibold">Employment Type</label>
-                        <p>@Model.EmploymentType</p>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="text-semibold">Email</label>
-                        <p>
-                            @Model.Email
-                        </p>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="text-semibold">Phone</label>
-                        <p>
-                            @Model.Phone
-                        </p>
-                    </div>
-
-                </div>
-
-            </div>
 
         </div>
-        @* <!-- Employee Header -->
-
-        <div class="row">
-
-            <div class="col-md-3 text-center">
-
-                @if (!string.IsNullOrEmpty(Model.FilePath))
-                {
-                    <img src="@Model.FilePath"
-                         class="img-circle img-responsive"
-                         style="width:150px;height:150px;object-fit:cover;margin:auto;" />
-                }
-                else
-                {
-                    <img src="~/images/no-image.png"
-                         class="img-circle img-responsive"
-                         style="width:150px;height:150px;margin:auto;" />
-                }
-
-                <h4 class="mt-15">
-
-                    @Model.FirstName @Model.LastName
-
-                </h4>
-
-                <span class="label bg-primary">
-
-                    @Model.EmployeeCode
-
-                </span>
-
-            </div>
-
-            <div class="col-md-9">
-
-                <div class="row">
-
-                    <div class="col-md-4">
-
-                        <div class="panel bg-primary-400">
-
-                            <div class="panel-body">
-
-                                <h3 class="no-margin">
-                                    @Model.CompanyName
-                                </h3>
-
-                                Company
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    <div class="col-md-4">
-
-                        <div class="panel bg-success-400">
-
-                            <div class="panel-body">
-
-                                <h3 class="no-margin">
-                                    @Model.DepartmentName
-                                </h3>
-
-                                Department
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    <div class="col-md-4">
-
-                        <div class="panel bg-warning-400">
-
-                            <div class="panel-body">
-
-                                <h3 class="no-margin">
-                                    @Model.DesignationName
-                                </h3>
-
-                                Designation
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <hr />
-
-        <!-- Personal Information -->
-
-        <div class="panel panel-bordered">
-
-            <div class="panel-heading">
-                <h6 class="panel-title">
-                    Personal Information
-                </h6>
-            </div>
-
-            <table class="table table-bordered">
-
-                <tr>
-                    <th width="250">First Name</th>
-                    <td>@Model.FirstName</td>
-                </tr>
-
-                <tr>
-                    <th>Last Name</th>
-                    <td>@Model.LastName</td>
-                </tr>
-
-                <tr>
-                    <th>Gender</th>
-                    <td>@Model.Gender</td>
-                </tr>
-
-                <tr>
-                    <th>Date Of Birth</th>
-                    <td>@Model.DateOfBirth?.ToString("dd-MMM-yyyy")</td>
-                </tr>
-
-                <tr>
-                    <th>Marital Status</th>
-                    <td>@Model.MaritalStatus</td>
-                </tr>
-
-            </table>
-
-        </div>
-
-        <!-- Organization -->
-
-        <div class="panel panel-bordered">
-
-            <div class="panel-heading">
-                <h6 class="panel-title">
-                    Organization Details
-                </h6>
-            </div>
-
-            <table class="table table-bordered">
-
-                <tr>
-                    <th width="250">Company</th>
-                    <td>@Model.CompanyName</td>
-                </tr>
-
-                <tr>
-                    <th>Branch</th>
-                    <td>@Model.BrnachName</td>
-                </tr>
-
-                <tr>
-                    <th>Department</th>
-                    <td>@Model.DepartmentName</td>
-                </tr>
-
-                <tr>
-                    <th>Designation</th>
-                    <td>@Model.DesignationName</td>
-                </tr>
-
-                <tr>
-                    <th>Reporting Manager</th>
-                    <td>@Model.ReportingManagerName</td>
-                </tr>
-
-            </table>
-
-        </div>
-
-        <!-- Contact Information -->
-
-        <div class="panel panel-bordered">
-
-            <div class="panel-heading">
-                <h6 class="panel-title">
-                    Contact Information
-                </h6>
-            </div>
-
-            <table class="table table-bordered">
-
-                <tr>
-                    <th width="250">Phone</th>
-                    <td>@Model.Phone</td>
-                </tr>
-
-                <tr>
-                    <th>Email</th>
-                    <td>@Model.Email</td>
-                </tr>
-
-                <tr>
-                    <th>Emergency Contact</th>
-                    <td>@Model.EmergencyContact</td>
-                </tr>
-
-                <tr>
-                    <th>Address</th>
-                    <td>@Model.Address</td>
-                </tr>
-
-                <tr>
-                    <th>Pincode</th>
-                    <td>@Model.Pincode</td>
-                </tr>
-
-            </table>
-
-        </div>
-
-        <!-- KYC -->
-
-        <div class="panel panel-bordered">
-
-            <div class="panel-heading">
-                <h6 class="panel-title">
-                    KYC Information
-                </h6>
-            </div>
-
-            <table class="table table-bordered">
-
-                <tr>
-                    <th width="250">PAN Number</th>
-                    <td>@Model.PANNumber</td>
-                </tr>
-
-                <tr>
-                    <th>Aadhar Number</th>
-                    <td>@Model.AadharNumber</td>
-                </tr>
-
-            </table>
-
-        </div>
-
-        <!-- Employment -->
-
-        <div class="panel panel-bordered">
-
-            <div class="panel-heading">
-                <h6 class="panel-title">
-                    Employment Information
-                </h6>
-            </div>
-
-            <table class="table table-bordered">
-
-                <tr>
-                    <th width="250">Joining Date</th>
-                    <td>@Model.JoiningDate?.ToString("dd-MMM-yyyy")</td>
-                </tr>
-
-                <tr>
-                    <th>Confirmation Date</th>
-                    <td>@Model.ConfirmationDate?.ToString("dd-MMM-yyyy")</td>
-                </tr>
-
-                <tr>
-                    <th>Relieving Date</th>
-                    <td>@Model.RelievingDate?.ToString("dd-MMM-yyyy")</td>
-                </tr>
-
-                <tr>
-                    <th>Employment Type</th>
-                    <td>@Model.EmploymentType</td>
-                </tr>
-
-                <tr>
-                    <th>Shift</th>
-                    <td>@Model.ShiftName</td>
-                </tr>
-
-            </table>
-
-        </div> *@
 
     </div>
 
-</div>
+    <div class="text-center" style="margin-bottom:24px;">
+        <a asp-controller="EmployeeDashboard" asp-action="Index" class="btn btn-default">
+            <i class="icon-arrow-left13"></i>
+            Back to Dashboard
+        </a>
+    </div>
 
+    @* =====================================================
+       UPLOAD PROFILE IMAGE MODAL
+       ===================================================== *@
+
+    <div class="modal fade" id="uploadPhotoModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+
+                <form asp-action="UploadProfilePhoto"
+                      asp-controller="Employee"
+                      method="post"
+                      enctype="multipart/form-data">
+
+                    @Html.AntiForgeryToken()
+
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-camera position-left"></i>
+                            Upload Profile Image
+                        </h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+
+                    <div class="modal-body text-center">
+
+                        <img id="uploadPhotoPreview"
+                             src="@(string.IsNullOrEmpty(Model.FilePath) ? Url.Content("~/images/no-image.png") : Model.FilePath)" />
+
+                        <div class="form-group text-left">
+                            <label class="text-semibold">Choose an image (JPG, JPEG, PNG - max 2 MB)</label>
+                            <input type="file"
+                                   name="profilePhoto"
+                                   id="profilePhotoInput"
+                                   class="form-control"
+                                   accept=".jpg,.jpeg,.png"
+                                   required />
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn bg-primary">
+                            <i class="bi bi-upload"></i>
+                            Upload
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+    @section Scripts {
+        @* Success/error messages are already shown by _AlertMessage in
+           _EmployeeLayout.cshtml (reads the same TempData keys this
+           controller sets) - no separate alert here needed. *@
+        <script>
+            $(function () {
+                $('#profilePhotoInput').on('change', function (e) {
+                    var file = e.target.files && e.target.files[0];
+                    if (!file) return;
+
+                    var reader = new FileReader();
+                    reader.onload = function (ev) {
+                        $('#uploadPhotoPreview').attr('src', ev.target.result);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            });
+        </script>
+    }
+}

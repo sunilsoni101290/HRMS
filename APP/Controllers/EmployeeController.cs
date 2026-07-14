@@ -486,6 +486,126 @@ namespace APP.Controllers
 
         #endregion
 
+        #region Upload Profile Photo
+
+        // Powers the "Upload Profile Image" modal on My Profile. Scoped so
+        // a self-service employee can only ever replace their OWN photo -
+        // id is taken from the logged-in session, never trusted from the
+        // form - and routes through the narrow update-photo API endpoint
+        // rather than the full employee update, so nothing else about the
+        // record can change through this action.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UploadProfilePhoto(IFormFile profilePhoto)
+        {
+            var targetEmployeeId = _isAdmin
+                ? Request.Form["employeeId"].ToString()
+                : _employeeId;
+
+            if (string.IsNullOrWhiteSpace(targetEmployeeId))
+            {
+                TempData["GlobalError"] = "Unable to determine which employee to update.";
+                return RedirectToAction(nameof(Details), new { id = _employeeId });
+            }
+
+            if (profilePhoto == null || profilePhoto.Length == 0)
+            {
+                TempData["GlobalError"] = "Please choose an image to upload.";
+                return RedirectToAction(nameof(Details), new { id = targetEmployeeId });
+            }
+
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png" };
+            var extension = Path.GetExtension(profilePhoto.FileName).ToLower();
+
+            if (!allowedExtensions.Contains(extension))
+            {
+                TempData["GlobalError"] = "Only JPG, JPEG and PNG files are allowed.";
+                return RedirectToAction(nameof(Details), new { id = targetEmployeeId });
+            }
+
+            // 2 MB cap - a profile photo has no business being larger than
+            // this, and it keeps the upload modal snappy.
+            const long maxSizeBytes = 2 * 1024 * 1024;
+
+            if (profilePhoto.Length > maxSizeBytes)
+            {
+                TempData["GlobalError"] = "Image is too large. Maximum size is 2 MB.";
+                return RedirectToAction(nameof(Details), new { id = targetEmployeeId });
+            }
+
+            try
+            {
+                string uploadFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/employee");
+
+                if (!Directory.Exists(uploadFolder))
+                    Directory.CreateDirectory(uploadFolder);
+
+                // Best-effort cleanup of the old file - fetch the current
+                // record first so we know what to delete.
+                var current = await _apiService
+                    .GetAsync<EmployeeListDto>($"Employee/get-employee-detail/{targetEmployeeId}");
+
+                // Save the NEW file and persist it to the DB first - only
+                // delete the OLD file once both of those have actually
+                // succeeded, so a failed upload never leaves the employee
+                // with no photo at all.
+                var fileName =
+                    $"{DateTime.Now:yyyyMMddHHmmssfff}{extension}";
+
+                var filePath = Path.Combine(uploadFolder, fileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await profilePhoto.CopyToAsync(stream);
+                }
+
+                var relativePath = "/employee/" + fileName;
+
+                // API always answers 200 with { Success, Message } here
+                // (never a non-2xx status for a normal "not found"/"failed"
+                // outcome) - PutAsync won't throw for that, so the actual
+                // Success flag has to be checked explicitly. Skipping this
+                // check was the bug: it always showed "updated
+                // successfully" even when the DB write failed.
+                var response = await _apiService.PutAsync<ApiResponse<object>>(
+                    $"Employee/update-photo/{targetEmployeeId}",
+                    new { FilePath = relativePath });
+
+                if (response == null || !response.Success)
+                {
+                    // Roll back the file we just wrote - the DB was never
+                    // updated to point at it.
+                    if (System.IO.File.Exists(filePath))
+                        System.IO.File.Delete(filePath);
+
+                    TempData["GlobalError"] = response?.Message ?? "Unable to update the profile photo.";
+                    return RedirectToAction(nameof(Details), new { id = targetEmployeeId });
+                }
+
+                // Now safe to remove the old photo.
+                if (current != null && !string.IsNullOrEmpty(current.FilePath))
+                {
+                    var oldFilePath = Path.Combine(
+                        Directory.GetCurrentDirectory(),
+                        "wwwroot",
+                        current.FilePath.TrimStart('/'));
+
+                    if (System.IO.File.Exists(oldFilePath))
+                        System.IO.File.Delete(oldFilePath);
+                }
+
+                TempData["Success"] = "Profile photo updated successfully.";
+            }
+            catch (Exception)
+            {
+                TempData["GlobalError"] = "Unable to upload the image. Please try again.";
+            }
+
+            return RedirectToAction(nameof(Details), new { id = targetEmployeeId });
+        }
+
+        #endregion
+
         #region Delete
 
         public async Task<IActionResult> Delete(string id)

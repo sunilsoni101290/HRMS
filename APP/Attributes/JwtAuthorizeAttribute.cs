@@ -1,14 +1,13 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace APP.Attributes
 {
+    using APP.Controllers;
     using APP.Helpers;
     using APP.Models.Auth;
     using APP.Services.Interfaces;
     using Microsoft.AspNetCore.Http;
-    using Microsoft.AspNetCore.Mvc;
-    using Microsoft.AspNetCore.Mvc.Filters;
 
     public class JwtAuthorizeAttribute : Attribute, IAsyncAuthorizationFilter
     {
@@ -16,30 +15,30 @@ namespace APP.Attributes
         {
             var session = context.HttpContext.Session;
 
-            var accessToken =  session.GetString("AccessToken");
+            var accessToken = session.GetString("AccessToken");
 
-            var refreshToken = session.GetString("RefreshToken");
-
-            // No token in Session at all - this happens whenever the
+            // Nothing in Session at all - this happens whenever the
             // server-side session has expired or was never established in
             // this browser session (e.g. the browser was closed and
-            // re-opened). Before bouncing to Login, check for a "Remember
-            // Me" refresh token cookie set at login time - if it's still
-            // valid, silently re-authenticate instead of forcing the user
-            // to log in again.
+            // reopened, an app pool recycle wiped the in-memory session
+            // store, etc.). Before bouncing to Login, try rebuilding the
+            // ENTIRE session straight from the mirrored cookies set at
+            // login (CookieHelper.SessionKeys) - no API call needed, so
+            // this is instant.
             if (string.IsNullOrEmpty(accessToken))
             {
-                var rememberMeToken = context.HttpContext.Request.Cookies["RememberMeToken"];
+                RestoreSessionFromCookies(context);
 
-                if (!string.IsNullOrEmpty(rememberMeToken) &&
-                    await TryRestoreSessionFromRememberMeToken(context, rememberMeToken))
+                accessToken = session.GetString("AccessToken");
+
+                if (string.IsNullOrEmpty(accessToken))
                 {
+                    context.Result = new RedirectToActionResult("Login", "Auth", null);
                     return;
                 }
-
-                context.Result = new RedirectToActionResult("Login","Auth",null);
-                return;
             }
+
+            var refreshToken = session.GetString("RefreshToken");
 
             // Check expiry
             bool isExpired = JwtTokenHelper.IsTokenExpired(accessToken);
@@ -48,29 +47,34 @@ namespace APP.Attributes
             if (!isExpired)
                 return;
 
-            // Access token expired
+            // Access token expired (this also covers the case where it was
+            // just restored from a cookie that's gone stale, e.g. after a
+            // long time away) - the cookies alone can't fix an expired
+            // access token, only a real refresh-token call can.
             if (string.IsNullOrEmpty(refreshToken))
             {
-                context.Result = new RedirectToActionResult("Login","Auth",null);
+                context.Result = new RedirectToActionResult("Login", "Auth", null);
                 return;
             }
 
             try
             {
                 // Resolve API service
-                var apiService =context.HttpContext.RequestServices.GetService<IApiService>();
+                var apiService = context.HttpContext.RequestServices.GetService<IApiService>();
 
                 // Call refresh API
-                var response =await apiService.PostAsync<AuthResponse>("auth/refresh-token",
+                var response = await apiService.PostAsync<AuthResponse>("auth/refresh-token",
                             new RefreshTokenRequestDto
                             {
                                 RefreshToken = refreshToken
                             });
 
-                // Refresh failed
+                // Refresh failed - the refresh token itself is genuinely no
+                // longer valid (fully expired past its sliding window, or
+                // revoked by an explicit Logout elsewhere).
                 if (response == null)
                 {
-                    context.Result =new RedirectToActionResult("Login","Auth",null);
+                    context.Result = new RedirectToActionResult("Login", "Auth", null);
                     return;
                 }
 
@@ -82,6 +86,15 @@ namespace APP.Attributes
                 session.SetString(
                     "RefreshToken",
                     response.RefreshToken);
+
+                // Keep the cookie mirror in sync too - AccessToken changes
+                // on every refresh, so without this the next cookie-based
+                // restore (RestoreSessionFromCookies above) would hand back
+                // a stale/expired AccessToken every time. Re-mirrors ALL
+                // fields (not just the tokens) so this also refreshes the
+                // cookies' own 30-day expiry on every active use, the same
+                // way the server-side refresh token itself slides forward.
+                AuthController.MirrorSessionToCookies(context.HttpContext);
             }
             catch
             {
@@ -93,82 +106,26 @@ namespace APP.Attributes
             }
         }
 
-        // Re-establishes the full Session (all the profile fields the app
-        // reads via SessionHelper, not just the tokens) from a "Remember
-        // Me" refresh token cookie. Returns false - leaving the caller to
-        // redirect to Login - if the token has been revoked/expired
-        // server-side or the call otherwise fails.
-        private static async Task<bool> TryRestoreSessionFromRememberMeToken(
-            AuthorizationFilterContext context,
-            string rememberMeToken)
+        // Copies every mirrored auth cookie (see CookieHelper.SessionKeys)
+        // straight into Session - no API round trip. If the AccessToken
+        // cookie itself is missing (never logged in on this browser, or an
+        // explicit Logout already cleared it), Session simply stays empty
+        // and the caller falls through to the normal "redirect to Login"
+        // path above.
+        private static void RestoreSessionFromCookies(AuthorizationFilterContext context)
         {
-            try
+            var request = context.HttpContext.Request;
+            var session = context.HttpContext.Session;
+
+            foreach (var key in CookieHelper.SessionKeys)
             {
-                var apiService = context.HttpContext.RequestServices.GetService<IApiService>();
+                var value = CookieHelper.GetCookie(request, key);
 
-                var response = await apiService.PostAsync<AuthResponse>(
-                    "auth/refresh-token",
-                    new RefreshTokenRequestDto { RefreshToken = rememberMeToken });
-
-                if (response == null)
-                    return false;
-
-                var session = context.HttpContext.Session;
-
-                session.SetString("AccessToken", response.AccessToken ?? "");
-                session.SetString("RefreshToken", response.RefreshToken ?? "");
-                session.SetString("FullName", response.FullName ?? "");
-                session.SetString("UserId", response.UserId ?? "");
-                session.SetString("EmployeeId", response.EmployeeId ?? "");
-                session.SetString("TenantId", response.TenantId ?? "");
-                session.SetString("Designation", response.Designation ?? "");
-                session.SetString("CompanyName", response.CompanyName ?? "");
-                session.SetString("CompanyId", response.CompanyId ?? "");
-                session.SetString("BranchId", response.BranchId ?? "");
-                session.SetString("RoleName", response.RoleName ?? "");
-
-                // The API reuses the same refresh token rather than rotating
-                // it, so this just slides the cookie's own expiry forward
-                // on each silent re-auth rather than letting it count down
-                // to the original login time.
-                context.HttpContext.Response.Cookies.Append(
-                    "RememberMeToken",
-                    response.RefreshToken ?? "",
-                    new CookieOptions
-                    {
-                        Expires = DateTimeOffset.UtcNow.AddDays(7),
-                        HttpOnly = true,
-                        Secure = context.HttpContext.Request.IsHttps,
-                        SameSite = SameSiteMode.Lax
-                    });
-
-                return true;
-            }
-            catch
-            {
-                return false;
+                if (!string.IsNullOrEmpty(value))
+                {
+                    session.SetString(key, value);
+                }
             }
         }
     }
-
-    //public class JwtAuthorizeAttribute : Attribute, IAuthorizationFilter
-    //{
-    //    public void OnAuthorization(
-    //        AuthorizationFilterContext context)
-    //    {
-    //        var token = context.HttpContext
-    //            .Session
-    //            .GetString("AccessToken");
-
-    //        if (string.IsNullOrEmpty(token))
-    //        {
-    //            context.Result =
-    //                new RedirectToActionResult(
-    //                    "Login",
-    //                    "Auth",
-    //                    null);
-    //        }
-    //    }
-    //}
-
 }

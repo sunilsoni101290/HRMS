@@ -240,12 +240,13 @@ namespace Application.Services.Users
 
         #region Reset Password
 
-        // Generates a brand-new temporary password server-side and returns
-        // it exactly once, in-memory, to the caller (which shows it to the
-        // admin one time and never persists it in plaintext anywhere).
-        // Admins/HR can never view or recover a user's actual password -
-        // only reset it to something new.
-        public async Task<string> ResetPasswordAsync(string id)
+        // Sets a new password for the user and returns it exactly once, in
+        // memory, to the caller (which shows it to the admin one time and
+        // never persists it in plaintext anywhere - only PasswordHash is
+        // stored). If the admin supplied a specific password, it's
+        // validated and used as-is; otherwise a random one is generated
+        // server-side, same as before.
+        public async Task<string> ResetPasswordAsync(string id, string? newPassword = null)
         {
             try
             {
@@ -255,7 +256,19 @@ namespace Application.Services.Users
                 if (user == null)
                     return null;
 
-                var newPassword = PasswordGenerator.GeneratePassword(10);
+                if (!string.IsNullOrWhiteSpace(newPassword))
+                {
+                    // Same minimum-length rule enforced for self-service
+                    // password changes (AuthService.ChangePasswordAsync) -
+                    // an admin-typed password shouldn't be held to a lower
+                    // bar than one the user picks themselves.
+                    if (newPassword.Length < 6)
+                        throw new Exception("New password must be at least 6 characters.");
+                }
+                else
+                {
+                    newPassword = PasswordGenerator.GeneratePassword(10);
+                }
 
                 user.PasswordHash = PasswordHelper.HashPassword(newPassword);
                 user.ModifiedOn = DateTime.UtcNow;
@@ -266,7 +279,7 @@ namespace Application.Services.Users
             }
             catch (Exception)
             {
-                return null;
+                throw;
             }
         }
 

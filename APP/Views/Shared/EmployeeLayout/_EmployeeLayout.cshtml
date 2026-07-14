@@ -152,6 +152,10 @@
 
     <script src="~/global_assets/js/plugins/loaders/blockui.min.js"></script>
 
+    <!-- Same missing-include bug as _LayoutMain.cshtml - swal(...) calls on
+         employee self-service pages were also silently failing. -->
+    <script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+
     <script src="~/assets/js/app.js"></script>
 
     <script src="~/js/employee.js"></script>

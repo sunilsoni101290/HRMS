@@ -40,12 +40,16 @@ namespace APP.Controllers
 
         // How long a "Remember Me" login stays silently renewable for. Must
         // stay in sync with the RefreshToken.ExpiryDate window set when the
-        // token is issued in AuthService.GenerateAuthResponse (7 days) -
-        // there's no point remembering a refresh token on the client for
-        // longer than the server will actually honor it.
-        private static readonly TimeSpan RememberMeDuration = TimeSpan.FromDays(7);
+        // token is issued in AuthService.GenerateAuthResponse
+        // (Jwt:RefreshTokenExpiryDays, 30 days by default) - there's no
+        // point remembering a refresh token on the client for longer than
+        // the server will actually honor it. That server-side window
+        // slides forward on every refresh (see AuthService.RefreshTokenAsync)
+        // so an actively-used login effectively never expires; only
+        // sustained inactivity for the whole window, or an explicit
+        // Logout, ends it.
+        private static readonly TimeSpan RememberMeDuration = TimeSpan.FromDays(30);
         private const string RememberedUsernameCookie = "RememberedUsername";
-        private const string RememberMeTokenCookie = "RememberMeToken";
 
         // =========================
         // LOGIN PAGE
@@ -139,11 +143,20 @@ namespace APP.Controllers
                 HttpContext.Session.SetString("BranchId", response.Data.BranchId ?? "");
                 HttpContext.Session.SetString("RoleName", response.Data.RoleName ?? "");
 
-                // Remember Me
-                ApplyRememberMeCookies(
-                    model.Username,
-                    response.Data.RefreshToken ?? "",
-                    model.RememberMe);
+                // Mirror the same fields into persistent, HttpOnly cookies -
+                // this is what lets JwtAuthorizeAttribute rebuild the whole
+                // Session instantly (no API call) whenever the server-side
+                // Session is empty for any reason (browser closed and
+                // reopened, app pool recycle, in-memory session eviction).
+                // Set UNCONDITIONALLY, not just when "Remember Me" is
+                // checked - see the comment on ApplyRememberMeCookies for
+                // why that's the deliberate behaviour here.
+                MirrorSessionToCookies(HttpContext);
+
+                // Remember Me - the human-facing username prefill only;
+                // actual session persistence is handled by
+                // MirrorSessionToCookies above.
+                ApplyRememberMeCookies(model.Username, model.RememberMe);
 
                 // Redirect based on role
                 if (SessionHelper.IsAdminRole(response.Data.RoleName))
@@ -229,15 +242,12 @@ namespace APP.Controllers
         //    return View(model);
         //}
 
-        // Sets or clears the two "Remember Me" cookies:
-        //  - RememberedUsername: plain, non-sensitive, only used to
-        //    pre-fill the Username field on the next visit.
-        //  - RememberMeToken: HttpOnly copy of the refresh token, used by
-        //    JwtAuthorizeAttribute to silently restore the session if the
-        //    server-side Session has expired (e.g. the browser was closed)
-        //    but the refresh token itself is still valid. Never readable
-        //    from client-side script, and never sent over plain HTTP.
-        private void ApplyRememberMeCookies(string username, string refreshToken, bool rememberMe)
+        // Purely cosmetic: pre-fills the Username field on the next visit
+        // to Login. Tied to the checkbox, since remembering an identity on
+        // a shared machine is a visible convenience the user should opt
+        // into - unlike session persistence itself (MirrorSessionToCookies),
+        // which is unconditional.
+        private void ApplyRememberMeCookies(string username, bool rememberMe)
         {
             if (rememberMe)
             {
@@ -248,19 +258,37 @@ namespace APP.Controllers
                     Secure = Request.IsHttps,
                     SameSite = SameSiteMode.Lax
                 });
-
-                Response.Cookies.Append(RememberMeTokenCookie, refreshToken ?? string.Empty, new CookieOptions
-                {
-                    Expires = DateTimeOffset.UtcNow.Add(RememberMeDuration),
-                    HttpOnly = true,
-                    Secure = Request.IsHttps,
-                    SameSite = SameSiteMode.Lax
-                });
             }
             else
             {
                 Response.Cookies.Delete(RememberedUsernameCookie);
-                Response.Cookies.Delete(RememberMeTokenCookie);
+            }
+        }
+
+        // Copies every CookieHelper.SessionKeys field currently in Session
+        // into matching HttpOnly cookies. Called on login, and again by
+        // JwtAuthorizeAttribute whenever the AccessToken/RefreshToken get
+        // silently refreshed, so the cookie mirror never goes stale while
+        // the user stays active.
+        internal static void MirrorSessionToCookies(HttpContext httpContext)
+        {
+            foreach (var key in CookieHelper.SessionKeys)
+            {
+                CookieHelper.SetCookie(
+                    httpContext.Response,
+                    key,
+                    httpContext.Session.GetString(key));
+            }
+        }
+
+        // Wipes every mirrored auth cookie - called on explicit Logout so
+        // a signed-out user can never be silently rebuilt back into a
+        // session from a stale cookie.
+        internal static void ClearSessionCookies(HttpContext httpContext)
+        {
+            foreach (var key in CookieHelper.SessionKeys)
+            {
+                CookieHelper.DeleteCookie(httpContext.Response, key);
             }
         }
 
@@ -269,12 +297,12 @@ namespace APP.Controllers
         // =========================
         public async Task<IActionResult> Logout()
         {
-            // An explicit logout should kill the silent-relogin token even
-            // for a "remembered" login - otherwise JwtAuthorizeAttribute
-            // would just log the user straight back in on their next
-            // request. The username cookie is left alone as a convenience
-            // so it still pre-fills next time.
-            Response.Cookies.Delete(RememberMeTokenCookie);
+            // An explicit logout must kill every mirrored auth cookie, not
+            // just Session - otherwise JwtAuthorizeAttribute's cookie-based
+            // restore would just silently log the user straight back in on
+            // their very next request. The username cookie is left alone
+            // as a convenience so it still pre-fills next time.
+            ClearSessionCookies(HttpContext);
 
             try
             {
@@ -290,8 +318,18 @@ namespace APP.Controllers
                     return RedirectToAction("Login");
                 }
 
-                // Call API
-                await _apiService.PostAsync<object>("api/auth/logout", refreshToken);
+                // Call API. Body must be { RefreshToken: "..." } (matching
+                // RefreshTokenRequestDto) - passing the bare token string
+                // used to serialize as a plain JSON string, which the API's
+                // [FromBody] DTO parameter can't bind, so the server-side
+                // revoke silently no-opped every time. Also fixed the URL:
+                // ApiService's HttpClient.BaseAddress already ends in
+                // "/api/", so the extra leading "api/" here was requesting
+                // ".../api/api/auth/logout" (a 404) instead of
+                // ".../api/auth/logout".
+                await _apiService.PostAsync<object>(
+                    "auth/logout",
+                    new RefreshTokenRequestDto { RefreshToken = refreshToken });
 
                 // Clear session
                 HttpContext.Session.Clear();

@@ -47,4 +47,13 @@ namespace APP.Models.DTOs
         public DateTime? ModifiedOn { get; set; }
         public string? ModifiedBy { get; set; }
     }
+
+    // Mirrors Application.DTOs.Users.ResetPasswordRequest on the API side -
+    // posted as the body of PUT user/reset-password/{id}. NewPassword is
+    // optional: blank means "let the server generate one".
+    public class ResetPasswordRequest
+    {
+        public string UserId { get; set; }
+        public string NewPassword { get; set; }
+    }
 }

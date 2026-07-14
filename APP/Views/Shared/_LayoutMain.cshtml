@@ -161,6 +161,12 @@
 	<script src="~/global_assets/js/core/libraries/jquery.min.js"></script>
 	<script src="~/global_assets/js/core/libraries/bootstrap.min.js"></script>
 	<script src="~/global_assets/js/plugins/loaders/blockui.min.js"></script>
+	<!-- sweet_alert.min.js ships in wwwroot but was never actually included
+	     here - every swal(...) call across the app (46 views, including the
+	     Reset Password result and most create/edit success messages) was
+	     throwing "swal is not defined" in the console and silently doing
+	     nothing. -->
+	<script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
 	<!-- /core JS files -->
 	<!-- Theme JS files -->
 	<script src="~/global_assets/js/plugins/visualization/d3/d3.min.js"></script>
@@ -200,12 +206,12 @@
 		<div class="navbar-header" style="margin-top:5px;">
 			<a class="navbar-brand" asp-controller="Dashboard" asp-action="Index">
 				<span class="brand-logo-panel">
-					<img src="~/images/PT-03.png" style="height:39px;" alt="Prosaec Total" />
+					<img src="~/images/PT-03.png" style="height:39px;" alt="PROSAEC Total" />
 				</span>
 				<span class="brand-divider"></span>
 				<span class="brand-title">
 					HRMS Suite
-					<small>Prosaec Total</small>
+					<small>PROSAEC Total</small>
 				</span>
 			</a>
 

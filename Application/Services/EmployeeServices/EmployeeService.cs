@@ -285,9 +285,18 @@ namespace Application.Services.EmployeeServices
                 throw;
             }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return ex.ToString();
+                // Previously swallowed every failure here (duplicate phone,
+                // duplicate email, DB errors, etc.) and returned
+                // ex.ToString() as if it were the success string - the API
+                // controller never inspected the returned value, so it
+                // always reported "Employee created successfully" even when
+                // creation had actually failed, and the real error was
+                // silently discarded. Rethrow instead so the caller's own
+                // try/catch (API EmployeeController.Create) reports the
+                // actual failure.
+                throw;
             }
         }
 
@@ -434,6 +443,31 @@ namespace Application.Services.EmployeeServices
             await SaveAsync();
 
             return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        // ==============================
+        // 🔹 UPDATE PROFILE PHOTO ONLY
+        // ==============================
+        public async Task<bool> UpdatePhotoAsync(string id, string filePath)
+        {
+            try
+            {
+                var entity = await _db.Employees.FindAsync(id);
+
+                if (entity == null || entity.IsDeleted)
+                    return false;
+
+                entity.FilePath = filePath;
+                entity.ModifiedOn = DateTime.UtcNow;
+
+                await SaveAsync();
+
+                return true;
             }
             catch (Exception)
             {

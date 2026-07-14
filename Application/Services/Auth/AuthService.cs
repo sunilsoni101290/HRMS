@@ -29,6 +29,15 @@ namespace Application.Services.Auth
             _config= config;
         }
 
+        // How long a refresh token stays valid without being used at all.
+        // Defaults to 30 days if not configured - matches the "stay logged
+        // in for a long time" requirement while still eventually expiring
+        // a truly-abandoned session rather than never expiring at all.
+        private int RefreshTokenExpiryDays =>
+            int.TryParse(_config["Jwt:RefreshTokenExpiryDays"], out var days) && days > 0
+                ? days
+                : 30;
+
         public async Task<AuthResponse> RegisterAsync(RegisterDto dto)
         {
             if (_db.Users.Any(x => x.Username == dto.Username))
@@ -90,6 +99,7 @@ namespace Application.Services.Auth
 
                 if (user == null)
                 {
+                    response.Success = false;
                     response.Message = "Invalid username.";
                     return response;
                 }
@@ -108,6 +118,8 @@ namespace Application.Services.Auth
                         Browser = dto.Browser,
                         OS = dto.OS
                     });
+
+                    response.Success = false;
                     response.Message = "Your account is inactive.";
                     return response;
                 }
@@ -135,6 +147,7 @@ namespace Application.Services.Auth
                             IsSuspicious = true
                         });
 
+                        response.Success = false;
                         response.Message =
                             $"Account is locked. Try again after {remaining} minute(s).";
 
@@ -177,6 +190,7 @@ namespace Application.Services.Auth
                         IsSuspicious = user.AccessFailedCount >= 3
                     });
 
+                    response.Success = false;
                     response.Message =
                         $"Invalid password. Attempt {user.AccessFailedCount}/5";
 
@@ -200,7 +214,7 @@ namespace Application.Services.Auth
                     DeviceInfo = dto.DeviceInfo,
                     Browser = dto.Browser,
                     OS = dto.OS,
-                    FailureReason="Login Sucess"
+                    FailureReason="Login Success"
                 });
 
                 response.Success = true;
@@ -368,6 +382,15 @@ namespace Application.Services.Auth
             if (token == null || token.ExpiryDate < DateTime.UtcNow)
                 throw new Exception("Invalid refresh token");
 
+            // Sliding expiry: an actively-used refresh token should never
+            // force a real re-login just because the calendar moved on -
+            // only sustained inactivity (no refresh call for the whole
+            // window) or an explicit Logout should end the session. Every
+            // successful refresh pushes the token's own expiry forward by
+            // the same window again.
+            token.ExpiryDate = DateTime.UtcNow.AddDays(RefreshTokenExpiryDays);
+            await _db.SaveChangesAsync();
+
             return await GenerateAuthResponse(token.User, refreshToken);
             }
             catch (Exception)
@@ -480,7 +503,7 @@ namespace Application.Services.Auth
                     Id = IDManager.GetNewId(new RefreshToken()),
                     UserId = user.Id,
                     Token = refreshToken,
-                    ExpiryDate = DateTime.UtcNow.AddDays(7),
+                    ExpiryDate = DateTime.UtcNow.AddDays(RefreshTokenExpiryDays),
                     IsRevoked = false,
                     TenantId = user.TenantId,
                     CreatedBy = user.Username

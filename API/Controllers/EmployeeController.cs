@@ -42,12 +42,20 @@ namespace API.Controllers
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                var result = await _service.CreateAsync(dto);
+                // CreateAsync returns "Username : xxx , Password : yyy" for
+                // the just-created login - this is the ONLY point in the
+                // system where that plaintext password exists (it's BCrypt
+                // hashed before this call returns and never stored in the
+                // clear). Surface it in the response so the admin can see
+                // and hand it to the new employee once; it is never
+                // retrievable again after this response - same "show once"
+                // rule as UserController's ResetPassword.
+                var credentials = await _service.CreateAsync(dto);
 
                 return Ok(new ApiResponse<EmployeeDto>
                 {
                     Success = true,
-                    Message = "Employee created successfully.",
+                    Message = $"Employee created successfully. {credentials}",
                 });
             }
             catch (Exception ex)
@@ -55,7 +63,7 @@ namespace API.Controllers
                 return BadRequest(new ApiResponse<object>
                 {
                     Success = false,
-                    Message = "Failed to create employee."
+                    Message = ex.Message
                 });
             }
         }
@@ -77,6 +85,33 @@ namespace API.Controllers
                 Message = result
                     ? "Employee updated successfully"
                     : "Employee update failed"
+            });
+        }
+
+        // ==============================
+        // UPDATE PROFILE PHOTO ONLY
+        // ==============================
+        // Deliberately separate from the full Update endpoint - the "My
+        // Profile" self-service page only ever needs to change FilePath,
+        // and routing that through the generic update would mean trusting
+        // a self-service client to submit (and not tamper with) every
+        // other employee field too.
+        [HttpPut("update-photo/{id}")]
+        public async Task<IActionResult> UpdatePhoto(
+            [FromRoute] string id,
+            [FromBody] UpdateEmployeePhotoRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request?.FilePath))
+                return BadRequest(new { Success = false, Message = "FilePath is required." });
+
+            var result = await _service.UpdatePhotoAsync(id, request.FilePath);
+
+            return Ok(new
+            {
+                Success = result,
+                Message = result
+                    ? "Profile photo updated successfully"
+                    : "Profile photo update failed"
             });
         }
 

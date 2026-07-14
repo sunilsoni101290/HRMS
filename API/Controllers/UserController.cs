@@ -48,17 +48,26 @@ namespace API.Controllers
             return Ok(new { Message = "User Updated Successfully", Id = result });
         }
 
-        // The server always generates the new password - it is never
-        // accepted from the caller and never stored/shown again after this
-        // one response.
+        // Body is optional: if the admin typed a specific password it's
+        // validated and used as-is; if omitted/blank, the server generates
+        // a random one. Either way the password is returned exactly once
+        // in this response and is never stored/shown again after this.
         [HttpPut("reset-password/{id}")]
-        public async Task<IActionResult> ResetPassword(string id)
+        public async Task<IActionResult> ResetPassword(string id, [FromBody] ResetPasswordRequest request)
         {
-            var newPassword = await _service.ResetPasswordAsync(id);
-            if (newPassword == null)
-                return NotFound(new { Message = "User not found." });
+            try
+            {
+                var newPassword = await _service.ResetPasswordAsync(id, request?.NewPassword);
 
-            return Ok(new { Success = true, NewPassword = newPassword });
+                if (newPassword == null)
+                    return NotFound(new { Message = "User not found." });
+
+                return Ok(new { Success = true, NewPassword = newPassword });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Success = false, Message = ex.Message });
+            }
         }
 
         [HttpPut("toggle-active/{id}")]

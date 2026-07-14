@@ -117,11 +117,7 @@ namespace API.Controllers
             var result =
                 await _leaveBalanceService.AllocateLeaveAsync(model);
 
-            return Ok(new
-            {
-                Success = result,
-                Message = "Leave allocated successfully."
-            });
+            return Ok(result);
         }
 
         [HttpPost("credit")]

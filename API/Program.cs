@@ -103,7 +103,20 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
             ValidateLifetime = true,
 
-            ClockSkew = TimeSpan.Zero
+            // Zero clock skew means the token is rejected the INSTANT it
+            // hits its exp claim, with no tolerance at all for clock drift
+            // between the API and APP servers or for the network latency
+            // of the request itself. The APP proactively refreshes tokens
+            // before sending them (see JwtTokenHelper.IsTokenExpired /
+            // JwtAuthorizeAttribute), but that check runs a few
+            // milliseconds-to-seconds before the request actually reaches
+            // here - with zero tolerance, a request that lands right on
+            // the boundary gets a hard 401 even though the APP thought the
+            // token was still valid. That intermittent 401 is what made
+            // users appear to get randomly logged out mid-session,
+            // especially "after calling an API". A small grace window
+            // fixes this without weakening security in any meaningful way.
+            ClockSkew = TimeSpan.FromMinutes(2)
         };
     });
 
