@@ -1,0 +1,189 @@
+@model RequestRegularizationDto
+
+@{
+    ViewData["Title"] = "Resubmit Regularization Request";
+    string employeeDisplayName = ViewBag.EmployeeDisplayName ?? "";
+    string? sendBackReason = ViewBag.SendBackReason as string;
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-redo2 position-left"></i>
+            Resubmit Regularization Request
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Index"
+               class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <div class="alert bg-orange-300 alert-styled-left">
+            <span class="text-semibold">This request was sent back for correction.</span>
+            @if (!string.IsNullOrEmpty(sendBackReason))
+            {
+                <div>Reason: @sendBackReason</div>
+            }
+            Update the details below and resubmit - approval will restart from the first approver.
+        </div>
+
+        <form asp-action="Resubmit"
+              asp-route-id="@Model.Id"
+              method="post">
+
+            <div asp-validation-summary="ModelOnly"
+                 class="alert alert-danger"></div>
+
+            <input asp-for="Id" type="hidden" />
+
+            <!-- Employee Information -->
+
+            <div class="row">
+
+                <div class="col-md-6">
+
+                    <div class="form-group">
+
+                        <label>Employee</label>
+
+                        <!-- Who the request belongs to never changes on
+                             resubmit - not editable here, even for admin. -->
+                        <input type="text"
+                               class="form-control bg-slate-100"
+                               value="@employeeDisplayName"
+                               readonly
+                               disabled />
+
+                        <input asp-for="EmployeeId" type="hidden" />
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-6">
+
+                    <div class="form-group">
+
+                        <label asp-for="Date"></label>
+
+                        <input asp-for="Date"
+                               type="date"
+                               class="form-control" />
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Requested Times -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-clock"></i>
+                    Requested Correction
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="RequestedFirstIn"></label>
+
+                            <input asp-for="RequestedFirstIn"
+                                   type="datetime-local"
+                                   class="form-control" />
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="RequestedLastOut"></label>
+
+                            <input asp-for="RequestedLastOut"
+                                   type="datetime-local"
+                                   class="form-control" />
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- Reason -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-file-text2"></i>
+                    Reason
+                </legend>
+
+                <div class="form-group">
+
+                    <label asp-for="Reason"></label>
+
+                    <textarea asp-for="Reason"
+                              rows="4"
+                              maxlength="500"
+                              class="form-control"></textarea>
+
+                    <span asp-validation-for="Reason"
+                          class="text-danger"></span>
+
+                </div>
+
+            </fieldset>
+
+            <hr />
+
+            <div class="text-right">
+
+                <a asp-action="Index"
+                   class="btn btn-default">
+
+                    Cancel
+
+                </a>
+
+                <button type="submit"
+                        class="btn bg-orange">
+
+                    <i class="icon-redo2"></i>
+                    Resubmit for Approval
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+@section Scripts {
+
+    <partial name="_ValidationScriptsPartial" />
+
+}

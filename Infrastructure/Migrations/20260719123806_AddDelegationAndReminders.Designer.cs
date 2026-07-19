@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260711110000_PendingChanges")]
-    partial class PendingChanges
+    [Migration("20260719123806_AddDelegationAndReminders")]
+    partial class AddDelegationAndReminders
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -430,6 +430,59 @@ namespace Infrastructure.Migrations
                     b.ToTable("AppFeatures");
                 });
 
+            modelBuilder.Entity("Domain.Entities.ApprovalDelegation", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DelegateEmployeeId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("DelegatorEmployeeId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Reason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TenantId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DelegateEmployeeId");
+
+                    b.HasIndex("DelegatorEmployeeId", "StartDate", "EndDate");
+
+                    b.ToTable("ApprovalDelegations");
+                });
+
             modelBuilder.Entity("Domain.Entities.Asset", b =>
                 {
                     b.Property<string>("Id")
@@ -841,6 +894,137 @@ namespace Infrastructure.Migrations
                     b.HasIndex("EmployeeId");
 
                     b.ToTable("AttendanceLogs");
+                });
+
+            modelBuilder.Entity("Domain.Entities.AttendanceRegularization", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ApprovedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ApprovedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("AttendanceId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CurrentLevel")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("EmployeeId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("OriginalFirstIn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("OriginalLastOut")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RejectedReason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("RequestedFirstIn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("RequestedLastOut")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("SendBackReason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TenantId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AttendanceId");
+
+                    b.HasIndex("EmployeeId", "Date");
+
+                    b.ToTable("AttendanceRegularizations");
+                });
+
+            modelBuilder.Entity("Domain.Entities.AttendanceRegularizationApprovalHistory", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("Action")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ActionBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ActionDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("AttendanceRegularizationId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Remarks")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TenantId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AttendanceRegularizationId");
+
+                    b.ToTable("AttendanceRegularizationApprovalHistories");
                 });
 
             modelBuilder.Entity("Domain.Entities.BiometricAttendanceLog", b =>
@@ -2954,6 +3138,9 @@ namespace Infrastructure.Migrations
                     b.Property<bool>("IsHalfDay")
                         .HasColumnType("bit");
 
+                    b.Property<DateTime?>("LastReminderSentOn")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("LeaveTypeId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
@@ -3307,7 +3494,6 @@ namespace Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("FailureReason")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("IPAddress")
@@ -3379,7 +3565,6 @@ namespace Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("FeatureId")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsActive")
@@ -3414,11 +3599,9 @@ namespace Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("RedirectUrl")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ReferenceId")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("TenantId")
@@ -4850,6 +5033,25 @@ namespace Infrastructure.Migrations
                     b.Navigation("ParentFeature");
                 });
 
+            modelBuilder.Entity("Domain.Entities.ApprovalDelegation", b =>
+                {
+                    b.HasOne("Domain.Entities.Employee", "DelegateEmployee")
+                        .WithMany()
+                        .HasForeignKey("DelegateEmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.Employee", "DelegatorEmployee")
+                        .WithMany()
+                        .HasForeignKey("DelegatorEmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DelegateEmployee");
+
+                    b.Navigation("DelegatorEmployee");
+                });
+
             modelBuilder.Entity("Domain.Entities.Asset", b =>
                 {
                     b.HasOne("Domain.Entities.AssetCategory", "AssetCategory")
@@ -4950,6 +5152,35 @@ namespace Infrastructure.Migrations
                     b.Navigation("Attendance");
 
                     b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("Domain.Entities.AttendanceRegularization", b =>
+                {
+                    b.HasOne("Domain.Entities.Attendance", "Attendance")
+                        .WithMany()
+                        .HasForeignKey("AttendanceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Domain.Entities.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Attendance");
+
+                    b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("Domain.Entities.AttendanceRegularizationApprovalHistory", b =>
+                {
+                    b.HasOne("Domain.Entities.AttendanceRegularization", "AttendanceRegularization")
+                        .WithMany()
+                        .HasForeignKey("AttendanceRegularizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AttendanceRegularization");
                 });
 
             modelBuilder.Entity("Domain.Entities.BiometricDevice", b =>

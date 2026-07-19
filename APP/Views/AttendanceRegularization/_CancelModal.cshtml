@@ -1,0 +1,41 @@
+<div class="modal fade"
+     id="cancelModal">
+
+    <div class="modal-dialog">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5>Cancel Regularization Request</h5>
+            </div>
+
+            <form asp-action="Cancel">
+
+                <div class="modal-body">
+
+                    <input type="hidden"
+                           id="CancelRegularizationId"
+                           name="AttendanceRegularizationId" />
+
+                    <p>
+                        Are you sure you want to cancel this regularization request?
+                    </p>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button type="submit"
+                            class="btn btn-warning">
+                        Cancel Request
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>

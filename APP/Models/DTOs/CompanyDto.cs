@@ -126,6 +126,7 @@ namespace APP.Models.DTOs
 
         // Company
         [Required]
+        [Display(Name = "Company")] 
         public string CompanyId { get; set; }
 
         public string? CompanyName { get; set; }
@@ -164,16 +165,19 @@ namespace APP.Models.DTOs
 
         // Location
         [Required(ErrorMessage = "Country is required")]
+        [Display(Name = "Country")]
         public string CountryId { get; set; }
 
         public string? CountryName { get; set; }
 
         [Required(ErrorMessage = "State is required")]
+        [Display(Name = "State")]
         public string StateId { get; set; }
 
         public string? StateName { get; set; }
 
         [Required(ErrorMessage = "City is required")]
+        [Display(Name = "City")]
         public string CityId { get; set; }
 
         public string? CityName { get; set; }

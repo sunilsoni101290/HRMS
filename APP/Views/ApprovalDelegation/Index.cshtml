@@ -1,0 +1,156 @@
+@model List<ApprovalDelegationDto>
+
+@{
+    ViewData["Title"] = "My Approval Delegations";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-user-check position-left"></i>
+            My Approval Delegations
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Create"
+               class="btn bg-primary btn-sm">
+
+                <i class="icon-plus22"></i>
+                Assign Delegate
+
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <p class="text-muted">
+            While you are out of office, a delegate you assign here can approve
+            leave requests that are awaiting your action as Reporting Manager
+            or Department Head, for the date range below.
+        </p>
+
+    </div>
+
+    <table class="table">
+
+        <thead>
+
+            <tr>
+                <th>Delegate</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Reason</th>
+                <th>Status</th>
+                <th class="text-center">Actions</th>
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            @if (Model == null || !Model.Any())
+            {
+                <tr>
+                    <td colspan="6" class="text-center text-muted">
+                        No delegations assigned yet.
+                    </td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var item in Model)
+                {
+                    <tr>
+
+                        <td><strong>@item.DelegateEmployeeName</strong></td>
+
+                        <td>@item.StartDate.ToString("dd-MMM-yyyy")</td>
+
+                        <td>@item.EndDate.ToString("dd-MMM-yyyy")</td>
+
+                        <td>@item.Reason</td>
+
+                        <td>
+
+                            @if (!item.IsActive)
+                            {
+                                <span class="label label-default">Revoked</span>
+                            }
+                            else if (item.IsCurrentlyInEffect)
+                            {
+                                <span class="label label-success">Active Now</span>
+                            }
+                            else
+                            {
+                                <span class="label bg-info">Scheduled</span>
+                            }
+
+                        </td>
+
+                        <td class="text-center">
+
+                            @if (item.IsActive)
+                            {
+                                <button type="button"
+                                        class="btn btn-default btn-xs btn-revoke-delegation"
+                                        data-id="@item.Id">
+                                    <i class="icon-cross2"></i>
+                                    Revoke
+                                </button>
+                            }
+                            else
+                            {
+                                <span>-</span>
+                            }
+
+                        </td>
+
+                    </tr>
+                }
+            }
+
+        </tbody>
+
+    </table>
+
+</div>
+
+@section Scripts {
+
+    <script>
+
+        $(function () {
+
+            $(".btn-revoke-delegation").on("click", function () {
+
+                if (!confirm("Revoke this delegation? The delegate will no longer be able to act on your behalf.")) {
+                    return;
+                }
+
+                var id = $(this).data("id");
+
+                $.post('@Url.Action("Revoke")', { id: id }, function (response) {
+
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert(response.message || "Unable to revoke this delegation.");
+                    }
+
+                }).fail(function () {
+                    alert("Unable to revoke this delegation.");
+                });
+
+            });
+
+        });
+
+    </script>
+
+}

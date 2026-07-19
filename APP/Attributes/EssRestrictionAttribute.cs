@@ -103,7 +103,25 @@ namespace APP.Attributes
                     // here - a Reporting Manager or Department Head may be
                     // logged in under the plain self-service role, since org
                     // hierarchy is independent of login role in this system.
+                    //
+                    // Calendar is also deliberately NOT here - it's the
+                    // month-grid view of approved leaves (scoped to the
+                    // employee's own department for ESS, org-wide for
+                    // admin/HR) and exists specifically so a self-service
+                    // employee can plan around their teammates' leave.
                     "Index", "Pending", "Approved", "Rejected", "Cancelled", "Edit"
+                },
+                ["AttendanceRegularization"] = new(StringComparer.OrdinalIgnoreCase)
+                {
+                    // Approve/Reject/SendBack/MyApprovals/Resubmit/Cancel are
+                    // deliberately NOT here - a Reporting Manager or
+                    // Department Head may be logged in under the plain
+                    // self-service role, since org hierarchy is independent
+                    // of login role in this system (same rule as
+                    // LeaveApplication above). Only the org-wide admin lists
+                    // are blocked; Create/Request/MyRequests/Details(own)
+                    // stay open to everyone.
+                    "Index", "Pending", "Approved", "Rejected", "Cancelled"
                 },
                 ["EmployeeDocument"] = new(StringComparer.OrdinalIgnoreCase)
                 {

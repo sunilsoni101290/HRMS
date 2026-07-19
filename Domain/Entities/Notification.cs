@@ -14,8 +14,8 @@ namespace Domain.Entities
         public string Message { get; set; }
 
         // Feature / Module
-        public string FeatureId { get; set; }   // e.g. LEAVE, PAYROLL
-        public string ReferenceId { get; set; } // e.g. LeaveApplicationId
+        public string? FeatureId { get; set; }   // e.g. LEAVE, PAYROLL
+        public string? ReferenceId { get; set; } // e.g. LeaveApplicationId
 
         // Type
         public string NotificationType { get; set; }
@@ -25,7 +25,7 @@ namespace Domain.Entities
         // HRMS / Billing / Inventory
 
         // Navigation (Frontend redirect)
-        public string RedirectUrl { get; set; }
+        public string? RedirectUrl { get; set; }
 
         // Broadcast
         public bool IsBroadcast { get; set; }

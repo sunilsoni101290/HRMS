@@ -1,6 +1,7 @@
 using Application.DTOs.Payroll;
 using Application.Interfaces.Payroll;
 using Domain.Entities;
+using Domain.Helper;
 using Infrastructure;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -88,7 +89,10 @@ namespace Application.Services.PayrollService
             {
             var entity = await _context.Payrolls
                 .AsNoTracking()
-                .Include(x => x.Employee)
+                .Include(x => x.Employee).ThenInclude(e => e.Company).ThenInclude(c => c.City)
+                .Include(x => x.Employee).ThenInclude(e => e.Company).ThenInclude(c => c.State)
+                .Include(x => x.Employee).ThenInclude(e => e.Department)
+                .Include(x => x.Employee).ThenInclude(e => e.Designation)
                 .Include(x => x.PayrollDetails)
                 .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
 
@@ -109,12 +113,43 @@ namespace Application.Services.PayrollService
                 .AsNoTracking()
                 .ToDictionaryAsync(c => c.Id, c => c.Name);
 
+            // Payslip letterhead / employee-detail fields - PF and Bank
+            // records aren't navigation properties off Employee, so they're
+            // looked up directly. Neither is guaranteed to exist for every
+            // employee, so both are deliberately optional (null-safe below)
+            // rather than treated as an error - a payslip must still render.
+            var company = entity.Employee?.Company;
+
+            var pfDetail = await _context.EmployeePFDetails
+                .AsNoTracking()
+                .Where(x => x.EmployeeId == entity.EmployeeId && !x.IsDeleted)
+                .OrderByDescending(x => x.PFJoiningDate)
+                .FirstOrDefaultAsync();
+
+            var bankDetail = await _context.EmployeeBankDetails
+                .AsNoTracking()
+                .Where(x => x.EmployeeId == entity.EmployeeId && !x.IsDeleted)
+                .OrderByDescending(x => x.IsPrimary)
+                .FirstOrDefaultAsync();
+
             var dto = new PayrollDto
             {
                 Id = entity.Id,
                 EmployeeId = entity.EmployeeId,
                 EmployeeName = entity.Employee != null ? entity.Employee.FirstName + " " + entity.Employee.LastName : "",
                 EmployeeCode = entity.Employee != null ? entity.Employee.EmployeeCode : "",
+
+                CompanyName = company?.Name,
+                CompanyAddress = BuildCompanyAddress(company),
+                CompanyLogoUrl = company?.Logo,
+
+                DepartmentName = entity.Employee?.Department?.Name,
+                DesignationName = entity.Employee?.Designation?.Name,
+
+                PAN = entity.Employee?.PANNumber,
+                UAN = pfDetail?.UANNumber,
+                BankAccountMasked = MaskAccountNumber(bankDetail?.AccountNumber),
+
                 CompanyId = entity.CompanyId,
                 BranchId = entity.BranchId,
                 SalaryYear = entity.SalaryYear,
@@ -125,6 +160,7 @@ namespace Application.Services.PayrollService
                 TotalEarnings = entity.TotalEarnings,
                 TotalDeductions = entity.TotalDeductions,
                 NetSalary = entity.NetSalary,
+                NetPayInWords = NumberToWordsHelper.ToRupeesInWords(entity.NetSalary),
                 TotalWorkingDays = entity.TotalWorkingDays,
                 PresentDays = entity.PresentDays,
                 LeaveDays = entity.LeaveDays,
@@ -144,6 +180,39 @@ namespace Application.Services.PayrollService
             };
 
             return dto;
+        }
+
+        // "123 Business Park, Mumbai, Maharashtra" - Address + City + State,
+        // matching the reference payslip's letterhead format. Any missing
+        // piece is simply omitted rather than leaving a stray ", ,".
+        private static string? BuildCompanyAddress(Company? company)
+        {
+            if (company == null)
+                return null;
+
+            var parts = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(company.Address)) parts.Add(company.Address.Trim());
+            if (!string.IsNullOrWhiteSpace(company.City?.Name)) parts.Add(company.City.Name.Trim());
+            if (!string.IsNullOrWhiteSpace(company.State?.Name)) parts.Add(company.State.Name.Trim());
+
+            return parts.Count > 0 ? string.Join(", ", parts) : null;
+        }
+
+        // "1234567890123489" -> "XXXXXXXXXXXX3489" - only the last 4 digits
+        // are ever shown on a payslip, matching the reference design.
+        private static string? MaskAccountNumber(string? accountNumber)
+        {
+            if (string.IsNullOrWhiteSpace(accountNumber))
+                return null;
+
+            var trimmed = accountNumber.Trim();
+
+            if (trimmed.Length <= 4)
+                return trimmed;
+
+            var lastFour = trimmed[^4..];
+            return new string('X', trimmed.Length - 4) + lastFour;
         }
 
         #endregion

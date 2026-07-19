@@ -35,6 +35,15 @@ namespace Application.DTOs.KPI
         public int HolidayCount { get; set; }
         public int TodayEventCount { get; set; }
 
+        // Upcoming Holidays widget (Admin/HR Dashboard) - a focused
+        // top-level list/count, separate from the mixed Events/Birthday
+        // feed in UpcomingDashboardEvents, since a dedicated "Upcoming
+        // Holidays" card/panel shouldn't have to filter that combined feed
+        // client-side. Populated in DashboardService.GetDashboardAsync from
+        // the same holiday query already run for UpcomingDashboardEvents -
+        // no extra DB round trip.
+        public List<UpcomingHolidayDto> UpcomingHolidays { get; set; } = new();
+
         // Recruitment
         public int OpenPositions { get; set; }
 
@@ -50,6 +59,14 @@ namespace Application.DTOs.KPI
         public DepartmentHeadcountDashboardDto? DepartmentDashboard { get; set; } = new();
     }
 
+
+    public class UpcomingHolidayDto
+    {
+        public string? Id { get; set; }
+        public string Name { get; set; }
+        public DateTime Date { get; set; }
+        public string? Remarks { get; set; }
+    }
 
     public class RecentLeaveRequestDto
     {

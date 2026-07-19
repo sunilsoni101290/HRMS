@@ -51,22 +51,10 @@ namespace APP.Models.DTOs
         public bool IsESICApplicable { get; set; }
     }
 
-    public class SalaryComponentImportRowResult
-    {
-        public int RowNumber { get; set; }
-        public string? Code { get; set; }
-        public string? Name { get; set; }
-        public bool Success { get; set; }
-        public string? Message { get; set; }
-    }
-
-    public class SalaryComponentImportResultDto
-    {
-        public int TotalRows { get; set; }
-        public int SuccessCount { get; set; }
-        public int FailureCount { get; set; }
-        public List<SalaryComponentImportRowResult> Rows { get; set; } = new();
-    }
+    // SalaryComponentImportRowResult / SalaryComponentImportResultDto have
+    // been replaced by the generic APP.Excel.ExcelImportResult /
+    // ExcelImportRowResult, now used by SalaryComponentController's Import
+    // action - see APP/Excel/ExcelImportResult.cs.
 
     // ==============================
     // Salary Structure
@@ -151,6 +139,22 @@ namespace APP.Models.DTOs
         public string EmployeeId { get; set; }
         public string? EmployeeName { get; set; }
         public string? EmployeeCode { get; set; }
+
+        // Payslip letterhead / employee-detail fields - see Application-side
+        // PayrollDto for how these get populated; kept in sync here.
+        public string? CompanyName { get; set; }
+        public string? CompanyAddress { get; set; }
+        public string? CompanyLogoUrl { get; set; }
+
+        public string? DepartmentName { get; set; }
+        public string? DesignationName { get; set; }
+
+        public string? PAN { get; set; }
+        public string? UAN { get; set; }
+
+        public string? BankAccountMasked { get; set; }
+
+        public string? NetPayInWords { get; set; }
 
         public string? CompanyId { get; set; }
         public string? BranchId { get; set; }

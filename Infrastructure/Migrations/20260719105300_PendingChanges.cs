@@ -10,25 +10,25 @@ namespace Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AlterColumn<int>(
-                name: "LoginStatus",
-                table: "LoginHistories",
-                type: "int",
-                nullable: false,
-                oldClrType: typeof(string),
-                oldType: "nvarchar(max)");
-
             migrationBuilder.AlterColumn<string>(
-                name: "Country",
-                table: "LoginHistories",
+                name: "ReferenceId",
+                table: "Notifications",
                 type: "nvarchar(max)",
                 nullable: true,
                 oldClrType: typeof(string),
                 oldType: "nvarchar(max)");
 
             migrationBuilder.AlterColumn<string>(
-                name: "City",
-                table: "LoginHistories",
+                name: "RedirectUrl",
+                table: "Notifications",
+                type: "nvarchar(max)",
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "nvarchar(max)");
+
+            migrationBuilder.AlterColumn<string>(
+                name: "FeatureId",
+                table: "Notifications",
                 type: "nvarchar(max)",
                 nullable: true,
                 oldClrType: typeof(string),
@@ -39,16 +39,8 @@ namespace Infrastructure.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AlterColumn<string>(
-                name: "LoginStatus",
-                table: "LoginHistories",
-                type: "nvarchar(max)",
-                nullable: false,
-                oldClrType: typeof(int),
-                oldType: "int");
-
-            migrationBuilder.AlterColumn<string>(
-                name: "Country",
-                table: "LoginHistories",
+                name: "ReferenceId",
+                table: "Notifications",
                 type: "nvarchar(max)",
                 nullable: false,
                 defaultValue: "",
@@ -57,8 +49,18 @@ namespace Infrastructure.Migrations
                 oldNullable: true);
 
             migrationBuilder.AlterColumn<string>(
-                name: "City",
-                table: "LoginHistories",
+                name: "RedirectUrl",
+                table: "Notifications",
+                type: "nvarchar(max)",
+                nullable: false,
+                defaultValue: "",
+                oldClrType: typeof(string),
+                oldType: "nvarchar(max)",
+                oldNullable: true);
+
+            migrationBuilder.AlterColumn<string>(
+                name: "FeatureId",
+                table: "Notifications",
                 type: "nvarchar(max)",
                 nullable: false,
                 defaultValue: "",

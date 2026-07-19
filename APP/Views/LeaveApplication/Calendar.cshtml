@@ -1,0 +1,264 @@
+@model APP.Models.DTOs.LeaveCalendarResponseDto
+@using APP.Models.DTOs
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"] = "Leave Calendar";
+
+    bool isAdmin = ViewBag.IsAdmin ?? false;
+    string? selectedDept = ViewBag.SelectedDepartmentId as string;
+
+    var firstOfMonth = new DateTime(Model.Year, Model.Month, 1);
+    var lastOfMonth = firstOfMonth.AddMonths(1).AddDays(-1);
+    int daysInMonth = DateTime.DaysInMonth(Model.Year, Model.Month);
+    int startOffset = (int)firstOfMonth.DayOfWeek; // 0 = Sunday
+
+    var prevMonth = firstOfMonth.AddMonths(-1);
+    var nextMonth = firstOfMonth.AddMonths(1);
+    var today = DateTime.Today;
+
+    // Spread every entry across each day-of-month cell it touches, clipped
+    // to this month's boundaries (a leave applied across a month boundary
+    // should only light up the days that actually fall in the month being
+    // viewed).
+    var entriesByDay = new Dictionary<int, List<LeaveCalendarEntryDto>>();
+
+    foreach (var entry in Model.Entries ?? new List<LeaveCalendarEntryDto>())
+    {
+        var spanStart = entry.FromDate.Date < firstOfMonth ? firstOfMonth : entry.FromDate.Date;
+        var spanEnd = entry.ToDate.Date > lastOfMonth ? lastOfMonth : entry.ToDate.Date;
+
+        for (var d = spanStart; d <= spanEnd; d = d.AddDays(1))
+        {
+            if (!entriesByDay.TryGetValue(d.Day, out var list))
+            {
+                list = new List<LeaveCalendarEntryDto>();
+                entriesByDay[d.Day] = list;
+            }
+
+            list.Add(entry);
+        }
+    }
+
+    var holidaySet = new HashSet<int>(
+        (Model.HolidayDates ?? new List<DateTime>())
+            .Where(x => x.Year == Model.Year && x.Month == Model.Month)
+            .Select(x => x.Day));
+
+    string Initials(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2
+            ? $"{parts[0][0]}{parts[^1][0]}".ToUpper()
+            : parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpper();
+    }
+}
+
+<style>
+    .leave-cal-panel .panel-heading { background: linear-gradient(90deg, #1b2a4a, #203258); border: none; }
+    .leave-cal-panel .panel-heading .panel-title,
+    .leave-cal-panel .panel-heading .panel-title i { color: #eef2fa; }
+
+    .leave-cal-toolbar {
+        display: flex; align-items: center; justify-content: space-between;
+        flex-wrap: wrap; gap: 12px; margin-bottom: 14px;
+    }
+    .leave-cal-nav { display: flex; align-items: center; gap: 8px; }
+    .leave-cal-month-label {
+        font-size: 16px; font-weight: 600; color: #1b2a4a; min-width: 150px;
+        text-align: center; display: inline-block;
+    }
+    .leave-cal-filter select { min-width: 200px; display: inline-block; }
+
+    .leave-cal-legend { margin-bottom: 10px; font-size: 12px; color: #6b7a99; }
+    .leave-cal-legend .legend-item { margin-right: 18px; }
+    .legend-dot {
+        display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+        margin-right: 5px; vertical-align: middle;
+    }
+    .legend-dot.leave { background: #4e9cff; }
+    .legend-dot.holiday { background: #ff8a65; }
+
+    .leave-cal-grid {
+        display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;
+    }
+    .leave-cal-dow {
+        text-align: center; font-size: 11px; font-weight: 700; letter-spacing: .5px;
+        text-transform: uppercase; color: #93a3c4; padding: 6px 0;
+    }
+    .leave-cal-cell {
+        min-height: 92px; border-radius: 6px; background: #f7f9fc;
+        border: 1px solid #e7ecf3; padding: 6px 6px 8px; position: relative;
+    }
+    .leave-cal-cell.empty { background: transparent; border: none; }
+    .leave-cal-cell.today { border-color: #4e9cff; box-shadow: 0 0 0 1px #4e9cff inset; }
+    .leave-cal-cell.holiday { background: #fff4ef; border-color: #ffd3bd; }
+
+    .leave-cal-daynum { font-size: 12.5px; font-weight: 600; color: #1b2a4a; }
+    .leave-cal-cell.today .leave-cal-daynum {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 20px; height: 20px; border-radius: 50%; background: #4e9cff; color: #fff;
+    }
+    .leave-cal-holiday-tag {
+        font-size: 9.5px; color: #d9642c; font-weight: 600; text-transform: uppercase;
+        letter-spacing: .3px; margin-top: 1px;
+    }
+
+    .leave-cal-entries { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 3px; }
+    .leave-cal-chip {
+        width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg,#4e9cff,#2b6fd9);
+        color: #fff; font-size: 9.5px; font-weight: 700; display: inline-flex;
+        align-items: center; justify-content: center; cursor: default;
+    }
+    .leave-cal-chip.more { background: #cfd8e6; color: #1b2a4a; }
+
+    @@media (max-width: 767px) {
+        .leave-cal-cell { min-height: 64px; }
+        .leave-cal-dow { font-size: 9px; }
+    }
+</style>
+
+<div class="panel panel-flat leave-cal-panel">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-calendar3 position-left"></i>
+            Leave Calendar
+        </h5>
+        <div class="heading-elements">
+            <a asp-action="Index" class="btn btn-default">
+                <i class="icon-arrow-left8"></i>
+                Back to List
+            </a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+
+        <div class="leave-cal-toolbar">
+
+            <div class="leave-cal-nav">
+                <a class="btn btn-default btn-icon"
+                   asp-action="Calendar"
+                   asp-route-year="@prevMonth.Year"
+                   asp-route-month="@prevMonth.Month"
+                   asp-route-departmentId="@selectedDept"
+                   data-popup="tooltip" title="Previous month">
+                    <i class="icon-arrow-left8"></i>
+                </a>
+
+                <span class="leave-cal-month-label">@Model.MonthName</span>
+
+                <a class="btn btn-default btn-icon"
+                   asp-action="Calendar"
+                   asp-route-year="@nextMonth.Year"
+                   asp-route-month="@nextMonth.Month"
+                   asp-route-departmentId="@selectedDept"
+                   data-popup="tooltip" title="Next month">
+                    <i class="icon-arrow-right8"></i>
+                </a>
+
+                <a class="btn btn-default"
+                   asp-action="Calendar"
+                   asp-route-year="@today.Year"
+                   asp-route-month="@today.Month"
+                   asp-route-departmentId="@selectedDept">
+                    Today
+                </a>
+            </div>
+
+            @if (isAdmin)
+            {
+                <form method="get" asp-action="Calendar" class="leave-cal-filter">
+                    <input type="hidden" name="year" value="@Model.Year" />
+                    <input type="hidden" name="month" value="@Model.Month" />
+
+                    <select name="departmentId" class="form-control" onchange="this.form.submit()">
+                        <option value="">All Departments</option>
+                        @if (ViewBag.DepartmentList is SelectList deptList)
+                        {
+                            @foreach (SelectListItem item in deptList)
+                            {
+                                <option value="@item.Value" selected="@(item.Value == selectedDept)">@item.Text</option>
+                            }
+                        }
+                    </select>
+                </form>
+            }
+            else
+            {
+                <span class="text-muted text-size-small">
+                    <i class="icon-info22"></i>
+                    Showing approved leave for your department
+                </span>
+            }
+
+        </div>
+
+        <div class="leave-cal-legend">
+            <span class="legend-item"><span class="legend-dot leave"></span>Approved leave (hover an avatar for details)</span>
+            <span class="legend-item"><span class="legend-dot holiday"></span>Holiday</span>
+        </div>
+
+        <div class="leave-cal-grid">
+
+            @foreach (var dow in new[] { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" })
+            {
+                <div class="leave-cal-dow">@dow</div>
+            }
+
+            @for (int i = 0; i < startOffset; i++)
+            {
+                <div class="leave-cal-cell empty"></div>
+            }
+
+            @for (int day = 1; day <= daysInMonth; day++)
+            {
+                bool isHoliday = holidaySet.Contains(day);
+                bool isToday = Model.Year == today.Year && Model.Month == today.Month && day == today.Day;
+                var dayEntries = entriesByDay.TryGetValue(day, out var list) ? list : new List<LeaveCalendarEntryDto>();
+
+                <div class="leave-cal-cell @(isHoliday ? "holiday" : "") @(isToday ? "today" : "")">
+                    <div class="leave-cal-daynum">@day</div>
+
+                    @if (isHoliday)
+                    {
+                        <div class="leave-cal-holiday-tag">Holiday</div>
+                    }
+
+                    @if (dayEntries.Count > 0)
+                    {
+                        <div class="leave-cal-entries">
+                            @foreach (var e in dayEntries.Take(4))
+                            {
+                                <span class="leave-cal-chip"
+                                      data-popup="tooltip"
+                                      title="@(e.EmployeeName)@(string.IsNullOrEmpty(e.LeaveTypeName) ? "" : " - " + e.LeaveTypeName)@(e.IsHalfDay ? " (Half Day)" : "")">
+                                    @Initials(e.EmployeeName)
+                                </span>
+                            }
+                            @if (dayEntries.Count > 4)
+                            {
+                                <span class="leave-cal-chip more" data-popup="tooltip" title="@(dayEntries.Count - 4) more on leave">
+                                    +@(dayEntries.Count - 4)
+                                </span>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('[data-popup="tooltip"]').tooltip();
+        });
+    </script>
+}

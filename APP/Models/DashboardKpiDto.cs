@@ -35,11 +35,24 @@ namespace APP.Models
         public int TodayBirthdays { get; set; }
         public int TodayWorkAnniversaries { get; set; }
 
+        // Upcoming Holidays widget - mirrors Application.DTOs.KPI.DashboardKpiDto's
+        // new fields (property names must match for the API JSON to bind here).
+        public int HolidayCount { get; set; }
+        public List<UpcomingHolidayDto> UpcomingHolidays { get; set; } = new();
+
         public List<RecentLeaveRequestDto>? RecentLeaveRequests { get; set; } = new();
         public UpcomingEventsDashboardDto? UpcomingEvents { get; set; } = new();
         public BirthdayDashboardDto? BirthdayDashboard { get; set; } = new();
         public AnnouncementDashboardDto? AnnouncementDashboard { get; set; } = new();
         public DepartmentHeadcountDashboardDto? DepartmentDashboard { get; set; } = new();
+    }
+
+    public class UpcomingHolidayDto
+    {
+        public string? Id { get; set; }
+        public string Name { get; set; }
+        public DateTime Date { get; set; }
+        public string? Remarks { get; set; }
     }
 
     public class RecentLeaveRequestDto

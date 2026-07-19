@@ -74,6 +74,8 @@ namespace Infrastructure
         public DbSet<BiometricDevice> BiometricDevices { get; set; }
         public DbSet<BiometricAttendanceLog> BiometricAttendanceLogs { get; set; }
         public DbSet<EmployeeBiometricMapping> EmployeeBiometricMappings { get; set; }
+        public DbSet<AttendanceRegularization> AttendanceRegularizations { get; set; }
+        public DbSet<AttendanceRegularizationApprovalHistory> AttendanceRegularizationApprovalHistories { get; set; }
 
         #endregion
 
@@ -83,6 +85,7 @@ namespace Infrastructure
         public DbSet<LeaveBalanceTransaction> LeaveBalanceTransactions { get; set; }
         public DbSet<LeaveApplication> LeaveApplications { get; set; }
         public DbSet<LeaveApprovalHistory> LeaveApprovalHistories { get; set; }
+        public DbSet<ApprovalDelegation> ApprovalDelegations { get; set; }
         #endregion
 
         #region 💰 PAYROLL
@@ -347,6 +350,9 @@ namespace Infrastructure
             modelBuilder.Entity<Attendance>()
                 .HasIndex(x => new { x.EmployeeId, x.Date });
 
+            modelBuilder.Entity<AttendanceRegularization>()
+                .HasIndex(x => new { x.EmployeeId, x.Date });
+
             modelBuilder.Entity<Payroll>()
                 .HasIndex(x => new { x.EmployeeId, x.SalaryMonth });
 
@@ -502,6 +508,25 @@ namespace Infrastructure
                 .WithMany()
                 .HasForeignKey(e => e.ReportingManagerId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // =====================================================
+            // 🔁 APPROVAL DELEGATION (two distinct FKs to Employee - must be
+            // configured explicitly or EF can't disambiguate them)
+            // =====================================================
+            modelBuilder.Entity<ApprovalDelegation>()
+                .HasOne(x => x.DelegatorEmployee)
+                .WithMany()
+                .HasForeignKey(x => x.DelegatorEmployeeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ApprovalDelegation>()
+                .HasOne(x => x.DelegateEmployee)
+                .WithMany()
+                .HasForeignKey(x => x.DelegateEmployeeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ApprovalDelegation>()
+                .HasIndex(x => new { x.DelegatorEmployeeId, x.StartDate, x.EndDate });
 
             // =====================================================
             // 🌍 LOCATION (NO CASCADE)

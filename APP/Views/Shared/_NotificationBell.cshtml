@@ -1,0 +1,152 @@
+@* Shared bell-icon notification dropdown - included from both the
+   admin/HR navbar (_LayoutMain.cshtml) and the ESS navbar
+   (_EmployeeLayout/_EmployeeNavbar.cshtml), so both audiences get the same
+   unread badge + recent list backed by the same per-user Notification
+   inbox (Application.Services.Communication.NotificationService).
+
+   Deliberately simple: no SignalR/real-time push - a periodic poll every
+   45s via fetch() against APP.Controllers.NotificationController's
+   UnreadCount/Recent/MarkReadAjax JSON endpoints, matching the rest of
+   this codebase's plain-jQuery-and-fetch style. *@
+
+<li class="dropdown dropdown-notification" id="notificationBellDropdown">
+
+    <a href="#" class="dropdown-toggle" data-toggle="dropdown" title="Notifications">
+        <i class="icon-bell2"></i>
+        <span class="badge bg-danger" id="notifBadge" style="display:none;position:relative;top:-10px;left:-4px;">0</span>
+    </a>
+
+    <ul class="dropdown-menu dropdown-menu-right" style="width:340px;max-height:420px;overflow-y:auto;padding:0;">
+
+        <li class="dropdown-header" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#f7f9fc;">
+            <span>Notifications</span>
+            <a href="javascript:void(0)" id="notifMarkAllRead" style="font-size:11px;">Mark all read</a>
+        </li>
+
+        <li id="notifListContainer">
+            <div class="text-center text-muted" style="padding:20px;">Loading...</div>
+        </li>
+
+        <li class="divider" style="margin:0;"></li>
+
+        <li>
+            <a asp-controller="Notification" asp-action="Index" class="text-center" style="display:block;padding:8px;font-size:12px;">
+                View all notifications
+            </a>
+        </li>
+
+    </ul>
+
+</li>
+
+<script>
+    (function () {
+        var badge = document.getElementById('notifBadge');
+        var listContainer = document.getElementById('notifListContainer');
+
+        if (!badge || !listContainer) return;
+
+        function escapeHtml(str) {
+            return (str || '').replace(/[&<>"']/g, function (c) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+            });
+        }
+
+        function refreshCount() {
+            fetch('/Notification/UnreadCount', { credentials: 'same-origin' })
+                .then(function (r) { return r.ok ? r.json() : { count: 0 }; })
+                .then(function (data) {
+                    var count = (data && data.count) ? data.count : 0;
+                    if (count > 0) {
+                        badge.style.display = 'inline-block';
+                        badge.textContent = count > 99 ? '99+' : count;
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                })
+                .catch(function () { /* bell must never break the page */ });
+        }
+
+        function renderList(items) {
+            if (!items || items.length === 0) {
+                listContainer.innerHTML =
+                    '<div class="text-center text-muted" style="padding:24px 10px;">' +
+                    '<i class="icon-bell2" style="font-size:26px;"></i><br>No notifications yet.</div>';
+                return;
+            }
+
+            var html = '';
+
+            items.forEach(function (item) {
+                var unreadStyle = item.isRead ? '' : 'background:#f5f9ff;';
+                var createdOn = item.createdOn ? new Date(item.createdOn).toLocaleString() : '';
+
+                html +=
+                    '<a href="javascript:void(0)" class="notif-item" ' +
+                    'data-recipient-id="' + escapeHtml(item.recipientId) + '" ' +
+                    'data-url="' + escapeHtml(item.redirectUrl || '') + '" ' +
+                    'style="display:block;padding:10px 14px;border-bottom:1px solid #eee;' + unreadStyle + 'white-space:normal;color:#333;">' +
+                    '<strong style="font-size:12.5px;">' + escapeHtml(item.title) + '</strong>' +
+                    (item.isRead ? '' : ' <span class="label bg-primary" style="font-size:9px;vertical-align:middle;">new</span>') +
+                    '<div style="font-size:11.5px;color:#777;margin-top:2px;">' + escapeHtml(item.message) + '</div>' +
+                    '<div style="font-size:10px;color:#aaa;margin-top:2px;">' + escapeHtml(createdOn) + '</div>' +
+                    '</a>';
+            });
+
+            listContainer.innerHTML = html;
+        }
+
+        function refreshList() {
+            fetch('/Notification/Recent', { credentials: 'same-origin' })
+                .then(function (r) { return r.ok ? r.json() : []; })
+                .then(renderList)
+                .catch(function () { /* bell must never break the page */ });
+        }
+
+        listContainer.addEventListener('click', function (e) {
+            var item = e.target.closest ? e.target.closest('.notif-item') : null;
+            if (!item) return;
+
+            var recipientId = item.getAttribute('data-recipient-id');
+            var url = item.getAttribute('data-url');
+
+            var finish = function () {
+                refreshCount();
+                if (url) window.location.href = url;
+            };
+
+            if (recipientId) {
+                var body = new URLSearchParams();
+                body.append('recipientId', recipientId);
+
+                fetch('/Notification/MarkReadAjax', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    body: body
+                }).then(finish).catch(finish);
+            } else {
+                finish();
+            }
+        });
+
+        var markAllBtn = document.getElementById('notifMarkAllRead');
+
+        if (markAllBtn) {
+            markAllBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+
+                fetch('/Notification/MarkAllRead', { method: 'POST', credentials: 'same-origin' })
+                    .then(function () { refreshCount(); refreshList(); })
+                    .catch(function () { });
+            });
+        }
+
+        refreshCount();
+        refreshList();
+
+        setInterval(function () {
+            refreshCount();
+            refreshList();
+        }, 45000);
+    })();
+</script>

@@ -559,6 +559,27 @@ namespace Domain.Enums
             Resolved = 3,
             Closed = 4
         }
+
+        // The specific leave-workflow event a notification was raised for.
+        // Kept narrowly scoped to what the Leave Application chain actually
+        // needs (Apply/Approve/Reject/SendBack/Resubmit/Cancel) rather than a
+        // generic catch-all. This drives the Title/message text composed in
+        // LeaveApplicationService; it is NOT persisted as its own column -
+        // the existing Notification.NotificationType string field still
+        // carries the UI severity (Info/Success/Warning/Error) that the
+        // Notification views already switch on, while this event maps to
+        // that severity and to the human-readable title.
+        public enum LeaveNotificationEvent
+        {
+            LeaveApplied = 1,
+            LeaveApproved = 2,
+            LeaveRejected = 3,
+            LeaveSentBack = 4,
+            LeaveResubmitted = 5,
+            LeaveCancelled = 6,
+            ApprovalPending = 7,
+            General = 8
+        }
     }
 
     public static class EnumHelper

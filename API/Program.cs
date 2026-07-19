@@ -1,3 +1,4 @@
+using API.BackgroundServices;
 using API.Middleware;
 using Application.DTOs.Attendances;
 using Application.Interfaces;
@@ -144,7 +145,8 @@ builder.Services.AddScoped<IEmployeeBiometricMappingService, EmployeeBiometricMa
 builder.Services.AddScoped<ILeaveTypeService, LeaveTypeService>();
 builder.Services.AddScoped<ILeaveBalanceService, LeaveBalanceService>();
 builder.Services.AddScoped<ILeaveApplicationService, LeaveApplicationService>();
-//builder.Services.AddScoped<ILeaveDashboardService, LeaveDashboardService>();
+builder.Services.AddScoped<Application.Interfaces.Leaves.IApprovalDelegationService, Application.Services.Leaves.ApprovalDelegationService>();
+builder.Services.AddScoped<IAttendanceRegularizationService, AttendanceRegularizationService>();
 builder.Services.AddScoped<IHolidayGroupService, HolidayGroupService>();
 builder.Services.AddScoped<ICompanyService, CompanyService>();
 builder.Services.AddScoped<IBranchService, BranchService>();
@@ -182,6 +184,9 @@ builder.Services.AddScoped<Application.Interfaces.Communication.IAnnouncementSer
 builder.Services.AddScoped<Application.Interfaces.Communication.IEventService, Application.Services.Communication.EventService>();
 builder.Services.AddScoped<Application.Interfaces.Communication.INotificationService, Application.Services.Communication.NotificationService>();
 
+// ===================== Email (best-effort, no-op if Smtp:Host is unset) =====================
+builder.Services.AddScoped<Application.Interfaces.IEmailSender, Application.Services.EmailSender>();
+
 // ===================== Tasks + Employee Dashboard =====================
 builder.Services.AddScoped<Application.Interfaces.Tasks.IEmployeeTaskService, Application.Services.Tasks.EmployeeTaskService>();
 builder.Services.AddScoped<Application.Interfaces.Dashboard.IEmployeeDashboardService, Application.Services.Dashboard.EmployeeDashboardService>();
@@ -200,6 +205,15 @@ builder.Services.AddScoped<Application.Interfaces.LoginHistory.ILoginHistoryServ
 
 
 builder.Services.AddHttpClient();
+
+// ======================================================
+// BACKGROUND SERVICES
+// ======================================================
+// Stale-pending Leave Application reminders/escalation notices - see
+// API/BackgroundServices/LeaveEscalationService.cs. First (and currently
+// only) hosted service in this API, so there is no prior registration
+// pattern to match here.
+builder.Services.AddHostedService<LeaveEscalationService>();
 
 // ======================================================
 // SWAGGER

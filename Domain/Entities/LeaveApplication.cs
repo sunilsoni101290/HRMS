@@ -52,6 +52,16 @@ namespace Domain.Entities
 
         // Attachment
         public string? DocumentUrl { get; set; }
+
+        // Set the moment a stale-pending reminder is actually sent by
+        // LeaveEscalationService (API/BackgroundServices/LeaveEscalationService.cs)
+        // so the hourly sweep doesn't re-notify the same approver every run
+        // once the reminder threshold is crossed - only reset back to null
+        // when the leave leaves Pending (approved/rejected/sent back/
+        // cancelled/resubmitted), so a resubmission gets its own fresh
+        // reminder clock.
+        public DateTime? LastReminderSentOn { get; set; }
+
         public override string GetSequencePrefix() => "LA";
     }
 }
