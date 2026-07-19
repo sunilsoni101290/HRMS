@@ -180,6 +180,10 @@ namespace Domain.Helper
         public const string EMPLOYEE_BIOMETRIC_MAPPING_CONTROLLER = "EmployeeBiometricMapping";
         public const string EMPLOYEE_BIOMETRIC_MAPPING_ACTION = ACTION_INDEX;
 
+        public const string ATTENDANCE_REGULARIZATION = "ATTENDANCE_REGULARIZATION";
+        public const string ATTENDANCE_REGULARIZATION_CONTROLLER = "AttendanceRegularization";
+        public const string ATTENDANCE_REGULARIZATION_ACTION = ACTION_INDEX;
+
         // =====================================================
         // LEAVE MANAGEMENT
         // =====================================================
@@ -201,6 +205,16 @@ namespace Domain.Helper
         public const string LEAVE_APPROVAL = "LEAVE_APPROVAL";
         public const string LEAVE_APPROVAL_CONTROLLER = "LeaveApproval";
         public const string LEAVE_APPROVAL_ACTION = ACTION_INDEX;
+
+        public const string LEAVE_CALENDAR = "LEAVE_CALENDAR";
+        public const string LEAVE_CALENDAR_CONTROLLER = "LeaveApplication";
+        public const string LEAVE_CALENDAR_ACTION = "Calendar";
+
+        // Out-of-office proxy approver (Level 1/2 delegation) - see
+        // Domain/Entities/ApprovalDelegation.cs.
+        public const string APPROVAL_DELEGATION = "APPROVAL_DELEGATION";
+        public const string APPROVAL_DELEGATION_CONTROLLER = "ApprovalDelegation";
+        public const string APPROVAL_DELEGATION_ACTION = ACTION_INDEX;
 
         // =====================================================
         // PAYROLL

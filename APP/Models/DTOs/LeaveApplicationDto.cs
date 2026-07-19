@@ -193,6 +193,35 @@ namespace APP.Models.DTOs
         public decimal TotalDays { get; set; }
     }
 
+    // ==============================
+    // Leave Calendar
+    // ==============================
+
+    public class LeaveCalendarEntryDto
+    {
+        public string LeaveApplicationId { get; set; }
+
+        public string EmployeeId { get; set; }
+        public string EmployeeName { get; set; }
+
+        public string? LeaveTypeName { get; set; }
+
+        public DateTime FromDate { get; set; }
+        public DateTime ToDate { get; set; }
+
+        public bool IsHalfDay { get; set; }
+    }
+
+    public class LeaveCalendarResponseDto
+    {
+        public int Year { get; set; }
+        public int Month { get; set; }
+        public string MonthName { get; set; }
+
+        public List<LeaveCalendarEntryDto> Entries { get; set; } = new();
+        public List<DateTime> HolidayDates { get; set; } = new();
+    }
+
     public class LeaveApplicationFilterRequestDto
     {
         [Display(Name = "Employee")]

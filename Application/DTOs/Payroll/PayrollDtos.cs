@@ -140,6 +140,31 @@ namespace Application.DTOs.Payroll
         public string? EmployeeName { get; set; }
         public string? EmployeeCode { get; set; }
 
+        // Payslip letterhead / employee-detail fields - all optional/nullable
+        // since not every employee has a PF or bank record on file, and a
+        // payslip must still render (blank rather than throw) if one is
+        // missing. Populated in PayrollBusinessService from Company/
+        // Department/Designation/EmployeePFDetail/EmployeeBankDetail, none
+        // of which PayrollDto carried before this redesign.
+        public string? CompanyName { get; set; }
+        public string? CompanyAddress { get; set; }
+        public string? CompanyLogoUrl { get; set; }
+
+        public string? DepartmentName { get; set; }
+        public string? DesignationName { get; set; }
+
+        public string? PAN { get; set; }
+        public string? UAN { get; set; }
+
+        // Masked for display (e.g. "XXXXXX4589") - never the full account
+        // number, matching the sample payslip's own masking convention.
+        public string? BankAccountMasked { get; set; }
+
+        // "Rupees Seventy Three Thousand Eight Hundred Only." - computed
+        // server-side (NumberToWordsHelper) so the view never has to
+        // duplicate currency-formatting logic.
+        public string? NetPayInWords { get; set; }
+
         public string? CompanyId { get; set; }
         public string? BranchId { get; set; }
 

@@ -1,0 +1,187 @@
+@model IEnumerable<AttendanceRegularizationDto>
+
+@{
+    // Row rendering (status badges, per-row action visibility via CanAct)
+    // lives in _RegularizationList.cshtml so both the initial render below
+    // and the AJAX Filter response share identical markup/logic.
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-calendar3 position-left"></i>
+            @(ViewBag.ListTitle ?? "Attendance Regularization")
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="MyApprovals" class="btn btn-default">
+                <i class="icon-checkmark4"></i>
+                Pending My Approval
+            </a>
+
+            <a asp-action="Create" class="btn bg-primary">
+                <i class="icon-plus22"></i>
+                Request Regularization
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+        <form id="regularizationFilterForm">
+            @await Html.PartialAsync("_Filter", new AttendanceRegularizationFilterRequestDto())
+        </form>
+    </div>
+
+    <div id="regularizationListContainer">
+        @await Html.PartialAsync("_RegularizationList", Model)
+    </div>
+
+</div>
+
+<partial name="_ApproveModal"
+         model="new ApproveRegularizationRequestDto()" />
+<partial name="_RejectModal"
+         model="new RejectRegularizationRequestDto()" />
+<partial name="_SendBackModal"
+         model="new SendBackRegularizationRequestDto()" />
+<partial name="_CancelModal"
+         model="new CancelRegularizationRequestDto()" />
+
+<script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+
+@section Scripts {
+    <script>
+
+        @if (TempData["Success"] != null)
+        {
+                <text>
+                    swal({
+                        title: 'Success',
+                        text: '@Html.Raw(TempData["Success"])',
+                        type: 'success',
+                        confirmButtonColor: '#66BB6A'
+                    });
+                </text>
+        }
+
+        @if (TempData["Error"] != null)
+        {
+                <text>
+                    swal({
+                        title: 'Error',
+                        text: '@Html.Raw(TempData["Error"])',
+                        type: 'error',
+                        confirmButtonColor: '#EF5350'
+                    });
+                </text>
+        }
+
+    </script>
+    <script>
+
+        // Search Table (not rendered for self-service users)
+
+        var searchInputEl = document.getElementById("searchInput");
+        if (searchInputEl) {
+            searchInputEl.addEventListener("keyup", function () {
+
+                let value = this.value.toLowerCase();
+
+                let rows = document.querySelectorAll("#regularizationTable tr");
+
+                rows.forEach(function (row) {
+
+                    let text = row.innerText.toLowerCase();
+
+                    row.style.display =
+                        text.includes(value) ? "" : "none";
+
+                });
+
+            });
+        }
+
+
+        $(document).ready(function () {
+
+            $('[data-popup="tooltip"]').tooltip();
+
+            // Approve
+            $(document).on('click', '.btnApprove', function () {
+                var id = $(this).data('id');
+
+                $('#ApproveRegularizationId').val(id);
+
+                $('#approveModal').modal('show');
+
+            });
+
+            // Reject
+            $(document).on('click', '.btnReject', function () {
+                var id = $(this).data('id');
+
+                $('#RejectRegularizationId').val(id);
+
+                $('#rejectModal').modal('show');
+
+            });
+
+            // Send Back
+            $(document).on('click', '.btnSendBack', function () {
+                var id = $(this).data('id');
+
+                $('#SendBackRegularizationId').val(id);
+
+                $('#sendBackModal').modal('show');
+
+            });
+
+            // Cancel
+            $(document).on('click', '.btnCancel', function () {
+                var id = $(this).data('id');
+
+                $('#CancelRegularizationId').val(id);
+
+                $('#cancelModal').modal('show');
+
+            });
+
+        });
+
+    </script>
+    <script>
+
+        // Filter (AJAX - posts to Filter, swaps only the table container so
+        // the panel heading / filter form itself stay put)
+        $(document).on('submit', '#regularizationFilterForm', function (e) {
+
+            e.preventDefault();
+
+            $.ajax({
+                url: '@Url.Action("Filter", "AttendanceRegularization")',
+                type: 'POST',
+                data: $(this).serialize(),
+                success: function (html) {
+                    $('#regularizationListContainer').html(html);
+                    $('[data-popup="tooltip"]').tooltip();
+                },
+                error: function () {
+                    swal({
+                        title: 'Error',
+                        text: 'Unable to apply filter. Please try again.',
+                        type: 'error',
+                        confirmButtonColor: '#EF5350'
+                    });
+                }
+            });
+
+        });
+
+    </script>
+
+}

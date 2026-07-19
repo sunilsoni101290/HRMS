@@ -1,0 +1,82 @@
+@model AttendanceRegularizationFilterRequestDto
+
+@using APP.Helpers
+
+@{
+    // Employee search/filter only makes sense on the org-wide admin list -
+    // "My Regularization Requests" already scopes to one employee.
+    bool isAdmin = ViewBag.IsAdmin ?? true;
+}
+
+<!-- Row 1 -->
+<div class="row">
+
+    @if (isAdmin)
+    {
+        <div class="col-md-3">
+            <input type="text" id="searchInput"
+                   class="form-control"
+                   placeholder="Search Employee..." />
+        </div>
+
+        <div class="col-md-3">
+            <select asp-for="EmployeeId"
+                    asp-items="ViewBag.EmployeeList" class="form-control" id="EmployeeId">
+                <option value="">All Employees</option>
+            </select>
+        </div>
+    }
+
+    <div class="col-md-3">
+        <select asp-for="Status"
+                asp-items="Html.GetEnumSelectList<EnumExtensions.ApprovalStatus>()"
+                class="form-control">
+            <option value="">All Status</option>
+        </select>
+    </div>
+
+</div>
+
+<!-- Row 2 -->
+<div class="row mt-10">
+
+    <div class="col-md-2">
+        <label>From Date</label>
+        <input type="date" asp-for="FromDate"
+               class="form-control" />
+    </div>
+
+    <div class="col-md-2">
+        <label>To Date</label>
+        <input type="date" asp-for="ToDate"
+               class="form-control" />
+    </div>
+
+    <div class="col-md-4" style="padding-top:27px;">
+
+        <button type="submit"
+                class="btn bg-primary">
+            <i class="icon-filter4 position-left"></i>
+            Filter
+        </button>
+
+        @if (isAdmin)
+        {
+            <a asp-action="Index"
+               class="btn bg-grey">
+                <i class="icon-reset position-left"></i>
+                Reset
+            </a>
+        }
+        else
+        {
+            <a asp-action="MyRequests"
+               class="btn bg-grey">
+                <i class="icon-reset position-left"></i>
+                Reset
+            </a>
+        }
+
+    </div>
+
+</div>

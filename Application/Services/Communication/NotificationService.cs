@@ -4,16 +4,19 @@ using Domain.Entities;
 using Infrastructure;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Application.Services.Communication
 {
     public class NotificationService : INotificationService
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<NotificationService> _logger;
 
-        public NotificationService(ApplicationDbContext context)
+        public NotificationService(ApplicationDbContext context, ILogger<NotificationService> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         #region Admin List
@@ -153,6 +156,76 @@ namespace Application.Services.Communication
             catch (Exception ex)
             {
                 return ex.ToString();
+            }
+        }
+
+        #endregion
+
+        #region Direct (single-recipient)
+
+        // Targeted notification for one specific user - e.g. the Leave
+        // Application approval chain notifying "whoever is next" rather
+        // than broadcasting to the whole tenant. Deliberately swallows
+        // every exception: this is called from inside other services'
+        // already-committed workflows (Apply/Approve/Reject/...) and must
+        // never be the reason that workflow appears to fail.
+        public async Task<string?> CreateDirectAsync(
+            string userId,
+            string title,
+            string message,
+            string notificationType,
+            string? redirectUrl = null,
+            string? featureId = null,
+            string? referenceId = null,
+            string? tenantId = null,
+            string? createdBy = null)
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+                return null;
+
+            try
+            {
+                var notification = new Notification
+                {
+                    Id = IDManager.GetNewId(new Notification()),
+                    Title = title,
+                    Message = message,
+                    NotificationType = notificationType,
+                    NotificationModule = "HRMS",
+                    FeatureId = featureId,
+                    ReferenceId = referenceId,
+                    RedirectUrl = redirectUrl,
+                    Priority = 2,
+                    IsBroadcast = false,
+                    TenantId = tenantId,
+                    CreatedBy = createdBy ?? "System"
+                };
+
+                await _context.Notifications.AddAsync(notification);
+
+                await _context.NotificationRecipients.AddAsync(new NotificationRecipient
+                {
+                    Id = IDManager.GetNewId(new NotificationRecipient()),
+                    NotificationId = notification.Id,
+                    UserId = userId,
+                    IsDelivered = true,
+                    DeliveredDate = DateTime.UtcNow,
+                    IsRead = false,
+                    TenantId = tenantId,
+                    CreatedBy = createdBy ?? "System"
+                });
+
+                await _context.SaveChangesAsync();
+
+                return notification.Id;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Failed to create direct notification for user {UserId} (feature {FeatureId}, reference {ReferenceId}).",
+                    userId, featureId, referenceId);
+
+                return null;
             }
         }
 

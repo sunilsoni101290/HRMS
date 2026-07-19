@@ -1,4 +1,5 @@
 using APP.Attributes;
+using APP.Excel;
 using APP.Models;
 using APP.Services.Implementations;
 using APP.Services.Interfaces;
@@ -73,6 +74,11 @@ builder.Services.AddHttpClient<IApiService, ApiService>(client =>
 
 builder.Services.Configure<AppSettings>(
     builder.Configuration.GetSection("AppSettings"));
+
+// Generic Excel import/export engine (APP/Excel) - shared by every
+// module's Import/Export/DownloadImportTemplate actions instead of each
+// one hand-rolling its own ClosedXML workbook code.
+builder.Services.AddScoped<IExcelEngine, ExcelEngine>();
 
 var app = builder.Build();
 

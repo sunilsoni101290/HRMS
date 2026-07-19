@@ -43,7 +43,7 @@ namespace APP.Controllers
         public async Task<IActionResult> Index()
         {
             ViewBag.IsAdmin = _isAdmin;
-            SetApprovalViewBag();
+            await SetApprovalViewBagAsync();
             await LoadDropdowns();
             var data = await _apiService.GetAsync<List<LeaveApplicationDto>>("LeaveApplication");
 
@@ -564,13 +564,11 @@ namespace APP.Controllers
 
             ViewBag.IsAdmin = _isAdmin;
             ViewBag.ListTitle = "Pending My Approval";
-            SetApprovalViewBag();
-
-            var roleName = SessionHelper.GetActiveRoleName;
+            await SetApprovalViewBagAsync();
 
             var url =
                 $"LeaveApplication/pending-for-approver?employeeId={Uri.EscapeDataString(_employeeId ?? string.Empty)}" +
-                $"&roleName={Uri.EscapeDataString(roleName ?? string.Empty)}";
+                $"&userId={Uri.EscapeDataString(_userId ?? string.Empty)}";
 
             var data = await _apiService.GetAsync<List<LeaveApplicationDto>>(url);
 
@@ -581,12 +579,15 @@ namespace APP.Controllers
         // Approve/Reject/Send Back buttons should be shown to the person
         // currently viewing the list - the API still re-checks for real
         // when a button is actually clicked, this is purely a UI convenience.
-        private void SetApprovalViewBag()
+        // ViewBag.IsHR now reflects the same permission-based check the API
+        // enforces (IsHrApproverAsync) instead of a substring match on the
+        // session's cached role display name.
+        private async Task SetApprovalViewBagAsync()
         {
             ViewBag.CurrentEmployeeId = _employeeId;
 
-            var roleName = SessionHelper.GetActiveRoleName ?? "";
-            ViewBag.IsHR = roleName.Contains("HR", StringComparison.OrdinalIgnoreCase);
+            ViewBag.IsHR = await _apiService.GetAsync<bool>(
+                $"LeaveApplication/is-hr-approver?userId={Uri.EscapeDataString(_userId ?? string.Empty)}");
         }
 
         [HttpPost]
@@ -629,7 +630,7 @@ namespace APP.Controllers
         public async Task<IActionResult> Pending()
         {
             ViewBag.IsAdmin = _isAdmin;
-            SetApprovalViewBag();
+            await SetApprovalViewBagAsync();
 
             var data =
                 await _apiService.GetAsync<List<LeaveApplicationDto>>(
@@ -642,7 +643,7 @@ namespace APP.Controllers
         public async Task<IActionResult> Approved()
         {
             ViewBag.IsAdmin = _isAdmin;
-            SetApprovalViewBag();
+            await SetApprovalViewBagAsync();
 
             var data =
                 await _apiService.GetAsync<List<LeaveApplicationDto>>(
@@ -655,7 +656,7 @@ namespace APP.Controllers
         public async Task<IActionResult> Rejected()
         {
             ViewBag.IsAdmin = _isAdmin;
-            SetApprovalViewBag();
+            await SetApprovalViewBagAsync();
 
             var data =
                 await _apiService.GetAsync<List<LeaveApplicationDto>>(
@@ -668,7 +669,7 @@ namespace APP.Controllers
         public async Task<IActionResult> Cancelled()
         {
             ViewBag.IsAdmin = _isAdmin;
-            SetApprovalViewBag();
+            await SetApprovalViewBagAsync();
 
             var data =
                 await _apiService.GetAsync<List<LeaveApplicationDto>>(
@@ -693,7 +694,7 @@ namespace APP.Controllers
 
             ViewBag.IsAdmin = _isAdmin;
             ViewBag.ListTitle = _isAdmin ? "Leave Application Management" : "My Leave History";
-            SetApprovalViewBag();
+            await SetApprovalViewBagAsync();
 
             if (string.IsNullOrEmpty(employeeId))
                 return View("Index", new List<LeaveApplicationDto>());
@@ -717,6 +718,53 @@ namespace APP.Controllers
                     model);
 
             return PartialView("_LeaveList", data);
+        }
+
+        #endregion
+
+        #region Calendar
+
+        // Month-grid view of approved leaves. Admin/HR sees org-wide
+        // (optionally narrowed by the Department dropdown); a self-service
+        // employee is scoped server-side to their own department so they
+        // can plan around teammates without seeing every other
+        // department's leave - same admin-vs-ESS convention as
+        // EmployeeLeaves/MyApprovals elsewhere in this controller.
+        [HttpGet]
+        public async Task<IActionResult> Calendar(int? year, int? month, string? departmentId)
+        {
+            var today = DateTime.Today;
+
+            int y = year ?? today.Year;
+            int m = month ?? today.Month;
+
+            // Normalize an out-of-range month (from Prev/Next navigation
+            // crossing a year boundary, or a hand-edited querystring)
+            // instead of letting `new DateTime(y, m, 1)` throw downstream.
+            while (m < 1) { m += 12; y -= 1; }
+            while (m > 12) { m -= 12; y += 1; }
+
+            ViewBag.IsAdmin = _isAdmin;
+            ViewBag.SelectedDepartmentId = departmentId;
+
+            if (_isAdmin)
+            {
+                var departments = await _apiService.GetAsync<List<DropdownDto>>("dropdown/department");
+                ViewBag.DepartmentList = new SelectList(departments, "Value", "Text", departmentId);
+            }
+
+            var url =
+                $"LeaveApplication/calendar?year={y}&month={m}" +
+                $"&employeeId={Uri.EscapeDataString(_employeeId ?? string.Empty)}" +
+                $"&isAdmin={(_isAdmin ? "true" : "false")}" +
+                $"&tenantId={Uri.EscapeDataString(_tenantId ?? string.Empty)}";
+
+            if (_isAdmin && !string.IsNullOrEmpty(departmentId))
+                url += $"&departmentId={Uri.EscapeDataString(departmentId)}";
+
+            var data = await _apiService.GetAsync<LeaveCalendarResponseDto>(url);
+
+            return View(data ?? new LeaveCalendarResponseDto { Year = y, Month = m, MonthName = new DateTime(y, m, 1).ToString("MMMM yyyy") });
         }
 
         #endregion

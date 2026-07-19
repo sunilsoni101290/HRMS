@@ -2196,6 +2196,50 @@ namespace Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "AttendanceRegularizations",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    EmployeeId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Date = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    AttendanceId = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    OriginalFirstIn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    OriginalLastOut = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RequestedFirstIn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RequestedLastOut = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Reason = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    CurrentLevel = table.Column<int>(type: "int", nullable: false),
+                    ApprovedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ApprovedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RejectedReason = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SendBackReason = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    TenantId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AttendanceRegularizations", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_AttendanceRegularizations_Attendances_AttendanceId",
+                        column: x => x.AttendanceId,
+                        principalTable: "Attendances",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_AttendanceRegularizations_Employees_EmployeeId",
+                        column: x => x.EmployeeId,
+                        principalTable: "Employees",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "LeaveApprovalHistories",
                 columns: table => new
                 {
@@ -2354,14 +2398,14 @@ namespace Infrastructure.Migrations
                     SessionId = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     LoginTime = table.Column<DateTime>(type: "datetime2", nullable: false),
                     LogoutTime = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    LoginStatus = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    FailureReason = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    LoginStatus = table.Column<int>(type: "int", nullable: false),
+                    FailureReason = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IPAddress = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     DeviceInfo = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Browser = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     OS = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Country = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    City = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Country = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    City = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsSuspicious = table.Column<bool>(type: "bit", nullable: false),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
                     CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -2551,6 +2595,35 @@ namespace Infrastructure.Migrations
                         onDelete: ReferentialAction.Restrict);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "AttendanceRegularizationApprovalHistories",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    AttendanceRegularizationId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    ActionBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Action = table.Column<int>(type: "int", nullable: false),
+                    Remarks = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ActionDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    TenantId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AttendanceRegularizationApprovalHistories", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_AttendanceRegularizationApprovalHistories_AttendanceRegularizations_AttendanceRegularizationId",
+                        column: x => x.AttendanceRegularizationId,
+                        principalTable: "AttendanceRegularizations",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_Announcements_DepartmentId",
                 table: "Announcements",
@@ -2637,6 +2710,21 @@ namespace Infrastructure.Migrations
                 name: "IX_AttendanceLogs_EmployeeId",
                 table: "AttendanceLogs",
                 column: "EmployeeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AttendanceRegularizationApprovalHistories_AttendanceRegularizationId",
+                table: "AttendanceRegularizationApprovalHistories",
+                column: "AttendanceRegularizationId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AttendanceRegularizations_AttendanceId",
+                table: "AttendanceRegularizations",
+                column: "AttendanceId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AttendanceRegularizations_EmployeeId_Date",
+                table: "AttendanceRegularizations",
+                columns: new[] { "EmployeeId", "Date" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Attendances_BranchId",
@@ -3216,6 +3304,9 @@ namespace Infrastructure.Migrations
                 name: "AttendanceLogs");
 
             migrationBuilder.DropTable(
+                name: "AttendanceRegularizationApprovalHistories");
+
+            migrationBuilder.DropTable(
                 name: "BiometricAttendanceLogs");
 
             migrationBuilder.DropTable(
@@ -3327,7 +3418,7 @@ namespace Infrastructure.Migrations
                 name: "Assets");
 
             migrationBuilder.DropTable(
-                name: "Attendances");
+                name: "AttendanceRegularizations");
 
             migrationBuilder.DropTable(
                 name: "Events");
@@ -3370,6 +3461,9 @@ namespace Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "AssetCategories");
+
+            migrationBuilder.DropTable(
+                name: "Attendances");
 
             migrationBuilder.DropTable(
                 name: "Roles");

@@ -1,0 +1,77 @@
+@model APP.Excel.ExcelImportResult
+
+@{
+    // Shared summary cards + per-row results table for any module's Import
+    // POST result view. Every module's controller now returns an
+    // ExcelImportResult (APP/Excel/ExcelImportResult.cs) instead of its own
+    // one-off *ImportResultDto, so this partial is the one place the
+    // "Total / Imported / Failed" cards and results table are drawn -
+    // future modules just @model APP.Excel.ExcelImportResult in their own
+    // Import.cshtml and <partial name="_ExcelImportResult" model="Model" />
+    // instead of copying this markup again.
+    bool hasResult = Model != null && Model.TotalRows > 0;
+}
+
+@if (hasResult)
+{
+    <hr />
+
+    <div class="row text-center">
+
+        <div class="col-md-4">
+            <div class="panel panel-body bg-slate-400">
+                <h3 class="no-margin">@Model.TotalRows</h3>
+                <span class="text-uppercase text-size-mini">Total Rows</span>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="panel panel-body bg-success-400">
+                <h3 class="no-margin">@Model.SuccessCount</h3>
+                <span class="text-uppercase text-size-mini">Imported</span>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="panel panel-body bg-danger-400">
+                <h3 class="no-margin">@Model.FailureCount</h3>
+                <span class="text-uppercase text-size-mini">Failed</span>
+            </div>
+        </div>
+
+    </div>
+
+    <table class="table table-bordered table-striped">
+
+        <thead>
+            <tr>
+                <th width="80">Row</th>
+                <th>Item</th>
+                <th width="100">Status</th>
+                <th>Message</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @foreach (var row in Model.Rows)
+            {
+                <tr>
+                    <td>@row.RowNumber</td>
+                    <td>@row.Identifier</td>
+                    <td>
+                        @if (row.Success)
+                        {
+                            <span class="label bg-success">Success</span>
+                        }
+                        else
+                        {
+                            <span class="label bg-danger">Failed</span>
+                        }
+                    </td>
+                    <td>@row.Message</td>
+                </tr>
+            }
+        </tbody>
+
+    </table>
+}

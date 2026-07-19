@@ -1,8 +1,8 @@
 using APP.Attributes;
+using APP.Excel;
 using APP.Helpers;
 using APP.Models.DTOs;
 using APP.Services.Interfaces;
-using ClosedXML.Excel;
 using Microsoft.AspNetCore.Mvc;
 
 namespace APP.Controllers
@@ -13,6 +13,7 @@ namespace APP.Controllers
     public class SalaryComponentController : Controller
     {
         private readonly IApiService _apiService;
+        private readonly IExcelEngine _excelEngine;
         private string _tenantId;
         private string _userId;
 
@@ -20,9 +21,10 @@ namespace APP.Controllers
         // convention as the Employee bulk import feature.
         private readonly bool _isAdmin;
 
-        public SalaryComponentController(IApiService apiService)
+        public SalaryComponentController(IApiService apiService, IExcelEngine excelEngine)
         {
             _apiService = apiService;
+            _excelEngine = excelEngine;
             _tenantId = SessionHelper.GetActiveTenantId;
             _userId = SessionHelper.GetActiveUserId;
             _isAdmin = SessionHelper.IsAdminRole();
@@ -104,7 +106,124 @@ namespace APP.Controllers
             if (!_isAdmin)
                 return Forbid();
 
-            return View(new SalaryComponentImportResultDto());
+            return View(new ExcelImportResult());
+        }
+
+        // Column mapping shared by DownloadImportTemplate and Import(POST) -
+        // the single source of truth for what each Excel column means and
+        // how it maps onto SalaryComponentDto. Headers carry the "*"/hint
+        // text shown in the template; each Setter owns its own parsing so
+        // there's no separate ParseYesNo/Cell(int) local helper duplicated
+        // here anymore (that logic now lives once in APP.Excel.ExcelEngine
+        // and per-column below).
+        private static List<ExcelColumn<SalaryComponentDto>> GetImportColumns()
+        {
+            return new List<ExcelColumn<SalaryComponentDto>>
+            {
+                new ExcelColumn<SalaryComponentDto>(
+                    "Component Name*",
+                    d => d.Name,
+                    (d, v) =>
+                    {
+                        if (string.IsNullOrWhiteSpace(v))
+                            throw new Exception("Component Name is required.");
+
+                        d.Name = v.Trim();
+                    },
+                    isRequired: true,
+                    sampleValue: "House Rent Allowance"),
+
+                new ExcelColumn<SalaryComponentDto>(
+                    "Code*",
+                    d => d.Code,
+                    (d, v) =>
+                    {
+                        if (string.IsNullOrWhiteSpace(v))
+                            throw new Exception("Code is required.");
+
+                        d.Code = v.Trim();
+                    },
+                    isRequired: true,
+                    sampleValue: "HRA"),
+
+                new ExcelColumn<SalaryComponentDto>(
+                    "Component Type* (Earning/Deduction)",
+                    d => d.ComponentType == 1 ? "Earning" : "Deduction",
+                    (d, v) =>
+                    {
+                        var text = (v ?? string.Empty).Trim();
+
+                        if (string.Equals(text, "Earning", StringComparison.OrdinalIgnoreCase))
+                            d.ComponentType = 1;
+                        else if (string.Equals(text, "Deduction", StringComparison.OrdinalIgnoreCase))
+                            d.ComponentType = 2;
+                        else
+                            throw new Exception($"Invalid Component Type '{text}'. Use Earning or Deduction.");
+                    },
+                    isRequired: true,
+                    sampleValue: "Earning"),
+
+                new ExcelColumn<SalaryComponentDto>(
+                    "Taxable (Yes/No)",
+                    d => d.IsTaxable ? "Yes" : "No",
+                    (d, v) => d.IsTaxable = ParseYesNo(v),
+                    sampleValue: "Yes"),
+
+                new ExcelColumn<SalaryComponentDto>(
+                    "PF Applicable (Yes/No)",
+                    d => d.IsPFApplicable ? "Yes" : "No",
+                    (d, v) => d.IsPFApplicable = ParseYesNo(v),
+                    sampleValue: "No"),
+
+                new ExcelColumn<SalaryComponentDto>(
+                    "ESIC Applicable (Yes/No)",
+                    d => d.IsESICApplicable ? "Yes" : "No",
+                    (d, v) => d.IsESICApplicable = ParseYesNo(v),
+                    sampleValue: "No"),
+            };
+        }
+
+        private static List<ExcelColumn<SalaryComponentListDto>> GetExportColumns()
+        {
+            return new List<ExcelColumn<SalaryComponentListDto>>
+            {
+                new ExcelColumn<SalaryComponentListDto>("Component Name", d => d.Name, (d, v) => d.Name = v ?? string.Empty),
+                new ExcelColumn<SalaryComponentListDto>("Code", d => d.Code, (d, v) => d.Code = v ?? string.Empty),
+                new ExcelColumn<SalaryComponentListDto>("Component Type", d => d.ComponentType == 1 ? "Earning" : "Deduction", (d, v) => { }),
+                new ExcelColumn<SalaryComponentListDto>("Taxable", d => d.IsTaxable ? "Yes" : "No", (d, v) => { }),
+                new ExcelColumn<SalaryComponentListDto>("PF Applicable", d => d.IsPFApplicable ? "Yes" : "No", (d, v) => { }),
+                new ExcelColumn<SalaryComponentListDto>("ESIC Applicable", d => d.IsESICApplicable ? "Yes" : "No", (d, v) => { }),
+            };
+        }
+
+        private static bool ParseYesNo(string? text, bool defaultValue = false)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return defaultValue;
+
+            return text.Trim().ToLowerInvariant() switch
+            {
+                "yes" or "y" or "true" or "1" => true,
+                "no" or "n" or "false" or "0" => false,
+                _ => throw new Exception($"Invalid value '{text}'. Use Yes or No.")
+            };
+        }
+
+        // Same "Reference Data" sheet as before - the exact Component Type
+        // text and Yes/No text the parser accepts - now expressed as data
+        // the engine renders rather than hand-written ClosedXML cell calls.
+        private static List<ExcelTemplateReferenceSheet> GetReferenceSheets()
+        {
+            return new List<ExcelTemplateReferenceSheet>
+            {
+                new ExcelTemplateReferenceSheet(
+                    "Reference Data",
+                    new List<ExcelReferenceColumn>
+                    {
+                        new ExcelReferenceColumn("Component Type", new[] { "Earning", "Deduction" }),
+                        new ExcelReferenceColumn("Yes / No columns", new[] { "Yes", "No" }),
+                    })
+            };
         }
 
         // A ready-to-fill .xlsx: headers + one sample row, plus a
@@ -116,51 +235,24 @@ namespace APP.Controllers
             if (!_isAdmin)
                 return Forbid();
 
-            using var workbook = new XLWorkbook();
-
-            var sheet = workbook.Worksheets.Add("Salary Components");
-
-            string[] headers =
+            var sampleRow = new SalaryComponentDto
             {
-                "Component Name*", "Code*", "Component Type* (Earning/Deduction)",
-                "Taxable (Yes/No)", "PF Applicable (Yes/No)", "ESIC Applicable (Yes/No)"
+                Name = "House Rent Allowance",
+                Code = "HRA",
+                ComponentType = 1,
+                IsTaxable = true,
+                IsPFApplicable = false,
+                IsESICApplicable = false
             };
 
-            for (int i = 0; i < headers.Length; i++)
-            {
-                var cell = sheet.Cell(1, i + 1);
-                cell.Value = headers[i];
-                cell.Style.Font.Bold = true;
-                cell.Style.Font.FontColor = XLColor.White;
-                cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1B2A4A");
-            }
-
-            var sample = new[] { "House Rent Allowance", "HRA", "Earning", "Yes", "No", "No" };
-
-            for (int i = 0; i < sample.Length; i++)
-                sheet.Cell(2, i + 1).Value = sample[i];
-
-            sheet.SheetView.FreezeRows(1);
-            sheet.Columns().AdjustToContents();
-
-            var refSheet = workbook.Worksheets.Add("Reference Data");
-            refSheet.Cell(1, 1).Value = "Component Type";
-            refSheet.Cell(1, 1).Style.Font.Bold = true;
-            refSheet.Cell(2, 1).Value = "Earning";
-            refSheet.Cell(3, 1).Value = "Deduction";
-
-            refSheet.Cell(1, 2).Value = "Yes / No columns";
-            refSheet.Cell(1, 2).Style.Font.Bold = true;
-            refSheet.Cell(2, 2).Value = "Yes";
-            refSheet.Cell(3, 2).Value = "No";
-
-            refSheet.Columns().AdjustToContents();
-
-            using var stream = new MemoryStream();
-            workbook.SaveAs(stream);
+            var bytes = _excelEngine.BuildTemplate(
+                GetImportColumns(),
+                sheetName: "Salary Components",
+                referenceSheets: GetReferenceSheets(),
+                sampleRow: sampleRow);
 
             return File(
-                stream.ToArray(),
+                bytes,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 "SalaryComponent_Import_Template.xlsx");
         }
@@ -172,109 +264,18 @@ namespace APP.Controllers
             if (!_isAdmin)
                 return Forbid();
 
-            var result = new SalaryComponentImportResultDto();
+            var result = new ExcelImportResult();
 
-            if (file == null || file.Length == 0)
-            {
-                TempData["GlobalError"] = "Please choose an Excel file to import.";
-                return View(result);
-            }
-
-            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-
-            if (extension != ".xlsx" && extension != ".xls")
-            {
-                TempData["GlobalError"] = "Only .xlsx or .xls files are supported.";
-                return View(result);
-            }
+            List<ExcelImportRow<SalaryComponentDto>> rows;
 
             try
             {
-                using var stream = file.OpenReadStream();
-                using var workbook = new XLWorkbook(stream);
-                var worksheet = workbook.Worksheet(1);
-
-                var dataRows = worksheet.RowsUsed().Skip(1).ToList();
-
-                foreach (var row in dataRows)
-                {
-                    string Cell(int col) => row.Cell(col).GetString().Trim();
-
-                    var name = Cell(1);
-                    var code = Cell(2);
-
-                    // Skip fully blank trailing rows
-                    if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(code))
-                        continue;
-
-                    var rowResult = new SalaryComponentImportRowResult
-                    {
-                        RowNumber = row.RowNumber(),
-                        Code = code,
-                        Name = name
-                    };
-
-                    try
-                    {
-                        if (string.IsNullOrWhiteSpace(name))
-                            throw new Exception("Component Name is required.");
-
-                        if (string.IsNullOrWhiteSpace(code))
-                            throw new Exception("Code is required.");
-
-                        var componentTypeText = Cell(3);
-                        int componentType;
-
-                        if (string.Equals(componentTypeText, "Earning", StringComparison.OrdinalIgnoreCase))
-                            componentType = 1;
-                        else if (string.Equals(componentTypeText, "Deduction", StringComparison.OrdinalIgnoreCase))
-                            componentType = 2;
-                        else
-                            throw new Exception($"Invalid Component Type '{componentTypeText}'. Use Earning or Deduction.");
-
-                        bool ParseYesNo(string text, bool defaultValue = false)
-                        {
-                            if (string.IsNullOrWhiteSpace(text))
-                                return defaultValue;
-
-                            return text.Trim().ToLowerInvariant() switch
-                            {
-                                "yes" or "y" or "true" or "1" => true,
-                                "no" or "n" or "false" or "0" => false,
-                                _ => throw new Exception($"Invalid value '{text}'. Use Yes or No.")
-                            };
-                        }
-
-                        var dto = new SalaryComponentDto
-                        {
-                            Name = name,
-                            Code = code,
-                            ComponentType = componentType,
-                            IsTaxable = ParseYesNo(Cell(4)),
-                            IsPFApplicable = ParseYesNo(Cell(5)),
-                            IsESICApplicable = ParseYesNo(Cell(6)),
-                            TenantId = _tenantId,
-                            CreatedBy = _userId
-                        };
-
-                        await _apiService.PostAsync<dynamic>("salary-component", dto);
-
-                        rowResult.Success = true;
-                        rowResult.Message = "Imported successfully.";
-                    }
-                    catch (ApiException apiEx)
-                    {
-                        rowResult.Success = false;
-                        rowResult.Message = GetErrorMessage(apiEx.ResponseContent);
-                    }
-                    catch (Exception ex)
-                    {
-                        rowResult.Success = false;
-                        rowResult.Message = ex.Message;
-                    }
-
-                    result.Rows.Add(rowResult);
-                }
+                rows = _excelEngine.ReadRows(file, GetImportColumns());
+            }
+            catch (ExcelFileValidationException ex)
+            {
+                TempData["GlobalError"] = ex.Message;
+                return View(result);
             }
             catch (Exception ex)
             {
@@ -282,9 +283,36 @@ namespace APP.Controllers
                 return View(result);
             }
 
-            result.TotalRows = result.Rows.Count;
-            result.SuccessCount = result.Rows.Count(x => x.Success);
-            result.FailureCount = result.TotalRows - result.SuccessCount;
+            foreach (var row in rows)
+            {
+                var identifier = string.Join(
+                    " - ",
+                    new[] { row.Item.Code, row.Item.Name }.Where(x => !string.IsNullOrWhiteSpace(x)));
+
+                if (row.HasErrors)
+                {
+                    result.AddRow(row.RowNumber, identifier, false, string.Join(" ", row.ParseErrors));
+                    continue;
+                }
+
+                try
+                {
+                    row.Item.TenantId = _tenantId;
+                    row.Item.CreatedBy = _userId;
+
+                    await _apiService.PostAsync<dynamic>("salary-component", row.Item);
+
+                    result.AddRow(row.RowNumber, identifier, true, "Imported successfully.");
+                }
+                catch (ApiException apiEx)
+                {
+                    result.AddRow(row.RowNumber, identifier, false, GetErrorMessage(apiEx.ResponseContent));
+                }
+                catch (Exception ex)
+                {
+                    result.AddRow(row.RowNumber, identifier, false, ex.Message);
+                }
+            }
 
             if (result.TotalRows == 0)
                 TempData["GlobalError"] = "The uploaded file didn't contain any component rows.";
@@ -335,43 +363,12 @@ namespace APP.Controllers
             var data = await _apiService
                 .GetAsync<List<SalaryComponentListDto>>("salary-component") ?? new();
 
-            using var workbook = new XLWorkbook();
-            var sheet = workbook.Worksheets.Add("Salary Components");
-
-            string[] headers = { "Component Name", "Code", "Component Type", "Taxable", "PF Applicable", "ESIC Applicable" };
-
-            for (int i = 0; i < headers.Length; i++)
-            {
-                var cell = sheet.Cell(1, i + 1);
-                cell.Value = headers[i];
-                cell.Style.Font.Bold = true;
-                cell.Style.Font.FontColor = XLColor.White;
-                cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1B2A4A");
-            }
-
-            int r = 2;
-
-            foreach (var item in data)
-            {
-                sheet.Cell(r, 1).Value = item.Name;
-                sheet.Cell(r, 2).Value = item.Code;
-                sheet.Cell(r, 3).Value = item.ComponentType == 1 ? "Earning" : "Deduction";
-                sheet.Cell(r, 4).Value = item.IsTaxable ? "Yes" : "No";
-                sheet.Cell(r, 5).Value = item.IsPFApplicable ? "Yes" : "No";
-                sheet.Cell(r, 6).Value = item.IsESICApplicable ? "Yes" : "No";
-                r++;
-            }
-
-            sheet.SheetView.FreezeRows(1);
-            sheet.Columns().AdjustToContents();
-
-            using var stream = new MemoryStream();
-            workbook.SaveAs(stream);
+            var bytes = _excelEngine.Export(data, GetExportColumns(), "Salary Components");
 
             var fileName = $"SalaryComponents_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
 
             return File(
-                stream.ToArray(),
+                bytes,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 fileName);
         }

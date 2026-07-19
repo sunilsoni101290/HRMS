@@ -1,0 +1,68 @@
+@model APP.Excel.ExcelImportResult
+
+@{
+    ViewData["Title"] = "Import States";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-file-spreadsheet position-left"></i>
+            Import States
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Index" class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <div class="alert alert-info alert-styled-left">
+            <span class="text-semibold">How this works:</span>
+            <ol class="no-margin-bottom" style="padding-left:18px;margin-top:6px;">
+                <li>Download the template below - it includes a "Reference Data" sheet listing every valid Country Code.</li>
+                <li>Fill in one row per state - State Name, State Code, Country Code, and GST State Code are all required.</li>
+                <li>Upload the completed file. Each row is validated and imported independently, so a mistake in one row won't block the rest.</li>
+            </ol>
+        </div>
+
+        <a asp-action="DownloadImportTemplate" class="btn bg-success mb-15">
+            <i class="icon-file-download"></i>
+            Download Excel Template
+        </a>
+
+        <form asp-action="Import" method="post" enctype="multipart/form-data">
+
+            <div class="form-group">
+
+                <label class="text-semibold">Select Excel File</label>
+
+                <input type="file"
+                       name="file"
+                       accept=".xlsx,.xls"
+                       class="form-control"
+                       required />
+
+            </div>
+
+            <button type="submit" class="btn bg-primary">
+                <i class="icon-upload3"></i>
+                Upload &amp; Import
+            </button>
+
+        </form>
+
+        <partial name="_ExcelImportResult" model="Model" />
+
+    </div>
+
+</div>

@@ -1,0 +1,237 @@
+@model AttendanceRegularizationDto
+
+@{
+    bool isAdmin = ViewBag.IsAdmin ?? true;
+    string? currentEmployeeId = ViewBag.CurrentEmployeeId as string;
+    bool canResubmit =
+        Model.Status == EnumExtensions.ApprovalStatus.ReturnedToEmployee &&
+        (isAdmin || Model.EmployeeId == currentEmployeeId);
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-calendar3 position-left"></i>
+            Attendance Regularization Details
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Index"
+               class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+
+            @if (canResubmit)
+            {
+                <a asp-action="Resubmit"
+                   asp-route-id="@Model.Id"
+                   class="btn bg-orange">
+                    <i class="icon-redo2"></i>
+                    Edit &amp; Resubmit
+                </a>
+            }
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <!-- Status Banner -->
+
+        <div class="alert @(Model.Status == EnumExtensions.ApprovalStatus.Approved ? "alert-success" :
+                            Model.Status == EnumExtensions.ApprovalStatus.Rejected ? "alert-danger" :
+                            Model.Status == EnumExtensions.ApprovalStatus.Cancelled ? "alert-warning" :
+                            Model.Status == EnumExtensions.ApprovalStatus.ReturnedToEmployee ? "alert-warning" :
+                            "alert-info")">
+
+            <strong>Status :</strong>
+
+            @if (Model.Status == EnumExtensions.ApprovalStatus.Pending)
+            {
+                <span class="label bg-warning">Pending</span>
+                @if (!string.IsNullOrEmpty(Model.CurrentLevelName))
+                {
+                    <span class="text-muted">
+                        &nbsp;- awaiting @Model.CurrentLevelName approval
+                    </span>
+                }
+            }
+            else if (Model.Status == EnumExtensions.ApprovalStatus.Approved)
+            {
+                <span class="label bg-success">Approved</span>
+            }
+            else if (Model.Status == EnumExtensions.ApprovalStatus.Rejected)
+            {
+                <span class="label bg-danger">Rejected</span>
+            }
+            else if (Model.Status == EnumExtensions.ApprovalStatus.ReturnedToEmployee)
+            {
+                <span class="label bg-orange">Sent Back</span>
+                @if (!string.IsNullOrEmpty(Model.SendBackReason))
+                {
+                    <span class="text-muted">
+                        &nbsp;- @Model.SendBackReason
+                    </span>
+                }
+            }
+            else if (Model.Status == EnumExtensions.ApprovalStatus.Cancelled)
+            {
+                <span class="label bg-grey">Cancelled</span>
+            }
+            else
+            {
+                <span class="label bg-grey">@Model.Status</span>
+            }
+
+        </div>
+
+        <!-- Employee / Date Information -->
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-user position-left"></i>
+                Employee Information
+            </legend>
+
+            <div class="row">
+
+                <div class="col-md-4">
+                    <label class="text-semibold text-muted">Employee</label>
+                    <h6>@Model.EmployeeName</h6>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="text-semibold text-muted">Attendance Date</label>
+                    <h6>@Model.Date.ToString("dd-MMM-yyyy")</h6>
+                </div>
+
+            </div>
+
+        </fieldset>
+
+        <!-- Original vs Requested -->
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-clock position-left"></i>
+                Original vs Requested
+            </legend>
+
+            <div class="row">
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Original First In</label>
+                    <h6>@(Model.OriginalFirstIn?.ToString("dd-MMM-yyyy hh:mm tt") ?? "-")</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Original Last Out</label>
+                    <h6>@(Model.OriginalLastOut?.ToString("dd-MMM-yyyy hh:mm tt") ?? "-")</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Requested First In</label>
+                    <h6>
+                        <span class="label bg-primary">
+                            @(Model.RequestedFirstIn?.ToString("dd-MMM-yyyy hh:mm tt") ?? "-")
+                        </span>
+                    </h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Requested Last Out</label>
+                    <h6>
+                        <span class="label bg-primary">
+                            @(Model.RequestedLastOut?.ToString("dd-MMM-yyyy hh:mm tt") ?? "-")
+                        </span>
+                    </h6>
+                </div>
+
+            </div>
+
+        </fieldset>
+
+        <!-- Reason -->
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-file-text2 position-left"></i>
+                Reason
+            </legend>
+
+            <div class="well">
+
+                @Model.Reason
+
+            </div>
+
+        </fieldset>
+
+        <!-- Approval Information -->
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-checkmark-circle position-left"></i>
+                Approval Information
+            </legend>
+
+            <div class="row">
+
+                <div class="col-md-4">
+                    <label class="text-semibold text-muted">
+                        Requested On
+                    </label>
+
+                    <h6>
+                        @(Model.CreatedOn.ToString("dd-MMM-yyyy HH:mm"))
+                    </h6>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="text-semibold text-muted">
+                        Approved By
+                    </label>
+
+                    <h6>
+                        @(string.IsNullOrEmpty(Model.ApprovedByName)
+                            ? "-"
+                            : Model.ApprovedByName)
+                    </h6>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="text-semibold text-muted">
+                        Approved Date
+                    </label>
+
+                    <h6>
+                        @(Model.ApprovedDate?.ToString("dd-MMM-yyyy HH:mm") ?? "-")
+                    </h6>
+                </div>
+
+            </div>
+
+            @if (Model.Status == EnumExtensions.ApprovalStatus.Rejected && !string.IsNullOrEmpty(Model.RejectedReason))
+            {
+                <div class="row">
+                    <div class="col-md-12">
+                        <label class="text-semibold text-muted">Rejected Reason</label>
+                        <h6>@Model.RejectedReason</h6>
+                    </div>
+                </div>
+            }
+
+        </fieldset>
+
+    </div>
+
+</div>

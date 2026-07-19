@@ -1,0 +1,296 @@
+@model RequestRegularizationDto
+
+@{
+    ViewData["Title"] = "Request Regularization";
+    bool isAdmin = ViewBag.IsAdmin ?? true;
+    bool noEmployeeProfile = ViewBag.NoEmployeeProfile ?? false;
+    string employeeDisplayName = ViewBag.EmployeeDisplayName ?? "";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-calendar-plus position-left"></i>
+            Request Attendance Regularization
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Index"
+               class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="Create"
+              method="post">
+
+            <div asp-validation-summary="ModelOnly"
+                 class="alert alert-danger"></div>
+
+            <!-- Employee Information -->
+
+            <div class="row">
+
+                <div class="col-md-6">
+
+                    <div class="form-group">
+
+                        <label asp-for="EmployeeId">Employee</label>
+
+                        @if (isAdmin)
+                        {
+                            <select asp-for="EmployeeId"
+                                    asp-items="ViewBag.EmployeeList"
+                                    id="EmployeeId"
+                                    class="form-control">
+                                <option value="">Select Employee</option>
+                            </select>
+
+                            <span asp-validation-for="EmployeeId"
+                                  class="text-danger"></span>
+                        }
+                        else
+                        {
+                            <!-- Self-service: always the logged-in employee, never a
+                                 pickable dropdown - the server ignores any other
+                                 value even if one were posted. -->
+                            <input type="text"
+                                   class="form-control bg-slate-100"
+                                   value="@employeeDisplayName"
+                                   readonly
+                                   disabled />
+
+                            <input asp-for="EmployeeId" type="hidden" id="EmployeeId" />
+
+                            @if (noEmployeeProfile)
+                            {
+                                <span class="text-danger text-size-small">
+                                    Your login isn't linked to an employee profile - you can't request regularization.
+                                </span>
+                            }
+                        }
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-6">
+
+                    <div class="form-group">
+
+                        <label asp-for="Date"></label>
+
+                        <input asp-for="Date"
+                               id="Date"
+                               type="date"
+                               class="form-control" />
+
+                        <span asp-validation-for="Date"
+                              class="text-danger"></span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Original Attendance (read-only, for context) -->
+
+            <div class="alert bg-slate-100 alert-styled-left">
+                <span id="originalAttendanceInfo">
+                    Current Attendance on record : <strong>First In - / Last Out -</strong>
+                </span>
+            </div>
+
+            <!-- Requested Times -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-clock"></i>
+                    Requested Correction
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="RequestedFirstIn"></label>
+
+                            <input asp-for="RequestedFirstIn"
+                                   type="datetime-local"
+                                   class="form-control" />
+
+                            <small class="text-muted">Leave blank if the First In punch was already correct.</small>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="RequestedLastOut"></label>
+
+                            <input asp-for="RequestedLastOut"
+                                   type="datetime-local"
+                                   class="form-control" />
+
+                            <small class="text-muted">Leave blank if the Last Out punch was already correct.</small>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- Reason -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-file-text2"></i>
+                    Reason
+                </legend>
+
+                <div class="form-group">
+
+                    <label asp-for="Reason"></label>
+
+                    <textarea asp-for="Reason"
+                              rows="4"
+                              maxlength="500"
+                              class="form-control"
+                              id="Reason"></textarea>
+
+                    <span asp-validation-for="Reason"
+                          class="text-danger"></span>
+
+                </div>
+
+            </fieldset>
+
+            <hr />
+
+            <div class="text-right">
+
+                <a asp-action="Index"
+                   class="btn btn-default">
+
+                    Cancel
+
+                </a>
+
+                <button type="submit"
+                        id="btnSubmitRegularization"
+                        class="btn bg-primary"
+                        @(noEmployeeProfile ? "disabled" : "")>
+
+                    <i class="icon-checkmark4"></i>
+                    Submit Request
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+@section Scripts {
+
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+
+        $(function () {
+
+            $("#EmployeeId, #Date").on("change", function () {
+
+                loadOriginalAttendance();
+
+            });
+
+            loadOriginalAttendance();
+
+        });
+
+        // Shows what Attendance already has on record for the chosen
+        // Employee/Date (if anything) so the employee can see exactly what
+        // they are correcting instead of guessing - purely informational,
+        // the server re-derives this itself when the request is approved.
+        function loadOriginalAttendance() {
+
+            var employeeId = $("#EmployeeId").val();
+            var date = $("#Date").val();
+
+            if (!employeeId || !date) {
+
+                $("#originalAttendanceInfo").html(
+                    'Current Attendance on record : <strong>First In - / Last Out -</strong>'
+                );
+
+                return;
+            }
+
+            $.ajax({
+
+                url: '@Url.Action("GetOriginalAttendance", "AttendanceRegularization")',
+                type: 'GET',
+                dataType: 'json',
+
+                data: {
+                    employeeId: employeeId,
+                    date: date
+                },
+
+                beforeSend: function () {
+                    $("#originalAttendanceInfo").html(
+                        '<i class="icon-spinner2 spinner"></i> Loading attendance...'
+                    );
+                },
+
+                success: function (response) {
+
+                    var firstIn = response.firstIn
+                        ? new Date(response.firstIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                        : '-';
+
+                    var lastOut = response.lastOut
+                        ? new Date(response.lastOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                        : '-';
+
+                    $("#originalAttendanceInfo").html(
+                        'Current Attendance on record : <strong>First In ' + firstIn + ' / Last Out ' + lastOut + '</strong>'
+                    );
+                },
+
+                error: function () {
+                    $("#originalAttendanceInfo").html(
+                        '<span class="text-danger">Unable to load current attendance</span>'
+                    );
+                }
+
+            });
+
+        }
+
+    </script>
+
+}

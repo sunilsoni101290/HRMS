@@ -3,100 +3,295 @@
 @{
     ViewData["Title"] = "Payslip";
     bool isAdmin = ViewBag.IsAdmin ?? true;
+
+    var earnings = Model.Details.Where(x => x.IsEarning).ToList();
+    var deductions = Model.Details.Where(x => !x.IsEarning).ToList();
+    int rows = Math.Max(earnings.Count, deductions.Count);
 }
 
-<div class="panel panel-flat" id="payslip">
-    <div class="panel-body">
+<style>
+    .payslip-toolbar {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
 
-        <div class="text-right hidden-print" style="margin-bottom:10px;">
-            <button onclick="window.print()" class="btn bg-primary"><i class="icon-printer"></i> Print</button>
-            @if (isAdmin)
+    .payslip-doc {
+        max-width: 900px;
+        margin: 0 auto;
+        background: #fff;
+        border: 1px solid #d8dce6;
+        border-radius: 6px;
+        padding: 28px 32px;
+        color: #22283a;
+        font-size: 13px;
+    }
+
+    .payslip-letterhead {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        border-bottom: 2px solid #1b2a4a;
+        padding-bottom: 14px;
+        margin-bottom: 18px;
+    }
+
+    .payslip-logo-box {
+        width: 64px;
+        height: 64px;
+        flex-shrink: 0;
+        border: 1px solid #9aa5b8;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        background: #f7f8fb;
+    }
+
+    .payslip-logo-box img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+
+    .payslip-logo-box span {
+        font-size: 10px;
+        letter-spacing: .5px;
+        color: #8b93a6;
+        font-weight: 600;
+    }
+
+    .payslip-company-name {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1b2a4a;
+        margin: 0;
+    }
+
+    .payslip-company-address {
+        font-size: 12px;
+        color: #6b7386;
+        margin: 2px 0 0;
+    }
+
+    .payslip-title {
+        font-size: 15px;
+        font-weight: 700;
+        margin: 0 0 14px;
+    }
+
+    .payslip-info-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 18px;
+    }
+
+    .payslip-info-table td {
+        border: 1px solid #d8dce6;
+        padding: 7px 12px;
+        font-size: 12.5px;
+        vertical-align: top;
+    }
+
+    .payslip-info-table td.label {
+        background: #f4f5f8;
+        font-weight: 600;
+        color: #4b5568;
+        width: 100%;
+    }
+
+    .payslip-info-table td.value {
+        width: 32%;
+    }
+
+    .payslip-earnings-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 16px;
+    }
+
+    .payslip-earnings-table th,
+    .payslip-earnings-table td {
+        border: 1px solid #d8dce6;
+        padding: 7px 12px;
+        font-size: 12.5px;
+    }
+
+    .payslip-earnings-table th {
+        background: #dce7f5;
+        color: #1b2a4a;
+        text-align: left;
+        font-weight: 700;
+    }
+
+    .payslip-earnings-table th.amount,
+    .payslip-earnings-table td.amount {
+        text-align: right;
+        width: 16%;
+    }
+
+    .payslip-earnings-table tr.payslip-total td {
+        background: #eef0dd;
+        font-weight: 700;
+    }
+
+    .payslip-earnings-table tr.payslip-netpay td {
+        background: #e2e6c8;
+        font-weight: 700;
+        font-size: 13.5px;
+    }
+
+    .payslip-words {
+        font-size: 12.5px;
+        margin-bottom: 22px;
+    }
+
+    .payslip-footer-note {
+        font-size: 11.5px;
+        font-style: italic;
+        color: #6b7386;
+        text-align: center;
+    }
+
+    @@media print {
+        .hidden-print, .sidebar, .navbar, .page-header, .breadcrumb-line, .footer {
+            display: none !important;
+        }
+
+        .content-wrapper, .content, .page-content {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .payslip-doc {
+            border: none;
+            max-width: 100%;
+            padding: 0;
+        }
+    }
+</style>
+
+<div class="payslip-toolbar hidden-print">
+    <button onclick="window.print()" class="btn bg-primary">
+        <i class="icon-printer"></i> Print
+    </button>
+
+    <button onclick="window.print()" class="btn btn-default" title="Choose &quot;Save as PDF&quot; in the print dialog to download">
+        <i class="icon-file-download"></i> Download PDF
+    </button>
+
+    @if (isAdmin)
+    {
+        <a asp-action="Index" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
+    }
+    else
+    {
+        <a asp-action="MyPayslips" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
+    }
+</div>
+
+<div class="payslip-doc" id="payslip">
+
+    <div class="payslip-letterhead">
+
+        <div class="payslip-logo-box">
+            @if (!string.IsNullOrWhiteSpace(Model.CompanyLogoUrl))
             {
-                <a asp-action="Index" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
+                <img src="@Model.CompanyLogoUrl" alt="@Model.CompanyName" />
             }
             else
             {
-                <a asp-action="MyPayslips" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
+                <span>LOGO</span>
             }
         </div>
 
-        <div class="text-center" style="border-bottom:2px solid #333; padding-bottom:10px; margin-bottom:20px;">
-            <h4 class="text-semibold" style="margin:0;">PAYSLIP</h4>
-            <span class="text-muted">For @Model.MonthName @Model.SalaryYear</span>
+        <div>
+            <p class="payslip-company-name">@(string.IsNullOrWhiteSpace(Model.CompanyName) ? "Company Name" : Model.CompanyName)</p>
+            @if (!string.IsNullOrWhiteSpace(Model.CompanyAddress))
+            {
+                <p class="payslip-company-address">@Model.CompanyAddress</p>
+            }
         </div>
 
-        <div class="row">
-            <div class="col-xs-6">
-                <p><strong>Employee:</strong> @Model.EmployeeName</p>
-                <p><strong>Employee Code:</strong> @Model.EmployeeCode</p>
-            </div>
-            <div class="col-xs-6 text-right">
-                <p><strong>Pay Date:</strong> @Model.SalaryDate.ToString("dd MMM yyyy")</p>
-                <p><strong>Status:</strong> @Model.Status</p>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-xs-6">
-                <p>
-                    <strong>Working Days:</strong> @(Model.TotalWorkingDays?.ToString("0.#") ?? "-")
-                </p>
-            </div>
-            <div class="col-xs-6 text-right">
-                <p>
-                    <strong>Present Days:</strong> @(Model.PresentDays?.ToString("0.#") ?? "-")
-                </p>
-            </div>
-        </div>
-
-        <table class="table table-bordered" style="margin-top:15px;">
-            <thead>
-                <tr>
-                    <th>Earnings</th>
-                    <th class="text-right">Amount (₹)</th>
-                    <th>Deductions</th>
-                    <th class="text-right">Amount (₹)</th>
-                </tr>
-            </thead>
-            <tbody>
-                @{
-                    var earnings = Model.Details.Where(x => x.IsEarning).ToList();
-                    var deductions = Model.Details.Where(x => !x.IsEarning).ToList();
-                    int rows = Math.Max(earnings.Count, deductions.Count);
-                }
-                @for (int i = 0; i < rows; i++)
-                {
-                    <tr>
-                        <td>@(i < earnings.Count ? earnings[i].SalaryComponentName : "")</td>
-                        <td class="text-right">@(i < earnings.Count ? earnings[i].Amount.ToString("N2") : "")</td>
-                        <td>@(i < deductions.Count ? deductions[i].SalaryComponentName : "")</td>
-                        <td class="text-right">@(i < deductions.Count ? deductions[i].Amount.ToString("N2") : "")</td>
-                    </tr>
-                }
-            </tbody>
-            <tfoot>
-                <tr>
-                    <th>Total Earnings</th>
-                    <th class="text-right">₹ @Model.TotalEarnings.ToString("N2")</th>
-                    <th>Total Deductions</th>
-                    <th class="text-right">₹ @Model.TotalDeductions.ToString("N2")</th>
-                </tr>
-            </tfoot>
-        </table>
-
-        <div class="text-right" style="border-top:2px solid #333; padding-top:10px;">
-            <h4 class="text-semibold">Net Pay: ₹ @Model.NetSalary.ToString("N2")</h4>
-        </div>
-
-        <p class="text-muted text-center" style="margin-top:30px;">
-            This is a computer-generated payslip and does not require a signature.
-        </p>
     </div>
-</div>
 
-@section Scripts {
-    <style media="print">
-        .hidden-print, .sidebar, .navbar, .page-header, .breadcrumb-line, .footer { display: none !important; }
-        .content-wrapper, .content, .page-content { margin: 0 !important; padding: 0 !important; }
-    </style>
-}
+    <p class="payslip-title">Salary Slip - @Model.MonthName @Model.SalaryYear</p>
+
+    <table class="payslip-info-table">
+        <tr>
+            <td class="label">Employee Name</td>
+            <td class="value">@Model.EmployeeName</td>
+            <td class="label">Employee ID</td>
+            <td class="value">@Model.EmployeeCode</td>
+        </tr>
+        <tr>
+            <td class="label">Department</td>
+            <td class="value">@(Model.DepartmentName ?? "-")</td>
+            <td class="label">Designation</td>
+            <td class="value">@(Model.DesignationName ?? "-")</td>
+        </tr>
+        <tr>
+            <td class="label">PAN</td>
+            <td class="value">@(Model.PAN ?? "-")</td>
+            <td class="label">UAN</td>
+            <td class="value">@(Model.UAN ?? "-")</td>
+        </tr>
+        <tr>
+            <td class="label">Bank A/C</td>
+            <td class="value">@(Model.BankAccountMasked ?? "-")</td>
+            <td class="label">Pay Date</td>
+            <td class="value">@Model.SalaryDate.ToString("dd-MMM-yyyy")</td>
+        </tr>
+    </table>
+
+    <table class="payslip-earnings-table">
+
+        <thead>
+            <tr>
+                <th>Earnings</th>
+                <th class="amount">Amount (&#8377;)</th>
+                <th>Deductions</th>
+                <th class="amount">Amount (&#8377;)</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+            @for (int i = 0; i < rows; i++)
+            {
+                <tr>
+                    <td>@(i < earnings.Count ? earnings[i].SalaryComponentName : "")</td>
+                    <td class="amount">@(i < earnings.Count ? earnings[i].Amount.ToString("N0") : "")</td>
+                    <td>@(i < deductions.Count ? deductions[i].SalaryComponentName : "")</td>
+                    <td class="amount">@(i < deductions.Count ? deductions[i].Amount.ToString("N0") : "")</td>
+                </tr>
+            }
+
+            <tr class="payslip-total">
+                <td>Gross Earnings</td>
+                <td class="amount">@Model.TotalEarnings.ToString("N0")</td>
+                <td>Total Deductions</td>
+                <td class="amount">@Model.TotalDeductions.ToString("N0")</td>
+            </tr>
+
+            <tr class="payslip-netpay">
+                <td colspan="2"></td>
+                <td>Net Pay</td>
+                <td class="amount">@Model.NetSalary.ToString("N0")</td>
+            </tr>
+
+        </tbody>
+
+    </table>
+
+    <p class="payslip-words">
+        <strong>Net Pay (in words):</strong> @Model.NetPayInWords
+    </p>
+
+    <p class="payslip-footer-note">
+        This is a system-generated payslip and does not require a signature.
+    </p>
+
+</div>

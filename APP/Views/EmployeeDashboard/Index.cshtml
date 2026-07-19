@@ -330,6 +330,39 @@
     </div>
 </div>
 
+<div class="row">
+    <!-- Upcoming Holidays -->
+    <div class="col-md-12">
+        <div class="panel panel-flat">
+            <div class="panel-heading">
+                <h6 class="panel-title"><i class="icon-gift position-left"></i> Upcoming Holidays</h6>
+                <div class="heading-elements">
+                    <span class="badge bg-indigo">@Model.UpcomingHolidays.Count</span>
+                </div>
+            </div>
+            <div class="panel-body">
+                @if (Model.UpcomingHolidays.Any())
+                {
+                    <div class="row text-center">
+                        @foreach (var h in Model.UpcomingHolidays)
+                        {
+                            <div class="col-sm-2 col-xs-4" style="margin-bottom:12px;">
+                                <div class="text-size-small text-muted">@h.Date.ToString("dddd")</div>
+                                <div class="text-size-large text-bold text-indigo-400">@h.Date.ToString("dd MMM")</div>
+                                <div class="text-size-small">@h.Name</div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted text-center" style="padding:10px 0;">No upcoming holidays.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Charts -->
 <div class="row">
     <div class="col-md-7">

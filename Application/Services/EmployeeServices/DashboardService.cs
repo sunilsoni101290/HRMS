@@ -559,6 +559,26 @@ namespace Application.Services.EmployeeServices
             {
             var today = DateTime.Today;
 
+            var upcomingEvents = await GetUpcomingEventsAsync();
+
+            // Upcoming Holidays widget - pulled straight out of the mixed
+            // Events/Birthday feed already computed above (same date-range
+            // holiday query, no extra DB round trip), narrowed to just the
+            // "Holiday" event type and capped to the next 5 for the
+            // dashboard's compact list panel.
+            var upcomingHolidays = (upcomingEvents?.Events ?? new List<UpcomingEventDto>())
+                .Where(x => x.EventType == "Holiday")
+                .OrderBy(x => x.EventDate)
+                .Take(5)
+                .Select(x => new UpcomingHolidayDto
+                {
+                    Id = x.Id,
+                    Name = x.Title,
+                    Date = x.EventDate,
+                    Remarks = x.Description
+                })
+                .ToList();
+
             return new DashboardKpiDto
             {
                 TotalEmployees = await GetTotalEmployeesAsync(),
@@ -584,7 +604,9 @@ namespace Application.Services.EmployeeServices
 
                 AnnouncementDashboard = await GetAnnouncementDashboardAsync(),
                 RecentLeaveRequests = await GetRecentLeaveRequestsAsync(),
-                UpcomingDashboardEvents = await GetUpcomingEventsAsync(),
+                UpcomingDashboardEvents = upcomingEvents,
+                HolidayCount = upcomingHolidays.Count,
+                UpcomingHolidays = upcomingHolidays,
                 EmployeeBirthdays = await GetBirthdayDashboardAsync(),
                 DepartmentDashboard = await GetDepartmentHeadcountAsync(tenantId),
 

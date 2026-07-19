@@ -228,6 +228,8 @@
 			<div class="navbar-right">
 				<ul class="nav navbar-nav">
 
+					@await Html.PartialAsync("_NotificationBell")
+
 					<li class="dropdown dropdown-user">
 						<a class="dropdown-toggle" data-toggle="dropdown">
 							<span class="user-avatar-circle">@(string.IsNullOrWhiteSpace(fullName) ? "?" : fullName.Trim().Substring(0, 1).ToUpper())</span>

@@ -221,13 +221,24 @@ namespace API.Controllers
         }
 
         [HttpGet("pending-for-approver")]
-        public async Task<IActionResult> GetPendingForApprover([FromQuery] string? employeeId, [FromQuery] string? roleName)
+        public async Task<IActionResult> GetPendingForApprover([FromQuery] string? employeeId, [FromQuery] string? userId)
         {
             var data =
                 await _leaveApplicationService
-                    .GetPendingForApproverAsync(employeeId, roleName);
+                    .GetPendingForApproverAsync(employeeId, userId);
 
             return Ok(data);
+        }
+
+        // Cosmetic-only helper for the APP self-service UI (button
+        // visibility) - the real Level 3 enforcement always happens inside
+        // ApproveLeaveAsync/RejectLeaveAsync/SendBackLeaveAsync via
+        // IsAuthorizedForLevelAsync regardless of what this returns.
+        [HttpGet("is-hr-approver")]
+        public async Task<IActionResult> IsHrApprover([FromQuery] string? userId)
+        {
+            var result = await _leaveApplicationService.IsHrApproverAsync(userId);
+            return Ok(result);
         }
 
         [HttpGet("approved")]
@@ -302,6 +313,25 @@ namespace API.Controllers
                     .GetTodayLeaveCountAsync();
 
             return Ok(count);
+        }
+
+        #endregion
+
+        #region Calendar
+
+        [HttpGet("calendar")]
+        public async Task<IActionResult> Calendar(
+            [FromQuery] int year,
+            [FromQuery] int month,
+            [FromQuery] string? employeeId,
+            [FromQuery] bool isAdmin,
+            [FromQuery] string? tenantId,
+            [FromQuery] string? departmentId)
+        {
+            var data = await _leaveApplicationService.GetCalendarAsync(
+                year, month, employeeId, isAdmin, tenantId, departmentId);
+
+            return Ok(data);
         }
 
         #endregion

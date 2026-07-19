@@ -721,6 +721,21 @@ namespace APP.Controllers
 
         #region Import
 
+        // NOT YET MIGRATED to the new APP.Excel.ExcelEngine (see
+        // APP/Excel/ExcelEngine.cs, IExcelEngine.cs and
+        // SalaryComponentController for the reference migration). This
+        // import has materially more going on than SalaryComponent's -
+        // multiple cross-referenced lookups resolved per row (Company,
+        // Branch scoped to Company, Department, Designation scoped to
+        // Department, Role, Reporting Manager by Employee Code) each with
+        // their own cache dictionaries, plus file uploads elsewhere in this
+        // controller reusing similar patterns. Porting it correctly needs
+        // its own focused pass rather than folding it into the engine's
+        // initial build - left as inline ClosedXML for now so the working
+        // bulk-import feature isn't put at risk. The next engineer wiring
+        // up the remaining modules should treat this as the second/third
+        // migration, once the engine has proven itself on a couple of
+        // simpler modules.
         [HttpGet]
         public IActionResult Import()
         {

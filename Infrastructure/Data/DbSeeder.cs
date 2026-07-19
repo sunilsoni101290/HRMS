@@ -693,9 +693,15 @@ namespace Infrastructure.Data
                     });
                 }
 
-                // 👨‍💼 HR Manager → Employee + Leave
+                // 👨‍💼 HR Manager → Employee + Leave (including LEAVE_APPROVAL/
+                // Approve - IsAuthorizedForLevelAsync's Level 3 check is
+                // permission-based, not a substring match on role name, so
+                // the HR Manager role must actually hold this permission or
+                // no HR user could ever approve a Level 3 leave request).
                 var hrPermissions = permissions
-                    .Where(p => p.FeatureId == AppFeatureConstants.EMPLOYEE || p.FeatureId == AppFeatureConstants.LEAVE_APPLICATION)
+                    .Where(p => p.FeatureId == AppFeatureConstants.EMPLOYEE ||
+                                p.FeatureId == AppFeatureConstants.LEAVE_APPLICATION ||
+                                p.FeatureId == AppFeatureConstants.LEAVE_APPROVAL)
                     .ToList();
 
                 foreach (var perm in hrPermissions)
@@ -1387,6 +1393,35 @@ namespace Infrastructure.Data
                 AppFeatureConstants.ATTENDANCE_MANAGEMENT, "bi bi-person-vcard-fill", AppFeatureType.Master, 56,
                 canAdd: true, canEdit: true, canDelete: true);
 
+            // Leave Calendar - month-grid view of approved leaves, scoped
+            // org-wide for admin/HR and to "my department" for a
+            // self-service employee. Deliberately not in
+            // EssRestrictionAttribute's LeaveApplication deny-list, so it
+            // stays reachable by everyone (the whole point is letting
+            // employees plan around their teammates).
+            Def("Leave Calendar", AppFeatureConstants.LEAVE_CALENDAR,
+                AppFeatureConstants.LEAVE_CALENDAR_CONTROLLER, AppFeatureConstants.LEAVE_CALENDAR_ACTION,
+                AppFeatureConstants.LEAVE_MANAGEMENT, "bi bi-calendar-week", AppFeatureType.Transaction, 65);
+
+            // Approval Delegation (out-of-office proxy approver) - reachable
+            // by any employee who might be an approver (Reporting Manager or
+            // Department Head), not admin-gated - see
+            // EssRestrictionAttribute, which deliberately does not list this
+            // controller.
+            Def("Approval Delegation", AppFeatureConstants.APPROVAL_DELEGATION,
+                AppFeatureConstants.APPROVAL_DELEGATION_CONTROLLER, AppFeatureConstants.APPROVAL_DELEGATION_ACTION,
+                AppFeatureConstants.LEAVE_MANAGEMENT, "bi bi-person-arms-up", AppFeatureType.Transaction, 66,
+                canAdd: true, canDelete: true);
+
+            // Attendance Regularization - employee-submitted correction of a
+            // missing/wrong punch for a date, routed through the same
+            // multi-level approval chain as Leave. Child of the existing
+            // Attendance Management group.
+            Def("Attendance Regularization", AppFeatureConstants.ATTENDANCE_REGULARIZATION,
+                AppFeatureConstants.ATTENDANCE_REGULARIZATION_CONTROLLER, AppFeatureConstants.ATTENDANCE_REGULARIZATION_ACTION,
+                AppFeatureConstants.ATTENDANCE_MANAGEMENT, "bi bi-calendar2-check", AppFeatureType.Transaction, 57,
+                canAdd: true, canApprove: true);
+
             // ---------------- PAYROLL (ensure parent + children + fixes) ----------------
             Def("Payroll", AppFeatureConstants.PAYROLL, "", "",
                 null, "bi bi-cash-stack", AppFeatureType.Transaction, 70);
@@ -1683,6 +1718,54 @@ namespace Infrastructure.Data
                 if (newLinks.Count > 0)
                 {
                     await context.RolePermissions.AddRangeAsync(newLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            // HR Manager → Approve Leave (LEAVE_APPROVAL/Approve).
+            // LeaveApplicationService.IsAuthorizedForLevelAsync's Level 3
+            // check was formalized from a loose actingRoleName.Contains("HR")
+            // substring match to a real permission check (does the acting
+            // user hold an allowed RolePermission for this Permission,
+            // regardless of what their role happens to be named). Databases
+            // seeded before this permission existed - or before it was
+            // included in the one-time HR Manager seed above - would
+            // otherwise have an HR Manager role that can no longer approve
+            // anything at Level 3. Runs on every startup, so it also
+            // backfills any tenant/role created before this reconcile step
+            // existed.
+            var hrManagerRole = await context.Roles
+                .FirstOrDefaultAsync(r => r.Code == ConstantHelper.HR_MANAGER);
+
+            if (hrManagerRole != null)
+            {
+                var hrApprovalPermissionIds = await context.Permissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.LEAVE_APPROVAL && p.Action == Actions.Approve)
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == hrManagerRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var hrNewLinks = hrApprovalPermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = hrManagerRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (hrNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(hrNewLinks);
                     await context.SaveChangesAsync();
                 }
             }

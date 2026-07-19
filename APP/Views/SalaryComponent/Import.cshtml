@@ -1,8 +1,7 @@
-@model SalaryComponentImportResultDto
+@model APP.Excel.ExcelImportResult
 
 @{
     ViewData["Title"] = "Import Salary Components";
-    bool hasResult = Model != null && Model.TotalRows > 0;
 }
 
 <div class="panel panel-flat">
@@ -62,71 +61,7 @@
 
         </form>
 
-        @if (hasResult)
-        {
-            <hr />
-
-            <div class="row text-center">
-
-                <div class="col-md-4">
-                    <div class="panel panel-body bg-slate-400">
-                        <h3 class="no-margin">@Model.TotalRows</h3>
-                        <span class="text-uppercase text-size-mini">Total Rows</span>
-                    </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="panel panel-body bg-success-400">
-                        <h3 class="no-margin">@Model.SuccessCount</h3>
-                        <span class="text-uppercase text-size-mini">Imported</span>
-                    </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="panel panel-body bg-danger-400">
-                        <h3 class="no-margin">@Model.FailureCount</h3>
-                        <span class="text-uppercase text-size-mini">Failed</span>
-                    </div>
-                </div>
-
-            </div>
-
-            <table class="table table-bordered table-striped">
-
-                <thead>
-                    <tr>
-                        <th width="80">Row</th>
-                        <th>Code</th>
-                        <th>Component Name</th>
-                        <th width="100">Status</th>
-                        <th>Message</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @foreach (var row in Model.Rows)
-                    {
-                        <tr>
-                            <td>@row.RowNumber</td>
-                            <td>@row.Code</td>
-                            <td>@row.Name</td>
-                            <td>
-                                @if (row.Success)
-                                {
-                                    <span class="label bg-success">Success</span>
-                                }
-                                else
-                                {
-                                    <span class="label bg-danger">Failed</span>
-                                }
-                            </td>
-                            <td>@row.Message</td>
-                        </tr>
-                    }
-                </tbody>
-
-            </table>
-        }
+        <partial name="_ExcelImportResult" model="Model" />
 
     </div>
 

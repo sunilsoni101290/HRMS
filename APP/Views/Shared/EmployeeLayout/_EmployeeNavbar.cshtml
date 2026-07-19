@@ -88,17 +88,7 @@
 
             <!-- Notifications -->
 
-            <li>
-
-                <a asp-controller="Notification"
-                   asp-action="Index"
-                   title="Notifications">
-
-                    <i class="icon-bell2"></i>
-
-                </a>
-
-            </li>
+            @await Html.PartialAsync("_NotificationBell")
 
             <!-- Employee -->
 
