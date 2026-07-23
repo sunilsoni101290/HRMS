@@ -66,9 +66,20 @@
             </div>
         }
 
+        @if (ViewBag.FromCandidate ?? false)
+        {
+            <div class="alert alert-info alert-styled-left mb-15">
+                <span class="text-semibold">Creating employee record from selected candidate.</span>
+                Onboarding will start automatically once this employee is saved.
+            </div>
+        }
+
         <form asp-action="@(Model.Id == null ? "Create" : "Edit")"
               asp-controller="Employee"
               method="post" enctype="multipart/form-data">
+
+            <input type="hidden" asp-for="CandidateId" />
+
             <div class="row">
 
                 <div class="col-md-4">

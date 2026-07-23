@@ -136,6 +136,7 @@ builder.Services.AddScoped<IAppFeatureService, AppFeatureService>();
 builder.Services.AddScoped<IFinancialYearService, FinancialYearService>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IEmployeeDocumentService, EmployeeDocumentService>();
+builder.Services.AddScoped<IEmployeeBankDetailService, EmployeeBankDetailService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
 builder.Services.AddScoped<IBiometricDeviceService, BiometricDeviceService>();
@@ -147,6 +148,8 @@ builder.Services.AddScoped<ILeaveBalanceService, LeaveBalanceService>();
 builder.Services.AddScoped<ILeaveApplicationService, LeaveApplicationService>();
 builder.Services.AddScoped<Application.Interfaces.Leaves.IApprovalDelegationService, Application.Services.Leaves.ApprovalDelegationService>();
 builder.Services.AddScoped<IAttendanceRegularizationService, AttendanceRegularizationService>();
+builder.Services.AddScoped<IAttendancePolicyService, AttendancePolicyService>();
+builder.Services.AddScoped<IWfhRequestService, WfhRequestService>();
 builder.Services.AddScoped<IHolidayGroupService, HolidayGroupService>();
 builder.Services.AddScoped<ICompanyService, CompanyService>();
 builder.Services.AddScoped<IBranchService, BranchService>();
@@ -178,6 +181,9 @@ builder.Services.AddScoped<Application.Interfaces.Recruitment.ICandidateService,
 builder.Services.AddScoped<Application.Interfaces.Recruitment.ICandidateApplicationService, Application.Services.Recruitment.CandidateApplicationService>();
 builder.Services.AddScoped<Application.Interfaces.Recruitment.IInterviewScheduleService, Application.Services.Recruitment.InterviewScheduleService>();
 builder.Services.AddScoped<Application.Interfaces.Recruitment.IRecruitmentDashboardService, Application.Services.Recruitment.RecruitmentDashboardService>();
+
+// ===================== Onboarding Module =====================
+builder.Services.AddScoped<Application.Interfaces.Onboarding.IOnboardingService, Application.Services.Onboarding.OnboardingService>();
 
 // ===================== Communication Module =====================
 builder.Services.AddScoped<Application.Interfaces.Communication.IAnnouncementService, Application.Services.Communication.AnnouncementService>();

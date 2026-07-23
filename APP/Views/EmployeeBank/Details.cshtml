@@ -1,0 +1,49 @@
+@model EmployeeBankDetailDto
+
+@{
+    ViewData["Title"] = "Bank Detail";
+}
+
+<div class="panel panel-flat">
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-bank position-left"></i> @Model.BankName
+            @if (Model.IsPrimary) { <span class="label bg-success" style="margin-left:8px;"><i class="icon-star-full3"></i> Primary</span> }
+        </h5>
+        <div class="heading-elements">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary btn-xs"><i class="icon-pencil7"></i> Edit</a>
+            <a asp-action="Index" class="btn btn-default btn-xs"><i class="icon-arrow-left13"></i> Back</a>
+        </div>
+    </div>
+    <div class="panel-body">
+        <table class="table table-striped">
+            <tr><th style="width:220px;">Employee</th><td>@Model.EmployeeName @(!string.IsNullOrEmpty(Model.EmployeeCode) ? $"({Model.EmployeeCode})" : "")</td></tr>
+            <tr><th>Bank Name</th><td>@Model.BankName</td></tr>
+            <tr><th>Branch Name</th><td>@(Model.BranchName ?? "-")</td></tr>
+            <tr><th>Account Number</th><td>@MaskAccountNumber(Model.AccountNumber)</td></tr>
+            <tr><th>Account Holder Name</th><td>@Model.AccountHolderName</td></tr>
+            <tr><th>IFSC Code</th><td>@Model.IFSCCode</td></tr>
+            <tr><th>MICR Code</th><td>@(Model.MICRCode ?? "-")</td></tr>
+            <tr><th>Account Type</th><td>@(Model.AccountTypeName ?? Model.AccountType.ToString())</td></tr>
+            <tr><th>Primary Account</th><td>@(Model.IsPrimary ? "Yes" : "No")</td></tr>
+            <tr><th>Remarks</th><td>@(Model.Remarks ?? "-")</td></tr>
+            <tr><th>Created On</th><td>@Model.CreatedOn.ToString("dd MMM yyyy")</td></tr>
+        </table>
+    </div>
+</div>
+
+@functions {
+    string MaskAccountNumber(string? accountNumber)
+    {
+        if (string.IsNullOrWhiteSpace(accountNumber))
+            return "-";
+
+        var trimmed = accountNumber.Trim();
+
+        if (trimmed.Length <= 4)
+            return trimmed;
+
+        var lastFour = trimmed[^4..];
+        return new string('X', trimmed.Length - 4) + lastFour;
+    }
+}

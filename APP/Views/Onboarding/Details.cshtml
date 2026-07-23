@@ -1,0 +1,431 @@
+@model OnboardingCaseDto
+@using APP.Helpers
+
+@{
+    ViewData["Title"] = "Onboarding Details";
+
+    string StatusLabel(int s) => s switch
+    {
+        1 => "bg-grey",       // NotStarted
+        2 => "bg-info",       // InProgress
+        3 => "bg-success",    // Completed
+        4 => "bg-warning",    // OnHold
+        5 => "bg-danger",     // Cancelled
+        _ => "bg-grey"
+    };
+
+    string ProgressBarClass(int percent) => percent >= 100
+        ? "progress-bar-success"
+        : percent >= 50
+            ? "progress-bar-info"
+            : "progress-bar-warning";
+
+    var currentStatus = (int)Model.Status;
+
+    bool canHold = currentStatus == 1 || currentStatus == 2;
+    bool canCancel = currentStatus == 1 || currentStatus == 2 || currentStatus == 4;
+    bool canReactivate = currentStatus == 4 || currentStatus == 5;
+
+    // Fixed stage order, per the task brief.
+    var stages = new[]
+    {
+        (Value: 1, Name: "Document Verification", Icon: "icon-file-check2"),
+        (Value: 2, Name: "Welcome Kit", Icon: "icon-gift"),
+        (Value: 3, Name: "Employee Creation", Icon: "icon-user-plus"),
+        (Value: 4, Name: "Asset Allocation", Icon: "icon-laptop"),
+        (Value: 5, Name: "Joining Checklist", Icon: "icon-checkmark4")
+    };
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-user position-left"></i>
+            @Model.EmployeeName
+            <span class="label @StatusLabel(currentStatus)" style="margin-left:8px;">@Model.StatusName</span>
+        </h5>
+
+        <div class="heading-elements">
+            <a asp-action="Index" class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back to Tracker
+            </a>
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <div class="row">
+            <div class="col-md-3">
+                <strong>Employee Code</strong><br />
+                @(Model.EmployeeCode ?? "-")
+            </div>
+            <div class="col-md-3">
+                <strong>Department / Designation</strong><br />
+                @(Model.DepartmentName ?? "-") @(string.IsNullOrEmpty(Model.DesignationName) ? "" : " / " + Model.DesignationName)
+            </div>
+            <div class="col-md-2">
+                <strong>Start Date</strong><br />
+                @Model.StartDate.ToString("dd MMM yyyy")
+            </div>
+            <div class="col-md-2">
+                <strong>Target Completion</strong><br />
+                @(Model.TargetCompletionDate?.ToString("dd MMM yyyy") ?? "-")
+            </div>
+            <div class="col-md-2">
+                <strong>Completed On</strong><br />
+                @(Model.CompletedOn?.ToString("dd MMM yyyy") ?? "-")
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.Remarks))
+        {
+            <div class="row mt-15">
+                <div class="col-md-12">
+                    <strong>Remarks</strong><br />
+                    @Model.Remarks
+                </div>
+            </div>
+        }
+
+        <hr />
+
+        <div class="row">
+            <div class="col-md-9">
+                <label class="text-semibold">Overall Progress</label>
+                <div class="progress" style="height:20px;">
+                    <div id="caseProgressBar"
+                         class="progress-bar @ProgressBarClass(Model.ProgressPercent)"
+                         role="progressbar"
+                         style="width:@(Model.ProgressPercent)%;">
+                        <span id="caseProgressText">@Model.ProgressPercent%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 text-end">
+                @if (canHold)
+                {
+                    <button type="button" class="btn bg-warning btn-status" data-status="4" title="Hold">
+                        <i class="icon-pause2"></i> Hold
+                    </button>
+                }
+                @if (canReactivate)
+                {
+                    <button type="button" class="btn bg-info btn-status" data-status="2" title="Reactivate">
+                        <i class="icon-play3"></i> Reactivate
+                    </button>
+                }
+                @if (canCancel)
+                {
+                    <button type="button" class="btn bg-danger btn-status" data-status="5" title="Cancel">
+                        <i class="icon-cross2"></i> Cancel
+                    </button>
+                }
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h6 class="panel-title">Checklist</h6>
+        <div class="heading-elements">
+            <a href="#addItemModal" data-toggle="modal" class="btn btn-primary btn-sm">
+                <i class="icon-plus22"></i>
+                Add Checklist Item
+            </a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+
+        <ul class="nav nav-tabs">
+            @for (int i = 0; i < stages.Length; i++)
+            {
+                <li class="@(i == 0 ? "active" : "")">
+                    <a href="#stage@(stages[i].Value)" data-toggle="tab">
+                        <i class="@(stages[i].Icon)"></i>
+                        @stages[i].Name
+                        <span class="label bg-grey-400" style="margin-left:5px;">
+                            @Model.ChecklistItems.Count(x => (int)x.StageType == stages[i].Value)
+                        </span>
+                    </a>
+                </li>
+            }
+        </ul>
+
+        <div class="tab-content">
+            @for (int i = 0; i < stages.Length; i++)
+            {
+                var stage = stages[i];
+                var stageItems = Model.ChecklistItems
+                    .Where(x => (int)x.StageType == stage.Value)
+                    .OrderBy(x => x.SortOrder)
+                    .ToList();
+
+                <div class="tab-pane @(i == 0 ? "active" : "")" id="stage@(stage.Value)">
+
+                    @if (!stageItems.Any())
+                    {
+                        <p class="text-muted text-center" style="padding:20px;">No checklist items in this stage.</p>
+                    }
+                    else
+                    {
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th width="90">Mandatory</th>
+                                    <th width="160">Status</th>
+                                    <th width="220">Remarks</th>
+                                    <th width="140">Completed By</th>
+                                    <th width="130">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in stageItems)
+                                {
+                                    <tr data-item-id="@item.Id">
+                                        <td>
+                                            <strong>@item.Title</strong>
+                                            @if (!string.IsNullOrEmpty(item.Description))
+                                            {
+                                                <br /><small class="text-muted">@item.Description</small>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (item.IsMandatory)
+                                            {
+                                                <span class="label bg-primary">Mandatory</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="label bg-grey-400">Optional</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <select class="form-control input-sm item-status-select">
+                                                <option value="1" selected="@((int)item.Status == 1)">Pending</option>
+                                                <option value="2" selected="@((int)item.Status == 2)">In Progress</option>
+                                                <option value="3" selected="@((int)item.Status == 3)">Completed</option>
+                                                <option value="4" selected="@((int)item.Status == 4)">Not Applicable</option>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control input-sm item-remarks"
+                                                   value="@item.Remarks" placeholder="Remarks..." />
+                                        </td>
+                                        <td>
+                                            <small>
+                                                @(item.CompletedByName ?? "-")
+                                                @if (item.CompletedOn.HasValue)
+                                                {
+                                                    <br />@item.CompletedOn.Value.ToString("dd MMM yyyy")
+                                                }
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="btn btn-primary btn-xs btn-save-item" title="Save">
+                                                <i class="icon-checkmark3"></i>
+                                            </button>
+                                            <form asp-action="DeleteChecklistItem" method="post" style="display:inline;"
+                                                  onsubmit="return confirm('Delete this checklist item?');">
+                                                <input type="hidden" name="itemId" value="@item.Id" />
+                                                <input type="hidden" name="caseId" value="@Model.Id" />
+                                                <button type="submit" class="btn btn-danger btn-xs" title="Delete">
+                                                    <i class="icon-trash"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+
+                </div>
+            }
+        </div>
+
+    </div>
+
+</div>
+
+<!-- Add Checklist Item Modal -->
+<div id="addItemModal" class="modal fade">
+    <div class="modal-dialog">
+        <form asp-action="AddChecklistItem" method="post">
+            <input type="hidden" name="caseId" value="@Model.Id" />
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h5 class="modal-title">Add Checklist Item</h5>
+                </div>
+                <div class="modal-body">
+
+                    <div class="form-group">
+                        <label class="text-semibold">Stage</label>
+                        <select name="StageType" class="form-control">
+                            @foreach (var stage in stages)
+                            {
+                                <option value="@stage.Value">@stage.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="text-semibold">Title</label>
+                        <input type="text" name="Title" class="form-control" required />
+                    </div>
+
+                    <div class="form-group">
+                        <label class="text-semibold">Description</label>
+                        <textarea name="Description" rows="2" class="form-control"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" name="IsMandatory" value="true" />
+                                    Mandatory
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="text-semibold">Sort Order</label>
+                                <input type="number" name="SortOrder" class="form-control" placeholder="Optional" />
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Item</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Update Case Status Modal -->
+<div id="statusModal" class="modal fade">
+    <div class="modal-dialog">
+        <form asp-action="UpdateStatus" method="post">
+            <input type="hidden" name="id" value="@Model.Id" />
+            <input type="hidden" id="statusValue" name="status" />
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h5 class="modal-title" id="statusModalTitle">Update Status</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="text-semibold">Remarks</label>
+                        <textarea name="remarks" rows="3" class="form-control" placeholder="Optional remarks..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Confirm</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+
+@section Scripts {
+    <script>
+
+        @if (TempData["Success"] != null)
+        {
+            <text>
+                swal({ title: 'Success', text: '@Html.Raw(TempData["Success"])', type: 'success', confirmButtonColor: '#66BB6A' });
+            </text>
+        }
+
+        @if (TempData["Error"] != null)
+        {
+            <text>
+                swal({ title: 'Error', text: '@Html.Raw(TempData["Error"])', type: 'error', confirmButtonColor: '#EF5350' });
+            </text>
+        }
+
+        $(document).ready(function () {
+
+            var statusTitles = { 2: 'Reactivate Onboarding Case', 4: 'Hold Onboarding Case', 5: 'Cancel Onboarding Case' };
+
+            // Hold / Cancel / Reactivate - opens the remarks modal, sets the
+            // target status, then normal-posts to UpdateStatus.
+            $(document).on('click', '.btn-status', function () {
+                var status = $(this).data('status');
+                $('#statusValue').val(status);
+                $('#statusModalTitle').text(statusTitles[status] || 'Update Status');
+                $('#statusModal').modal('show');
+            });
+
+            // Inline "mark complete/pending" - AJAX so the progress bar
+            // refreshes without a full page reload.
+            $(document).on('click', '.btn-save-item', function () {
+
+                var row = $(this).closest('tr');
+                var itemId = row.data('item-id');
+                var status = row.find('.item-status-select').val();
+                var remarks = row.find('.item-remarks').val();
+                var btn = $(this);
+
+                btn.prop('disabled', true);
+
+                $.ajax({
+                    url: '@Url.Action("UpdateChecklistItemStatus", "Onboarding")',
+                    type: 'POST',
+                    data: {
+                        itemId: itemId,
+                        status: status,
+                        remarks: remarks
+                    },
+                    success: function (response) {
+                        btn.prop('disabled', false);
+
+                        if (!response.success) {
+                            swal({ title: 'Error', text: response.message || 'Unable to update checklist item.', type: 'error' });
+                            return;
+                        }
+
+                        $('#caseProgressBar')
+                            .css('width', response.progressPercent + '%')
+                            .removeClass('progress-bar-success progress-bar-info progress-bar-warning')
+                            .addClass(response.progressPercent >= 100 ? 'progress-bar-success' : (response.progressPercent >= 50 ? 'progress-bar-info' : 'progress-bar-warning'));
+
+                        $('#caseProgressText').text(response.progressPercent + '%');
+
+                        swal({ title: 'Saved', text: 'Checklist item updated successfully.', type: 'success', timer: 1200, showConfirmButton: false });
+
+                        if (response.caseStatus == 3) {
+                            // Case auto-completed server-side - reload so the
+                            // header badge / Hold/Cancel buttons reflect it.
+                            setTimeout(function () { location.reload(); }, 1200);
+                        }
+                    },
+                    error: function () {
+                        btn.prop('disabled', false);
+                        swal({ title: 'Error', text: 'Unable to update checklist item. Please try again.', type: 'error' });
+                    }
+                });
+
+            });
+
+        });
+
+    </script>
+}

@@ -1,0 +1,162 @@
+@model IEnumerable<AttendanceDto>
+
+@{
+    ViewData["Title"] = "My Attendance";
+
+    bool noProfile = ViewBag.NoEmployeeProfile ?? false;
+    var mySummary = ViewBag.MySummary as AttendanceSummaryRowDto;
+    string monthName = ViewBag.SummaryMonthName ?? DateTime.Today.ToString("MMMM yyyy");
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-calendar3 position-left"></i>
+            @(ViewBag.ListTitle ?? "My Attendance")
+        </h5>
+        <div class="heading-elements">
+            <a asp-action="Calendar" class="btn bg-primary btn-sm">
+                <i class="icon-calendar2 position-left"></i>
+                View My Attendance Calendar
+            </a>
+            <a asp-action="Create" class="btn btn-default btn-sm">
+                <i class="icon-alarm position-left"></i>
+                Punch In / Out
+            </a>
+        </div>
+    </div>
+
+    @if (noProfile)
+    {
+        <div class="panel-body">
+            <div class="alert alert-warning no-margin">
+                <i class="icon-warning22 position-left"></i>
+                Your login isn't linked to an employee profile, so attendance can't be shown.
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Monthly summary strip -->
+        <div class="panel-body">
+            <h6 class="text-muted no-margin-top">Summary for @monthName</h6>
+            <div class="row">
+                <div class="col-md-2 col-sm-4 col-xs-6">
+                    <div class="panel bg-success-400">
+                        <div class="panel-body text-center">
+                            <h3 class="no-margin">@(mySummary?.PresentDays ?? 0)</h3>
+                            <span>Present</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2 col-sm-4 col-xs-6">
+                    <div class="panel bg-danger-400">
+                        <div class="panel-body text-center">
+                            <h3 class="no-margin">@(mySummary?.AbsentDays ?? 0)</h3>
+                            <span>Absent</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2 col-sm-4 col-xs-6">
+                    <div class="panel bg-warning-400">
+                        <div class="panel-body text-center">
+                            <h3 class="no-margin">@(mySummary?.LateDays ?? 0)</h3>
+                            <span>Late</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2 col-sm-4 col-xs-6">
+                    <div class="panel bg-orange-400">
+                        <div class="panel-body text-center">
+                            <h3 class="no-margin">@(mySummary?.HalfDays ?? 0)</h3>
+                            <span>Half Day</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2 col-sm-4 col-xs-6">
+                    <div class="panel bg-blue-400">
+                        <div class="panel-body text-center">
+                            <h3 class="no-margin">@(mySummary?.LeaveDays ?? 0)</h3>
+                            <span>Leave</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2 col-sm-4 col-xs-6">
+                    <div class="panel bg-info-400">
+                        <div class="panel-body text-center">
+                            <h3 class="no-margin">@((mySummary?.TotalWorkingHours ?? 0).ToString("0.#"))</h3>
+                            <span>Total Working Hours</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <table class="table datatable-scroll-y table-hover">
+
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Shift</th>
+                    <th>First In</th>
+                    <th>Last Out</th>
+                    <th>Working</th>
+                    <th>Break</th>
+                    <th>OT</th>
+                    <th>Status</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.Date.ToString("dd MMM yyyy")</td>
+                            <td>@item.ShiftName</td>
+                            <td>@(item.FirstIn?.ToString("hh:mm tt") ?? "-")</td>
+                            <td>@(item.LastOut?.ToString("hh:mm tt") ?? "-")</td>
+                            <td><span class="label label-success">@item.WorkingHoursText</span></td>
+                            <td>@item.BreakHours</td>
+                            <td>@item.OvertimeHours</td>
+                            <td>
+                                @if (item.StatusText == "Present")
+                                {
+                                    <span class="label label-success">Present</span>
+                                }
+                                else if (item.StatusText == "HalfDay")
+                                {
+                                    <span class="label label-warning">Half Day</span>
+                                }
+                                else
+                                {
+                                    <span class="label label-danger">@item.StatusText</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <ul class="icons-list">
+                                    <li>
+                                        <a asp-action="Details" asp-route-id="@item.Id" title="View">
+                                            <i class="icon-eye"></i>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="9" class="text-center text-muted" style="padding:30px;">No attendance records found.</td></tr>
+                }
+
+            </tbody>
+
+        </table>
+    }
+
+</div>

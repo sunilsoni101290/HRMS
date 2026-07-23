@@ -3,6 +3,7 @@ using Application.DTOs.Communication;
 using Application.DTOs.Dashboard;
 using Application.Interfaces.Dashboard;
 using Domain.Entities;
+using Domain.Helper;
 using Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
@@ -106,7 +107,13 @@ namespace Application.Services.Dashboard
                 {
                     Date = d,
                     DayName = d.ToString("ddd"),
-                    Status = rec != null ? rec.Status.ToString() : (d > today ? "None" : "None")
+                    // Extracted to a shared helper (Domain/Helper/AttendanceStatusHelper.cs)
+                    // so the richer Attendance Calendar/Team/Summary/Dashboard
+                    // aggregation added later shares the same classification
+                    // rules - MapLegacyWeekStatus() reproduces this widget's
+                    // original behavior exactly (Attendance.Status.ToString()
+                    // if a row exists for the day, else "None"), unchanged.
+                    Status = AttendanceStatusHelper.MapLegacyWeekStatus(rec?.Status)
                 });
             }
 

@@ -184,6 +184,44 @@ namespace Domain.Helper
         public const string ATTENDANCE_REGULARIZATION_CONTROLLER = "AttendanceRegularization";
         public const string ATTENDANCE_REGULARIZATION_ACTION = ACTION_INDEX;
 
+        // Company-wide attendance rules (separate from Shift's per-shift
+        // timing) - see Domain/Entities/AttendancePolicy.cs.
+        public const string ATTENDANCE_POLICY = "ATTENDANCE_POLICY";
+        public const string ATTENDANCE_POLICY_CONTROLLER = "AttendancePolicy";
+        public const string ATTENDANCE_POLICY_ACTION = ACTION_INDEX;
+
+        // Calendar/Team/Summary/Dashboard aggregation endpoints - see
+        // API/Controllers/AttendanceInsightsController.cs.
+        public const string ATTENDANCE_INSIGHTS = "ATTENDANCE_INSIGHTS";
+        public const string ATTENDANCE_INSIGHTS_CONTROLLER = "AttendanceInsights";
+        public const string ATTENDANCE_INSIGHTS_ACTION = ACTION_INDEX;
+
+        // Menu-visible screens backed by AttendanceInsightsController - each
+        // maps to its own APP-side controller/action so they show up as
+        // separate sidebar links under Attendance Management.
+        public const string ATTENDANCE_CALENDAR = "ATTENDANCE_CALENDAR";
+        public const string ATTENDANCE_CALENDAR_CONTROLLER = "Attendance";
+        public const string ATTENDANCE_CALENDAR_ACTION = "Calendar";
+
+        public const string TEAM_ATTENDANCE = "TEAM_ATTENDANCE";
+        public const string TEAM_ATTENDANCE_CONTROLLER = "TeamAttendance";
+        public const string TEAM_ATTENDANCE_ACTION = ACTION_INDEX;
+
+        public const string ATTENDANCE_SUMMARY = "ATTENDANCE_SUMMARY";
+        public const string ATTENDANCE_SUMMARY_CONTROLLER = "AttendanceSummary";
+        public const string ATTENDANCE_SUMMARY_ACTION = ACTION_INDEX;
+
+        public const string ATTENDANCE_DASHBOARD = "ATTENDANCE_DASHBOARD";
+        public const string ATTENDANCE_DASHBOARD_CONTROLLER = "AttendanceDashboard";
+        public const string ATTENDANCE_DASHBOARD_ACTION = ACTION_INDEX;
+
+        // Work From Home request - employee-submitted date-range request,
+        // single-level approval (Reporting Manager or HR/Admin override) -
+        // see Domain/Entities/WfhRequest.cs.
+        public const string WFH_REQUEST = "WFH_REQUEST";
+        public const string WFH_REQUEST_CONTROLLER = "WfhRequest";
+        public const string WFH_REQUEST_ACTION = ACTION_INDEX;
+
         // =====================================================
         // LEAVE MANAGEMENT
         // =====================================================
@@ -298,6 +336,20 @@ namespace Domain.Helper
         public const string ASSET_HISTORY = "ASSET_HISTORY";
         public const string ASSET_HISTORY_CONTROLLER = "AssetHistory";
         public const string ASSET_HISTORY_ACTION = ACTION_INDEX;
+
+        // =====================================================
+        // EMPLOYEE ONBOARDING
+        // =====================================================
+
+        public const string ONBOARDING_MANAGEMENT = "ONBOARDING_MANAGEMENT";
+
+        public const string ONBOARDING = "ONBOARDING";
+        public const string ONBOARDING_CONTROLLER = "Onboarding";
+        public const string ONBOARDING_ACTION = ACTION_INDEX;
+
+        public const string ONBOARDING_TEMPLATE = "ONBOARDING_TEMPLATE";
+        public const string ONBOARDING_TEMPLATE_CONTROLLER = "OnboardingTemplate";
+        public const string ONBOARDING_TEMPLATE_ACTION = ACTION_INDEX;
 
         // =====================================================
         // COMMUNICATION

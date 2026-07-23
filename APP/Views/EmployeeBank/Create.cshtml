@@ -1,0 +1,144 @@
+@model EmployeeBankDetailDto
+
+@{
+    ViewData["Title"] = "Add Bank Detail";
+}
+
+<form asp-action="Create" asp-controller="EmployeeBank" method="post">
+
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="TenantId" type="hidden" />
+    <input asp-for="CreatedBy" type="hidden" />
+
+    <div class="panel panel-flat">
+
+        <div class="panel-heading">
+            <h5 class="panel-title">
+                <i class="icon-bank position-left"></i>
+                Add Bank Detail
+            </h5>
+            <div class="heading-elements">
+                <a asp-action="Index" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
+            </div>
+        </div>
+
+        <div class="panel-body">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <fieldset>
+                <legend class="text-semibold"><i class="icon-user position-left"></i> Employee</legend>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="EmployeeId"></label> <span class="text-danger">*</span>
+                            <select asp-for="EmployeeId" asp-items="ViewBag.EmployeeList" class="form-control">
+                                <option value="">-- Select Employee --</option>
+                            </select>
+                            <span asp-validation-for="EmployeeId" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="checkbox" style="margin-top:28px;">
+                            <label>
+                                <input asp-for="IsPrimary" class="styled" type="checkbox" />
+                                Make this the primary account
+                            </label>
+                            <p class="help-block">
+                                The primary account is the one used for payslips and salary payment.
+                                Only one account can be primary per employee.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend class="text-semibold"><i class="icon-credit-card position-left"></i> Bank Details</legend>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="BankName"></label> <span class="text-danger">*</span>
+                            <input asp-for="BankName" class="form-control" placeholder="e.g. State Bank of India" />
+                            <span asp-validation-for="BankName" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="BranchName"></label>
+                            <input asp-for="BranchName" class="form-control" placeholder="Branch name" />
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="AccountNumber"></label> <span class="text-danger">*</span>
+                            <input asp-for="AccountNumber" class="form-control" placeholder="Bank account number" autocomplete="off" />
+                            <span asp-validation-for="AccountNumber" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="AccountHolderName"></label> <span class="text-danger">*</span>
+                            <input asp-for="AccountHolderName" class="form-control" placeholder="Name as per bank records" />
+                            <span asp-validation-for="AccountHolderName" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="IFSCCode"></label> <span class="text-danger">*</span>
+                            <input asp-for="IFSCCode" class="form-control text-uppercase" placeholder="e.g. SBIN0001234" maxlength="11" />
+                            <span class="help-block">11 characters: 4 letters, '0', then 6 alphanumeric.</span>
+                            <span asp-validation-for="IFSCCode" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="MICRCode"></label>
+                            <input asp-for="MICRCode" class="form-control" placeholder="9 digit MICR code" />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="AccountType"></label> <span class="text-danger">*</span>
+                            <select asp-for="AccountType" asp-items="ViewBag.AccountTypes" class="form-control">
+                                <option value="">-- Select Type --</option>
+                            </select>
+                            <span asp-validation-for="AccountType" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="CancelledChequeFilePath"></label>
+                            <input asp-for="CancelledChequeFilePath" class="form-control" placeholder="/Uploads/... (optional path)" />
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="Remarks"></label>
+                            <textarea asp-for="Remarks" class="form-control" rows="1" placeholder="Notes (optional)"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+
+        <div class="panel-footer text-right">
+            <button type="submit" class="btn bg-primary">
+                <i class="icon-floppy-disk"></i> Save
+            </button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    @if (TempData["GlobalError"] != null)
+    {
+        <script>$(function(){ swal({ title:"Error", text:"@TempData["GlobalError"]", type:"error" }); });</script>
+    }
+    <partial name="_ValidationScriptsPartial" />
+}

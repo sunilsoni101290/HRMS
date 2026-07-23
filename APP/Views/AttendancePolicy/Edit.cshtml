@@ -1,0 +1,154 @@
+@model AttendancePolicyDto
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"] = "Edit Attendance Policy";
+}
+
+<form asp-action="Edit" asp-controller="AttendancePolicy" asp-route-id="@Model.Id" method="post">
+
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="TenantId" type="hidden" />
+    <input asp-for="CreatedBy" type="hidden" />
+    <input asp-for="CreatedOn" type="hidden" />
+    <input asp-for="LateMarkPenaltyTypeName" type="hidden" />
+
+    <div class="panel panel-flat">
+
+        <div class="panel-heading">
+            <h5 class="panel-title">
+                <i class="icon-shield-check position-left"></i>
+                Edit Attendance Policy
+            </h5>
+            <div class="heading-elements">
+                <a asp-action="Index" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
+            </div>
+        </div>
+
+        <div class="panel-body">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <fieldset>
+                <legend class="text-semibold"><i class="icon-office position-left"></i> Scope</legend>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="CompanyId"></label>
+                            <select asp-for="CompanyId" asp-items="ViewBag.CompanyList" class="form-control">
+                                <option value="">-- All Companies --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="PolicyName"></label> <span class="text-danger">*</span>
+                            <input asp-for="PolicyName" class="form-control" />
+                            <span asp-validation-for="PolicyName" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="EffectiveFrom"></label> <span class="text-danger">*</span>
+                            <input asp-for="EffectiveFrom" type="date" class="form-control" />
+                            <span asp-validation-for="EffectiveFrom" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="checkbox" style="margin-top:28px;">
+                            <label>
+                                <input asp-for="IsActive" class="styled" type="checkbox" />
+                                Active
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend class="text-semibold"><i class="icon-alarm position-left"></i> Late Mark &amp; Correction</legend>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="MaxRegularizationRequestsPerMonth"></label>
+                            <input asp-for="MaxRegularizationRequestsPerMonth" type="number" min="0" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="LateMarkGraceCount"></label>
+                            <input asp-for="LateMarkGraceCount" type="number" min="0" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="LateMarkPenaltyType"></label>
+                            <select asp-for="LateMarkPenaltyType" asp-items="ViewBag.LateMarkPenaltyTypes" class="form-control">
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend class="text-semibold"><i class="icon-home4 position-left"></i> Work From Home</legend>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="MaxWfhDaysPerMonth"></label>
+                            <input asp-for="MaxWfhDaysPerMonth" type="number" min="0" class="form-control" />
+                            <span class="help-block">Maximum WFH days allowed per employee per month. 0 = unlimited.</span>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend class="text-semibold"><i class="icon-coins position-left"></i> Salary &amp; Comp-Off</legend>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="MinimumAttendancePercentForFullSalary"></label>
+                            <div class="input-group">
+                                <input asp-for="MinimumAttendancePercentForFullSalary" type="number" step="0.01" min="0" max="100" class="form-control" />
+                                <span class="input-group-addon">%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="CompOffEligibleExtraHours"></label>
+                            <div class="input-group">
+                                <input asp-for="CompOffEligibleExtraHours" type="number" step="0.01" min="0" class="form-control" />
+                                <span class="input-group-addon">hrs</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label asp-for="Remarks"></label>
+                            <textarea asp-for="Remarks" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+
+        <div class="panel-footer text-right">
+            <button type="submit" class="btn bg-primary">
+                <i class="icon-floppy-disk"></i> Update
+            </button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    @if (TempData["GlobalError"] != null)
+    {
+        <script>$(function(){ swal({ title:"Error", text:"@TempData["GlobalError"]", type:"error" }); });</script>
+    }
+    <partial name="_ValidationScriptsPartial" />
+}

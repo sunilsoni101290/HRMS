@@ -218,6 +218,16 @@ namespace APP.Helpers
             Training = 17,
             BusinessTrip = 18
         }
+        // Mirrors Domain's AttendancePolicy.LateMarkPenaltyType (int on the
+        // wire in AttendancePolicyDto.LateMarkPenaltyType) - used to build
+        // the dropdown on the Attendance Policy Create/Edit screens.
+        public enum LateMarkPenaltyType
+        {
+            None = 1,
+            WarningOnly = 2,
+            HalfDayDeduction = 3,
+            FullDayDeduction = 4
+        }
         public enum FinancialYearStatus
         {
             Upcoming = 0,
@@ -551,6 +561,46 @@ namespace APP.Helpers
             InProgress = 2,
             Resolved = 3,
             Closed = 4
+        }
+
+        // Employee Onboarding - mirrors Domain.Enums.EnumExtensions exactly
+        // (see Domain/Enums/EnumExtensions.cs) so the int values sent
+        // to/received from the API line up on both sides.
+        public enum OnboardingCaseStatus
+        {
+            NotStarted = 1,
+            InProgress = 2,
+            Completed = 3,
+            OnHold = 4,
+            Cancelled = 5
+        }
+
+        public enum OnboardingStageType
+        {
+            DocumentVerification = 1,
+            WelcomeKit = 2,
+            EmployeeCreation = 3,
+            AssetAllocation = 4,
+            JoiningChecklist = 5
+        }
+
+        public enum OnboardingChecklistItemStatus
+        {
+            Pending = 1,
+            InProgress = 2,
+            Completed = 3,
+            NotApplicable = 4
+        }
+
+        // Work From Home request - mirrors Domain.Enums.EnumExtensions
+        // exactly (see Domain/Enums/EnumExtensions.cs) so the int values
+        // sent to/received from the API line up on both sides.
+        public enum WfhRequestStatus
+        {
+            Pending = 1,
+            Approved = 2,
+            Rejected = 3,
+            Cancelled = 4
         }
     }
 

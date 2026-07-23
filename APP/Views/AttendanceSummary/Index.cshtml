@@ -1,0 +1,141 @@
+@model List<AttendanceSummaryRowDto>
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"] = "Attendance Summary";
+
+    int month = ViewBag.Month;
+    int year = ViewBag.Year;
+    string monthName = ViewBag.MonthName;
+    string? selectedDepartmentId = ViewBag.SelectedDepartmentId as string;
+    string? selectedEmployeeId = ViewBag.SelectedEmployeeId as string;
+
+    var records = Model ?? new List<AttendanceSummaryRowDto>();
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-stats-bars position-left"></i>
+            @ViewData["Title"] - @monthName
+        </h5>
+        <div class="heading-elements">
+            <a asp-action="Export"
+               asp-route-month="@month"
+               asp-route-year="@year"
+               asp-route-departmentId="@selectedDepartmentId"
+               asp-route-employeeId="@selectedEmployeeId"
+               class="btn btn-success btn-sm">
+                <i class="icon-file-excel position-left"></i>
+                Export to Excel
+            </a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+        <form method="get" asp-action="Index" class="row">
+            <div class="col-md-3">
+                <label>Month</label>
+                <select name="month" class="form-control">
+                    @for (int i = 1; i <= 12; i++)
+                    {
+                        <option value="@i" selected="@(i == month)">@(new DateTime(year, i, 1).ToString("MMMM"))</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label>Year</label>
+                <select name="year" class="form-control">
+                    @for (int y = DateTime.Today.Year; y >= DateTime.Today.Year - 5; y--)
+                    {
+                        <option value="@y" selected="@(y == year)">@y</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label>Department</label>
+                <select name="departmentId" class="form-control">
+                    <option value="">-- All Departments --</option>
+                    @if (ViewBag.DepartmentList is SelectList deptList)
+                    {
+                        @foreach (SelectListItem item in deptList)
+                        {
+                            <option value="@item.Value" selected="@(item.Value == selectedDepartmentId)">@item.Text</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label>Employee</label>
+                <select name="employeeId" class="form-control">
+                    <option value="">-- All Employees --</option>
+                    @if (ViewBag.EmployeeList is SelectList empList)
+                    {
+                        @foreach (SelectListItem item in empList)
+                        {
+                            <option value="@item.Value" selected="@(item.Value == selectedEmployeeId)">@item.Text</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-1">
+                <label>&nbsp;</label>
+                <button type="submit" class="btn btn-default form-control"><i class="icon-search4"></i></button>
+            </div>
+        </form>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-striped">
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Department</th>
+                    <th class="text-center">Present</th>
+                    <th class="text-center">Absent</th>
+                    <th class="text-center">Late</th>
+                    <th class="text-center">Half Day</th>
+                    <th class="text-center">Leave</th>
+                    <th class="text-center">Holiday</th>
+                    <th class="text-center">Week Off</th>
+                    <th class="text-center">Working Hrs</th>
+                    <th class="text-center">OT Hrs</th>
+                    <th class="text-center">Corrections</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (records.Any())
+                {
+                    foreach (var item in records)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@item.EmployeeName</strong>
+                                @if (!string.IsNullOrEmpty(item.EmployeeCode))
+                                {
+                                    <br /><span class="text-muted">@item.EmployeeCode</span>
+                                }
+                            </td>
+                            <td>@item.DepartmentName</td>
+                            <td class="text-center"><span class="label label-success">@item.PresentDays</span></td>
+                            <td class="text-center"><span class="label label-danger">@item.AbsentDays</span></td>
+                            <td class="text-center"><span class="label label-warning">@item.LateDays</span></td>
+                            <td class="text-center">@item.HalfDays</td>
+                            <td class="text-center">@item.LeaveDays</td>
+                            <td class="text-center">@item.HolidayDays</td>
+                            <td class="text-center">@item.WeekOffDays</td>
+                            <td class="text-center">@item.TotalWorkingHours.ToString("0.##")</td>
+                            <td class="text-center">@item.OvertimeHours.ToString("0.##")</td>
+                            <td class="text-center">@item.RegularizationCount</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="12" class="text-center text-muted" style="padding:30px;">No attendance summary data found for this period.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

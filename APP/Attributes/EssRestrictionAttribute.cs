@@ -49,6 +49,21 @@ namespace APP.Attributes
             "AssetCategory",
             "Asset",
             "AttendanceLog",
+            // Attendance Policy master data, org-wide Attendance Summary
+            // (with department filter + Excel export), and the org-wide
+            // Attendance Dashboard KPIs are Admin/HR only - the self-service
+            // equivalent of "my own summary" lives on the ESS-reachable
+            // Attendance/MyAttendance action instead.
+            //
+            // TeamAttendanceController is deliberately NOT listed here - like
+            // LeaveApplication/MyApprovals, a Reporting Manager may be logged
+            // in under the plain self-service role (org hierarchy is
+            // independent of login role), and the API itself already scopes
+            // the result to that caller's direct reports (or org-wide only
+            // for a real HR/Admin caller).
+            "AttendancePolicy",
+            "AttendanceSummary",
+            "AttendanceDashboard",
             "BiometricDevice",
             "Branch",
             "CandidateApplication",

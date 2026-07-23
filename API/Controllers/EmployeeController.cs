@@ -52,10 +52,16 @@ namespace API.Controllers
                 // rule as UserController's ResetPassword.
                 var credentials = await _service.CreateAsync(dto);
 
+                // CreateAsync mutates dto.Id in place to the newly-generated
+                // Employee Id (see EmployeeService.CreateAsync) - surface it
+                // here so callers (e.g. the APP's Recruitment-to-Onboarding
+                // bridge) can redirect straight to the new employee's record
+                // without a second round trip.
                 return Ok(new ApiResponse<EmployeeDto>
                 {
                     Success = true,
                     Message = $"Employee created successfully. {credentials}",
+                    Data = new EmployeeDto { Id = dto.Id }
                 });
             }
             catch (Exception ex)

@@ -1393,6 +1393,18 @@ namespace Infrastructure.Data
                 AppFeatureConstants.ATTENDANCE_MANAGEMENT, "bi bi-person-vcard-fill", AppFeatureType.Master, 56,
                 canAdd: true, canEdit: true, canDelete: true);
 
+            // Employee Bank Details - child of the existing Employee
+            // Management group (same level as Employee Document/Employee
+            // Shift), standalone top-level list rather than a tab on the
+            // Employee Details/Edit page. PayrollBusinessService.GenerateAsync
+            // reads Domain.Entities.EmployeeBankDetail directly (not through
+            // this menu) to resolve the primary account for a payslip, so
+            // this entry only wires up the CRUD screen.
+            Def("Employee Bank Details", AppFeatureConstants.EMPLOYEE_BANK,
+                AppFeatureConstants.EMPLOYEE_BANK_CONTROLLER, AppFeatureConstants.EMPLOYEE_BANK_ACTION,
+                AppFeatureConstants.EMPLOYEE_MANAGEMENT, "bi bi-bank2", AppFeatureType.Transaction, 44,
+                canAdd: true, canEdit: true, canDelete: true);
+
             // Leave Calendar - month-grid view of approved leaves, scoped
             // org-wide for admin/HR and to "my department" for a
             // self-service employee. Deliberately not in
@@ -1417,9 +1429,55 @@ namespace Infrastructure.Data
             // missing/wrong punch for a date, routed through the same
             // multi-level approval chain as Leave. Child of the existing
             // Attendance Management group.
-            Def("Attendance Regularization", AppFeatureConstants.ATTENDANCE_REGULARIZATION,
+            Def("Attendance Correction", AppFeatureConstants.ATTENDANCE_REGULARIZATION,
                 AppFeatureConstants.ATTENDANCE_REGULARIZATION_CONTROLLER, AppFeatureConstants.ATTENDANCE_REGULARIZATION_ACTION,
                 AppFeatureConstants.ATTENDANCE_MANAGEMENT, "bi bi-calendar2-check", AppFeatureType.Transaction, 57,
+                canAdd: true, canApprove: true);
+
+            // Attendance Policy - company-wide attendance rules (grace/
+            // regularization limits, late-mark penalty, minimum attendance %
+            // for full salary, comp-off eligible extra hours), separate from
+            // Shift's per-shift timing fields. Simple master-data CRUD,
+            // child of the existing Attendance Management group (same level
+            // as Shift/Attendance Correction).
+            Def("Attendance Policy", AppFeatureConstants.ATTENDANCE_POLICY,
+                AppFeatureConstants.ATTENDANCE_POLICY_CONTROLLER, AppFeatureConstants.ATTENDANCE_POLICY_ACTION,
+                AppFeatureConstants.ATTENDANCE_MANAGEMENT, "bi bi-shield-check", AppFeatureType.Master, 58,
+                canAdd: true, canEdit: true, canDelete: true);
+
+            // Attendance Calendar / Team Attendance / Attendance Summary /
+            // Attendance Dashboard - the four remaining "screens" requested
+            // alongside My Attendance (which reuses the existing Attendance
+            // menu entry's MyAttendance action, no new menu item needed).
+            // All read from AttendanceInsightsController; scoping (self vs
+            // manager vs HR) is enforced server-side per request.
+            Def("Attendance Calendar", AppFeatureConstants.ATTENDANCE_CALENDAR,
+                AppFeatureConstants.ATTENDANCE_CALENDAR_CONTROLLER, AppFeatureConstants.ATTENDANCE_CALENDAR_ACTION,
+                AppFeatureConstants.ATTENDANCE_MANAGEMENT, "bi bi-calendar3", AppFeatureType.Dashboard, 59);
+
+            Def("Team Attendance", AppFeatureConstants.TEAM_ATTENDANCE,
+                AppFeatureConstants.TEAM_ATTENDANCE_CONTROLLER, AppFeatureConstants.TEAM_ATTENDANCE_ACTION,
+                AppFeatureConstants.ATTENDANCE_MANAGEMENT, "bi bi-people-fill", AppFeatureType.Dashboard, 60);
+
+            Def("Attendance Summary", AppFeatureConstants.ATTENDANCE_SUMMARY,
+                AppFeatureConstants.ATTENDANCE_SUMMARY_CONTROLLER, AppFeatureConstants.ATTENDANCE_SUMMARY_ACTION,
+                AppFeatureConstants.ATTENDANCE_MANAGEMENT, "bi bi-bar-chart-fill", AppFeatureType.Dashboard, 61,
+                canExport: true);
+
+            Def("Attendance Dashboard", AppFeatureConstants.ATTENDANCE_DASHBOARD,
+                AppFeatureConstants.ATTENDANCE_DASHBOARD_CONTROLLER, AppFeatureConstants.ATTENDANCE_DASHBOARD_ACTION,
+                AppFeatureConstants.ATTENDANCE_MANAGEMENT, "bi bi-speedometer2", AppFeatureType.Dashboard, 62);
+
+            // Work From Home Request - employee-submitted date-range
+            // request, single-level approval (Reporting Manager or HR/Admin
+            // override), child of the existing Attendance Management group
+            // (same level as Attendance Correction/Attendance Policy).
+            // Reachable by both HR Manager (approve/view-all override) and
+            // plain Employee (create/view own + approve direct reports) -
+            // see the role-permission grants below.
+            Def("Work From Home Request", AppFeatureConstants.WFH_REQUEST,
+                AppFeatureConstants.WFH_REQUEST_CONTROLLER, AppFeatureConstants.WFH_REQUEST_ACTION,
+                AppFeatureConstants.ATTENDANCE_MANAGEMENT, "bi bi-house-door", AppFeatureType.Transaction, 63,
                 canAdd: true, canApprove: true);
 
             // ---------------- PAYROLL (ensure parent + children + fixes) ----------------
@@ -1502,6 +1560,26 @@ namespace Infrastructure.Data
             Def("Recruitment Dashboard", AppFeatureConstants.RECRUITMENT_DASHBOARD,
                 AppFeatureConstants.RECRUITMENT_DASHBOARD_CONTROLLER, AppFeatureConstants.RECRUITMENT_DASHBOARD_ACTION,
                 AppFeatureConstants.RECRUITMENT, "bi bi-graph-up-arrow", AppFeatureType.Dashboard, 95);
+
+            // ---------------- EMPLOYEE ONBOARDING ----------------
+            // An Onboarding case is started either manually by HR for any
+            // existing Employee, or automatically when a Recruitment
+            // Candidate is converted into an Employee (see
+            // Employee.CandidateId / EmployeeService.CreateAsync). Grouped
+            // as its own top-level module rather than nested under
+            // Recruitment, since HR starts most cases directly.
+            Def("Onboarding", AppFeatureConstants.ONBOARDING_MANAGEMENT, "", "",
+                null, "bi bi-person-check-fill", AppFeatureType.Transaction, 96);
+
+            Def("Onboarding Tracker", AppFeatureConstants.ONBOARDING,
+                AppFeatureConstants.ONBOARDING_CONTROLLER, AppFeatureConstants.ONBOARDING_ACTION,
+                AppFeatureConstants.ONBOARDING_MANAGEMENT, "bi bi-list-check", AppFeatureType.Transaction, 97,
+                canAdd: true, canEdit: true, canDelete: true);
+
+            Def("Onboarding Checklist Templates", AppFeatureConstants.ONBOARDING_TEMPLATE,
+                AppFeatureConstants.ONBOARDING_TEMPLATE_CONTROLLER, AppFeatureConstants.ONBOARDING_TEMPLATE_ACTION,
+                AppFeatureConstants.ONBOARDING_MANAGEMENT, "bi bi-card-checklist", AppFeatureType.Master, 98,
+                canAdd: true, canEdit: true, canDelete: true);
 
             // ---------------- COMMUNICATION ----------------
             Def("Communication", AppFeatureConstants.COMMUNICATION, "", "",
@@ -1766,6 +1844,257 @@ namespace Infrastructure.Data
                 if (hrNewLinks.Count > 0)
                 {
                     await context.RolePermissions.AddRangeAsync(hrNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            // HR Manager → full access (View/Create/Edit/Delete) on the new
+            // Employee Onboarding tracker + checklist template screens.
+            // Super Admin / System Configurator already received every
+            // permission (including these) from the fullAccessRoles loop
+            // above; Onboarding is a straightforward HR-manages-this-list
+            // feature with no approval chain, so no separate Approve grant
+            // is needed here (mirrors Asset/Recruitment's simple CRUD
+            // permission style rather than Leave/Attendance Regularization's
+            // approval-chain style).
+            if (hrManagerRole != null)
+            {
+                var onboardingPermissionIds = await context.Permissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.ONBOARDING
+                             || p.FeatureId == AppFeatureConstants.ONBOARDING_TEMPLATE)
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == hrManagerRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var onboardingNewLinks = onboardingPermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = hrManagerRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (onboardingNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(onboardingNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            // HR Manager → full access (View/Create/Edit/Delete) on the new
+            // Employee Bank Details screen. Same simple CRUD style as the
+            // Onboarding grant above - no approval chain involved. Super
+            // Admin / System Configurator already received every permission
+            // (including this one) from the fullAccessRoles loop above.
+            if (hrManagerRole != null)
+            {
+                var bankPermissionIds = await context.Permissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.EMPLOYEE_BANK)
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == hrManagerRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var bankNewLinks = bankPermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = hrManagerRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (bankNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(bankNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            // HR Manager → full access (View/Create/Edit/Delete) on the new
+            // Attendance Policy screen. Same simple CRUD style as the
+            // Onboarding/Employee Bank Details grants above - no approval
+            // chain involved. Super Admin / System Configurator already
+            // received every permission (including this one) from the
+            // fullAccessRoles loop above.
+            if (hrManagerRole != null)
+            {
+                var attendancePolicyPermissionIds = await context.Permissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.ATTENDANCE_POLICY)
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == hrManagerRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var attendancePolicyNewLinks = attendancePolicyPermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = hrManagerRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (attendancePolicyNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(attendancePolicyNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            // Work From Home Request - dual-audience feature (unlike
+            // Attendance Correction above, which only ever granted HR
+            // Manager - Employee never actually got a View grant there,
+            // which would leave the menu unreachable for plain employees):
+            //   - HR Manager -> View/Create/Approve (the HR override path
+            //     inside WfhRequestService.EnsureApproverAuthorizedAsync).
+            //   - Employee -> View/Create (create their own request, view
+            //     their own list; a Reporting Manager approving a direct
+            //     report's request is still authorized purely by
+            //     Employee.ReportingManagerId inside the service - no
+            //     RolePermission check gates the Approve/Reject/Cancel API
+            //     actions themselves, only menu visibility does).
+            // Super Admin / System Configurator already received every
+            // permission from the fullAccessRoles loop above.
+            if (hrManagerRole != null)
+            {
+                var wfhPermissionIds = await context.Permissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.WFH_REQUEST)
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == hrManagerRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var wfhNewLinks = wfhPermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = hrManagerRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (wfhNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(wfhNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            var employeeRole = await context.Roles
+                .FirstOrDefaultAsync(r => r.Code == ConstantHelper.EMPLOYEE);
+
+            if (employeeRole != null)
+            {
+                var wfhSelfServicePermissionIds = await context.Permissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.WFH_REQUEST
+                             && (p.Action == Actions.View || p.Action == Actions.Create))
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == employeeRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var wfhEmployeeNewLinks = wfhSelfServicePermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = employeeRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (wfhEmployeeNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(wfhEmployeeNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            // HR Manager -> access to the 4 new Attendance Insights screens
+            // (Calendar/Team/Summary/Dashboard). Team Attendance also works
+            // for Reporting Managers who aren't HR Manager - that scoping is
+            // enforced server-side per-request (self/direct-reports/all),
+            // not via this role-permission grant, so no extra role needs a
+            // grant here beyond what already reaches this feature.
+            if (hrManagerRole != null)
+            {
+                var insightsFeatureIds = new[]
+                {
+                    AppFeatureConstants.ATTENDANCE_CALENDAR,
+                    AppFeatureConstants.TEAM_ATTENDANCE,
+                    AppFeatureConstants.ATTENDANCE_SUMMARY,
+                    AppFeatureConstants.ATTENDANCE_DASHBOARD
+                };
+
+                var insightsPermissionIds = await context.Permissions
+                    .Where(p => insightsFeatureIds.Contains(p.FeatureId))
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == hrManagerRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var insightsNewLinks = insightsPermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = hrManagerRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (insightsNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(insightsNewLinks);
                     await context.SaveChangesAsync();
                 }
             }

@@ -95,6 +95,17 @@ namespace Domain.Entities
         #endregion
 
         public EmploymentType EmploymentType { get; set; }
+
+        // Onboarding: links this Employee back to the Recruitment Candidate
+        // they were created from, if any (null for employees added directly
+        // by HR without going through Recruitment). Scalar-only, no
+        // navigation property, to keep this addition minimal and avoid
+        // destabilizing the existing heavily-used Employee entity/DTO chain.
+        // Set by EmployeeService.CreateAsync from EmployeeDto.CandidateId,
+        // which also triggers auto-creation of an OnboardingCase for the new
+        // Employee - see IOnboardingService.CreateCaseAsync.
+        public string? CandidateId { get; set; }
+
         public override string GetSequencePrefix() => "EMP";
         // Navigation
         public ICollection<EmployeeDocument> Documents { get; set; }

@@ -50,15 +50,40 @@ namespace APP.Controllers
 
         #region Create GET
 
+        // Optional querystring params let the Recruitment "Create Employee &
+        // Start Onboarding" bridge (see Candidate/Index.cshtml,
+        // Candidate/Details.cshtml) preselect/prefill this form from a
+        // selected Candidate. candidateId is what actually matters
+        // functionally - it flows through to CandidateId below and, once
+        // posted, triggers EmployeeService.CreateAsync's automatic
+        // OnboardingCase creation server-side.
         [HttpGet]
-        public async Task<IActionResult> Create()
+        public async Task<IActionResult> Create(string? candidateId, string? name, string? email, string? phone)
         {
             await LoadDropdowns();
 
-            return View(new EmployeeDto
+            var model = new EmployeeDto
             {
-                JoiningDate = DateTime.UtcNow
-            });
+                JoiningDate = DateTime.UtcNow,
+                CandidateId = candidateId
+            };
+
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                var parts = name.Trim().Split(' ', 2);
+                model.FirstName = parts[0];
+                model.LastName = parts.Length > 1 ? parts[1] : null;
+            }
+
+            if (!string.IsNullOrWhiteSpace(email))
+                model.Email = email;
+
+            if (!string.IsNullOrWhiteSpace(phone))
+                model.Phone = phone;
+
+            ViewBag.FromCandidate = !string.IsNullOrWhiteSpace(candidateId);
+
+            return View(model);
         }
 
         #endregion
@@ -161,6 +186,32 @@ namespace APP.Controllers
                 {
                     TempData["Success"] = response.Message;
 
+                    // If this Employee was created from a Candidate,
+                    // EmployeeService.CreateAsync (Application layer) will
+                    // have already auto-started an OnboardingCase for them -
+                    // send HR straight there instead of the plain employee
+                    // list so the "onboarding will start automatically"
+                    // promise on the form is visibly kept. Best-effort only:
+                    // any failure here just falls back to the normal
+                    // redirect, the case is still reachable from the
+                    // Onboarding tracker either way.
+                    if (!string.IsNullOrWhiteSpace(dto.CandidateId) && response.Data != null && !string.IsNullOrWhiteSpace(response.Data.Id))
+                    {
+                        try
+                        {
+                            var onboardingCase = await _apiService
+                                .GetAsync<OnboardingCaseDto>($"onboarding/employee/{response.Data.Id}");
+
+                            if (onboardingCase != null && !string.IsNullOrWhiteSpace(onboardingCase.Id))
+                                return RedirectToAction("Details", "Onboarding", new { id = onboardingCase.Id });
+                        }
+                        catch
+                        {
+                            // No onboarding case found (or the lookup
+                            // failed) - fall through to the normal redirect.
+                        }
+                    }
+
                     return RedirectToAction(nameof(Index));
                 }
 
@@ -174,6 +225,8 @@ namespace APP.Controllers
                     "",
                     ex.Message);
             }
+
+            ViewBag.FromCandidate = !string.IsNullOrWhiteSpace(dto.CandidateId);
 
             return View(dto);
 

@@ -1,0 +1,242 @@
+@model List<OnboardingChecklistTemplateItemDto>
+
+@{
+    ViewData["Title"] = "Onboarding Checklist Templates";
+
+    var stages = new[]
+    {
+        (Value: 1, Name: "Document Verification"),
+        (Value: 2, Name: "Welcome Kit"),
+        (Value: 3, Name: "Employee Creation"),
+        (Value: 4, Name: "Asset Allocation"),
+        (Value: 5, Name: "Joining Checklist")
+    };
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-card-checklist position-left"></i>
+            Onboarding Checklist Templates
+        </h5>
+
+        <div class="heading-elements">
+            <a href="#itemModal" data-toggle="modal" class="btn bg-primary" onclick="openAddModal()">
+                <i class="icon-plus22"></i>
+                Add Item
+            </a>
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+        <p class="text-muted">
+            These items are copied onto every new Onboarding case's checklist when it is started.
+            Changes here only affect cases started <strong>after</strong> the change - existing cases keep the checklist they were seeded with.
+        </p>
+    </div>
+
+    @foreach (var stage in stages)
+    {
+        var items = Model
+            .Where(x => (int)x.StageType == stage.Value)
+            .OrderBy(x => x.SortOrder)
+            .ToList();
+
+        <div class="panel panel-flat">
+            <div class="panel-heading">
+                <h6 class="panel-title">@stage.Name</h6>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th width="50">Order</th>
+                            <th>Title</th>
+                            <th>Description</th>
+                            <th width="100">Mandatory</th>
+                            <th width="90">Active</th>
+                            <th width="120">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!items.Any())
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">No template items for this stage yet.</td>
+                            </tr>
+                        }
+                        else
+                        {
+                            foreach (var item in items)
+                            {
+                                <tr>
+                                    <td>@item.SortOrder</td>
+                                    <td>@item.Title</td>
+                                    <td><small class="text-muted">@(item.Description ?? "-")</small></td>
+                                    <td>
+                                        @if (item.IsMandatory)
+                                        {
+                                            <span class="label bg-primary">Mandatory</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="label bg-grey-400">Optional</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (item.IsActive)
+                                        {
+                                            <span class="label bg-success">Active</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="label bg-danger">Inactive</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-primary btn-xs btn-edit-item"
+                                                data-id="@item.Id"
+                                                data-stagetype="@((int)item.StageType)"
+                                                data-title="@item.Title"
+                                                data-description="@item.Description"
+                                                data-mandatory="@item.IsMandatory.ToString().ToLower()"
+                                                data-sortorder="@item.SortOrder"
+                                                data-active="@item.IsActive.ToString().ToLower()"
+                                                title="Edit">
+                                            <i class="icon-pencil7"></i>
+                                        </button>
+
+                                        <form asp-controller="OnboardingTemplate" asp-action="Delete" method="post" style="display:inline;"
+                                              onsubmit="return confirm('Delete this template item?');">
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <button type="submit" class="btn btn-danger btn-xs" title="Delete">
+                                                <i class="icon-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+</div>
+
+<!-- Add / Edit Template Item Modal -->
+<div id="itemModal" class="modal fade">
+    <div class="modal-dialog">
+        <form id="itemForm" asp-controller="OnboardingTemplate" asp-action="Create" method="post">
+            <input type="hidden" name="id" id="itemId" />
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h5 class="modal-title" id="itemModalTitle">Add Template Item</h5>
+                </div>
+                <div class="modal-body">
+
+                    <div class="form-group">
+                        <label class="text-semibold">Stage</label>
+                        <select name="StageType" id="itemStageType" class="form-control">
+                            @foreach (var stage in stages)
+                            {
+                                <option value="@stage.Value">@stage.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="text-semibold">Title</label>
+                        <input type="text" name="Title" id="itemTitle" class="form-control" required />
+                    </div>
+
+                    <div class="form-group">
+                        <label class="text-semibold">Description</label>
+                        <textarea name="Description" id="itemDescription" rows="2" class="form-control"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" name="IsMandatory" id="itemMandatory" value="true" />
+                                    Mandatory
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="text-semibold">Sort Order</label>
+                                <input type="number" name="SortOrder" id="itemSortOrder" class="form-control" value="0" />
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" name="IsActive" id="itemActive" value="true" checked />
+                                    Active
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+
+@section Scripts {
+    <script>
+
+        @if (TempData["Success"] != null)
+        {
+            <text>$(function(){ swal({ title:"Success", text:"@Html.Raw(TempData["Success"])", type:"success" }); });</text>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <text>$(function(){ swal({ title:"Error", text:"@Html.Raw(TempData["Error"])", type:"error" }); });</text>
+        }
+
+        function openAddModal() {
+            $('#itemModalTitle').text('Add Template Item');
+            $('#itemForm').attr('action', '@Url.Action("Create", "OnboardingTemplate")');
+            $('#itemId').val('');
+            $('#itemStageType').val('1');
+            $('#itemTitle').val('');
+            $('#itemDescription').val('');
+            $('#itemMandatory').prop('checked', false);
+            $('#itemSortOrder').val('0');
+            $('#itemActive').prop('checked', true);
+        }
+
+        $(document).on('click', '.btn-edit-item', function () {
+            var btn = $(this);
+
+            $('#itemModalTitle').text('Edit Template Item');
+            $('#itemForm').attr('action', '@Url.Action("Edit", "OnboardingTemplate")');
+            $('#itemId').val(btn.data('id'));
+            $('#itemStageType').val(btn.data('stagetype'));
+            $('#itemTitle').val(btn.data('title'));
+            $('#itemDescription').val(btn.data('description'));
+            $('#itemMandatory').prop('checked', btn.data('mandatory') === true || btn.data('mandatory') === 'true');
+            $('#itemSortOrder').val(btn.data('sortorder'));
+            $('#itemActive').prop('checked', btn.data('active') === true || btn.data('active') === 'true');
+
+            $('#itemModal').modal('show');
+        });
+
+    </script>
+}

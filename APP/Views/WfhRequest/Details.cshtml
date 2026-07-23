@@ -1,0 +1,343 @@
+@model WfhRequestDto
+
+@{
+    ViewData["Title"] = "Work From Home Request Details";
+    bool isAdmin = ViewBag.IsAdmin ?? false;
+    string? currentEmployeeId = ViewBag.CurrentEmployeeId as string;
+
+    bool isOwnRequest = Model.EmployeeId == currentEmployeeId;
+    bool isPending = Model.Status == (int)EnumExtensions.WfhRequestStatus.Pending;
+
+    // Cosmetic only - the API is the real authority on who may
+    // approve/reject/cancel a given request; a 403 there still bounces back
+    // here with an error message via TempData.
+    bool canCancel = isPending && (isAdmin || isOwnRequest);
+    bool canActOn = isPending && !isOwnRequest;
+
+    string statusLabelClass = Model.Status switch
+    {
+        (int)EnumExtensions.WfhRequestStatus.Pending => "bg-warning",
+        (int)EnumExtensions.WfhRequestStatus.Approved => "bg-success",
+        (int)EnumExtensions.WfhRequestStatus.Rejected => "bg-danger",
+        (int)EnumExtensions.WfhRequestStatus.Cancelled => "bg-grey",
+        _ => "bg-grey"
+    };
+
+    string alertClass = Model.Status switch
+    {
+        (int)EnumExtensions.WfhRequestStatus.Approved => "alert-success",
+        (int)EnumExtensions.WfhRequestStatus.Rejected => "alert-danger",
+        (int)EnumExtensions.WfhRequestStatus.Cancelled => "alert-warning",
+        _ => "alert-info"
+    };
+
+    string statusText = !string.IsNullOrEmpty(Model.StatusName)
+        ? Model.StatusName
+        : ((EnumExtensions.WfhRequestStatus)Model.Status).ToString();
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-home4 position-left"></i>
+            Work From Home Request Details
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="MyRequests"
+               class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <!-- Status Banner -->
+
+        <div class="alert @alertClass">
+
+            <strong>Status :</strong>
+            <span class="label @statusLabelClass">@statusText</span>
+
+        </div>
+
+        <!-- Employee Information -->
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-user position-left"></i>
+                Employee Information
+            </legend>
+
+            <div class="row">
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Employee</label>
+                    <h6>@Model.EmployeeName</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Employee Code</label>
+                    <h6>@(Model.EmployeeCode ?? "-")</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Department</label>
+                    <h6>@(Model.DepartmentName ?? "-")</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Reporting Manager</label>
+                    <h6>@(Model.ReportingManagerName ?? "-")</h6>
+                </div>
+
+            </div>
+
+        </fieldset>
+
+        <!-- Dates -->
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-calendar3 position-left"></i>
+                Requested Dates
+            </legend>
+
+            <div class="row">
+
+                <div class="col-md-4">
+                    <label class="text-semibold text-muted">From Date</label>
+                    <h6>@Model.FromDate.ToString("dd-MMM-yyyy")</h6>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="text-semibold text-muted">To Date</label>
+                    <h6>@Model.ToDate.ToString("dd-MMM-yyyy")</h6>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="text-semibold text-muted">Total Days</label>
+                    <h6>
+                        <span class="label bg-primary">@Model.TotalDays</span>
+                    </h6>
+                </div>
+
+            </div>
+
+        </fieldset>
+
+        <!-- Reason -->
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-file-text2 position-left"></i>
+                Reason
+            </legend>
+
+            <div class="well">
+                @Model.Reason
+            </div>
+
+        </fieldset>
+
+        <!-- Status Timeline -->
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-clock position-left"></i>
+                Status Timeline
+            </legend>
+
+            <div class="row">
+
+                <div class="col-md-4">
+                    <label class="text-semibold text-muted">Requested On</label>
+                    <h6>@Model.CreatedOn.ToString("dd-MMM-yyyy HH:mm")</h6>
+                </div>
+
+                @if (Model.Status == (int)EnumExtensions.WfhRequestStatus.Approved)
+                {
+                    <div class="col-md-4">
+                        <label class="text-semibold text-muted">Approved By</label>
+                        <h6>@(Model.ApprovedByName ?? "-")</h6>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="text-semibold text-muted">Approved On</label>
+                        <h6>@(Model.ApprovedOn?.ToString("dd-MMM-yyyy HH:mm") ?? "-")</h6>
+                    </div>
+                }
+                else if (Model.Status == (int)EnumExtensions.WfhRequestStatus.Rejected)
+                {
+                    <div class="col-md-4">
+                        <label class="text-semibold text-muted">Rejected On</label>
+                        <h6>@(Model.RejectedOn?.ToString("dd-MMM-yyyy HH:mm") ?? "-")</h6>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="text-semibold text-muted">Rejected Reason</label>
+                        <h6>@(Model.RejectedReason ?? "-")</h6>
+                    </div>
+                }
+                else if (Model.Status == (int)EnumExtensions.WfhRequestStatus.Cancelled)
+                {
+                    <div class="col-md-4">
+                        <label class="text-semibold text-muted">Cancelled On</label>
+                        <h6>@(Model.CancelledOn?.ToString("dd-MMM-yyyy HH:mm") ?? "-")</h6>
+                    </div>
+                }
+
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.Remarks))
+            {
+                <div class="row">
+                    <div class="col-md-12">
+                        <label class="text-semibold text-muted">Remarks</label>
+                        <h6>@Model.Remarks</h6>
+                    </div>
+                </div>
+            }
+
+        </fieldset>
+
+        @if (canCancel || canActOn)
+        {
+            <hr />
+
+            <div class="text-right">
+
+                @if (canCancel)
+                {
+                    <button type="button" class="btn bg-slate btnCancel" data-id="@Model.Id">
+                        <i class="icon-blocked"></i>
+                        Cancel Request
+                    </button>
+                }
+
+                @if (canActOn)
+                {
+                    <button type="button" class="btn btn-danger btnReject" data-id="@Model.Id">
+                        <i class="icon-cross2"></i>
+                        Reject
+                    </button>
+
+                    <button type="button" class="btn btn-success btnApprove" data-id="@Model.Id">
+                        <i class="icon-checkmark4"></i>
+                        Approve
+                    </button>
+                }
+
+            </div>
+        }
+
+    </div>
+
+</div>
+
+@if (canCancel)
+{
+    <partial name="_CancelModal" />
+}
+
+@if (canActOn)
+{
+    <partial name="_RejectModal" />
+
+    <form id="approveForm" asp-action="Approve" method="post" style="display:none;">
+        <input type="hidden" id="ApproveWfhRequestId" name="id" />
+    </form>
+}
+
+<script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+
+@section Scripts {
+
+    <script>
+
+        @if (TempData["Success"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Success',
+                    text: '@Html.Raw(TempData["Success"])',
+                    type: 'success',
+                    confirmButtonColor: '#66BB6A'
+                });
+            </text>
+        }
+
+        @if (TempData["GlobalError"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Error',
+                    text: '@Html.Raw(TempData["GlobalError"])',
+                    type: 'error',
+                    confirmButtonColor: '#EF5350'
+                });
+            </text>
+        }
+
+    </script>
+
+    <script>
+
+        $(document).ready(function () {
+
+            $(document).on('click', '.btnCancel', function () {
+
+                var id = $(this).data('id');
+
+                $('#CancelWfhRequestId').val(id);
+
+                $('#cancelModal').modal('show');
+
+            });
+
+            $(document).on('click', '.btnReject', function () {
+
+                var id = $(this).data('id');
+
+                $('#RejectWfhRequestId').val(id);
+
+                $('#rejectModal').modal('show');
+
+            });
+
+            $(document).on('click', '.btnApprove', function () {
+
+                var id = $(this).data('id');
+
+                swal({
+                    title: 'Approve this request?',
+                    text: 'The employee will be marked Work From Home for the requested dates.',
+                    type: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#66BB6A',
+                    confirmButtonText: 'Yes, approve it'
+                }, function (isConfirm) {
+                    if (isConfirm) {
+                        $('#ApproveWfhRequestId').val(id);
+                        $('#approveForm').submit();
+                    }
+                });
+
+            });
+
+        });
+
+    </script>
+
+}

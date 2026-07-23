@@ -1,0 +1,129 @@
+@model List<TeamAttendanceMemberDto>
+
+@{
+    ViewData["Title"] = "Team Attendance";
+
+    DateTime selectedDate = ViewBag.SelectedDate ?? DateTime.Today;
+    var prevDate = selectedDate.AddDays(-1);
+    var nextDate = selectedDate.AddDays(1);
+
+    var records = Model ?? new List<TeamAttendanceMemberDto>();
+    int present = records.Count(x => x.Status is "Present" or "Late" or "WorkFromHome" or "OnDuty" or "Overtime" or "CompOff");
+    int absent = records.Count(x => x.Status is "Absent" or "MissPunch");
+    int onLeave = records.Count(x => x.Status == "Leave");
+
+    string StatusCss(string s) => s switch
+    {
+        "Present" or "Late" or "WorkFromHome" or "OnDuty" or "Overtime" or "CompOff" => "label-success",
+        "HalfDay" or "EarlyExit" => "label-warning",
+        "Absent" or "MissPunch" => "label-danger",
+        "Leave" => "label-info",
+        "Holiday" => "label-default",
+        "WeekOff" => "label-default",
+        _ => "label-default"
+    };
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-users4 position-left"></i>
+            @ViewData["Title"]
+        </h5>
+        <div class="heading-elements">
+            <form method="get" asp-action="Index" class="form-inline">
+                <div class="input-group">
+                    <a class="btn btn-default btn-icon" asp-action="Index" asp-route-date="@prevDate.ToString("yyyy-MM-dd")" title="Previous day">
+                        <i class="icon-arrow-left8"></i>
+                    </a>
+                    <input type="date" name="date" value="@selectedDate.ToString("yyyy-MM-dd")" class="form-control" onchange="this.form.submit()" />
+                    <a class="btn btn-default btn-icon" asp-action="Index" asp-route-date="@nextDate.ToString("yyyy-MM-dd")" title="Next day">
+                        <i class="icon-arrow-right8"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="panel-body">
+        <h6 class="text-muted no-margin-top">@selectedDate.ToString("dddd, dd MMMM yyyy")</h6>
+        <div class="row">
+            <div class="col-md-3 col-sm-6">
+                <div class="panel bg-success-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">@present</h3>
+                        <span>Present</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="panel bg-danger-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">@absent</h3>
+                        <span>Absent</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="panel bg-blue-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">@onLeave</h3>
+                        <span>On Leave</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="panel bg-slate-400">
+                    <div class="panel-body text-center">
+                        <h3 class="no-margin">@records.Count</h3>
+                        <span>Team Size</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-striped">
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Department</th>
+                    <th>Designation</th>
+                    <th>First In</th>
+                    <th>Last Out</th>
+                    <th>Working Hours</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (records.Any())
+                {
+                    foreach (var item in records)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@item.EmployeeName</strong>
+                                @if (!string.IsNullOrEmpty(item.EmployeeCode))
+                                {
+                                    <br /><span class="text-muted">@item.EmployeeCode</span>
+                                }
+                            </td>
+                            <td>@item.DepartmentName</td>
+                            <td>@item.DesignationName</td>
+                            <td>@(item.FirstIn.HasValue ? DateTime.Today.Add(item.FirstIn.Value).ToString("hh:mm tt") : "-")</td>
+                            <td>@(item.LastOut.HasValue ? DateTime.Today.Add(item.LastOut.Value).ToString("hh:mm tt") : "-")</td>
+                            <td>@(item.TotalWorkingHours.HasValue ? item.TotalWorkingHours.Value.ToString("0.##") : "-")</td>
+                            <td><span class="label @StatusCss(item.Status)">@item.Status</span></td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="7" class="text-center text-muted" style="padding:30px;">No team members found for this date.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

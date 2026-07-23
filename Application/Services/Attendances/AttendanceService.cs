@@ -3,6 +3,7 @@ using Application.DTOs.Attendances;
 using Application.Interfaces.Attendances;
 using Domain.Entities;
 using Domain.Enums;
+using Domain.Helper;
 using Domain.Interfaces;
 using Infrastructure;
 using Infrastructure.Data;
@@ -1484,6 +1485,496 @@ namespace Application.Services.Attendances
                 return false;
             }
         }
+
+        #region Attendance Insights (Calendar / Team / Summary / Dashboard)
+
+        // "Present-ish" buckets that should count towards a day being
+        // attended, mirroring EmployeeDashboardService.PresentStatuses
+        // (Present/Late/EarlyExit/WorkFromHome/OnDuty/Overtime/CompOff) plus
+        // HalfDay, which the ESS dashboard counts separately but every
+        // Insights aggregation below treats as "present" for the
+        // Present/Absent counters. "Late" is deliberately NOT included here -
+        // every call site checks it explicitly first (it counts towards both
+        // the Present bucket AND its own dedicated Late bucket).
+        private static bool IsPresentLikeStatus(string status) =>
+            status is "Present" or "WorkFromHome" or "OnDuty" or "Overtime"
+                   or "CompOff" or "EarlyExit" or "HalfDay";
+
+        // =========================
+        // 📅 CALENDAR (one employee, one month)
+        // =========================
+        public async Task<List<AttendanceCalendarDayDto>> GetCalendarAsync(string employeeId, int month, int year, string tenantId)
+        {
+            // Tenant ownership check - without this, any authenticated
+            // caller could pass another tenant's employeeId and read their
+            // punch times/status (cross-tenant IDOR). Every other insights
+            // method (Team/Summary/Dashboard) already scopes its employee
+            // set by TenantId first; this mirrors that.
+            bool employeeInTenant = await _db.Employees
+                .AnyAsync(e => e.Id == employeeId && e.TenantId == tenantId && !e.IsDeleted);
+
+            if (!employeeInTenant)
+                return new List<AttendanceCalendarDayDto>();
+
+            var daysInMonth = DateTime.DaysInMonth(year, month);
+            var monthStart = new DateTime(year, month, 1);
+            var monthEnd = monthStart.AddDays(daysInMonth - 1);
+            var today = DateTime.UtcNow.Date;
+
+            var attendances = await _db.Attendances.AsNoTracking()
+                .Include(x => x.Shift)
+                .Where(x => x.EmployeeId == employeeId
+                         && x.Date >= monthStart && x.Date <= monthEnd
+                         && !x.IsDeleted)
+                .ToListAsync();
+
+            var leaves = await _db.LeaveApplications.AsNoTracking()
+                .Where(x => x.EmployeeId == employeeId
+                         && x.Status == ApprovalStatus.Approved
+                         && x.FromDate <= monthEnd && x.ToDate >= monthStart)
+                .Select(x => new { x.FromDate, x.ToDate })
+                .ToListAsync();
+
+            var holidaySet = (await _db.HolidayGroupDetails.AsNoTracking()
+                    .Where(h => h.TenantId == tenantId && h.HolidayDate >= monthStart && h.HolidayDate <= monthEnd)
+                    .Select(h => h.HolidayDate.Date)
+                    .ToListAsync())
+                .ToHashSet();
+
+            var weekOffSet = (await _db.WeekOffs.AsNoTracking()
+                    .Where(w => w.TenantId == tenantId)
+                    .Select(w => w.Day)
+                    .ToListAsync())
+                .ToHashSet();
+
+            var regularizedSet = (await _db.AttendanceRegularizations.AsNoTracking()
+                    .Where(x => x.EmployeeId == employeeId
+                             && x.Status == ApprovalStatus.Approved
+                             && x.Date >= monthStart && x.Date <= monthEnd)
+                    .Select(x => x.Date.Date)
+                    .ToListAsync())
+                .ToHashSet();
+
+            var result = new List<AttendanceCalendarDayDto>();
+
+            for (int day = 1; day <= daysInMonth; day++)
+            {
+                var date = new DateTime(year, month, day);
+                var att = attendances.FirstOrDefault(a => a.Date.Date == date);
+
+                bool hasApprovedLeave = leaves.Any(l => l.FromDate.Date <= date && l.ToDate.Date >= date);
+                bool isHoliday = holidaySet.Contains(date);
+                bool isWeekOff = weekOffSet.Contains(date.DayOfWeek);
+
+                var status = AttendanceStatusHelper.ClassifyDay(att?.Status, hasApprovedLeave, isHoliday, isWeekOff, date, today);
+
+                result.Add(new AttendanceCalendarDayDto
+                {
+                    Date = date,
+                    Status = status,
+                    FirstIn = att?.FirstIn?.TimeOfDay,
+                    LastOut = att?.LastOut?.TimeOfDay,
+                    TotalWorkingHours = att?.TotalWorkingHours,
+                    ShiftName = att?.Shift?.Name,
+                    IsRegularized = regularizedSet.Contains(date)
+                });
+            }
+
+            return result;
+        }
+
+        // =========================
+        // 🔐 HR/ADMIN CHECK (for GetTeamAttendanceAsync scoping)
+        // =========================
+        // Same permission-based pattern as
+        // AttendanceRegularizationService.IsHrApproverAsync - does the
+        // acting user hold, through any Role assigned to them, an allowed
+        // RolePermission for the View action on the ATTENDANCE feature.
+        public async Task<bool> IsHrOrAdminForAttendanceAsync(string? actingUserId)
+        {
+            if (string.IsNullOrEmpty(actingUserId))
+                return false;
+
+            return await (
+                from ur in _db.UserRoles
+                join rp in _db.RolePermissions.Where(x => x.IsAllowed) on ur.RoleId equals rp.RoleId
+                join p in _db.Permissions.Where(x =>
+                        x.FeatureId == AppFeatureConstants.ATTENDANCE && x.Action == Actions.View)
+                    on rp.PermissionId equals p.Id
+                where ur.UserId == actingUserId
+                select p.Id
+            ).AnyAsync();
+        }
+
+        // =========================
+        // 👥 TEAM ATTENDANCE (one date)
+        // =========================
+        public async Task<List<TeamAttendanceMemberDto>> GetTeamAttendanceAsync(string actingUserId, DateTime date, string tenantId, bool isHrOrAdmin)
+        {
+            // Resolve "who is this login" -> Employee, same pattern as
+            // AttendanceRegularizationService.GetActingContextAsync.
+            var actingUser = await _db.Users.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == actingUserId);
+
+            var actingEmployeeId = actingUser?.EmployeeId;
+
+            var employeesQuery = _db.Employees.AsNoTracking()
+                .Where(e => e.TenantId == tenantId && !e.IsDeleted);
+
+            if (!isHrOrAdmin)
+            {
+                if (string.IsNullOrEmpty(actingEmployeeId))
+                    return new List<TeamAttendanceMemberDto>();
+
+                employeesQuery = employeesQuery.Where(e => e.ReportingManagerId == actingEmployeeId);
+            }
+
+            var employees = await employeesQuery
+                .Select(e => new
+                {
+                    e.Id,
+                    e.FirstName,
+                    e.LastName,
+                    e.EmployeeCode,
+                    DepartmentName = e.Department != null ? e.Department.Name : null,
+                    DesignationName = e.Designation != null ? e.Designation.Name : null
+                })
+                .ToListAsync();
+
+            var employeeIds = employees.Select(e => e.Id).ToList();
+            var dateOnly = date.Date;
+            var today = DateTime.UtcNow.Date;
+
+            var attendances = await _db.Attendances.AsNoTracking()
+                .Where(a => employeeIds.Contains(a.EmployeeId) && a.Date.Date == dateOnly && !a.IsDeleted)
+                .ToListAsync();
+
+            var leaveEmployeeIds = (await _db.LeaveApplications.AsNoTracking()
+                    .Where(l => employeeIds.Contains(l.EmployeeId)
+                             && l.Status == ApprovalStatus.Approved
+                             && l.FromDate.Date <= dateOnly && l.ToDate.Date >= dateOnly)
+                    .Select(l => l.EmployeeId)
+                    .ToListAsync())
+                .ToHashSet();
+
+            bool isHoliday = await _db.HolidayGroupDetails.AsNoTracking()
+                .AnyAsync(h => h.TenantId == tenantId && h.HolidayDate.Date == dateOnly);
+
+            var weekOffDays = (await _db.WeekOffs.AsNoTracking()
+                    .Where(w => w.TenantId == tenantId)
+                    .Select(w => w.Day)
+                    .ToListAsync())
+                .ToHashSet();
+            bool isWeekOff = weekOffDays.Contains(dateOnly.DayOfWeek);
+
+            return employees.Select(e =>
+            {
+                var att = attendances.FirstOrDefault(a => a.EmployeeId == e.Id);
+                var status = AttendanceStatusHelper.ClassifyDay(
+                    att?.Status, leaveEmployeeIds.Contains(e.Id), isHoliday, isWeekOff, dateOnly, today);
+
+                return new TeamAttendanceMemberDto
+                {
+                    EmployeeId = e.Id,
+                    EmployeeName = $"{e.FirstName} {e.LastName}".Trim(),
+                    EmployeeCode = e.EmployeeCode,
+                    DepartmentName = e.DepartmentName,
+                    DesignationName = e.DesignationName,
+                    Status = status,
+                    FirstIn = att?.FirstIn?.TimeOfDay,
+                    LastOut = att?.LastOut?.TimeOfDay,
+                    TotalWorkingHours = att?.TotalWorkingHours
+                };
+            }).ToList();
+        }
+
+        // =========================
+        // 📊 SUMMARY (all/filtered employees, one month)
+        // =========================
+        public async Task<List<AttendanceSummaryRowDto>> GetSummaryAsync(string tenantId, int month, int year, string? departmentId, string? employeeId)
+        {
+            var daysInMonth = DateTime.DaysInMonth(year, month);
+            var monthStart = new DateTime(year, month, 1);
+            var monthEnd = monthStart.AddDays(daysInMonth - 1);
+            var today = DateTime.UtcNow.Date;
+
+            var employeesQuery = _db.Employees.AsNoTracking()
+                .Where(e => e.TenantId == tenantId && !e.IsDeleted);
+
+            if (!string.IsNullOrWhiteSpace(departmentId))
+                employeesQuery = employeesQuery.Where(e => e.DepartmentId == departmentId);
+
+            if (!string.IsNullOrWhiteSpace(employeeId))
+                employeesQuery = employeesQuery.Where(e => e.Id == employeeId);
+
+            var employees = await employeesQuery
+                .Select(e => new
+                {
+                    e.Id,
+                    e.FirstName,
+                    e.LastName,
+                    e.EmployeeCode,
+                    DepartmentName = e.Department != null ? e.Department.Name : null
+                })
+                .ToListAsync();
+
+            var employeeIds = employees.Select(e => e.Id).ToList();
+
+            var attendances = await _db.Attendances.AsNoTracking()
+                .Where(a => employeeIds.Contains(a.EmployeeId) && a.Date >= monthStart && a.Date <= monthEnd && !a.IsDeleted)
+                .ToListAsync();
+
+            var leaves = await _db.LeaveApplications.AsNoTracking()
+                .Where(l => employeeIds.Contains(l.EmployeeId)
+                         && l.Status == ApprovalStatus.Approved
+                         && l.FromDate <= monthEnd && l.ToDate >= monthStart)
+                .Select(l => new { l.EmployeeId, l.FromDate, l.ToDate })
+                .ToListAsync();
+
+            var holidaySet = (await _db.HolidayGroupDetails.AsNoTracking()
+                    .Where(h => h.TenantId == tenantId && h.HolidayDate >= monthStart && h.HolidayDate <= monthEnd)
+                    .Select(h => h.HolidayDate.Date)
+                    .ToListAsync())
+                .ToHashSet();
+
+            var weekOffSet = (await _db.WeekOffs.AsNoTracking()
+                    .Where(w => w.TenantId == tenantId)
+                    .Select(w => w.Day)
+                    .ToListAsync())
+                .ToHashSet();
+
+            var regCountMap = (await _db.AttendanceRegularizations.AsNoTracking()
+                    .Where(x => employeeIds.Contains(x.EmployeeId) && x.Date >= monthStart && x.Date <= monthEnd)
+                    .GroupBy(x => x.EmployeeId)
+                    .Select(g => new { EmployeeId = g.Key, Count = g.Count() })
+                    .ToListAsync())
+                .ToDictionary(x => x.EmployeeId, x => x.Count);
+
+            var result = new List<AttendanceSummaryRowDto>();
+
+            foreach (var e in employees)
+            {
+                var empAttendances = attendances.Where(a => a.EmployeeId == e.Id).ToList();
+                var empLeaves = leaves.Where(l => l.EmployeeId == e.Id).ToList();
+
+                var row = new AttendanceSummaryRowDto
+                {
+                    EmployeeId = e.Id,
+                    EmployeeName = $"{e.FirstName} {e.LastName}".Trim(),
+                    EmployeeCode = e.EmployeeCode,
+                    DepartmentName = e.DepartmentName,
+                    TotalWorkingHours = empAttendances.Sum(a => a.TotalWorkingHours),
+                    OvertimeHours = empAttendances.Sum(a => a.OvertimeHours),
+                    RegularizationCount = regCountMap.TryGetValue(e.Id, out var c) ? c : 0
+                };
+
+                // Only days up to today are classified/tallied - a
+                // still-in-progress month shouldn't count its remaining
+                // future days as Absent.
+                for (int day = 1; day <= daysInMonth; day++)
+                {
+                    var date = new DateTime(year, month, day);
+                    if (date > today) break;
+
+                    var att = empAttendances.FirstOrDefault(a => a.Date.Date == date);
+                    bool hasApprovedLeave = empLeaves.Any(l => l.FromDate.Date <= date && l.ToDate.Date >= date);
+                    bool isHoliday = holidaySet.Contains(date);
+                    bool isWeekOff = weekOffSet.Contains(date.DayOfWeek);
+
+                    var status = AttendanceStatusHelper.ClassifyDay(att?.Status, hasApprovedLeave, isHoliday, isWeekOff, date, today);
+
+                    switch (status)
+                    {
+                        case "Late":
+                            row.PresentDays++;
+                            row.LateDays++;
+                            break;
+                        case "HalfDay":
+                            row.HalfDays++;
+                            break;
+                        case "Absent":
+                            row.AbsentDays++;
+                            break;
+                        case "Leave":
+                            row.LeaveDays++;
+                            break;
+                        case "Holiday":
+                            row.HolidayDays++;
+                            break;
+                        case "WeekOff":
+                            row.WeekOffDays++;
+                            break;
+                        case "Present":
+                        case "WorkFromHome":
+                        case "OnDuty":
+                        case "Overtime":
+                        case "CompOff":
+                        case "EarlyExit":
+                            row.PresentDays++;
+                            break;
+                        // "None" (future date - unreachable here since the
+                        // loop breaks once date > today) is intentionally
+                        // not tallied into any bucket.
+                    }
+                }
+
+                result.Add(row);
+            }
+
+            return result;
+        }
+
+        // =========================
+        // 📈 DASHBOARD (org-wide, today + 30-day trend)
+        // =========================
+        public async Task<AttendanceDashboardDto> GetDashboardAsync(string tenantId, string? companyId)
+        {
+            var today = DateTime.UtcNow.Date;
+
+            var employeesQuery = _db.Employees.AsNoTracking()
+                .Where(e => e.TenantId == tenantId && !e.IsDeleted && e.IsActive);
+
+            if (!string.IsNullOrWhiteSpace(companyId))
+                employeesQuery = employeesQuery.Where(e => e.CompanyId == companyId);
+
+            var employees = await employeesQuery
+                .Select(e => new
+                {
+                    e.Id,
+                    DepartmentName = e.Department != null ? e.Department.Name : "Unassigned"
+                })
+                .ToListAsync();
+
+            var employeeIds = employees.Select(e => e.Id).ToList();
+            int totalActive = employees.Count;
+
+            var weekOffSet = (await _db.WeekOffs.AsNoTracking()
+                    .Where(w => w.TenantId == tenantId)
+                    .Select(w => w.Day)
+                    .ToListAsync())
+                .ToHashSet();
+
+            // ---- Today snapshot ----
+            var todayAttendances = await _db.Attendances.AsNoTracking()
+                .Where(a => employeeIds.Contains(a.EmployeeId) && a.Date.Date == today && !a.IsDeleted)
+                .ToListAsync();
+
+            var todayLeaveEmployeeIds = (await _db.LeaveApplications.AsNoTracking()
+                    .Where(l => employeeIds.Contains(l.EmployeeId)
+                             && l.Status == ApprovalStatus.Approved
+                             && l.FromDate.Date <= today && l.ToDate.Date >= today)
+                    .Select(l => l.EmployeeId)
+                    .ToListAsync())
+                .ToHashSet();
+
+            bool isHolidayToday = await _db.HolidayGroupDetails.AsNoTracking()
+                .AnyAsync(h => h.TenantId == tenantId && h.HolidayDate.Date == today);
+
+            bool isWeekOffToday = weekOffSet.Contains(today.DayOfWeek);
+
+            int presentToday = 0, absentToday = 0, lateToday = 0, onLeaveToday = 0;
+
+            string StatusFor(string employeeId, Attendance? att) =>
+                AttendanceStatusHelper.ClassifyDay(
+                    att?.Status, todayLeaveEmployeeIds.Contains(employeeId), isHolidayToday, isWeekOffToday, today, today);
+
+            foreach (var e in employees)
+            {
+                var att = todayAttendances.FirstOrDefault(a => a.EmployeeId == e.Id);
+                var status = StatusFor(e.Id, att);
+
+                if (status == "Absent") absentToday++;
+                else if (status == "Leave") onLeaveToday++;
+                else if (status == "Late") { presentToday++; lateToday++; }
+                else if (IsPresentLikeStatus(status)) presentToday++;
+            }
+
+            int pendingRegularizations = await _db.AttendanceRegularizations.AsNoTracking()
+                .CountAsync(x => employeeIds.Contains(x.EmployeeId) && x.Status == ApprovalStatus.Pending);
+
+            // ---- Department-wise present today ----
+            var departmentWise = employees
+                .GroupBy(e => e.DepartmentName ?? "Unassigned")
+                .Select(g =>
+                {
+                    int totalCount = g.Count();
+                    int presentCount = g.Count(e =>
+                    {
+                        var att = todayAttendances.FirstOrDefault(a => a.EmployeeId == e.Id);
+                        var status = StatusFor(e.Id, att);
+                        return status == "Late" || IsPresentLikeStatus(status);
+                    });
+
+                    return new DepartmentAttendanceDto
+                    {
+                        DepartmentName = g.Key,
+                        PresentCount = presentCount,
+                        TotalCount = totalCount,
+                        PresentPercent = totalCount > 0 ? Math.Round(presentCount * 100m / totalCount, 2) : 0
+                    };
+                })
+                .OrderByDescending(x => x.TotalCount)
+                .ToList();
+
+            // ---- Last 30 days trend ----
+            var trendStart = today.AddDays(-29);
+
+            var trendAttendances = await _db.Attendances.AsNoTracking()
+                .Where(a => employeeIds.Contains(a.EmployeeId) && a.Date >= trendStart && a.Date <= today && !a.IsDeleted)
+                .ToListAsync();
+
+            var trendLeaves = await _db.LeaveApplications.AsNoTracking()
+                .Where(l => employeeIds.Contains(l.EmployeeId)
+                         && l.Status == ApprovalStatus.Approved
+                         && l.FromDate <= today && l.ToDate >= trendStart)
+                .Select(l => new { l.EmployeeId, l.FromDate, l.ToDate })
+                .ToListAsync();
+
+            var trendHolidaySet = (await _db.HolidayGroupDetails.AsNoTracking()
+                    .Where(h => h.TenantId == tenantId && h.HolidayDate >= trendStart && h.HolidayDate <= today)
+                    .Select(h => h.HolidayDate.Date)
+                    .ToListAsync())
+                .ToHashSet();
+
+            var trend = new List<AttendanceTrendPointDto>();
+
+            for (int i = 29; i >= 0; i--)
+            {
+                var d = today.AddDays(-i);
+                bool isHolidayDay = trendHolidaySet.Contains(d);
+                bool isWeekOffDay = weekOffSet.Contains(d.DayOfWeek);
+
+                int p = 0, a = 0, l = 0;
+
+                foreach (var e in employees)
+                {
+                    var att = trendAttendances.FirstOrDefault(x => x.EmployeeId == e.Id && x.Date.Date == d);
+                    bool hasLeave = trendLeaves.Any(x => x.EmployeeId == e.Id && x.FromDate.Date <= d && x.ToDate.Date >= d);
+                    var status = AttendanceStatusHelper.ClassifyDay(att?.Status, hasLeave, isHolidayDay, isWeekOffDay, d, today);
+
+                    if (status == "Absent") a++;
+                    else if (status == "Late") { p++; l++; }
+                    else if (IsPresentLikeStatus(status)) p++;
+                }
+
+                trend.Add(new AttendanceTrendPointDto { Date = d, PresentCount = p, AbsentCount = a, LateCount = l });
+            }
+
+            return new AttendanceDashboardDto
+            {
+                PresentToday = presentToday,
+                AbsentToday = absentToday,
+                LateToday = lateToday,
+                OnLeaveToday = onLeaveToday,
+                TotalActiveEmployees = totalActive,
+                PresentPercentToday = totalActive > 0 ? Math.Round(presentToday * 100m / totalActive, 2) : 0,
+                PendingRegularizations = pendingRegularizations,
+                Last30DaysTrend = trend,
+                DepartmentWisePresentToday = departmentWise
+            };
+        }
+
+        #endregion
 
     }
 }

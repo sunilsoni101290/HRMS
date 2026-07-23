@@ -1,0 +1,184 @@
+@model List<OnboardingCaseDto>
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"] = "Onboarding Tracker";
+
+    string StatusLabel(int s) => s switch
+    {
+        1 => "bg-grey",       // NotStarted
+        2 => "bg-info",       // InProgress
+        3 => "bg-success",    // Completed
+        4 => "bg-warning",    // OnHold
+        5 => "bg-danger",     // Cancelled
+        _ => "bg-grey"
+    };
+
+    string ProgressBarClass(int percent) => percent >= 100
+        ? "progress-bar-success"
+        : percent >= 50
+            ? "progress-bar-info"
+            : "progress-bar-warning";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-list-check3 position-left"></i>
+            Onboarding Tracker
+        </h5>
+
+        <div class="heading-elements">
+            <a asp-action="Create" class="btn bg-primary">
+                <i class="icon-plus22"></i>
+                Start Onboarding
+            </a>
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <form method="get" asp-action="Index">
+
+            <div class="row">
+
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="text-semibold">Status</label>
+                        <select name="status" class="form-control">
+                            <option value="">All Statuses</option>
+                            @foreach (var s in (List<SelectListItem>)ViewBag.StatusList)
+                            {
+                                <option value="@s.Value" selected="@(s.Value == (string)ViewBag.SelectedStatus)">@s.Text</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="text-semibold">Department</label>
+                        <select name="departmentId" class="form-control">
+                            <option value="">All Departments</option>
+                            @foreach (SelectListItem d in ViewBag.DepartmentList)
+                            {
+                                <option value="@d.Value" selected="@(d.Value == (string)ViewBag.SelectedDepartmentId)">@d.Text</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="text-semibold">Search</label>
+                        <input type="text" name="search" class="form-control"
+                               value="@ViewBag.SelectedSearch"
+                               placeholder="Employee name / code..." />
+                    </div>
+                </div>
+
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label class="text-semibold">&nbsp;</label>
+                        <button type="submit" class="btn btn-primary btn-block">
+                            <i class="icon-search4"></i>
+                            Filter
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+        </form>
+
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-striped">
+            <thead>
+                <tr>
+                    <th width="50">#</th>
+                    <th>Employee</th>
+                    <th>Department / Designation</th>
+                    <th>Status</th>
+                    <th width="180">Progress</th>
+                    <th>Start Date</th>
+                    <th>Target Completion</th>
+                    <th width="90">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{ int sr = 1; }
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@sr</td>
+                            <td>
+                                <strong>@item.EmployeeName</strong>
+                                @if (!string.IsNullOrEmpty(item.EmployeeCode))
+                                {
+                                    <br /><small class="text-muted">@item.EmployeeCode</small>
+                                }
+                            </td>
+                            <td>
+                                @(item.DepartmentName ?? "-")
+                                @if (!string.IsNullOrEmpty(item.DesignationName))
+                                {
+                                    <br /><small class="text-muted">@item.DesignationName</small>
+                                }
+                            </td>
+                            <td><span class="label @StatusLabel((int)item.Status)">@item.StatusName</span></td>
+                            <td>
+                                <div class="progress" style="height:16px;margin-bottom:0;">
+                                    <div class="progress-bar @ProgressBarClass(item.ProgressPercent)"
+                                         role="progressbar"
+                                         style="width:@(item.ProgressPercent)%;">
+                                        @item.ProgressPercent%
+                                    </div>
+                                </div>
+                            </td>
+                            <td>@item.StartDate.ToString("dd MMM yyyy")</td>
+                            <td>@(item.TargetCompletionDate?.ToString("dd MMM yyyy") ?? "-")</td>
+                            <td>
+                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-default btn-icon" title="View">
+                                    <i class="icon-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        sr++;
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" class="text-center text-muted" style="padding:30px;">
+                            <i class="icon-list-check3" style="font-size:32px;"></i><br />
+                            No onboarding cases found.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <script>$(function(){ swal({ title:"Error", text:"@TempData["Error"]", type:"error" }); });</script>
+    }
+    <style>
+        .label { font-size: 11px; }
+        .btn-icon { width: 34px; }
+    </style>
+}

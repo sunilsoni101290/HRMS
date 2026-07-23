@@ -1,0 +1,148 @@
+@model IEnumerable<EmployeeBankDetailDto>
+
+@{
+    ViewData["Title"] = "Employee Bank Details";
+    string? filteredEmployeeId = ViewBag.FilteredEmployeeId;
+    string? searchTerm = ViewBag.SearchTerm;
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title"><i class="icon-bank position-left"></i> @ViewData["Title"]</h5>
+        <div class="heading-elements">
+            <a asp-action="Create" asp-route-employeeId="@filteredEmployeeId" class="btn bg-primary">
+                <i class="icon-plus22"></i> Add Bank Detail
+            </a>
+            @if (!string.IsNullOrEmpty(filteredEmployeeId))
+            {
+                <a asp-action="Index" class="btn btn-default"><i class="icon-cross2"></i> Clear Filter</a>
+            }
+        </div>
+    </div>
+
+    <div class="panel-body">
+        <form method="get" asp-action="Index" class="row">
+            <div class="col-md-4">
+                <input type="text" name="search" value="@searchTerm" id="searchInput" class="form-control"
+                       placeholder="Search employee, bank, account no, IFSC..." />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-default"><i class="icon-search4"></i> Search</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-striped">
+            <thead>
+                <tr>
+                    <th width="50">#</th>
+                    <th>Employee</th>
+                    <th>Bank</th>
+                    <th>Account Number</th>
+                    <th>IFSC Code</th>
+                    <th>Type</th>
+                    <th>Primary</th>
+                    <th width="230">Action</th>
+                </tr>
+            </thead>
+            <tbody id="dataTable">
+                @{ int sr = 1; }
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@sr</td>
+                            <td>
+                                <strong>@item.EmployeeName</strong>
+                                @if (!string.IsNullOrEmpty(item.EmployeeCode))
+                                {
+                                    <br /><span class="text-muted">@item.EmployeeCode</span>
+                                }
+                            </td>
+                            <td>
+                                @item.BankName
+                                @if (!string.IsNullOrEmpty(item.BranchName))
+                                {
+                                    <br /><span class="text-muted">@item.BranchName</span>
+                                }
+                            </td>
+                            <td>@MaskAccountNumber(item.AccountNumber)</td>
+                            <td>@item.IFSCCode</td>
+                            <td><span class="label bg-primary">@(item.AccountTypeName ?? item.AccountType.ToString())</span></td>
+                            <td>
+                                @if (item.IsPrimary)
+                                {
+                                    <span class="label bg-success"><i class="icon-star-full3"></i> Primary</span>
+                                }
+                                else
+                                {
+                                    <span class="label bg-grey">Secondary</span>
+                                }
+                            </td>
+                            <td>
+                                @if (!item.IsPrimary)
+                                {
+                                    <form asp-action="SetPrimary" asp-route-id="@item.Id" asp-route-employeeId="@filteredEmployeeId"
+                                          method="post" style="display:inline;">
+                                        <button type="submit" class="btn btn-success btn-icon" title="Set Primary"><i class="icon-star-full3"></i></button>
+                                    </form>
+                                }
+                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-default btn-icon" title="View"><i class="icon-eye"></i></a>
+                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary btn-icon" title="Edit"><i class="icon-pencil7"></i></a>
+                                <form asp-action="Delete" asp-route-id="@item.Id" method="post" style="display:inline;"
+                                      onsubmit="return confirm('Delete this bank detail?');">
+                                    <button type="submit" class="btn btn-danger btn-icon" title="Delete"><i class="icon-trash"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                        sr++;
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="8" class="text-center text-muted" style="padding:30px;"><i class="icon-bank" style="font-size:32px;"></i><br />No bank details found.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@functions {
+    // "1234567890123489" -> "XXXXXXXXXXXX3489" - mirrors
+    // PayrollBusinessService.MaskAccountNumber (Application layer, not
+    // reachable from APP) so the full account number is never shown on
+    // this list, only on the Edit form where HR needs to see/correct it.
+    string MaskAccountNumber(string? accountNumber)
+    {
+        if (string.IsNullOrWhiteSpace(accountNumber))
+            return "-";
+
+        var trimmed = accountNumber.Trim();
+
+        if (trimmed.Length <= 4)
+            return trimmed;
+
+        var lastFour = trimmed[^4..];
+        return new string('X', trimmed.Length - 4) + lastFour;
+    }
+}
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    @if (TempData["GlobalError"] != null)
+    {
+        <script>$(function(){ swal({ title:"Error", text:"@TempData["GlobalError"]", type:"error" }); });</script>
+    }
+    <style>
+        .table > thead > tr > th { font-weight: 600; }
+        .table > tbody > tr > td { vertical-align: middle; }
+        .label { font-size: 11px; }
+        .btn-icon { width: 34px; }
+    </style>
+}

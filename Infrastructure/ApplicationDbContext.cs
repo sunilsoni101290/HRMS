@@ -77,6 +77,14 @@ namespace Infrastructure
         public DbSet<AttendanceRegularization> AttendanceRegularizations { get; set; }
         public DbSet<AttendanceRegularizationApprovalHistory> AttendanceRegularizationApprovalHistories { get; set; }
 
+        // Company-wide attendance rules (separate from Shift's per-shift
+        // timing) - see Domain/Entities/AttendancePolicy.cs.
+        public DbSet<AttendancePolicy> AttendancePolicies { get; set; }
+
+        // Work From Home requests (date-range, single-level approval) - see
+        // Domain/Entities/WfhRequest.cs / WfhRequestService.
+        public DbSet<WfhRequest> WfhRequests { get; set; }
+
         #endregion
 
         #region  📅 LEAVE
@@ -113,6 +121,12 @@ namespace Infrastructure
         public DbSet<JobOpening> JobOpenings { get; set; }
         public DbSet<CandidateApplication> CandidateApplications { get; set; }
         public DbSet<InterviewSchedule> InterviewSchedules { get; set; }
+        #endregion
+
+        #region 🧑‍💼 ONBOARDING
+        public DbSet<OnboardingCase> OnboardingCases { get; set; }
+        public DbSet<OnboardingChecklistItem> OnboardingChecklistItems { get; set; }
+        public DbSet<OnboardingChecklistTemplateItem> OnboardingChecklistTemplateItems { get; set; }
         #endregion
 
         #region 📢 NOTIFICATION
@@ -353,6 +367,21 @@ namespace Infrastructure
             modelBuilder.Entity<AttendanceRegularization>()
                 .HasIndex(x => new { x.EmployeeId, x.Date });
 
+            modelBuilder.Entity<AttendancePolicy>()
+                .HasIndex(x => x.TenantId);
+
+            modelBuilder.Entity<AttendancePolicy>()
+                .HasIndex(x => new { x.TenantId, x.CompanyId, x.IsActive, x.EffectiveFrom });
+
+            // Work From Home requests - EmployeeId for "my requests"/
+            // approver-scoped lookups, (TenantId, Status) for admin/HR
+            // list + pending-count queries.
+            modelBuilder.Entity<WfhRequest>()
+                .HasIndex(x => x.EmployeeId);
+
+            modelBuilder.Entity<WfhRequest>()
+                .HasIndex(x => new { x.TenantId, x.Status });
+
             modelBuilder.Entity<Payroll>()
                 .HasIndex(x => new { x.EmployeeId, x.SalaryMonth });
 
@@ -391,6 +420,39 @@ namespace Infrastructure
 
             modelBuilder.Entity<EmployeeTask>()
                 .HasIndex(x => new { x.EmployeeId, x.Status });
+
+            // =====================================================
+            // 🧑‍💼 ONBOARDING
+            // =====================================================
+            modelBuilder.Entity<OnboardingCase>()
+                .HasOne(x => x.Employee)
+                .WithMany()
+                .HasForeignKey(x => x.EmployeeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<OnboardingCase>()
+                .HasOne(x => x.Candidate)
+                .WithMany()
+                .HasForeignKey(x => x.CandidateId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<OnboardingCase>()
+                .HasIndex(x => x.EmployeeId);
+
+            modelBuilder.Entity<OnboardingCase>()
+                .HasIndex(x => x.TenantId);
+
+            modelBuilder.Entity<OnboardingChecklistItem>()
+                .HasOne(x => x.OnboardingCase)
+                .WithMany(x => x.ChecklistItems)
+                .HasForeignKey(x => x.OnboardingCaseId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<OnboardingChecklistItem>()
+                .HasIndex(x => new { x.OnboardingCaseId, x.StageType });
+
+            modelBuilder.Entity<OnboardingChecklistTemplateItem>()
+                .HasIndex(x => new { x.TenantId, x.StageType });
 
             // =====================================================
             // 🔗 USER / ROLE / PERMISSION

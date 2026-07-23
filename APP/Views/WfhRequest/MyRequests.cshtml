@@ -1,0 +1,196 @@
+@model IEnumerable<WfhRequestDto>
+
+@{
+    ViewData["Title"] = "My Work From Home Requests";
+
+    string StatusBadgeClass(int status) => status switch
+    {
+        (int)EnumExtensions.WfhRequestStatus.Pending => "bg-warning",
+        (int)EnumExtensions.WfhRequestStatus.Approved => "bg-success",
+        (int)EnumExtensions.WfhRequestStatus.Rejected => "bg-danger",
+        (int)EnumExtensions.WfhRequestStatus.Cancelled => "bg-grey",
+        _ => "bg-grey"
+    };
+
+    string StatusText(WfhRequestDto item) =>
+        !string.IsNullOrEmpty(item.StatusName)
+            ? item.StatusName
+            : ((EnumExtensions.WfhRequestStatus)item.Status).ToString();
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-home4 position-left"></i>
+            My Work From Home Requests
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="PendingApprovals" class="btn btn-default">
+                <i class="icon-checkmark4"></i>
+                Pending My Approval
+            </a>
+
+            <a asp-action="Create" class="btn bg-primary">
+                <i class="icon-plus22"></i>
+                New Request
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="table-responsive">
+
+        <table class="table table-bordered table-striped">
+
+            <thead>
+                <tr>
+                    <th>From Date</th>
+                    <th>To Date</th>
+                    <th>Total Days</th>
+                    <th>Reason</th>
+                    <th>Status</th>
+                    <th>Approved By</th>
+                    <th width="140">Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+
+                            <td>@item.FromDate.ToString("dd-MMM-yyyy")</td>
+
+                            <td>@item.ToDate.ToString("dd-MMM-yyyy")</td>
+
+                            <td class="text-center">@item.TotalDays</td>
+
+                            <td>
+                                <span class="text-muted text-size-small">
+                                    @(item.Reason?.Length > 40 ? item.Reason.Substring(0, 40) + "..." : item.Reason)
+                                </span>
+                            </td>
+
+                            <td>
+                                <span class="label @StatusBadgeClass(item.Status)">@StatusText(item)</span>
+                            </td>
+
+                            <td>
+                                @(string.IsNullOrEmpty(item.ApprovedByName) ? "-" : item.ApprovedByName)
+                            </td>
+
+                            <td style="padding: 10px 15px;">
+
+                                <div class="btn-group">
+
+                                    <a asp-action="Details"
+                                       asp-route-id="@item.Id"
+                                       class="btn btn-default btn-icon"
+                                       data-popup="tooltip"
+                                       title="View">
+
+                                        <i class="icon-eye"></i>
+
+                                    </a>
+
+                                    @if (item.Status == (int)EnumExtensions.WfhRequestStatus.Pending)
+                                    {
+                                        <button type="button"
+                                                class="btn bg-slate btn-icon btnCancel"
+                                                data-id="@item.Id"
+                                                data-popup="tooltip"
+                                                title="Cancel">
+
+                                            <i class="icon-blocked"></i>
+
+                                        </button>
+                                    }
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7" class="text-center text-muted" style="padding:30px;">
+                            <i class="icon-home4" style="font-size:32px;"></i><br />
+                            No Work From Home requests found.
+                        </td>
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+<partial name="_CancelModal" />
+
+<script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+
+@section Scripts {
+
+    <script>
+
+        @if (TempData["Success"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Success',
+                    text: '@Html.Raw(TempData["Success"])',
+                    type: 'success',
+                    confirmButtonColor: '#66BB6A'
+                });
+            </text>
+        }
+
+        @if (TempData["GlobalError"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Error',
+                    text: '@Html.Raw(TempData["GlobalError"])',
+                    type: 'error',
+                    confirmButtonColor: '#EF5350'
+                });
+            </text>
+        }
+
+    </script>
+
+    <script>
+
+        $(document).ready(function () {
+
+            $('[data-popup="tooltip"]').tooltip();
+
+            $(document).on('click', '.btnCancel', function () {
+
+                var id = $(this).data('id');
+
+                $('#CancelWfhRequestId').val(id);
+
+                $('#cancelModal').modal('show');
+
+            });
+
+        });
+
+    </script>
+
+}
