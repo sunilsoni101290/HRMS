@@ -229,6 +229,30 @@ namespace Domain.Enums
             Training = 17,
             BusinessTrip = 18
         }
+
+        // Work From Home request approval workflow - single-level approval
+        // (the requesting employee's direct ReportingManagerId, or HR/Admin
+        // as an override) unlike Leave/Attendance Regularization's
+        // multi-level chain. See Domain/Entities/WfhRequest.cs.
+        public enum WfhRequestStatus
+        {
+            Pending = 1,
+            Approved = 2,
+            Rejected = 3,
+            Cancelled = 4
+        }
+
+        // Penalty applied once an employee crosses their AttendancePolicy's
+        // LateMarkGraceCount (allowed late arrivals per month) - see
+        // Domain/Entities/AttendancePolicy.cs.
+        public enum LateMarkPenaltyType
+        {
+            None = 1,
+            WarningOnly = 2,
+            HalfDayDeduction = 3,
+            FullDayDeduction = 4
+        }
+
         public enum FinancialYearStatus
         {
             Upcoming = 0,
@@ -579,6 +603,42 @@ namespace Domain.Enums
             LeaveCancelled = 6,
             ApprovalPending = 7,
             General = 8
+        }
+
+        // =====================================================
+        // EMPLOYEE ONBOARDING
+        // An OnboardingCase always belongs to an Employee that already
+        // exists (started manually by HR, or auto-started when a
+        // Recruitment Candidate is converted into an Employee - see
+        // Employee.CandidateId / EmployeeDto.CandidateId). It spans 5
+        // conceptual stages (OnboardingStageType), each tracked via a
+        // checklist of OnboardingChecklistItem rows.
+        // =====================================================
+
+        public enum OnboardingCaseStatus
+        {
+            NotStarted = 1,
+            InProgress = 2,
+            Completed = 3,
+            OnHold = 4,
+            Cancelled = 5
+        }
+
+        public enum OnboardingStageType
+        {
+            DocumentVerification = 1,
+            WelcomeKit = 2,
+            EmployeeCreation = 3,
+            AssetAllocation = 4,
+            JoiningChecklist = 5
+        }
+
+        public enum OnboardingChecklistItemStatus
+        {
+            Pending = 1,
+            InProgress = 2,
+            Completed = 3,
+            NotApplicable = 4
         }
     }
 

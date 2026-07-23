@@ -19,7 +19,10 @@
     string currentPath = Context.Request.Path.Value?.ToLower() ?? "";
     bool IsActive(string controller, string action) =>
         currentPath.StartsWith(Url.Content($"~/{controller}/{action}").ToLower());
-    bool attendanceActive = IsActive("Attendance", "Create") || IsActive("Attendance", "MyAttendance");
+    bool attendanceActive = IsActive("Attendance", "Create") || IsActive("Attendance", "MyAttendance") ||
+                             IsActive("Attendance", "Calendar") || IsActive("TeamAttendance", "Index") ||
+                             IsActive("WfhRequest", "MyRequests") || IsActive("WfhRequest", "Create") ||
+                             IsActive("WfhRequest", "PendingApprovals");
     bool leaveActive = IsActive("LeaveApplication", "Create") ||
                         IsActive("LeaveApplication", "EmployeeLeaves") ||
                         IsActive("LeaveApplication", "MyApprovals");
@@ -109,6 +112,45 @@
                                    asp-action="MyAttendance">
 
                                     My Attendance History
+
+                                </a>
+
+                            </li>
+
+                            <li class="@(IsActive("Attendance", "Calendar") ? "active" : "")">
+
+                                <a asp-controller="Attendance"
+                                   asp-action="Calendar">
+
+                                    My Attendance Calendar
+
+                                </a>
+
+                            </li>
+
+                            <!-- Only meaningful for a Reporting Manager or
+                                 HR/Admin user - the API scopes the result to
+                                 the caller's own direct reports (or org-wide
+                                 for HR/Admin), so it's always safe to show
+                                 here; a plain employee just sees an empty
+                                 team list. -->
+                            <li class="@(IsActive("TeamAttendance", "Index") ? "active" : "")">
+
+                                <a asp-controller="TeamAttendance"
+                                   asp-action="Index">
+
+                                    Team Attendance
+
+                                </a>
+
+                            </li>
+
+                            <li class="@(IsActive("WfhRequest", "MyRequests") ? "active" : "")">
+
+                                <a asp-controller="WfhRequest"
+                                   asp-action="MyRequests">
+
+                                    Work From Home
 
                                 </a>
 

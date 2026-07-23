@@ -1,0 +1,203 @@
+@model AttendanceDashboardDto
+
+@{
+    ViewData["Title"] = "Attendance Dashboard";
+
+    var trendLabels = string.Join(",", Model.Last30DaysTrend.Select(x => "'" + x.Date.ToString("dd MMM") + "'"));
+    var presentValues = string.Join(",", Model.Last30DaysTrend.Select(x => x.PresentCount));
+    var absentValues = string.Join(",", Model.Last30DaysTrend.Select(x => x.AbsentCount));
+    var lateValues = string.Join(",", Model.Last30DaysTrend.Select(x => x.LateCount));
+}
+
+<!-- ================= KPI Cards ================= -->
+<div class="row ent-kpi-row">
+
+    <div class="col-md-3 col-sm-6">
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-teal"><i class="icon-checkmark-circle"></i></div>
+            <div class="ent-kpi-body">
+                <h3>@Model.PresentToday</h3>
+                <span>Present Today</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-orange"><i class="icon-cross2"></i></div>
+            <div class="ent-kpi-body">
+                <h3>@Model.AbsentToday</h3>
+                <span>Absent Today</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-gold"><i class="icon-alarm"></i></div>
+            <div class="ent-kpi-body">
+                <h3>@Model.LateToday</h3>
+                <span>Late Today</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-purple"><i class="icon-calendar3"></i></div>
+            <div class="ent-kpi-body">
+                <h3>@Model.OnLeaveToday</h3>
+                <span>On Leave Today</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-blue"><i class="icon-users"></i></div>
+            <div class="ent-kpi-body">
+                <h3>@Model.TotalActiveEmployees</h3>
+                <span>Active Employees</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-green"><i class="icon-stats-bars"></i></div>
+            <div class="ent-kpi-body">
+                <h3>@Model.PresentPercentToday.ToString("0.#")%</h3>
+                <span>Present % Today</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-pink"><i class="icon-hour-glass"></i></div>
+            <div class="ent-kpi-body">
+                <h3>@Model.PendingRegularizations</h3>
+                <span>Pending Corrections</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-indigo"><i class="icon-office"></i></div>
+            <div class="ent-kpi-body">
+                <h3>@Model.DepartmentWisePresentToday.Count</h3>
+                <span>Departments</span>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ================= Trend + Department ================= -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="panel panel-flat ent-panel">
+            <div class="panel-heading">
+                <h6 class="panel-title"><i class="icon-stats-bars position-left"></i> Attendance Trend (Last 30 Days)</h6>
+            </div>
+            <div class="panel-body">
+                <div id="attTrendChart" style="height:320px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="panel panel-flat ent-panel">
+            <div class="panel-heading">
+                <h6 class="panel-title"><i class="icon-office position-left"></i> Department-wise Present Today</h6>
+            </div>
+            <div class="panel-body">
+                @if (Model.DepartmentWisePresentToday.Any())
+                {
+                    foreach (var dept in Model.DepartmentWisePresentToday)
+                    {
+                        <div class="ent-dept-row">
+                            <div class="ent-dept-label">@dept.DepartmentName</div>
+                            <div class="ent-dept-progress">
+                                <div class="progress">
+                                    <div class="progress-bar bg-teal" style="width:@(dept.PresentPercent)%"></div>
+                                </div>
+                            </div>
+                            <div class="ent-dept-count">@dept.PresentCount / @dept.TotalCount <small>(@dept.PresentPercent.ToString("0.#")%)</small></div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="text-muted">No department data available.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* ---------- KPI cards (matches Views/Dashboard/Index.cshtml) ---------- */
+    .ent-kpi-row { margin-bottom: 4px; }
+    .ent-kpi-card {
+        background: #fff; border-radius: 8px; padding: 18px 18px;
+        display: flex; align-items: center; gap: 14px;
+        box-shadow: 0 1px 3px rgba(20,30,60,.08);
+        border: 1px solid #edf0f5;
+        margin-bottom: 20px;
+        transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .ent-kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(20,30,60,.12); }
+    .ent-kpi-icon {
+        width: 48px; height: 48px; border-radius: 10px; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center; font-size: 20px; color: #fff;
+    }
+    .ent-icon-blue   { background: linear-gradient(135deg,#4e9cff,#2b6fd9); }
+    .ent-icon-green  { background: linear-gradient(135deg,#4cd39b,#1fa876); }
+    .ent-icon-indigo { background: linear-gradient(135deg,#8a7bff,#5c4de0); }
+    .ent-icon-red    { background: linear-gradient(135deg,#ff8a8a,#e5484d); }
+    .ent-icon-teal   { background: linear-gradient(135deg,#3ecbc8,#1f9d9a); }
+    .ent-icon-orange { background: linear-gradient(135deg,#ffb04e,#e08b1f); }
+    .ent-icon-purple { background: linear-gradient(135deg,#c084fc,#9333ea); }
+    .ent-icon-pink   { background: linear-gradient(135deg,#ff7bb0,#e0447e); }
+    .ent-icon-gold   { background: linear-gradient(135deg,#f5c542,#d99a1f); }
+    .ent-kpi-body h3 { margin: 0; font-size: 24px; font-weight: 700; color: #1b2a4a; line-height: 1; }
+    .ent-kpi-body span { color: #8896ad; font-size: 11.5px; text-transform: uppercase; letter-spacing: .4px; }
+
+    .ent-panel { border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(20,30,60,.06); }
+
+    .ent-dept-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; }
+    .ent-dept-label { flex: 0 0 110px; font-size: 12.5px; color: #45526b; }
+    .ent-dept-progress { flex: 1; }
+    .ent-dept-progress .progress { height: 8px; margin: 0; border-radius: 4px; }
+    .ent-dept-count { flex: 0 0 110px; text-align: right; font-size: 12.5px; font-weight: 600; color: #1b2a4a; }
+    .ent-dept-count small { font-weight: 400; color: #8896ad; }
+</style>
+
+@section Scripts {
+    <script src="~/global_assets/js/plugins/visualization/echarts/echarts.min.js"></script>
+    <script>
+        $(function () {
+            if (typeof echarts !== 'undefined') {
+                var el = document.getElementById('attTrendChart');
+                if (el) {
+                    var chart = echarts.init(el);
+                    chart.setOption({
+                        tooltip: { trigger: 'axis' },
+                        legend: { data: ['Present', 'Absent', 'Late'], bottom: 0 },
+                        grid: { left: '3%', right: '4%', top: '8%', bottom: '12%', containLabel: true },
+                        xAxis: { type: 'category', data: [@Html.Raw(trendLabels)] },
+                        yAxis: { type: 'value' },
+                        series: [
+                            { name: 'Present', type: 'line', smooth: true, itemStyle: { color: '#1fa876' }, data: [@Html.Raw(presentValues)] },
+                            { name: 'Absent', type: 'line', smooth: true, itemStyle: { color: '#e5484d' }, data: [@Html.Raw(absentValues)] },
+                            { name: 'Late', type: 'line', smooth: true, itemStyle: { color: '#d99a1f' }, data: [@Html.Raw(lateValues)] }
+                        ]
+                    });
+                    window.addEventListener('resize', function () { chart.resize(); });
+                }
+            }
+        });
+    </script>
+}

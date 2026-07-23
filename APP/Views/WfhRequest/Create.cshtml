@@ -1,0 +1,229 @@
+@model CreateWfhRequestDto
+
+@{
+    ViewData["Title"] = "Request Work From Home";
+    bool noEmployeeProfile = ViewBag.NoEmployeeProfile ?? false;
+    string employeeDisplayName = ViewBag.EmployeeDisplayName ?? "";
+    var remaining = ViewBag.Remaining as WfhRemainingDaysDto;
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-home4 position-left"></i>
+            Request Work From Home
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="MyRequests"
+               class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <!-- Monthly WFH usage -->
+
+        <div class="alert bg-slate-100 alert-styled-left">
+            @if (remaining == null)
+            {
+                <span>Unable to load this month's WFH usage - you can still submit a request.</span>
+            }
+            else if (remaining.MaxWfhDaysPerMonth == null || remaining.MaxWfhDaysPerMonth == 0)
+            {
+                <span>
+                    <strong>@remaining.UsedDays</strong> WFH day(s) used this month.
+                    <span class="label bg-info">Unlimited</span>
+                </span>
+            }
+            else
+            {
+                <span>
+                    <strong>@remaining.UsedDays of @remaining.MaxWfhDaysPerMonth</strong>
+                    WFH days used this month
+                    (<strong>@remaining.RemainingDays</strong> remaining).
+                </span>
+            }
+        </div>
+
+        <form asp-action="Create"
+              method="post">
+
+            <div asp-validation-summary="ModelOnly"
+                 class="alert alert-danger"></div>
+
+            <!-- Employee Information -->
+
+            <div class="row">
+
+                <div class="col-md-12">
+
+                    <div class="form-group">
+
+                        <label>Employee</label>
+
+                        <!-- Self-service: always the logged-in employee, never a
+                             pickable dropdown - the server ignores any other
+                             value even if one were posted. -->
+                        <input type="text"
+                               class="form-control bg-slate-100"
+                               value="@employeeDisplayName"
+                               readonly
+                               disabled />
+
+                        <input asp-for="EmployeeId" type="hidden" />
+
+                        @if (noEmployeeProfile)
+                        {
+                            <span class="text-danger text-size-small">
+                                Your login isn't linked to an employee profile - you can't request Work From Home.
+                            </span>
+                        }
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Dates -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-calendar3"></i>
+                    Dates
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="FromDate"></label>
+
+                            <input asp-for="FromDate"
+                                   id="FromDate"
+                                   type="date"
+                                   class="form-control" />
+
+                            <span asp-validation-for="FromDate"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="ToDate"></label>
+
+                            <input asp-for="ToDate"
+                                   id="ToDate"
+                                   type="date"
+                                   class="form-control" />
+
+                            <span asp-validation-for="ToDate"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- Reason -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-file-text2"></i>
+                    Reason
+                </legend>
+
+                <div class="form-group">
+
+                    <label asp-for="Reason"></label>
+
+                    <textarea asp-for="Reason"
+                              rows="4"
+                              maxlength="500"
+                              class="form-control"></textarea>
+
+                    <span asp-validation-for="Reason"
+                          class="text-danger"></span>
+
+                </div>
+
+            </fieldset>
+
+            <hr />
+
+            <div class="text-right">
+
+                <a asp-action="MyRequests"
+                   class="btn btn-default">
+
+                    Cancel
+
+                </a>
+
+                <button type="submit"
+                        id="btnSubmitWfhRequest"
+                        class="btn bg-primary"
+                        @(noEmployeeProfile ? "disabled" : "")>
+
+                    <i class="icon-checkmark4"></i>
+                    Submit Request
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+@section Scripts {
+
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+
+        $(function () {
+
+            // Keep To Date from ever being earlier than From Date.
+            $("#FromDate").on("change", function () {
+
+                var fromVal = $(this).val();
+
+                if (fromVal) {
+                    $("#ToDate").attr("min", fromVal);
+
+                    if ($("#ToDate").val() && $("#ToDate").val() < fromVal) {
+                        $("#ToDate").val(fromVal);
+                    }
+                }
+
+            });
+
+        });
+
+    </script>
+
+}

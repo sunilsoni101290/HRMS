@@ -1,0 +1,49 @@
+<div class="modal fade"
+     id="rejectModal">
+
+    <div class="modal-dialog">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5>Reject Work From Home Request</h5>
+            </div>
+
+            <form asp-action="Reject" method="post">
+
+                <div class="modal-body">
+
+                    <input type="hidden"
+                           id="RejectWfhRequestId"
+                           name="id" />
+
+                    <label>Reason</label>
+
+                    <textarea class="form-control"
+                              name="reason"
+                              required></textarea>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button type="button"
+                            class="btn btn-default"
+                            data-dismiss="modal">
+                        Close
+                    </button>
+
+                    <button type="submit"
+                            class="btn btn-danger">
+                        Reject
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>

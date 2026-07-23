@@ -33,5 +33,29 @@ namespace Application.Interfaces.Attendances
 
         Task<bool> DeleteAsync(string id);
         #endregion
+
+        #region Attendance Insights (Calendar / Team / Summary / Dashboard)
+
+        // Month-grid classification for one employee - see
+        // Domain/Helper/AttendanceStatusHelper.cs for the status values.
+        Task<List<AttendanceCalendarDayDto>> GetCalendarAsync(string employeeId, int month, int year, string tenantId);
+
+        // Does the acting user (by User.Id) hold an allowed RolePermission
+        // for the View action on the ATTENDANCE feature - mirrors
+        // AttendanceRegularizationService.IsHrApproverAsync's exact join
+        // pattern, swapped to ATTENDANCE/View instead of
+        // ATTENDANCE_REGULARIZATION/Approve.
+        Task<bool> IsHrOrAdminForAttendanceAsync(string? actingUserId);
+
+        // isHrOrAdmin=true -> every employee in the tenant for that date;
+        // otherwise only employees reporting to the acting user's linked
+        // Employee (Employee.ReportingManagerId).
+        Task<List<TeamAttendanceMemberDto>> GetTeamAttendanceAsync(string actingUserId, DateTime date, string tenantId, bool isHrOrAdmin);
+
+        Task<List<AttendanceSummaryRowDto>> GetSummaryAsync(string tenantId, int month, int year, string? departmentId, string? employeeId);
+
+        Task<AttendanceDashboardDto> GetDashboardAsync(string tenantId, string? companyId);
+
+        #endregion
     }
 }

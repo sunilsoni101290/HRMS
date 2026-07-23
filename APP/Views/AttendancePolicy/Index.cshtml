@@ -1,0 +1,98 @@
+@model IEnumerable<AttendancePolicyDto>
+
+@{
+    ViewData["Title"] = "Attendance Policy";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title"><i class="icon-shield-check position-left"></i> @ViewData["Title"]</h5>
+        <div class="heading-elements">
+            <a asp-action="Create" class="btn bg-primary">
+                <i class="icon-plus22"></i> Add Policy
+            </a>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-striped">
+            <thead>
+                <tr>
+                    <th width="50">#</th>
+                    <th>Policy Name</th>
+                    <th>Company</th>
+                    <th>Effective From</th>
+                    <th>Max Corrections / Month</th>
+                    <th>Max WFH Days / Month</th>
+                    <th>Late Mark Grace Count</th>
+                    <th>Late Mark Penalty</th>
+                    <th>Min. Attendance %</th>
+                    <th>Comp-Off Extra Hrs</th>
+                    <th>Status</th>
+                    <th width="150">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{ int sr = 1; }
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@sr</td>
+                            <td><strong>@item.PolicyName</strong></td>
+                            <td>@(item.CompanyName ?? "All Companies")</td>
+                            <td>@item.EffectiveFrom.ToString("dd MMM yyyy")</td>
+                            <td class="text-center">@item.MaxRegularizationRequestsPerMonth</td>
+                            <td class="text-center">@(item.MaxWfhDaysPerMonth > 0 ? item.MaxWfhDaysPerMonth.ToString() : "Unlimited")</td>
+                            <td class="text-center">@item.LateMarkGraceCount</td>
+                            <td>@(item.LateMarkPenaltyTypeName ?? item.LateMarkPenaltyType.ToString())</td>
+                            <td class="text-center">@item.MinimumAttendancePercentForFullSalary.ToString("0.##")%</td>
+                            <td class="text-center">@item.CompOffEligibleExtraHours.ToString("0.##")</td>
+                            <td>
+                                @if (item.IsActive)
+                                {
+                                    <span class="label bg-success">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="label bg-grey">Inactive</span>
+                                }
+                            </td>
+                            <td>
+                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary btn-icon" title="Edit"><i class="icon-pencil7"></i></a>
+                                <form asp-action="Delete" asp-route-id="@item.Id" method="post" style="display:inline;"
+                                      onsubmit="return confirm('Delete this attendance policy?');">
+                                    <button type="submit" class="btn btn-danger btn-icon" title="Delete"><i class="icon-trash"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                        sr++;
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="12" class="text-center text-muted" style="padding:30px;"><i class="icon-shield-check" style="font-size:32px;"></i><br />No attendance policies found.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    @if (TempData["GlobalError"] != null)
+    {
+        <script>$(function(){ swal({ title:"Error", text:"@TempData["GlobalError"]", type:"error" }); });</script>
+    }
+    <style>
+        .table > thead > tr > th { font-weight: 600; }
+        .table > tbody > tr > td { vertical-align: middle; }
+        .label { font-size: 11px; }
+        .btn-icon { width: 34px; }
+    </style>
+}

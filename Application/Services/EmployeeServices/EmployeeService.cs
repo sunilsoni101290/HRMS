@@ -1,7 +1,9 @@
 ﻿using Application.DTOs.Employee;
+using Application.DTOs.Onboarding;
 using Application.Interfaces;
 using Application.Interfaces.EmployeeInterface;
 using Application.Interfaces.Masters;
+using Application.Interfaces.Onboarding;
 using Application.Mappings;
 using Domain.Entities;
 using Domain.Helper;
@@ -25,12 +27,20 @@ namespace Application.Services.EmployeeServices
         private readonly ISequenceService _sequenceService;
         private readonly IFinancialYearService _financialYearService;
 
+        // One-directional dependency only (Onboarding -> Employee has no
+        // reverse dependency, so no circular DI here) - used to
+        // auto-start an OnboardingCase right after a new Employee is
+        // created FROM a Recruitment Candidate conversion (EmployeeDto.CandidateId
+        // set). See CreateAsync below.
+        private readonly IOnboardingService _onboardingService;
+
         public EmployeeService(ApplicationDbContext db, ITenantService tenantService, ISequenceService sequenceService,
-            IFinancialYearService financialYearService) : base(db)
+            IFinancialYearService financialYearService, IOnboardingService onboardingService) : base(db)
         {
             _tenantService = tenantService;
             _sequenceService = sequenceService;
             _financialYearService = financialYearService;
+            _onboardingService = onboardingService;
         }
         public async Task<PagedResult<EmployeeListDto>> SearchAsync(EmployeeSearchRequest request)
         {
@@ -153,6 +163,14 @@ namespace Application.Services.EmployeeServices
 
                 employee.Id = IDManager.GetNewId(new Employee());
 
+                // Mutate the caller's dto in place so callers (e.g. the API
+                // controller) can read back the newly-generated Id after
+                // this method returns - CreateAsync's return type is the
+                // shared IBaseService<TDto> string contract (credentials
+                // message), so this is the only way to surface the new
+                // Employee's Id without changing that shared interface.
+                dto.Id = employee.Id;
+
                 employee.CreatedBy = string.IsNullOrWhiteSpace(dto.CreatedBy)
                     ? "System"
                     : dto.CreatedBy;
@@ -273,6 +291,35 @@ namespace Application.Services.EmployeeServices
                 // =========================================
 
                 await _db.SaveChangesAsync();
+
+                // =========================================
+                // ONBOARDING (best-effort, never blocks employee creation)
+                // =========================================
+                // If this Employee was created from a Recruitment Candidate
+                // conversion (EmployeeDto.CandidateId set), auto-start their
+                // OnboardingCase. Deliberately swallowed on failure - the
+                // Employee + User + credentials above are already committed,
+                // so a template/onboarding misconfiguration must not turn a
+                // successful employee creation into a reported failure. HR
+                // can always start the case manually afterwards.
+                if (!string.IsNullOrWhiteSpace(dto.CandidateId))
+                {
+                    try
+                    {
+                        await _onboardingService.CreateCaseAsync(
+                            new CreateOnboardingCaseDto
+                            {
+                                EmployeeId = employee.Id,
+                                CandidateId = dto.CandidateId
+                            },
+                            dto.TenantId,
+                            employee.CreatedBy);
+                    }
+                    catch
+                    {
+                        // Swallowed by design - see comment above.
+                    }
+                }
 
                 // =========================================
                 // COMMIT

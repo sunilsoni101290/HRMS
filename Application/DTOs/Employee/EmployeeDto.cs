@@ -61,6 +61,13 @@ namespace Application.DTOs.Employee
         [Display(Name = "Reporting Manager")]
         public string? ReportingManagerId { get; set; }
 
+        // Onboarding: set when this Employee is being created FROM a
+        // Recruitment Candidate conversion (rather than added directly by
+        // HR) - when populated, EmployeeService.CreateAsync automatically
+        // starts an OnboardingCase for the new Employee via
+        // IOnboardingService.CreateCaseAsync. Mirrors Employee.CandidateId.
+        public string? CandidateId { get; set; }
+
         #endregion
 
         #region Personal Information

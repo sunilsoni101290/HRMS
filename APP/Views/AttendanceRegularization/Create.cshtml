@@ -1,7 +1,7 @@
 @model RequestRegularizationDto
 
 @{
-    ViewData["Title"] = "Request Regularization";
+    ViewData["Title"] = "Request Correction";
     bool isAdmin = ViewBag.IsAdmin ?? true;
     bool noEmployeeProfile = ViewBag.NoEmployeeProfile ?? false;
     string employeeDisplayName = ViewBag.EmployeeDisplayName ?? "";
@@ -13,7 +13,7 @@
 
         <h5 class="panel-title">
             <i class="icon-calendar-plus position-left"></i>
-            Request Attendance Regularization
+            Request Attendance Correction
         </h5>
 
         <div class="heading-elements">
@@ -74,7 +74,7 @@
                             @if (noEmployeeProfile)
                             {
                                 <span class="text-danger text-size-small">
-                                    Your login isn't linked to an employee profile - you can't request regularization.
+                                    Your login isn't linked to an employee profile - you can't request a correction.
                                 </span>
                             }
                         }

@@ -1,0 +1,113 @@
+@model CreateOnboardingCaseDto
+
+@{
+    ViewData["Title"] = "Start Onboarding";
+
+    bool lockEmployee = ViewBag.LockEmployee ?? false;
+    bool fromCandidate = ViewBag.FromCandidate ?? false;
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-user-plus position-left"></i>
+            Start Onboarding
+        </h5>
+
+        <div class="heading-elements">
+            <a asp-action="Index" class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        @if (fromCandidate)
+        {
+            <div class="alert alert-info alert-styled-left mb-15">
+                <span class="text-semibold">Starting onboarding from a selected candidate.</span>
+                The employee has already been created from this candidate - onboarding starts as soon as you submit this form.
+            </div>
+        }
+
+        <form asp-action="Create" asp-controller="Onboarding" method="post">
+
+            <input type="hidden" asp-for="CandidateId" />
+
+            <div class="row">
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="EmployeeId" class="text-semibold"></label>
+
+                        @if (lockEmployee)
+                        {
+                            <select asp-items="ViewBag.EmployeeList" class="form-control" disabled>
+                                <option value="">Select Employee</option>
+                            </select>
+                            <input type="hidden" name="EmployeeId" value="@Model.EmployeeId" />
+                        }
+                        else
+                        {
+                            <select asp-for="EmployeeId" asp-items="ViewBag.EmployeeList" class="form-control">
+                                <option value="">Select Employee</option>
+                            </select>
+                        }
+
+                        <span asp-validation-for="EmployeeId" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="TargetCompletionDate" class="text-semibold"></label>
+                        <input asp-for="TargetCompletionDate" type="date" class="form-control" />
+                        <span asp-validation-for="TargetCompletionDate" class="text-danger"></span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="row">
+
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label asp-for="Remarks" class="text-semibold"></label>
+                        <textarea asp-for="Remarks" rows="3" class="form-control" placeholder="Optional remarks..."></textarea>
+                        <span asp-validation-for="Remarks" class="text-danger"></span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="text-end">
+                <a asp-action="Index" class="btn btn-light border rounded-3 px-4">
+                    <i class="bi bi-arrow-left"></i>
+                    Cancel
+                </a>
+                <button type="submit" class="btn btn-primary rounded-3 px-4">
+                    <i class="bi bi-check-circle"></i>
+                    Start Onboarding
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+@section Scripts {
+    @if (TempData["Error"] != null)
+    {
+        <script>$(function(){ swal({ title:"Error", text:"@Html.Raw(TempData["Error"])", type:"error" }); });</script>
+    }
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

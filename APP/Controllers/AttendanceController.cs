@@ -41,19 +41,24 @@ namespace APP.Controllers
         }
 
         /// <summary>
-        /// Self-service attendance history - reuses the same Index view/list
-        /// endpoint as the admin screen, but filters down to only the
-        /// logged-in user's own employee record server-side, so an employee
-        /// can never see anyone else's attendance from this page.
+        /// Self-service attendance history - filters the same punch list the
+        /// admin Index screen uses down to only the logged-in user's own
+        /// employee record server-side, so an employee can never see anyone
+        /// else's attendance from this page. Enhanced with a monthly
+        /// summary strip (Present/Absent/Late/HalfDay/Leave counts + total
+        /// working hours, from AttendanceInsights/summary scoped to this one
+        /// employee) and a link into the new self-service Attendance
+        /// Calendar - own dedicated view (MyAttendance.cshtml) so the
+        /// original admin Index.cshtml/route stays completely untouched.
         /// </summary>
-        public async Task<IActionResult> MyAttendance()
+        public async Task<IActionResult> MyAttendance(int? month, int? year)
         {
             ViewBag.IsAdmin = false;
 
             if (string.IsNullOrEmpty(_employeeId))
             {
                 ViewBag.NoEmployeeProfile = true;
-                return View("Index", new List<AttendanceDto>());
+                return View(new List<AttendanceDto>());
             }
 
             var data = await _apiService
@@ -64,8 +69,33 @@ namespace APP.Controllers
                 .OrderByDescending(a => a.Date)
                 .ToList();
 
+            var today = DateTime.Today;
+            int y = year ?? today.Year;
+            int m = month ?? today.Month;
+
+            ViewBag.SummaryMonth = m;
+            ViewBag.SummaryYear = y;
+            ViewBag.SummaryMonthName = new DateTime(y, m, 1).ToString("MMMM yyyy");
+
+            try
+            {
+                var summaryUrl =
+                    $"attendanceinsights/summary?month={m}&year={y}" +
+                    $"&employeeId={Uri.EscapeDataString(_employeeId)}";
+
+                var summaryRows = await _apiService.GetAsync<List<AttendanceSummaryRowDto>>(summaryUrl);
+                ViewBag.MySummary = summaryRows?.FirstOrDefault();
+            }
+            catch
+            {
+                // Insights endpoint failing shouldn't take down the whole
+                // page - the punch list below still renders without the
+                // summary strip.
+                ViewBag.MySummary = null;
+            }
+
             ViewBag.ListTitle = "My Attendance";
-            return View("Index", mine);
+            return View(mine);
         }
 
         [HttpGet]
@@ -116,6 +146,69 @@ namespace APP.Controllers
 
             return View(data);
         }
+
+        #region Calendar
+
+        /// <summary>
+        /// Month-grid view of one employee's attendance, calling
+        /// AttendanceInsights/calendar - same placement precedent as
+        /// LeaveApplication.Calendar (an action added directly on the
+        /// existing feature controller rather than a new one, since it's
+        /// just another read view over the same "attendance" concept).
+        /// Self-service: always defaults to (and, for a non-admin, is
+        /// locked to) the logged-in user's own employee record. Admin/HR
+        /// may pass employeeId to view anyone else's calendar via the
+        /// dropdown rendered in the view.
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> Calendar(int? year, int? month, string? employeeId)
+        {
+            var today = DateTime.Today;
+
+            int y = year ?? today.Year;
+            int m = month ?? today.Month;
+
+            while (m < 1) { m += 12; y -= 1; }
+            while (m > 12) { m -= 12; y += 1; }
+
+            // Never trust a client-supplied employeeId for a self-service
+            // user - always view their own calendar, exactly like
+            // Details/EmployeeLeaves elsewhere in this app. Only admin/HR
+            // may look up another employee's calendar this way.
+            string? targetEmployeeId = _isAdmin
+                ? (string.IsNullOrWhiteSpace(employeeId) ? _employeeId : employeeId)
+                : _employeeId;
+
+            ViewBag.IsAdmin = _isAdmin;
+            ViewBag.SelectedEmployeeId = targetEmployeeId;
+
+            if (_isAdmin)
+            {
+                var employees = await _apiService.GetAsync<List<DropdownDto>>("dropdown/employee");
+                ViewBag.EmployeeList = new SelectList(employees, "Value", "Text", targetEmployeeId);
+            }
+
+            if (string.IsNullOrEmpty(targetEmployeeId))
+            {
+                ViewBag.NoEmployeeProfile = true;
+                return View(new List<AttendanceCalendarDayDto>());
+            }
+
+            ViewBag.NoEmployeeProfile = false;
+            ViewBag.Year = y;
+            ViewBag.Month = m;
+            ViewBag.MonthName = new DateTime(y, m, 1).ToString("MMMM yyyy");
+
+            var url =
+                $"attendanceinsights/calendar?employeeId={Uri.EscapeDataString(targetEmployeeId)}" +
+                $"&month={m}&year={y}";
+
+            var data = await _apiService.GetAsync<List<AttendanceCalendarDayDto>>(url);
+
+            return View(data ?? new List<AttendanceCalendarDayDto>());
+        }
+
+        #endregion
 
         [HttpGet]
         public async Task<IActionResult> Create()

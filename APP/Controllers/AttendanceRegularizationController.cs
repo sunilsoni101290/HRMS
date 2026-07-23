@@ -108,7 +108,7 @@ namespace APP.Controllers
             {
                 if (string.IsNullOrEmpty(_employeeId))
                 {
-                    TempData["GlobalError"] = "Your login isn't linked to an employee profile, so you can't request regularization.";
+                    TempData["GlobalError"] = "Your login isn't linked to an employee profile, so you can't request a correction.";
                     return RedirectToAction(nameof(Create));
                 }
 
@@ -125,11 +125,11 @@ namespace APP.Controllers
 
                 if (result == null)
                 {
-                    TempData["GlobalError"] = "Unable to submit regularization request.";
+                    TempData["GlobalError"] = "Unable to submit correction request.";
                     return RedirectToAction(nameof(Create));
                 }
 
-                TempData["Success"] = "Regularization request submitted successfully.";
+                TempData["Success"] = "Correction request submitted successfully.";
 
                 // Admin/HR land on the org-wide list; a self-service employee
                 // should stay inside their own portal and see their own
@@ -172,11 +172,11 @@ namespace APP.Controllers
                     }
                 }
 
-                return "Unable to submit regularization request.";
+                return "Unable to submit correction request.";
             }
             catch
             {
-                return "Unable to submit regularization request.";
+                return "Unable to submit correction request.";
             }
         }
 
@@ -227,8 +227,8 @@ namespace APP.Controllers
                     "AttendanceRegularization/approve", model);
 
                 TempData[result ? "Success" : "GlobalError"] = result
-                    ? "Regularization request approved successfully."
-                    : "Unable to approve this regularization request.";
+                    ? "Correction request approved successfully."
+                    : "Unable to approve this correction request.";
             }
             catch (ApiException ex)
             {
@@ -254,8 +254,8 @@ namespace APP.Controllers
                     "AttendanceRegularization/reject", model);
 
                 TempData[result ? "Success" : "GlobalError"] = result
-                    ? "Regularization request rejected."
-                    : "Unable to reject this regularization request.";
+                    ? "Correction request rejected."
+                    : "Unable to reject this correction request.";
             }
             catch (ApiException ex)
             {
@@ -280,8 +280,8 @@ namespace APP.Controllers
                     "AttendanceRegularization/send-back", model);
 
                 TempData[result ? "Success" : "GlobalError"] = result
-                    ? "Regularization request sent back to the employee."
-                    : "Unable to send this regularization request back.";
+                    ? "Correction request sent back to the employee."
+                    : "Unable to send this correction request back.";
             }
             catch (ApiException ex)
             {
@@ -308,7 +308,7 @@ namespace APP.Controllers
 
             if (data.Status != EnumExtensions.ApprovalStatus.ReturnedToEmployee)
             {
-                TempData["GlobalError"] = "Only a regularization request that was sent back can be resubmitted.";
+                TempData["GlobalError"] = "Only a correction request that was sent back can be resubmitted.";
                 return RedirectToAction(nameof(MyRequests));
             }
 
@@ -359,11 +359,11 @@ namespace APP.Controllers
 
                 if (result == null)
                 {
-                    TempData["GlobalError"] = "Unable to resubmit regularization request.";
+                    TempData["GlobalError"] = "Unable to resubmit correction request.";
                     return RedirectToAction(nameof(Resubmit), new { id });
                 }
 
-                TempData["Success"] = "Regularization request resubmitted for approval.";
+                TempData["Success"] = "Correction request resubmitted for approval.";
 
                 return _isAdmin
                     ? RedirectToAction(nameof(Index))
@@ -430,7 +430,7 @@ namespace APP.Controllers
                     $"AttendanceRegularization/{model.AttendanceRegularizationId}");
 
                 if (existing == null || existing.EmployeeId != _employeeId)
-                    return Json(new { success = false, message = "You can only cancel your own regularization requests." });
+                    return Json(new { success = false, message = "You can only cancel your own correction requests." });
             }
 
             model.CancelledBy = _userId;
@@ -500,7 +500,7 @@ namespace APP.Controllers
             await LoadDropdowns();
 
             ViewBag.IsAdmin = _isAdmin;
-            ViewBag.ListTitle = "My Regularization Requests";
+            ViewBag.ListTitle = "My Correction Requests";
             await SetApprovalViewBagAsync();
 
             if (string.IsNullOrEmpty(_employeeId))

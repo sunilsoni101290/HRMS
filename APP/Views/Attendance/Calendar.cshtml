@@ -1,0 +1,371 @@
+@model List<AttendanceCalendarDayDto>
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"] = "Attendance Calendar";
+
+    bool isAdmin = ViewBag.IsAdmin ?? false;
+    bool noProfile = ViewBag.NoEmployeeProfile ?? false;
+    string? selectedEmployeeId = ViewBag.SelectedEmployeeId as string;
+
+    int year = ViewBag.Year ?? DateTime.Today.Year;
+    int month = ViewBag.Month ?? DateTime.Today.Month;
+    string monthName = ViewBag.MonthName ?? new DateTime(year, month, 1).ToString("MMMM yyyy");
+
+    var firstOfMonth = new DateTime(year, month, 1);
+    int daysInMonth = DateTime.DaysInMonth(year, month);
+    int startOffset = (int)firstOfMonth.DayOfWeek;
+
+    var prevMonth = firstOfMonth.AddMonths(-1);
+    var nextMonth = firstOfMonth.AddMonths(1);
+    var today = DateTime.Today;
+
+    var byDay = (Model ?? new List<AttendanceCalendarDayDto>())
+        .Where(x => x.Date.Year == year && x.Date.Month == month)
+        .ToDictionary(x => x.Date.Day, x => x);
+
+    // Soft, low-saturation "enterprise" palette - a tinted background +
+    // solid accent bar/icon color reads clearly without the eye-strain of
+    // a whole grid of fully-saturated fill colors. Grouping mirrors the
+    // status classification used everywhere else in this app (ESS
+    // dashboard Week Attendance strip, Team Attendance, Attendance
+    // Summary) so the same status always means the same color family.
+    (string Bg, string Border, string Text, string Icon, string Group) StatusStyle(string s) => s switch
+    {
+        "Present" or "WorkFromHome" or "OnDuty" or "Overtime" or "CompOff"
+            => ("#eafaf1", "#2fa96a", "#1c7a4d", "icon-checkmark", "Working"),
+        "Late" or "HalfDay" or "EarlyExit"
+            => ("#fff8e8", "#e2a836", "#8a5e0a", "icon-alarm", "Late / Partial"),
+        "Absent" or "MissPunch"
+            => ("#fdedec", "#e2645f", "#a3312d", "icon-cross", "Absent"),
+        "Leave"
+            => ("#edf2fd", "#5b7fe0", "#33499e", "icon-airplane", "Leave"),
+        "Holiday"
+            => ("#e9f8f6", "#2bab9e", "#0f6b62", "icon-flag3", "Holiday"),
+        "WeekOff"
+            => ("#f4f5f8", "#9aa3b2", "#5c6674", "icon-office", "Week Off"),
+        _ => ("#fbfbfc", "#dde2ea", "#a7afbd", "", "No Data")
+    };
+
+    string[] workingStatuses = { "Present", "WorkFromHome", "OnDuty", "Overtime", "CompOff" };
+    string[] lateStatuses = { "Late", "HalfDay", "EarlyExit" };
+    string[] absentStatuses = { "Absent", "MissPunch" };
+
+    int presentCount = byDay.Values.Count(x => workingStatuses.Contains(x.Status));
+    int lateCount = byDay.Values.Count(x => lateStatuses.Contains(x.Status));
+    int absentCount = byDay.Values.Count(x => absentStatuses.Contains(x.Status));
+    int leaveCount = byDay.Values.Count(x => x.Status == "Leave");
+    int holidayCount = byDay.Values.Count(x => x.Status == "Holiday");
+    int weekOffCount = byDay.Values.Count(x => x.Status == "WeekOff");
+    int correctedCount = byDay.Values.Count(x => x.IsRegularized);
+    decimal totalHours = byDay.Values.Sum(x => x.TotalWorkingHours ?? 0);
+}
+
+<style>
+    /* ---------- Month overview stat strip ---------- */
+    .att-cal-stats {
+        display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin-bottom: 18px;
+    }
+    .att-cal-stat-card {
+        background: #fff; border: 1px solid #eef0f4; border-radius: 8px;
+        padding: 12px 10px; text-align: center; box-shadow: 0 1px 2px rgba(20,30,60,.04);
+    }
+    .att-cal-stat-card .val { font-size: 19px; font-weight: 700; color: #1b2a4a; line-height: 1.2; }
+    .att-cal-stat-card .lbl { font-size: 10.5px; color: #8b93a6; text-transform: uppercase; letter-spacing: .4px; margin-top: 2px; }
+    .att-cal-stat-card.accent-working .val { color: #1c7a4d; }
+    .att-cal-stat-card.accent-late .val { color: #8a5e0a; }
+    .att-cal-stat-card.accent-absent .val { color: #a3312d; }
+    .att-cal-stat-card.accent-leave .val { color: #33499e; }
+    .att-cal-stat-card.accent-holiday .val { color: #0f6b62; }
+    .att-cal-stat-card.accent-weekoff .val { color: #5c6674; }
+    .att-cal-stat-card.accent-hours .val { color: #1b2a4a; }
+
+    /* ---------- Toolbar ---------- */
+    .att-cal-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+    .att-cal-nav { display: flex; align-items: center; gap: 8px; }
+    .att-cal-month-label { font-size: 16px; font-weight: 700; color: #1b2a4a; min-width: 150px; text-align: center; display: inline-block; }
+
+    /* ---------- Legend ---------- */
+    .att-cal-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    .att-cal-legend .legend-chip {
+        display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600;
+        padding: 5px 10px; border-radius: 20px; border: 1px solid transparent;
+    }
+    .att-cal-legend .legend-chip i { font-size: 12px; }
+
+    /* ---------- Grid ---------- */
+    .att-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+    .att-cal-dow {
+        text-align: center; font-size: 11px; font-weight: 700; letter-spacing: .5px;
+        text-transform: uppercase; color: #93a3c4; padding: 4px 0 8px;
+    }
+    .att-cal-dow.weekend { color: #b98a4e; }
+
+    .att-cal-cell {
+        min-height: 108px; border-radius: 8px; border: 1px solid transparent; border-left-width: 4px;
+        padding: 8px 9px 9px; position: relative; transition: box-shadow .15s ease, transform .15s ease;
+    }
+    .att-cal-cell:not(.empty):hover { box-shadow: 0 4px 10px rgba(20,30,60,.09); transform: translateY(-1px); }
+    .att-cal-cell.empty { background: transparent !important; border: none; }
+    .att-cal-cell.no-data { border-style: dashed; }
+    .att-cal-cell.today { box-shadow: 0 0 0 2px #2f5aa8 inset; }
+
+    .att-cal-daynum-row { display: flex; align-items: center; justify-content: space-between; }
+    .att-cal-daynum { font-size: 13px; font-weight: 700; color: #2a3550; }
+    .att-cal-today-tag {
+        font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px;
+        background: #2f5aa8; color: #fff; padding: 1px 6px; border-radius: 8px;
+    }
+    .att-cal-reg-badge {
+        position: absolute; top: 7px; right: 7px; background: #1b2a4a; color: #fff;
+        font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 10px;
+        display: inline-flex; align-items: center; gap: 3px;
+    }
+    .att-cal-reg-badge i { font-size: 8px; }
+
+    .att-cal-status-chip {
+        display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 700;
+        text-transform: uppercase; letter-spacing: .3px; margin-top: 6px;
+    }
+    .att-cal-status-chip i { font-size: 10px; }
+
+    .att-cal-times { font-size: 10.5px; margin-top: 6px; line-height: 1.55; color: #4b5568; }
+    .att-cal-hours-badge {
+        display: inline-block; margin-top: 5px; font-size: 9.5px; font-weight: 700;
+        background: rgba(255,255,255,.65); padding: 1px 6px; border-radius: 8px;
+    }
+    .att-cal-shift { font-size: 9px; color: #8b93a6; margin-top: 3px; }
+    .att-cal-nodata-label { font-size: 10px; color: #b7bfcc; margin-top: 8px; font-style: italic; }
+
+    @@media (max-width: 991px) {
+        .att-cal-stats { grid-template-columns: repeat(4, 1fr); }
+    }
+    @@media (max-width: 767px) {
+        .att-cal-stats { grid-template-columns: repeat(3, 1fr); }
+        .att-cal-cell { min-height: 78px; padding: 6px 6px 7px; }
+        .att-cal-dow { font-size: 9px; }
+        .att-cal-times, .att-cal-status-chip, .att-cal-shift { display: none; }
+    }
+</style>
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-calendar3 position-left"></i>
+            Attendance Calendar
+        </h5>
+        <div class="heading-elements">
+            <a asp-action="@(isAdmin ? "Index" : "MyAttendance")" class="btn btn-default">
+                <i class="icon-arrow-left8"></i>
+                Back
+            </a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+
+        @if (noProfile)
+        {
+            <div class="alert alert-warning no-margin">
+                <i class="icon-warning22 position-left"></i>
+                Your login isn't linked to an employee profile, so an attendance calendar can't be shown.
+            </div>
+        }
+        else
+        {
+            <div class="att-cal-toolbar">
+
+                <div class="att-cal-nav">
+                    <a class="btn btn-default btn-icon"
+                       asp-action="Calendar"
+                       asp-route-year="@prevMonth.Year"
+                       asp-route-month="@prevMonth.Month"
+                       asp-route-employeeId="@selectedEmployeeId"
+                       data-popup="tooltip" title="Previous month">
+                        <i class="icon-arrow-left8"></i>
+                    </a>
+
+                    <span class="att-cal-month-label">@monthName</span>
+
+                    <a class="btn btn-default btn-icon"
+                       asp-action="Calendar"
+                       asp-route-year="@nextMonth.Year"
+                       asp-route-month="@nextMonth.Month"
+                       asp-route-employeeId="@selectedEmployeeId"
+                       data-popup="tooltip" title="Next month">
+                        <i class="icon-arrow-right8"></i>
+                    </a>
+
+                    <a class="btn btn-default"
+                       asp-action="Calendar"
+                       asp-route-year="@today.Year"
+                       asp-route-month="@today.Month"
+                       asp-route-employeeId="@selectedEmployeeId">
+                        Today
+                    </a>
+                </div>
+
+                @if (isAdmin)
+                {
+                    <form method="get" asp-action="Calendar" class="att-cal-filter">
+                        <input type="hidden" name="year" value="@year" />
+                        <input type="hidden" name="month" value="@month" />
+
+                        <select name="employeeId" class="form-control" onchange="this.form.submit()" style="min-width:220px;display:inline-block;">
+                            @if (ViewBag.EmployeeList is SelectList empList)
+                            {
+                                @foreach (SelectListItem item in empList)
+                                {
+                                    <option value="@item.Value" selected="@(item.Value == selectedEmployeeId)">@item.Text</option>
+                                }
+                            }
+                        </select>
+                    </form>
+                }
+            </div>
+
+            <!-- Month-at-a-glance overview -->
+            <div class="att-cal-stats">
+                <div class="att-cal-stat-card accent-working">
+                    <div class="val">@presentCount</div>
+                    <div class="lbl">Present</div>
+                </div>
+                <div class="att-cal-stat-card accent-late">
+                    <div class="val">@lateCount</div>
+                    <div class="lbl">Late / Partial</div>
+                </div>
+                <div class="att-cal-stat-card accent-absent">
+                    <div class="val">@absentCount</div>
+                    <div class="lbl">Absent</div>
+                </div>
+                <div class="att-cal-stat-card accent-leave">
+                    <div class="val">@leaveCount</div>
+                    <div class="lbl">Leave</div>
+                </div>
+                <div class="att-cal-stat-card accent-holiday">
+                    <div class="val">@holidayCount</div>
+                    <div class="lbl">Holiday</div>
+                </div>
+                <div class="att-cal-stat-card accent-weekoff">
+                    <div class="val">@weekOffCount</div>
+                    <div class="lbl">Week Off</div>
+                </div>
+                <div class="att-cal-stat-card accent-hours">
+                    <div class="val">@totalHours.ToString("0.#")</div>
+                    <div class="lbl">Total Hours</div>
+                </div>
+            </div>
+
+            <div class="att-cal-legend">
+                @{
+                    var legendGroups = new[] { "Present", "Late", "Absent", "Leave", "Holiday", "WeekOff" };
+                }
+                @foreach (var g in legendGroups)
+                {
+                    var st = StatusStyle(g);
+                    <span class="legend-chip" style="background:@st.Bg;color:@st.Text;border-color:@st.Border;">
+                        <i class="@st.Icon"></i>@st.Group
+                    </span>
+                }
+                @if (correctedCount > 0)
+                {
+                    <span class="legend-chip" style="background:#eef0f4;color:#1b2a4a;">
+                        <i class="icon-checkmark3"></i>@correctedCount Corrected
+                    </span>
+                }
+            </div>
+
+            <div class="att-cal-grid">
+
+                @{
+                    var dowNames = new[] { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+                }
+                @for (int d = 0; d < 7; d++)
+                {
+                    <div class="att-cal-dow @((d == 0 || d == 6) ? "weekend" : "")">@dowNames[d]</div>
+                }
+
+                @for (int i = 0; i < startOffset; i++)
+                {
+                    <div class="att-cal-cell empty"></div>
+                }
+
+                @for (int day = 1; day <= daysInMonth; day++)
+                {
+                    var cellDate = new DateTime(year, month, day);
+                    bool isToday = cellDate == today;
+                    byDay.TryGetValue(day, out var entry);
+                    string status = entry?.Status ?? "None";
+                    var style = StatusStyle(status);
+                    bool hasData = entry != null && status != "None";
+
+                    string tooltip = hasData
+                        ? $"{status}" + (entry!.ShiftName != null ? $" · {entry.ShiftName}" : "") + (entry.TotalWorkingHours.HasValue ? $" · {entry.TotalWorkingHours:0.#} hrs" : "")
+                        : "No attendance record";
+
+                    <div class="att-cal-cell @(isToday ? "today" : "") @(hasData ? "" : "no-data")"
+                         style="background:@style.Bg;border-left-color:@style.Border;"
+                         data-popup="tooltip" title="@tooltip">
+
+                        @if (entry != null && entry.IsRegularized)
+                        {
+                            <span class="att-cal-reg-badge" data-popup="tooltip" title="Corrected via an approved correction request">
+                                <i class="icon-checkmark3"></i>COR
+                            </span>
+                        }
+
+                        <div class="att-cal-daynum-row">
+                            <span class="att-cal-daynum">@day</span>
+                            @if (isToday)
+                            {
+                                <span class="att-cal-today-tag">Today</span>
+                            }
+                        </div>
+
+                        @if (hasData)
+                        {
+                            <div class="att-cal-status-chip" style="color:@style.Text;">
+                                <i class="@style.Icon"></i>@status
+                            </div>
+
+                            @if (entry!.FirstIn.HasValue || entry.LastOut.HasValue)
+                            {
+                                <div class="att-cal-times">
+                                    In: @(entry.FirstIn.HasValue ? DateTime.Today.Add(entry.FirstIn.Value).ToString("hh:mm tt") : "-")<br />
+                                    Out: @(entry.LastOut.HasValue ? DateTime.Today.Add(entry.LastOut.Value).ToString("hh:mm tt") : "-")
+                                </div>
+                            }
+
+                            @if (entry.TotalWorkingHours.HasValue && entry.TotalWorkingHours.Value > 0)
+                            {
+                                <span class="att-cal-hours-badge" style="color:@style.Text;">@entry.TotalWorkingHours.Value.ToString("0.#")h</span>
+                            }
+
+                            @if (!string.IsNullOrWhiteSpace(entry.ShiftName))
+                            {
+                                <div class="att-cal-shift">@entry.ShiftName</div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="att-cal-nodata-label">No record</div>
+                        }
+
+                    </div>
+                }
+
+            </div>
+        }
+
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('[data-popup="tooltip"]').tooltip();
+        });
+    </script>
+}

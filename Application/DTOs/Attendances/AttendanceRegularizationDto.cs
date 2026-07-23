@@ -103,7 +103,7 @@ namespace Application.DTOs.Attendances
 
     public class ApproveRegularizationRequestDto
     {
-        [Required(ErrorMessage = "Attendance Regularization is required")]
+        [Required(ErrorMessage = "Attendance Correction is required")]
         public string AttendanceRegularizationId { get; set; }
 
         [Required(ErrorMessage = "Approver is required")]
@@ -119,7 +119,7 @@ namespace Application.DTOs.Attendances
 
     public class RejectRegularizationRequestDto
     {
-        [Required(ErrorMessage = "Attendance Regularization is required")]
+        [Required(ErrorMessage = "Attendance Correction is required")]
         public string AttendanceRegularizationId { get; set; }
 
         [Required(ErrorMessage = "Rejected By is required")]
@@ -134,7 +134,7 @@ namespace Application.DTOs.Attendances
 
     public class SendBackRegularizationRequestDto
     {
-        [Required(ErrorMessage = "Attendance Regularization is required")]
+        [Required(ErrorMessage = "Attendance Correction is required")]
         public string AttendanceRegularizationId { get; set; }
 
         [Required(ErrorMessage = "Acting user is required")]
@@ -147,7 +147,7 @@ namespace Application.DTOs.Attendances
 
     public class CancelRegularizationRequestDto
     {
-        [Required(ErrorMessage = "Attendance Regularization is required")]
+        [Required(ErrorMessage = "Attendance Correction is required")]
         public string AttendanceRegularizationId { get; set; }
 
         [Required(ErrorMessage = "Cancelled By is required")]

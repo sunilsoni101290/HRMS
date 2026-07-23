@@ -30,6 +30,8 @@ namespace Application.Mappings
                 DesignationId = dto.DesignationId,
                 ReportingManagerId = dto.ReportingManagerId,
 
+                CandidateId = dto.CandidateId,
+
                 DateOfBirth = dto.DateOfBirth,
                 Gender = dto.Gender,
                 MaritalStatus = dto.MaritalStatus,

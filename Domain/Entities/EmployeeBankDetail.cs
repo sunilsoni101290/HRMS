@@ -35,18 +35,18 @@ namespace Domain.Entities
         public string IFSCCode { get; set; }
 
         [StringLength(20)]
-        public string MICRCode { get; set; }
+        public string? MICRCode { get; set; }
 
         [StringLength(20)]
         public BankAccountType AccountType { get; set; } // Savings / Current / Salary
 
         [StringLength(300)]
-        public string CancelledChequeFilePath { get; set; }
+        public string? CancelledChequeFilePath { get; set; }
 
         public bool IsPrimary { get; set; } = true;
 
         [StringLength(500)]
-        public string Remarks { get; set; }
+        public string? Remarks { get; set; }
 
         public override string GetSequencePrefix() => "BNK";
     }
