@@ -22,7 +22,12 @@
     bool attendanceActive = IsActive("Attendance", "Create") || IsActive("Attendance", "MyAttendance") ||
                              IsActive("Attendance", "Calendar") || IsActive("TeamAttendance", "Index") ||
                              IsActive("WfhRequest", "MyRequests") || IsActive("WfhRequest", "Create") ||
-                             IsActive("WfhRequest", "PendingApprovals");
+                             IsActive("WfhRequest", "PendingApprovals") ||
+                             IsActive("OnDutyRequest", "MyRequests") || IsActive("OnDutyRequest", "Create") ||
+                             IsActive("OnDutyRequest", "PendingApprovals") ||
+                             IsActive("ShortLeaveRequest", "MyRequests") || IsActive("ShortLeaveRequest", "Create") ||
+                             IsActive("ShortLeaveRequest", "PendingApprovals") ||
+                             IsActive("CompOff", "MyHistory");
     bool leaveActive = IsActive("LeaveApplication", "Create") ||
                         IsActive("LeaveApplication", "EmployeeLeaves") ||
                         IsActive("LeaveApplication", "MyApprovals");
@@ -151,6 +156,45 @@
                                    asp-action="MyRequests">
 
                                     Work From Home
+
+                                </a>
+
+                            </li>
+
+                            <li class="@(IsActive("OnDutyRequest", "MyRequests") ? "active" : "")">
+
+                                <a asp-controller="OnDutyRequest"
+                                   asp-action="MyRequests">
+
+                                    On Duty
+
+                                </a>
+
+                            </li>
+
+                            <li class="@(IsActive("ShortLeaveRequest", "MyRequests") ? "active" : "")">
+
+                                <a asp-controller="ShortLeaveRequest"
+                                   asp-action="MyRequests">
+
+                                    Short Leave
+
+                                </a>
+
+                            </li>
+
+                            <!-- Comp Off candidates are system-detected (a
+                                 background job creates them, not the
+                                 employee) - this link is purely a
+                                 read-only "check my own status" view; the
+                                 HR review queue (PendingReview) is
+                                 admin-gated and never shown here. -->
+                            <li class="@(IsActive("CompOff", "MyHistory") ? "active" : "")">
+
+                                <a asp-controller="CompOff"
+                                   asp-action="MyHistory">
+
+                                    Comp Off
 
                                 </a>
 

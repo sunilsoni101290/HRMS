@@ -95,7 +95,35 @@ namespace APP.Attributes
             "Tenant",
             "User",
             "WeekOff",
+            // Employee Transfer (Maker-Checker) - HR/Admin only, no
+            // self-service equivalent (an employee never proposes/approves
+            // their own transfer). See
+            // Domain/Helper/AppFeatureConstants.EMPLOYEE_TRANSFER.
+            "EmployeeTransfer",
+            // Rejoining - HR-only single-step rehire action for a FORMER
+            // employee, no self-service equivalent. See
+            // Domain/Helper/AppFeatureConstants.REJOINING.
+            "Rejoining",
+            // Probation Confirmation (Maker-Checker) - HR-internal decision
+            // workflow, never self-service. See
+            // Domain/Helper/AppFeatureConstants.PROBATION_CONFIRMATION.
+            "ProbationConfirmation",
+            // PIP (Performance Improvement Plan) - HR-internal, only ever
+            // created off an approved Probation Confirmation. See
+            // Domain/Helper/AppFeatureConstants.PIP.
+            "Pip",
         };
+
+        // NOTE: "EmployeeFeedback" is deliberately NOT listed here (neither
+        // in AdminOnlyControllers nor below) - a plain employee legitimately
+        // needs Index (their own "My Feedback", via
+        // EmployeeFeedbackController.Index with no employeeId) reachable,
+        // same reasoning as LeaveApplication/TeamAttendance's self-service
+        // actions above. The API's own visibility filter
+        // (IsVisibleToEmployee) and Reporting-Manager-or-HR authorization
+        // rule are the real authority on Create/Edit/Delete/GivenByMe -
+        // this filter only ever blocks whole controllers or whole actions,
+        // it has no concept of "this specific record".
 
         // Mixed controllers - reachable by self-service by default, EXCEPT
         // the specific admin-only actions listed here.
@@ -188,6 +216,18 @@ namespace APP.Attributes
                     // reach this filter anyway (see below); Logout and
                     // ChangePassword stay open to everyone.
                     "Index", "Register", "Details"
+                },
+                ["CompOff"] = new(StringComparer.OrdinalIgnoreCase)
+                {
+                    // The HR review queue (list + Approve/Reject act on it)
+                    // is HR/Admin only - Comp Off candidates are
+                    // system-detected, not employee-submitted, so there is
+                    // no self-service equivalent to open up here. Index
+                    // (role-based redirect), MyHistory (own history/
+                    // transparency view), and Details deliberately stay off
+                    // this list so a plain employee can still see their own
+                    // Comp Off credits.
+                    "PendingReview"
                 },
             };
 

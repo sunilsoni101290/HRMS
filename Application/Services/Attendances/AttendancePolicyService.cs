@@ -113,6 +113,7 @@ namespace Application.Services.Attendances
                 LateMarkPenaltyType = (LateMarkPenaltyType)dto.LateMarkPenaltyType,
                 MinimumAttendancePercentForFullSalary = dto.MinimumAttendancePercentForFullSalary,
                 CompOffEligibleExtraHours = dto.CompOffEligibleExtraHours,
+                ShortLeaveHoursPerDay = dto.ShortLeaveHoursPerDay,
                 Remarks = dto.Remarks,
 
                 TenantId = tenantId,
@@ -154,6 +155,7 @@ namespace Application.Services.Attendances
             entity.LateMarkPenaltyType = (LateMarkPenaltyType)dto.LateMarkPenaltyType;
             entity.MinimumAttendancePercentForFullSalary = dto.MinimumAttendancePercentForFullSalary;
             entity.CompOffEligibleExtraHours = dto.CompOffEligibleExtraHours;
+            entity.ShortLeaveHoursPerDay = dto.ShortLeaveHoursPerDay;
             entity.Remarks = dto.Remarks;
 
             entity.ModifiedOn = DateTime.UtcNow;
@@ -219,6 +221,9 @@ namespace Application.Services.Attendances
             if (dto.CompOffEligibleExtraHours < 0)
                 throw new Exception("Comp-Off Eligible Extra Hours cannot be negative.");
 
+            if (dto.ShortLeaveHoursPerDay <= 0)
+                throw new Exception("Short Leave Hours / Day must be greater than zero.");
+
             if (dto.MinimumAttendancePercentForFullSalary < 0 || dto.MinimumAttendancePercentForFullSalary > 100)
                 throw new Exception("Minimum Attendance % For Full Salary must be between 0 and 100.");
 
@@ -259,6 +264,7 @@ namespace Application.Services.Attendances
                 LateMarkPenaltyTypeName = entity.LateMarkPenaltyType.ToString(),
                 MinimumAttendancePercentForFullSalary = entity.MinimumAttendancePercentForFullSalary,
                 CompOffEligibleExtraHours = entity.CompOffEligibleExtraHours,
+                ShortLeaveHoursPerDay = entity.ShortLeaveHoursPerDay,
                 Remarks = entity.Remarks,
 
                 TenantId = entity.TenantId,

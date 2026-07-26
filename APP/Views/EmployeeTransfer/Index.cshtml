@@ -1,0 +1,211 @@
+@model IEnumerable<EmployeeTransferDto>
+
+@{
+    ViewData["Title"] = "Employee Transfers";
+
+    string StatusBadgeClass(int status) => status switch
+    {
+        (int)EnumExtensions.TransferStatus.PendingChecker => "bg-warning",
+        (int)EnumExtensions.TransferStatus.Approved => "bg-success",
+        (int)EnumExtensions.TransferStatus.Rejected => "bg-danger",
+        _ => "bg-grey"
+    };
+
+    string StatusText(EmployeeTransferDto item) =>
+        !string.IsNullOrEmpty(item.StatusName)
+            ? item.StatusName
+            : ((EnumExtensions.TransferStatus)item.Status).ToString();
+
+    string ToSummary(EmployeeTransferDto item)
+    {
+        var parts = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(item.ToCompanyName)) parts.Add(item.ToCompanyName);
+        if (!string.IsNullOrWhiteSpace(item.ToBranchName)) parts.Add(item.ToBranchName);
+        if (!string.IsNullOrWhiteSpace(item.ToDepartmentName)) parts.Add(item.ToDepartmentName);
+        if (!string.IsNullOrWhiteSpace(item.ToDesignationName)) parts.Add(item.ToDesignationName);
+        if (!string.IsNullOrWhiteSpace(item.ToReportingManagerName)) parts.Add("Mgr: " + item.ToReportingManagerName);
+
+        return parts.Count > 0 ? string.Join(", ", parts) : "-";
+    }
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-shuffle position-left"></i>
+            Employee Transfers
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Create" class="btn bg-primary">
+                <i class="icon-plus22"></i>
+                New Transfer
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="Index" method="get" class="row">
+
+            <div class="col-md-3">
+                <select name="status" class="form-control">
+                    <option value="">All Statuses</option>
+                    @foreach (var s in Enum.GetValues(typeof(EnumExtensions.TransferStatus)).Cast<EnumExtensions.TransferStatus>())
+                    {
+                        if (((string?)ViewBag.Status) == ((int)s).ToString())
+                        {
+                            <option value="@((int)s)" selected>@s</option>
+                        }
+                        else
+                        {
+                            <option value="@((int)s)">@s</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <select name="departmentId" asp-items="ViewBag.DepartmentList" class="form-control">
+                    <option value="">All Departments</option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control" placeholder="Search by employee name/code..." />
+            </div>
+
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-default">
+                    <i class="icon-search4"></i>
+                    Search
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+
+    <div class="table-responsive">
+
+        <table class="table table-bordered table-striped">
+
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Effective Date</th>
+                    <th>Changes Proposed</th>
+                    <th>Maker</th>
+                    <th>Status</th>
+                    <th width="80">Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+
+                            <td>
+                                @item.EmployeeName
+                                <br />
+                                <span class="text-muted text-size-small">@item.EmployeeCode</span>
+                            </td>
+
+                            <td>@item.EffectiveDate.ToString("dd-MMM-yyyy")</td>
+
+                            <td>
+                                <span class="text-muted text-size-small">@ToSummary(item)</span>
+                            </td>
+
+                            <td>@(item.MakerName ?? "-")</td>
+
+                            <td>
+                                <span class="label @StatusBadgeClass(item.Status)">@StatusText(item)</span>
+                            </td>
+
+                            <td style="padding: 10px 15px;">
+
+                                <a asp-action="Details"
+                                   asp-route-id="@item.Id"
+                                   class="btn btn-default btn-icon"
+                                   data-popup="tooltip"
+                                   title="View">
+
+                                    <i class="icon-eye"></i>
+
+                                </a>
+
+                            </td>
+
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center text-muted" style="padding:30px;">
+                            <i class="icon-shuffle" style="font-size:32px;"></i><br />
+                            No Employee Transfer records found.
+                        </td>
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+<script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+
+@section Scripts {
+
+    <script>
+
+        @if (TempData["Success"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Success',
+                    text: '@Html.Raw(TempData["Success"])',
+                    type: 'success',
+                    confirmButtonColor: '#66BB6A'
+                });
+            </text>
+        }
+
+        @if (TempData["GlobalError"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Error',
+                    text: '@Html.Raw(TempData["GlobalError"])',
+                    type: 'error',
+                    confirmButtonColor: '#EF5350'
+                });
+            </text>
+        }
+
+    </script>
+
+    <script>
+
+        $(document).ready(function () {
+            $('[data-popup="tooltip"]').tooltip();
+        });
+
+    </script>
+
+}

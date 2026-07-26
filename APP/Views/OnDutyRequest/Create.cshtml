@@ -1,0 +1,231 @@
+@model CreateOnDutyRequestDto
+
+@{
+    ViewData["Title"] = "Request On Duty";
+    bool noEmployeeProfile = ViewBag.NoEmployeeProfile ?? false;
+    string employeeDisplayName = ViewBag.EmployeeDisplayName ?? "";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-briefcase position-left"></i>
+            Request On Duty
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="MyRequests"
+               class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="Create"
+              method="post">
+
+            <div asp-validation-summary="ModelOnly"
+                 class="alert alert-danger"></div>
+
+            <!-- Employee Information -->
+
+            <div class="row">
+
+                <div class="col-md-12">
+
+                    <div class="form-group">
+
+                        <label>Employee</label>
+
+                        <!-- Self-service: always the logged-in employee, never a
+                             pickable dropdown - the server ignores any other
+                             value even if one were posted. -->
+                        <input type="text"
+                               class="form-control bg-slate-100"
+                               value="@employeeDisplayName"
+                               readonly
+                               disabled />
+
+                        <input asp-for="EmployeeId" type="hidden" />
+
+                        @if (noEmployeeProfile)
+                        {
+                            <span class="text-danger text-size-small">
+                                Your login isn't linked to an employee profile - you can't request On Duty.
+                            </span>
+                        }
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Dates -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-calendar3"></i>
+                    Dates
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="FromDate"></label>
+
+                            <input asp-for="FromDate"
+                                   id="FromDate"
+                                   type="date"
+                                   class="form-control" />
+
+                            <span asp-validation-for="FromDate"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="ToDate"></label>
+
+                            <input asp-for="ToDate"
+                                   id="ToDate"
+                                   type="date"
+                                   class="form-control" />
+
+                            <span asp-validation-for="ToDate"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- Purpose / Location -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-file-text2"></i>
+                    Details
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-12">
+
+                        <div class="form-group">
+
+                            <label asp-for="Purpose"></label>
+
+                            <textarea asp-for="Purpose"
+                                      rows="4"
+                                      maxlength="500"
+                                      class="form-control"></textarea>
+
+                            <span asp-validation-for="Purpose"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-12">
+
+                        <div class="form-group">
+
+                            <label asp-for="Location"></label>
+
+                            <input asp-for="Location"
+                                   type="text"
+                                   maxlength="200"
+                                   class="form-control"
+                                   placeholder="e.g. client site / city" />
+
+                            <span asp-validation-for="Location"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <hr />
+
+            <div class="text-right">
+
+                <a asp-action="MyRequests"
+                   class="btn btn-default">
+
+                    Cancel
+
+                </a>
+
+                <button type="submit"
+                        id="btnSubmitOnDutyRequest"
+                        class="btn bg-primary"
+                        @(noEmployeeProfile ? "disabled" : "")>
+
+                    <i class="icon-checkmark4"></i>
+                    Submit Request
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+@section Scripts {
+
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+
+        $(function () {
+
+            // Keep To Date from ever being earlier than From Date.
+            $("#FromDate").on("change", function () {
+
+                var fromVal = $(this).val();
+
+                if (fromVal) {
+                    $("#ToDate").attr("min", fromVal);
+
+                    if ($("#ToDate").val() && $("#ToDate").val() < fromVal) {
+                        $("#ToDate").val(fromVal);
+                    }
+                }
+
+            });
+
+        });
+
+    </script>
+
+}

@@ -34,6 +34,18 @@ namespace Application.Services.Leaves
                     MaxCarryForwardDays = x.MaxCarryForwardDays,
                     AllowHalfDay = x.AllowHalfDay,
 
+                    MinServiceDaysRequired = x.MinServiceDaysRequired,
+                    AccrualFrequency = x.AccrualFrequency,
+                    AccrualFrequencyName = x.AccrualFrequency.ToString(),
+                    AccrualDaysPerCycle = x.AccrualDaysPerCycle,
+                    IsEncashable = x.IsEncashable,
+                    MaxEncashableDays = x.MaxEncashableDays,
+                    ApplicableGender = x.ApplicableGender,
+                    ApplicableGenderName = x.ApplicableGender.ToString(),
+                    IsRestrictedHolidayType = x.IsRestrictedHolidayType,
+
+                    TenantId = x.TenantId,
+
                     CreatedBy = x.CreatedBy,
                     ModifiedOn = x.ModifiedOn,
                     ModifiedBy = x.ModifiedBy
@@ -62,6 +74,18 @@ namespace Application.Services.Leaves
                     MaxCarryForwardDays = x.MaxCarryForwardDays,
                     AllowHalfDay = x.AllowHalfDay,
 
+                    MinServiceDaysRequired = x.MinServiceDaysRequired,
+                    AccrualFrequency = x.AccrualFrequency,
+                    AccrualFrequencyName = x.AccrualFrequency.ToString(),
+                    AccrualDaysPerCycle = x.AccrualDaysPerCycle,
+                    IsEncashable = x.IsEncashable,
+                    MaxEncashableDays = x.MaxEncashableDays,
+                    ApplicableGender = x.ApplicableGender,
+                    ApplicableGenderName = x.ApplicableGender.ToString(),
+                    IsRestrictedHolidayType = x.IsRestrictedHolidayType,
+
+                    TenantId = x.TenantId,
+
                     CreatedBy = x.CreatedBy,
                     ModifiedOn = x.ModifiedOn,
                     ModifiedBy = x.ModifiedBy
@@ -84,6 +108,8 @@ namespace Application.Services.Leaves
             if (exists)
                 throw new Exception("Leave Type already exists.");
 
+            ValidatePolicyFields(dto);
+
             var entity = new LeaveType
             {
                 Id = IDManager.GetNewId(new LeaveType()),
@@ -93,6 +119,15 @@ namespace Application.Services.Leaves
                 AllowCarryForward = dto.AllowCarryForward,
                 MaxCarryForwardDays = dto.MaxCarryForwardDays,
                 AllowHalfDay = dto.AllowHalfDay,
+
+                MinServiceDaysRequired = dto.MinServiceDaysRequired,
+                AccrualFrequency = dto.AccrualFrequency,
+                AccrualDaysPerCycle = dto.AccrualDaysPerCycle,
+                IsEncashable = dto.IsEncashable,
+                MaxEncashableDays = dto.MaxEncashableDays,
+                ApplicableGender = dto.ApplicableGender,
+                IsRestrictedHolidayType = dto.IsRestrictedHolidayType,
+
                 TenantId=dto.TenantId,
                 CreatedBy = dto.CreatedBy,
                 CreatedOn = DateTime.UtcNow
@@ -122,12 +157,22 @@ namespace Application.Services.Leaves
             if (entity == null)
                 return null;
 
+            ValidatePolicyFields(dto);
+
             entity.Name = dto.Name;
             entity.MaxDaysPerYear = dto.MaxDaysPerYear;
             entity.IsPaid = dto.IsPaid;
             entity.AllowCarryForward = dto.AllowCarryForward;
             entity.MaxCarryForwardDays = dto.MaxCarryForwardDays;
             entity.AllowHalfDay = dto.AllowHalfDay;
+
+            entity.MinServiceDaysRequired = dto.MinServiceDaysRequired;
+            entity.AccrualFrequency = dto.AccrualFrequency;
+            entity.AccrualDaysPerCycle = dto.AccrualDaysPerCycle;
+            entity.IsEncashable = dto.IsEncashable;
+            entity.MaxEncashableDays = dto.MaxEncashableDays;
+            entity.ApplicableGender = dto.ApplicableGender;
+            entity.IsRestrictedHolidayType = dto.IsRestrictedHolidayType;
 
             entity.ModifiedOn = DateTime.UtcNow;
             entity.ModifiedBy = dto.ModifiedBy;
@@ -162,6 +207,23 @@ namespace Application.Services.Leaves
             {
                 return false;
             }
+        }
+
+        // =====================================================
+        // Leave Policy Engine field validation - basic guardrails only,
+        // deliberately not enforcing anything the pre-existing LeaveType
+        // fields didn't already enforce.
+        // =====================================================
+        private static void ValidatePolicyFields(LeaveTypeDto dto)
+        {
+            if (dto.MinServiceDaysRequired < 0)
+                throw new Exception("Minimum Service Days Required cannot be negative.");
+
+            if (dto.AccrualDaysPerCycle < 0)
+                throw new Exception("Accrual Days Per Cycle cannot be negative.");
+
+            if (dto.IsEncashable && (!dto.MaxEncashableDays.HasValue || dto.MaxEncashableDays.Value <= 0))
+                throw new Exception("Maximum Encashable Days must be set and greater than zero when Is Encashable is enabled.");
         }
     }
 }

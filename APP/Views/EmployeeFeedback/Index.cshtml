@@ -1,0 +1,232 @@
+@model IEnumerable<EmployeeFeedbackDto>
+
+@{
+    var employee = ViewBag.Employee as EmployeeListDto;
+    bool isOwnFeedback = ViewBag.IsOwnFeedback ?? false;
+    bool isAdmin = ViewBag.IsAdmin ?? false;
+    string? currentUserId = ViewBag.CurrentUserId as string;
+    string employeeId = ViewBag.EmployeeId as string ?? "";
+
+    ViewData["Title"] = isOwnFeedback ? "My Feedback" : "Employee Feedback";
+
+    string CategoryText(EmployeeFeedbackDto item) =>
+        !string.IsNullOrEmpty(item.CategoryName)
+            ? item.CategoryName
+            : ((EnumExtensions.FeedbackCategory)item.Category).ToString();
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-bubbles4 position-left"></i>
+            @ViewData["Title"]
+            @if (employee != null && !isOwnFeedback)
+            {
+                <span class="text-muted"> - @employee.FirstName @employee.LastName (@employee.EmployeeCode)</span>
+            }
+        </h5>
+
+        <div class="heading-elements">
+
+            @if (isAdmin)
+            {
+                <a asp-action="GivenByMe" class="btn btn-default">
+                    <i class="icon-list"></i>
+                    Feedback Given By Me
+                </a>
+            }
+
+            <a asp-action="Create" asp-route-employeeId="@employeeId" class="btn bg-primary">
+                <i class="icon-plus22"></i>
+                Give Feedback
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="table-responsive">
+
+        <table class="table table-bordered table-striped">
+
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Category</th>
+                    <th>Rating</th>
+                    <th>Given By</th>
+                    <th>Visible To Employee</th>
+                    <th width="140">Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        bool canManage = isAdmin || item.GivenByUserId == currentUserId;
+
+                        <tr>
+
+                            <td>@item.FeedbackDate.ToString("dd-MMM-yyyy")</td>
+
+                            <td><span class="label bg-info">@CategoryText(item)</span></td>
+
+                            <td class="text-center">
+                                @if (item.Rating.HasValue)
+                                {
+                                    <span>
+                                        @for (int i = 1; i <= 5; i++)
+                                        {
+                                            <i class="icon-star-full2 @(i <= item.Rating ? "text-warning" : "text-muted")" style="font-size:12px;"></i>
+                                        }
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+
+                            <td>@(item.GivenByName ?? "-")</td>
+
+                            <td>
+                                @if (item.IsVisibleToEmployee)
+                                {
+                                    <span class="label bg-success">Visible</span>
+                                }
+                                else
+                                {
+                                    <span class="label bg-grey">Hidden</span>
+                                }
+                            </td>
+
+                            <td style="padding: 10px 15px;">
+
+                                <div class="btn-group">
+
+                                    <a asp-action="Details"
+                                       asp-route-id="@item.Id"
+                                       class="btn btn-default btn-icon"
+                                       data-popup="tooltip"
+                                       title="View">
+                                        <i class="icon-eye"></i>
+                                    </a>
+
+                                    @if (canManage)
+                                    {
+                                        <a asp-action="Edit"
+                                           asp-route-id="@item.Id"
+                                           class="btn btn-default btn-icon"
+                                           data-popup="tooltip"
+                                           title="Edit">
+                                            <i class="icon-pencil7"></i>
+                                        </a>
+
+                                        <button type="button"
+                                                class="btn btn-danger btn-icon btnDelete"
+                                                data-id="@item.Id"
+                                                data-employeeid="@employeeId"
+                                                data-popup="tooltip"
+                                                title="Delete">
+                                            <i class="icon-cross2"></i>
+                                        </button>
+                                    }
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center text-muted" style="padding:30px;">
+                            <i class="icon-bubbles4" style="font-size:32px;"></i><br />
+                            No feedback records found.
+                        </td>
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+<form id="deleteForm" asp-action="Delete" method="post" style="display:none;">
+    <input type="hidden" id="DeleteFeedbackId" name="id" />
+    <input type="hidden" id="DeleteFeedbackEmployeeId" name="employeeId" />
+</form>
+
+<script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+
+@section Scripts {
+
+    <script>
+
+        @if (TempData["Success"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Success',
+                    text: '@Html.Raw(TempData["Success"])',
+                    type: 'success',
+                    confirmButtonColor: '#66BB6A'
+                });
+            </text>
+        }
+
+        @if (TempData["GlobalError"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Error',
+                    text: '@Html.Raw(TempData["GlobalError"])',
+                    type: 'error',
+                    confirmButtonColor: '#EF5350'
+                });
+            </text>
+        }
+
+    </script>
+
+    <script>
+
+        $(document).ready(function () {
+
+            $('[data-popup="tooltip"]').tooltip();
+
+            $(document).on('click', '.btnDelete', function () {
+                var id = $(this).data('id');
+                var employeeId = $(this).data('employeeid');
+
+                swal({
+                    title: 'Delete this feedback?',
+                    text: 'This cannot be undone.',
+                    type: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#EF5350',
+                    confirmButtonText: 'Yes, delete it'
+                }, function (isConfirm) {
+                    if (isConfirm) {
+                        $('#DeleteFeedbackId').val(id);
+                        $('#DeleteFeedbackEmployeeId').val(employeeId);
+                        $('#deleteForm').submit();
+                    }
+                });
+            });
+
+        });
+
+    </script>
+
+}

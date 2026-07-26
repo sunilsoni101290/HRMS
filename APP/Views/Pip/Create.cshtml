@@ -1,0 +1,217 @@
+@model CreatePipRecordDto
+
+@{
+    ViewData["Title"] = "Create PIP Record";
+
+    var confirmation = ViewBag.Confirmation as ProbationConfirmationDto;
+    bool isEligible = ViewBag.IsEligible ?? false;
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-clipboard4 position-left"></i>
+            Create PIP Record
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-controller="ProbationConfirmation"
+               asp-action="Details"
+               asp-route-id="@Model.ProbationConfirmationId"
+               class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back to Probation Confirmation
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        @if (!isEligible)
+        {
+            <div class="alert alert-danger alert-styled-left">
+                <strong>Not eligible.</strong>
+                A PIP can only be created from a Probation Confirmation that is <strong>Approved</strong> with
+                recommendation <strong>Place on PIP</strong>. The server will re-validate this on submit regardless.
+            </div>
+        }
+
+        @if (confirmation != null)
+        {
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-user position-left"></i>
+                    Triggering Probation Confirmation
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-3">
+                        <label class="text-semibold text-muted">Employee</label>
+                        <h6>@confirmation.EmployeeName</h6>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="text-semibold text-muted">Employee Code</label>
+                        <h6>@(confirmation.EmployeeCode ?? "-")</h6>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="text-semibold text-muted">Department</label>
+                        <h6>@(confirmation.DepartmentName ?? "-")</h6>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="text-semibold text-muted">Status</label>
+                        <h6>@(confirmation.StatusName ?? confirmation.Status.ToString())</h6>
+                    </div>
+
+                </div>
+
+            </fieldset>
+        }
+
+        <form asp-action="Create" method="post">
+
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <input asp-for="EmployeeId" type="hidden" />
+            <input asp-for="ProbationConfirmationId" type="hidden" />
+
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-calendar3 position-left"></i>
+                    PIP Window
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="StartDate"></label>
+
+                            <input asp-for="StartDate" id="StartDate" type="date" class="form-control" />
+
+                            <span asp-validation-for="StartDate" class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="EndDate"></label>
+
+                            <input asp-for="EndDate" id="EndDate" type="date" class="form-control" />
+
+                            <span asp-validation-for="EndDate" class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-flag position-left"></i>
+                    Goals
+                </legend>
+
+                <div class="form-group">
+
+                    <label asp-for="Goals"></label>
+
+                    <textarea asp-for="Goals" rows="5" class="form-control"
+                              placeholder="Specific, measurable improvement goals for this PIP..."></textarea>
+
+                    <span asp-validation-for="Goals" class="text-danger"></span>
+
+                </div>
+
+            </fieldset>
+
+            <hr />
+
+            <div class="text-right">
+
+                <a asp-controller="ProbationConfirmation"
+                   asp-action="Details"
+                   asp-route-id="@Model.ProbationConfirmationId"
+                   class="btn btn-default">
+                    Cancel
+                </a>
+
+                <button type="submit" class="btn bg-primary">
+                    <i class="icon-checkmark4"></i>
+                    Create PIP Record
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+@section Scripts {
+
+    <partial name="_ValidationScriptsPartial" />
+
+    <script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+
+    <script>
+
+        @if (TempData["GlobalError"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Error',
+                    text: '@Html.Raw(TempData["GlobalError"])',
+                    type: 'error',
+                    confirmButtonColor: '#EF5350'
+                });
+            </text>
+        }
+
+    </script>
+
+    <script>
+
+        // Keep End Date from ever being earlier than Start Date.
+        $(function () {
+
+            $("#StartDate").on("change", function () {
+
+                var fromVal = $(this).val();
+
+                if (fromVal) {
+                    $("#EndDate").attr("min", fromVal);
+
+                    if ($("#EndDate").val() && $("#EndDate").val() < fromVal) {
+                        $("#EndDate").val(fromVal);
+                    }
+                }
+
+            });
+
+        });
+
+    </script>
+
+}

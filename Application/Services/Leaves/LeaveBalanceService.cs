@@ -375,7 +375,7 @@ namespace Application.Services.Leaves
         {
             try
             {
-            int year = DateTime.Now.Year;
+            int year = DateTime.UtcNow.Year; // UTC-consistent with callers (e.g. LeaveAccrualService) to avoid a local-vs-UTC year mismatch right around Dec 31/Jan 1
 
             var balance = await _context.LeaveBalances
                 .FirstOrDefaultAsync(x =>
@@ -428,7 +428,7 @@ namespace Application.Services.Leaves
         {
             try
             {
-            int year = DateTime.Now.Year;
+            int year = DateTime.UtcNow.Year; // UTC-consistent with callers (e.g. LeaveAccrualService) to avoid a local-vs-UTC year mismatch right around Dec 31/Jan 1
 
             var balance = await _context.LeaveBalances
                 .FirstOrDefaultAsync(x =>

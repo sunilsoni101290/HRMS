@@ -140,6 +140,154 @@
 
             </fieldset>
 
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-clock position-left"></i>
+                    Eligibility &amp; Accrual
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-4">
+
+                        <div class="form-group">
+
+                            <label asp-for="MinServiceDaysRequired"></label>
+
+                            <input asp-for="MinServiceDaysRequired"
+                                   type="number"
+                                   min="0"
+                                   class="form-control" />
+
+                            <span class="help-block">
+                                Minimum days of service before an employee becomes eligible for this leave type. 0 = eligible from day one.
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-4">
+
+                        <div class="form-group">
+
+                            <label asp-for="AccrualFrequency"></label>
+
+                            <select asp-for="AccrualFrequency"
+                                    asp-items="Html.GetEnumSelectList<EnumExtensions.LeaveAccrualFrequency>()"
+                                    id="AccrualFrequency"
+                                    class="form-control">
+                            </select>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-4"
+                         id="accrualDaysPanel">
+
+                        <div class="form-group">
+
+                            <label asp-for="AccrualDaysPerCycle"></label>
+
+                            <input asp-for="AccrualDaysPerCycle"
+                                   type="number"
+                                   step="0.01"
+                                   min="0"
+                                   class="form-control" />
+
+                            <span class="help-block">
+                                Days credited per accrual cycle - only meaningful when Accrual Frequency isn't "None".
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-cash3 position-left"></i>
+                    Encashment &amp; Applicability
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-4">
+
+                        <div class="checkbox">
+
+                            <label>
+                                <input asp-for="IsEncashable"
+                                       id="IsEncashable" />
+                                Is Encashable
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-4"
+                         id="encashableDaysPanel">
+
+                        <div class="form-group">
+
+                            <label asp-for="MaxEncashableDays"></label>
+
+                            <input asp-for="MaxEncashableDays"
+                                   type="number"
+                                   min="0"
+                                   class="form-control" />
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-4">
+
+                        <div class="form-group">
+
+                            <label asp-for="ApplicableGender"></label>
+
+                            <select asp-for="ApplicableGender"
+                                    asp-items="Html.GetEnumSelectList<EnumExtensions.LeaveApplicableGender>()"
+                                    class="form-control">
+                            </select>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="row">
+
+                    <div class="col-md-12">
+
+                        <div class="checkbox">
+
+                            <label>
+                                <input asp-for="IsRestrictedHolidayType" />
+                                Is Restricted Holiday Type
+                            </label>
+
+                        </div>
+
+                        <span class="help-block">
+                            Marks this as the special Restricted Holiday leave type - only one should typically be marked this way.
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
             <div class="text-right">
 
                 <a asp-action="Index"
@@ -166,3 +314,39 @@
 
 </div>
 
+@section Scripts {
+
+    <script>
+
+        $(function () {
+
+            // Accrual Days Per Cycle is only meaningful when Accrual
+            // Frequency isn't "None" - purely a display nicety, the field
+            // still posts/validates normally either way.
+            function toggleAccrualDaysPanel() {
+
+                var isNone = $("#AccrualFrequency").val() === "@((int)EnumExtensions.LeaveAccrualFrequency.None)";
+
+                $("#accrualDaysPanel").toggle(!isNone);
+
+            }
+
+            // Max Encashable Days is only meaningful when Is Encashable is
+            // checked.
+            function toggleEncashableDaysPanel() {
+
+                $("#encashableDaysPanel").toggle($("#IsEncashable").is(":checked"));
+
+            }
+
+            toggleAccrualDaysPanel();
+            toggleEncashableDaysPanel();
+
+            $("#AccrualFrequency").on("change", toggleAccrualDaysPanel);
+            $("#IsEncashable").on("change", toggleEncashableDaysPanel);
+
+        });
+
+    </script>
+
+}

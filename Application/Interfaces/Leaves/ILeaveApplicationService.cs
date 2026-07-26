@@ -108,5 +108,18 @@ namespace Application.Interfaces.Leaves
         Task<List<string>> ResolveNextLevelApproverUserIdsAsync(string leaveApplicationId);
 
         #endregion
+
+        #region Restricted Holiday
+
+        // Read-only helper for the frontend's "which optional holidays can
+        // I still claim" widget - every tenant-wide IsOptional=true
+        // HolidayGroupDetail row from today onward, cross-referenced
+        // against this employee's own Pending/Approved "Restricted
+        // Holiday" LeaveApplications so already-claimed (or claim-pending)
+        // dates are flagged rather than offered again. Does not create or
+        // modify anything.
+        Task<List<AvailableRestrictedHolidayDto>> GetAvailableRestrictedHolidaysAsync(string employeeId, string tenantId);
+
+        #endregion
     }
 }

@@ -49,6 +49,11 @@ namespace Domain.Entities
         // a Comp-Off is earned.
         public decimal CompOffEligibleExtraHours { get; set; }
 
+        // Conversion factor used to turn a Short Leave request's requested
+        // hours into a fraction of a day (FractionalDays = RequestedHours /
+        // ShortLeaveHoursPerDay) - see ShortLeaveRequestService.CreateAsync.
+        public decimal ShortLeaveHoursPerDay { get; set; } = 8.0m;
+
         [MaxLength(500)]
         public string? Remarks { get; set; }
 

@@ -112,6 +112,62 @@
 
             </div>
 
+            @{
+                var restrictedHolidayLeaveTypeId = ViewBag.RestrictedHolidayLeaveTypeId as string;
+                var availableRestrictedHolidays =
+                    (ViewBag.AvailableRestrictedHolidays as List<AvailableRestrictedHolidayDto>)
+                    ?? new List<AvailableRestrictedHolidayDto>();
+            }
+
+            @if (!string.IsNullOrEmpty(restrictedHolidayLeaveTypeId) && availableRestrictedHolidays.Any())
+            {
+                <!-- Restricted Holiday helper panel - shown/hidden via JS
+                     based on the selected Leave Type. Restricted Holiday can
+                     only be claimed on one of these specific dates; clicking
+                     a date auto-fills From/To (always single-day). This is a
+                     UX nicety only - the API independently re-validates the
+                     date regardless. -->
+                <div id="restrictedHolidayPanel"
+                     class="alert bg-warning-100 alert-styled-left"
+                     style="display:none;">
+
+                    <span class="text-semibold">Available Restricted Holidays</span>
+                    <p class="text-muted text-size-small mb-10">
+                        Restricted Holiday can only be claimed on one of the dates below. Click a date to fill it in.
+                    </p>
+
+                    <ul class="list-inline mb-0">
+
+                        @foreach (var holiday in availableRestrictedHolidays)
+                        {
+                            if (holiday.AlreadyClaimed)
+                            {
+                                <li>
+                                    <button type="button"
+                                            class="btn btn-default btn-xs"
+                                            disabled
+                                            title="Already claimed">
+                                        @holiday.HolidayDate.ToString("dd-MMM-yyyy") (@holiday.HolidayName)
+                                    </button>
+                                </li>
+                            }
+                            else
+                            {
+                                <li>
+                                    <button type="button"
+                                            class="btn btn-primary btn-xs btnPickRestrictedHoliday"
+                                            data-date="@holiday.HolidayDate.ToString("yyyy-MM-dd")">
+                                        @holiday.HolidayDate.ToString("dd-MMM-yyyy") (@holiday.HolidayName)
+                                    </button>
+                                </li>
+                            }
+                        }
+
+                    </ul>
+
+                </div>
+            }
+
             <!-- Leave Balance -->
             <div class="alert bg-info-300 alert-styled-left">
                 <span id="leaveBalanceInfo">
@@ -401,6 +457,51 @@
                 });
                 </text>
             }
+
+        });
+
+        // Restricted Holiday helper panel - show it only while the
+        // Restricted Holiday LeaveType is selected; clicking a listed date
+        // fills From/To with that date (always single-day) and triggers the
+        // existing #FromDate/#ToDate change handler to recalculate Total
+        // Days server-side, same as picking the date manually.
+        var restrictedHolidayLeaveTypeId = @Html.Raw(
+            string.IsNullOrEmpty(ViewBag.RestrictedHolidayLeaveTypeId as string)
+                ? "null"
+                : Newtonsoft.Json.JsonConvert.SerializeObject((string)ViewBag.RestrictedHolidayLeaveTypeId));
+
+        function toggleRestrictedHolidayPanel() {
+
+            if (!restrictedHolidayLeaveTypeId) {
+                return;
+            }
+
+            if ($("#LeaveTypeId").val() === restrictedHolidayLeaveTypeId) {
+                $("#restrictedHolidayPanel").show();
+            } else {
+                $("#restrictedHolidayPanel").hide();
+            }
+
+        }
+
+        $(function () {
+
+            toggleRestrictedHolidayPanel();
+
+            $("#LeaveTypeId").on("change", function () {
+
+                toggleRestrictedHolidayPanel();
+
+            });
+
+            $(document).on("click", ".btnPickRestrictedHoliday", function () {
+
+                var date = $(this).data("date");
+
+                $("#FromDate").val(date).trigger("change");
+                $("#ToDate").val(date).trigger("change");
+
+            });
 
         });
 

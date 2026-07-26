@@ -1,0 +1,321 @@
+@model CreateEmployeeTransferDto
+
+@{
+    ViewData["Title"] = "New Employee Transfer";
+    var currentEmployee = ViewBag.CurrentEmployee as EmployeeListDto;
+
+    string From(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-shuffle position-left"></i>
+            New Employee Transfer
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Index" class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <div class="alert bg-slate-100 alert-styled-left">
+            Only set the "To" dropdown(s) for the dimension(s) actually changing - leave the rest blank to keep the
+            employee's current value. At least one "To" field must be provided and differ from their current value.
+        </div>
+
+        <!-- Employee picker - selecting an employee here reloads this page
+             (GET) with employeeId in the querystring, so the "From"
+             reference column below reflects the newly selected employee. -->
+        <div class="row">
+
+            <div class="col-md-6">
+
+                <div class="form-group">
+
+                    <label>Employee <span class="text-danger">*</span></label>
+
+                    <select name="employeeIdPicker" id="employeeIdPicker" asp-items="ViewBag.EmployeeList" class="form-control">
+                        <option value="">-- Select Employee --</option>
+                    </select>
+
+                    <input asp-for="EmployeeId" type="hidden" id="EmployeeId" />
+
+                    <span asp-validation-for="EmployeeId" class="text-danger"></span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        @if (currentEmployee == null)
+        {
+            <div class="alert alert-warning">
+                Select an employee above to see their current Company/Branch/Department/Designation/Reporting Manager for reference.
+            </div>
+        }
+        else
+        {
+            <form asp-action="Create" method="post">
+
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                <input asp-for="EmployeeId" type="hidden" />
+
+                <!-- Effective Date / Reason -->
+
+                <fieldset>
+
+                    <legend class="text-semibold">
+                        <i class="icon-calendar3"></i>
+                        Transfer Details
+                    </legend>
+
+                    <div class="row">
+
+                        <div class="col-md-4">
+
+                            <div class="form-group">
+
+                                <label asp-for="EffectiveDate"></label>
+
+                                <input asp-for="EffectiveDate" type="date" class="form-control" />
+
+                                <span asp-validation-for="EffectiveDate" class="text-danger"></span>
+
+                            </div>
+
+                        </div>
+
+                        <div class="col-md-8">
+
+                            <div class="form-group">
+
+                                <label asp-for="Reason"></label>
+
+                                <textarea asp-for="Reason" rows="2" maxlength="500" class="form-control"></textarea>
+
+                                <span asp-validation-for="Reason" class="text-danger"></span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </fieldset>
+
+                <!-- From -> To dimensions -->
+
+                <fieldset>
+
+                    <legend class="text-semibold">
+                        <i class="icon-transmission position-left"></i>
+                        Organization Placement (From -&gt; To)
+                    </legend>
+
+                    <div class="row">
+
+                        <div class="col-md-6">
+
+                            <div class="form-group">
+
+                                <label asp-for="ToCompanyId"></label>
+                                <div class="text-muted text-size-small" style="margin-bottom:4px;">
+                                    Current: <strong>@From(currentEmployee.CompanyName)</strong>
+                                </div>
+
+                                <select asp-for="ToCompanyId" asp-items="ViewBag.CompanyList" class="form-control">
+                                    <option value="">-- Leave blank to keep current --</option>
+                                </select>
+
+                                <span asp-validation-for="ToCompanyId" class="text-danger"></span>
+
+                            </div>
+
+                        </div>
+
+                        <div class="col-md-6">
+
+                            <div class="form-group">
+
+                                <label asp-for="ToBranchId"></label>
+                                <div class="text-muted text-size-small" style="margin-bottom:4px;">
+                                    Current: <strong>@From(currentEmployee.BrnachName)</strong>
+                                </div>
+
+                                <select name="ToBranchId" id="ToBranchId" class="form-control">
+                                    <option value="">-- Leave blank to keep current --</option>
+                                </select>
+
+                            </div>
+
+                        </div>
+
+                        <div class="col-md-6">
+
+                            <div class="form-group">
+
+                                <label asp-for="ToDepartmentId"></label>
+                                <div class="text-muted text-size-small" style="margin-bottom:4px;">
+                                    Current: <strong>@From(currentEmployee.DepartmentName)</strong>
+                                </div>
+
+                                <select asp-for="ToDepartmentId" asp-items="ViewBag.DepartmentList" class="form-control">
+                                    <option value="">-- Leave blank to keep current --</option>
+                                </select>
+
+                                <span asp-validation-for="ToDepartmentId" class="text-danger"></span>
+
+                            </div>
+
+                        </div>
+
+                        <div class="col-md-6">
+
+                            <div class="form-group">
+
+                                <label asp-for="ToDesignationId"></label>
+                                <div class="text-muted text-size-small" style="margin-bottom:4px;">
+                                    Current: <strong>@From(currentEmployee.DesignationName)</strong>
+                                </div>
+
+                                <select name="ToDesignationId" id="ToDesignationId" class="form-control">
+                                    <option value="">-- Leave blank to keep current --</option>
+                                </select>
+
+                            </div>
+
+                        </div>
+
+                        <div class="col-md-6">
+
+                            <div class="form-group">
+
+                                <label asp-for="ToReportingManagerId"></label>
+                                <div class="text-muted text-size-small" style="margin-bottom:4px;">
+                                    Current: <strong>@From(currentEmployee.ReportingManagerName)</strong>
+                                </div>
+
+                                <select asp-for="ToReportingManagerId" asp-items="ViewBag.ReportingManagerList" class="form-control">
+                                    <option value="">-- Leave blank to keep current --</option>
+                                </select>
+
+                                <span asp-validation-for="ToReportingManagerId" class="text-danger"></span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </fieldset>
+
+                <hr />
+
+                <div class="text-right">
+
+                    <a asp-action="Index" class="btn btn-default">Cancel</a>
+
+                    <button type="submit" class="btn bg-primary">
+                        <i class="icon-checkmark4"></i>
+                        Submit Transfer Proposal
+                    </button>
+
+                </div>
+
+            </form>
+        }
+
+    </div>
+
+</div>
+
+<script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+
+@section Scripts {
+
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+
+        @if (TempData["GlobalError"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Error',
+                    text: '@Html.Raw(TempData["GlobalError"])',
+                    type: 'error',
+                    confirmButtonColor: '#EF5350'
+                });
+            </text>
+        }
+
+    </script>
+
+    <script>
+
+        $(function () {
+
+            // Selecting an employee reloads the page (GET) with employeeId
+            // in the querystring so the server can load the "From"
+            // reference values for the newly selected employee.
+            $('#employeeIdPicker').val('@Model.EmployeeId');
+
+            $('#employeeIdPicker').on('change', function () {
+                var id = $(this).val();
+                if (id) {
+                    window.location.href = '@Url.Action("Create")?employeeId=' + id;
+                } else {
+                    window.location.href = '@Url.Action("Create")';
+                }
+            });
+
+            // Cascading Branch (scoped to the newly selected "To" Company).
+            $('#ToCompanyId').on('change', function () {
+                var companyId = $(this).val();
+                var branchDropdown = $('#ToBranchId');
+
+                branchDropdown.empty().append('<option value="">-- Leave blank to keep current --</option>');
+
+                if (!companyId) return;
+
+                $.get('@Url.Action("GetBranchByCompanyId")', { companyId: companyId }, function (data) {
+                    $.each(data, function (i, item) {
+                        branchDropdown.append('<option value="' + item.value + '">' + item.text + '</option>');
+                    });
+                });
+            });
+
+            // Cascading Designation (scoped to the newly selected "To" Department).
+            $('#ToDepartmentId').on('change', function () {
+                var departmentId = $(this).val();
+                var designationDropdown = $('#ToDesignationId');
+
+                designationDropdown.empty().append('<option value="">-- Leave blank to keep current --</option>');
+
+                if (!departmentId) return;
+
+                $.get('@Url.Action("GetDesignationByDepartmentId")', { departmentId: departmentId }, function (data) {
+                    $.each(data, function (i, item) {
+                        designationDropdown.append('<option value="' + item.value + '">' + item.text + '</option>');
+                    });
+                });
+            });
+
+        });
+
+    </script>
+
+}

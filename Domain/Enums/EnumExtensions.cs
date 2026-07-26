@@ -242,6 +242,52 @@ namespace Domain.Enums
             Cancelled = 4
         }
 
+        // On Duty request approval workflow - single-level approval (the
+        // requesting employee's direct ReportingManagerId, or HR/Admin as
+        // an override), identical shape to WfhRequestStatus above but kept
+        // as its own enum (a separate type per transactional module is the
+        // existing convention in this codebase - see WfhRequestStatus,
+        // LeaveApplication's status, etc. - so OD can evolve independently
+        // of WFH, e.g. a future OD-only status, without touching WFH). See
+        // Domain/Entities/OnDutyRequest.cs.
+        public enum OnDutyRequestStatus
+        {
+            Pending = 1,
+            Approved = 2,
+            Rejected = 3,
+            Cancelled = 4
+        }
+
+        // Short Leave request approval workflow - single-level approval (the
+        // requesting employee's direct ReportingManagerId, or HR/Admin as an
+        // override), same shape as WfhRequestStatus/OnDutyRequestStatus above
+        // but its own enum per the existing per-module convention. Unlike
+        // WFH/On Duty, approving a Short Leave request does NOT touch
+        // Attendance - it deducts a fractional day from the chosen
+        // LeaveType's balance instead. See Domain/Entities/ShortLeaveRequest.cs.
+        public enum ShortLeaveRequestStatus
+        {
+            Pending = 1,
+            Approved = 2,
+            Rejected = 3,
+            Cancelled = 4
+        }
+
+        // Comp Off candidate review workflow - "System-detected, HR-approved":
+        // API/BackgroundServices/CompOffDetectionService.cs auto-detects a day
+        // an employee worked extra hours on a Holiday/WeekOff and creates a
+        // CompOffCandidate row at PendingReview - it never credits the
+        // balance itself. HR must individually Approve (credits
+        // CreditedDays into the "Comp Off" LeaveType balance via
+        // ILeaveBalanceService.CreditLeaveAsync) or Reject each candidate -
+        // see Domain/Entities/CompOffCandidate.cs / CompOffService.
+        public enum CompOffCandidateStatus
+        {
+            PendingReview = 1,
+            Approved = 2,
+            Rejected = 3
+        }
+
         // Penalty applied once an employee crosses their AttendancePolicy's
         // LateMarkGraceCount (allowed late arrivals per month) - see
         // Domain/Entities/AttendancePolicy.cs.
@@ -429,6 +475,28 @@ namespace Domain.Enums
             Credit = 2,
             Deduct = 3,
             CarryForward = 4
+        }
+
+        // Leave Policy Engine (foundational phase) - drives
+        // LeaveAccrualService's cycle-boundary detection for
+        // LeaveType.AccrualFrequency. None = fully manual (default,
+        // backward-compatible for every existing LeaveType).
+        public enum LeaveAccrualFrequency
+        {
+            None = 1,
+            Monthly = 2,
+            Quarterly = 3,
+            Yearly = 4
+        }
+
+        // Leave Policy Engine (foundational phase) - restricts a LeaveType
+        // to a specific gender (e.g. Maternity/Paternity-style leaves).
+        // All = default, no restriction (backward-compatible).
+        public enum LeaveApplicableGender
+        {
+            All = 1,
+            Male = 2,
+            Female = 3
         }
 
         public enum Nationality
@@ -639,6 +707,121 @@ namespace Domain.Enums
             InProgress = 2,
             Completed = 3,
             NotApplicable = 4
+        }
+
+        // =====================================================
+        // PROBATION & CONFIRMATION (Maker-Checker)
+        // =====================================================
+        // Foundational Maker-Checker (segregation-of-duties) workflow
+        // status for Domain/Entities/ProbationConfirmation.cs - a MAKER
+        // (HR staff holding Create permission on PROBATION_CONFIRMATION)
+        // proposes an outcome for an employee's probation, and a DIFFERENT
+        // person acting as CHECKER (holding Approve permission) must
+        // Approve or Reject it - see
+        // ProbationConfirmationService.ApproveAsync/RejectAsync for the
+        // actingUserId != MakerId invariant (no override, not even for
+        // HR/Admin). This exact field shape (MakerId/MakerActionOn/
+        // MakerRemarks/Status/CheckerId/CheckerActionOn/CheckerRemarks) is
+        // meant to be replicated by the later PIP Outcome and Employee
+        // Transfer features - per this codebase's existing convention of a
+        // separate, identically-shaped enum per module (see
+        // WfhRequestStatus/OnDutyRequestStatus/ShortLeaveRequestStatus
+        // above), those features should define their OWN
+        // PipOutcomeStatus/TransferStatus enums with this same shape
+        // rather than reusing this one.
+        public enum ProbationConfirmationStatus
+        {
+            PendingChecker = 1,
+            Approved = 2,
+            Rejected = 3
+        }
+
+        // The Maker's proposed outcome for an employee's probation review -
+        // see Domain/Entities/ProbationConfirmation.cs.
+        public enum ProbationRecommendation
+        {
+            Confirm = 1,       // Confirm employment - Employee.ConfirmationDate set, EmploymentType flips Probation -> Permanent
+            Extend = 2,        // Extend probation - Employee.ProbationEndDate set to ExtendedProbationEndDate
+            PlaceOnPIP = 3,    // Hand-off to the (later) PIP module - no Employee change made here
+            Terminate = 4      // Terminate during probation - Employee.RelievingDate set
+        }
+
+        // =====================================================
+        // PERFORMANCE IMPROVEMENT PLAN (PIP) (Maker-Checker)
+        // =====================================================
+        // Phase 2 of the "Probation & Confirmation" module - see
+        // Domain/Entities/PipRecord.cs. A PipRecord is only ever created
+        // as a system/HR hand-off from an Approved ProbationConfirmation
+        // row with Recommendation == PlaceOnPIP (no maker-checker gate on
+        // creation itself). The maker-checker gate applies to the FINAL
+        // OUTCOME RESOLUTION instead - see PipService.ProposeOutcomeAsync/
+        // ApproveOutcomeAsync/RejectOutcomeAsync for the actingUserId !=
+        // MakerId invariant (identical to ProbationConfirmationStatus's,
+        // no override). Kept as its own enum rather than reusing
+        // ProbationConfirmationStatus, per this codebase's per-module enum
+        // convention (see WfhRequestStatus/OnDutyRequestStatus/
+        // ShortLeaveRequestStatus above).
+        public enum PipOutcomeStatus
+        {
+            PendingChecker = 1,
+            Approved = 2,
+            Rejected = 3
+        }
+
+        // The PIP's live/proposed final outcome - see
+        // PipRecord.FinalOutcome (live, starts InProgress) vs.
+        // PipRecord.ProposedFinalOutcome (staged Maker proposal, cleared
+        // on Reject).
+        public enum PipFinalOutcome
+        {
+            InProgress = 1,    // PIP still running - no outcome resolved yet
+            Successful = 2,    // Approved as Successful - mirrors Confirm: Employee.ConfirmationDate set, EmploymentType Probation -> Permanent
+            Unsuccessful = 3   // Approved as Unsuccessful - mirrors Terminate: Employee.RelievingDate set
+        }
+
+        // =====================================================
+        // EMPLOYEE TRANSFER (Maker-Checker)
+        // =====================================================
+        // Phase 3 of the "Probation & Confirmation" (Employee Lifecycle)
+        // module - see Domain/Entities/EmployeeTransfer.cs. A MAKER (HR
+        // staff holding Create permission on
+        // AppFeatureConstants.EMPLOYEE_TRANSFER) proposes new Company/
+        // Branch/Department/Designation/ReportingManager values for an
+        // Employee, and a DIFFERENT person acting as CHECKER (holding
+        // Approve permission) must Approve or Reject it before the change
+        // is applied to the live Employee record - see
+        // EmployeeTransferService.ApproveAsync/RejectAsync for the
+        // actingUserId != MakerId invariant (identical to
+        // ProbationConfirmationStatus's/PipOutcomeStatus's, no override).
+        // Kept as its own enum rather than reusing either of those, per
+        // this codebase's per-module enum convention.
+        public enum TransferStatus
+        {
+            PendingChecker = 1,
+            Approved = 2,
+            Rejected = 3
+        }
+
+        // =====================================================
+        // EMPLOYEE FEEDBACK
+        // =====================================================
+        // Phase 4 of the "Probation & Confirmation" (Employee Lifecycle)
+        // module - see Domain/Entities/EmployeeFeedback.cs. UNLIKE the
+        // preceding three phases (ProbationConfirmation/PipRecord/
+        // EmployeeTransfer), this feature has NO maker-checker workflow -
+        // Feedback is general ongoing performance feedback usable any time
+        // for any employee, plain CRUD only. Category classifies the kind
+        // of feedback being given - see EmployeeFeedbackService for the
+        // Reporting-Manager-or-HR authorization rules and the
+        // IsVisibleToEmployee-driven self-service visibility filter.
+        public enum FeedbackCategory
+        {
+            General = 1,
+            Performance = 2,
+            Behavioral = 3,
+            Skill = 4,
+            Attendance = 5,
+            Other = 6
         }
     }
 

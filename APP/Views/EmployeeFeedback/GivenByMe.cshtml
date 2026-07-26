@@ -1,0 +1,122 @@
+@model IEnumerable<EmployeeFeedbackDto>
+
+@{
+    ViewData["Title"] = "Feedback Given By Me";
+
+    string CategoryText(EmployeeFeedbackDto item) =>
+        !string.IsNullOrEmpty(item.CategoryName)
+            ? item.CategoryName
+            : ((EnumExtensions.FeedbackCategory)item.Category).ToString();
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-bubbles4 position-left"></i>
+            Feedback Given By Me
+        </h5>
+
+    </div>
+
+    <div class="table-responsive">
+
+        <table class="table table-bordered table-striped">
+
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Employee</th>
+                    <th>Category</th>
+                    <th>Rating</th>
+                    <th>Visible To Employee</th>
+                    <th width="80">Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+
+                            <td>@item.FeedbackDate.ToString("dd-MMM-yyyy")</td>
+
+                            <td>
+                                @item.EmployeeName
+                                <br />
+                                <span class="text-muted text-size-small">@item.EmployeeCode</span>
+                            </td>
+
+                            <td><span class="label bg-info">@CategoryText(item)</span></td>
+
+                            <td class="text-center">
+                                @if (item.Rating.HasValue)
+                                {
+                                    <span>
+                                        @for (int i = 1; i <= 5; i++)
+                                        {
+                                            <i class="icon-star-full2 @(i <= item.Rating ? "text-warning" : "text-muted")" style="font-size:12px;"></i>
+                                        }
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+
+                            <td>
+                                @if (item.IsVisibleToEmployee)
+                                {
+                                    <span class="label bg-success">Visible</span>
+                                }
+                                else
+                                {
+                                    <span class="label bg-grey">Hidden</span>
+                                }
+                            </td>
+
+                            <td style="padding: 10px 15px;">
+
+                                <a asp-action="Details"
+                                   asp-route-id="@item.Id"
+                                   class="btn btn-default btn-icon"
+                                   data-popup="tooltip"
+                                   title="View">
+                                    <i class="icon-eye"></i>
+                                </a>
+
+                            </td>
+
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center text-muted" style="padding:30px;">
+                            <i class="icon-bubbles4" style="font-size:32px;"></i><br />
+                            You haven't given any feedback yet.
+                        </td>
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('[data-popup="tooltip"]').tooltip();
+        });
+    </script>
+}

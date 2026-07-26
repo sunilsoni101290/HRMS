@@ -1,0 +1,134 @@
+@model IEnumerable<CompOffCandidateDto>
+
+@{
+    ViewData["Title"] = "My Comp Off History";
+
+    string StatusBadgeClass(int status) => status switch
+    {
+        (int)EnumExtensions.CompOffCandidateStatus.PendingReview => "bg-warning",
+        (int)EnumExtensions.CompOffCandidateStatus.Approved => "bg-success",
+        (int)EnumExtensions.CompOffCandidateStatus.Rejected => "bg-danger",
+        _ => "bg-grey"
+    };
+
+    string StatusText(CompOffCandidateDto item) =>
+        !string.IsNullOrEmpty(item.StatusName)
+            ? item.StatusName
+            : ((EnumExtensions.CompOffCandidateStatus)item.Status).ToString();
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-calendar52 position-left"></i>
+            My Comp Off History
+        </h5>
+
+    </div>
+
+    <div class="panel-body">
+        <p class="text-muted">
+            Comp Off candidates are created automatically when you work extra hours on a Holiday or Week Off.
+            HR reviews each one below - this list is read-only, for your own transparency.
+        </p>
+    </div>
+
+    <div class="table-responsive">
+
+        <table class="table table-bordered table-striped">
+
+            <thead>
+                <tr>
+                    <th>Worked Date</th>
+                    <th>Hours Worked</th>
+                    <th>Trigger Reason</th>
+                    <th>Credited Days</th>
+                    <th>Status</th>
+                    <th>Reviewed By</th>
+                    <th>Reviewed On</th>
+                    <th width="80">Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+
+                            <td>@item.WorkedDate.ToString("dd-MMM-yyyy")</td>
+
+                            <td class="text-center">@item.HoursWorked</td>
+
+                            <td>
+                                <span class="text-muted text-size-small">
+                                    @(item.TriggerReason?.Length > 40 ? item.TriggerReason.Substring(0, 40) + "..." : item.TriggerReason)
+                                </span>
+                            </td>
+
+                            <td class="text-center">@item.CreditedDays</td>
+
+                            <td>
+                                <span class="label @StatusBadgeClass(item.Status)">@StatusText(item)</span>
+                            </td>
+
+                            <td>
+                                @(string.IsNullOrEmpty(item.ReviewedByName) ? "-" : item.ReviewedByName)
+                            </td>
+
+                            <td>
+                                @(item.ReviewedOn?.ToString("dd-MMM-yyyy") ?? "-")
+                            </td>
+
+                            <td style="padding: 10px 15px;">
+
+                                <a asp-action="Details"
+                                   asp-route-id="@item.Id"
+                                   class="btn btn-default btn-icon"
+                                   data-popup="tooltip"
+                                   title="View">
+
+                                    <i class="icon-eye"></i>
+
+                                </a>
+
+                            </td>
+
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" class="text-center text-muted" style="padding:30px;">
+                            <i class="icon-calendar52" style="font-size:32px;"></i><br />
+                            No Comp Off history found.
+                        </td>
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+@section Scripts {
+
+    <script>
+
+        $(document).ready(function () {
+
+            $('[data-popup="tooltip"]').tooltip();
+
+        });
+
+    </script>
+
+}

@@ -222,6 +222,39 @@ namespace Domain.Helper
         public const string WFH_REQUEST_CONTROLLER = "WfhRequest";
         public const string WFH_REQUEST_ACTION = ACTION_INDEX;
 
+        // On Duty request - employee-submitted date-range request for
+        // official work carried out away from the office (client visit/site
+        // visit/training, etc.), single-level approval (Reporting Manager
+        // or HR/Admin override) - near-exact mirror of WFH_REQUEST above,
+        // see Domain/Entities/OnDutyRequest.cs.
+        public const string ON_DUTY_REQUEST = "ON_DUTY_REQUEST";
+        public const string ON_DUTY_REQUEST_CONTROLLER = "OnDutyRequest";
+        public const string ON_DUTY_REQUEST_ACTION = ACTION_INDEX;
+
+        // Short Leave request - employee-submitted request for a FEW HOURS
+        // off during a working day, single-level approval (Reporting
+        // Manager or HR/Admin override) - same dual-audience shape as
+        // WFH_REQUEST/ON_DUTY_REQUEST above. Unlike those, approval deducts
+        // a fractional day from a chosen LeaveType's balance instead of
+        // writing back to Attendance - see
+        // Domain/Entities/ShortLeaveRequest.cs.
+        public const string SHORT_LEAVE_REQUEST = "SHORT_LEAVE_REQUEST";
+        public const string SHORT_LEAVE_REQUEST_CONTROLLER = "ShortLeaveRequest";
+        public const string SHORT_LEAVE_REQUEST_ACTION = ACTION_INDEX;
+
+        // Comp Off ("System-detected, HR-approved") - candidates are
+        // auto-created by API/BackgroundServices/CompOffDetectionService.cs
+        // (a background job, never a user action) when an employee works
+        // extra hours on a Holiday/WeekOff; HR individually reviews each one
+        // (View/Approve) via CompOffController - see
+        // Domain/Entities/CompOffCandidate.cs / CompOffService. Unlike
+        // WFH_REQUEST/ON_DUTY_REQUEST/SHORT_LEAVE_REQUEST above, this is
+        // HR-only for acting (Approve/Reject) - the Employee grant below is
+        // View-only, for their own history.
+        public const string COMP_OFF = "COMP_OFF";
+        public const string COMP_OFF_CONTROLLER = "CompOff";
+        public const string COMP_OFF_ACTION = ACTION_INDEX;
+
         // =====================================================
         // LEAVE MANAGEMENT
         // =====================================================
@@ -350,6 +383,82 @@ namespace Domain.Helper
         public const string ONBOARDING_TEMPLATE = "ONBOARDING_TEMPLATE";
         public const string ONBOARDING_TEMPLATE_CONTROLLER = "OnboardingTemplate";
         public const string ONBOARDING_TEMPLATE_ACTION = ACTION_INDEX;
+
+        // =====================================================
+        // PROBATION & CONFIRMATION (Maker-Checker)
+        // =====================================================
+        // New top-level menu group (a sibling of ONBOARDING_MANAGEMENT/
+        // ASSET_MANAGEMENT/RECRUITMENT above, NOT nested under
+        // ATTENDANCE_MANAGEMENT or EMPLOYEE_MANAGEMENT) - an Employee
+        // Management concern, but broken out on its own since later
+        // features (PIP, Employee Transfer) will be added here as sibling
+        // children too. This is the first module in this codebase to use
+        // the Maker-Checker (segregation of duties) authorization pattern -
+        // see ProbationConfirmationService for the actingUserId != MakerId
+        // invariant. LATER AGENTS building PIP/Transfer: reuse this exact
+        // PROBATION_CONFIRMATION_MANAGEMENT parent constant/menu group
+        // (seeded in DbSeeder.ReconcileModulesAsync) rather than creating a
+        // new one.
+        public const string PROBATION_CONFIRMATION_MANAGEMENT = "PROBATION_CONFIRMATION_MANAGEMENT";
+
+        // Probation Confirmation - the first child feature under the new
+        // parent above. MAKER: anyone holding Create permission on this
+        // feature proposes Confirm/Extend/PlaceOnPIP/Terminate for an
+        // employee whose probation is due; CHECKER: a DIFFERENT person
+        // holding Approve permission must Approve/Reject it - see
+        // Domain/Entities/ProbationConfirmation.cs / ProbationConfirmationService.
+        public const string PROBATION_CONFIRMATION = "PROBATION_CONFIRMATION";
+        public const string PROBATION_CONFIRMATION_CONTROLLER = "ProbationConfirmation";
+        public const string PROBATION_CONFIRMATION_ACTION = ACTION_INDEX;
+
+        // PIP (Performance Improvement Plan) - Phase 2, a SIBLING child
+        // feature under the SAME PROBATION_CONFIRMATION_MANAGEMENT parent
+        // above (do not create a new parent). Creation (hand-off from an
+        // Approved ProbationConfirmation with Recommendation ==
+        // PlaceOnPIP) has NO maker-checker gate; the gate applies to the
+        // final outcome resolution instead - see
+        // Domain/Entities/PipRecord.cs / PipService.
+        public const string PIP = "PIP";
+        public const string PIP_CONTROLLER = "Pip";
+        public const string PIP_ACTION = ACTION_INDEX;
+
+        // Employee Transfer - Phase 3, a SIBLING child feature under the
+        // SAME PROBATION_CONFIRMATION_MANAGEMENT parent above (not a new
+        // parent). MAKER: anyone holding Create permission on this feature
+        // proposes new Company/Branch/Department/Designation/
+        // ReportingManager values for an Employee; CHECKER: a DIFFERENT
+        // person holding Approve permission must Approve/Reject it before
+        // the change is applied to the live Employee record - see
+        // Domain/Entities/EmployeeTransfer.cs / EmployeeTransferService.
+        public const string EMPLOYEE_TRANSFER = "EMPLOYEE_TRANSFER";
+        public const string EMPLOYEE_TRANSFER_CONTROLLER = "EmployeeTransfer";
+        public const string EMPLOYEE_TRANSFER_ACTION = ACTION_INDEX;
+
+        // Employee Feedback - Phase 4, a SIBLING child feature under the
+        // SAME PROBATION_CONFIRMATION_MANAGEMENT parent above (not a new
+        // parent). UNLIKE the three phases above, this feature has NO
+        // maker-checker workflow - plain CRUD. Create authorization: the
+        // acting user's own linked Employee is the target Employee's
+        // current ReportingManagerId, OR they hold Create permission on
+        // this feature (HR/Admin) - see
+        // Domain/Entities/EmployeeFeedback.cs / EmployeeFeedbackService.
+        public const string EMPLOYEE_FEEDBACK = "EMPLOYEE_FEEDBACK";
+        public const string EMPLOYEE_FEEDBACK_CONTROLLER = "EmployeeFeedback";
+        public const string EMPLOYEE_FEEDBACK_ACTION = ACTION_INDEX;
+
+        // Rejoining - Phase 5 (final) of the "Probation & Confirmation"
+        // module, a SIBLING child feature under the SAME
+        // PROBATION_CONFIRMATION_MANAGEMENT parent above (not a new
+        // parent). Like Phase 4 (Employee Feedback), this feature has NO
+        // maker-checker workflow - a single-step, HR-permission-gated
+        // rehire action for a FORMER employee (Employee.RelievingDate !=
+        // null, IsDeleted == false). HR-only (no Employee self-service
+        // grant), View/Create permissions only - rejoining history is an
+        // append-only audit log, not editable/deletable - see
+        // Domain/Entities/RejoiningHistory.cs / RejoiningService.
+        public const string REJOINING = "REJOINING";
+        public const string REJOINING_CONTROLLER = "Rejoining";
+        public const string REJOINING_ACTION = ACTION_INDEX;
 
         // =====================================================
         // COMMUNICATION

@@ -1,0 +1,166 @@
+@model CreateUpdateEmployeeFeedbackDto
+
+@{
+    ViewData["Title"] = "Edit Feedback";
+    var employee = ViewBag.Employee as EmployeeListDto;
+    string id = ViewBag.Id as string ?? "";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-pencil7 position-left"></i>
+            Edit Feedback
+            @if (employee != null)
+            {
+                <span class="text-muted"> - @employee.FirstName @employee.LastName (@employee.EmployeeCode)</span>
+            }
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Details" asp-route-id="@id" class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="Edit" asp-route-id="@id" method="post">
+
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <input asp-for="EmployeeId" type="hidden" />
+
+            <div class="row">
+
+                <div class="col-md-4">
+
+                    <div class="form-group">
+
+                        <label asp-for="FeedbackDate"></label>
+
+                        <input asp-for="FeedbackDate" type="date" class="form-control" />
+
+                        <span asp-validation-for="FeedbackDate" class="text-danger"></span>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-4">
+
+                    <div class="form-group">
+
+                        <label asp-for="Category"></label>
+
+                        <select asp-for="Category" asp-items="ViewBag.CategoryList" class="form-control"></select>
+
+                        <span asp-validation-for="Category" class="text-danger"></span>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-4">
+
+                    <div class="form-group">
+
+                        <label asp-for="Rating"></label>
+
+                        <select asp-for="Rating" class="form-control">
+                            <option value="">-- Not Rated --</option>
+                            <option value="1">1 - Poor</option>
+                            <option value="2">2 - Below Average</option>
+                            <option value="3">3 - Average</option>
+                            <option value="4">4 - Good</option>
+                            <option value="5">5 - Excellent</option>
+                        </select>
+
+                        <span asp-validation-for="Rating" class="text-danger"></span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="row">
+
+                <div class="col-md-6">
+
+                    <div class="form-group">
+
+                        <label asp-for="Strengths"></label>
+
+                        <textarea asp-for="Strengths" rows="3" class="form-control"></textarea>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-6">
+
+                    <div class="form-group">
+
+                        <label asp-for="AreasOfImprovement"></label>
+
+                        <textarea asp-for="AreasOfImprovement" rows="3" class="form-control"></textarea>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-12">
+
+                    <div class="form-group">
+
+                        <label asp-for="Comments"></label>
+
+                        <textarea asp-for="Comments" rows="3" class="form-control"></textarea>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-12">
+
+                    <div class="checkbox">
+                        <label>
+                            <input asp-for="IsVisibleToEmployee" type="checkbox" />
+                            Visible to the employee
+                        </label>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <hr />
+
+            <div class="text-right">
+
+                <a asp-action="Details" asp-route-id="@id" class="btn btn-default">Cancel</a>
+
+                <button type="submit" class="btn bg-primary">
+                    <i class="icon-checkmark4"></i>
+                    Save Changes
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

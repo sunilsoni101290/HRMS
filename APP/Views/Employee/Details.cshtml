@@ -278,6 +278,19 @@
                 Employment
             </a>
         </li>
+
+        @* ===== ADDITIVE: "Probation & Confirmation" (Employee Lifecycle)
+           Phases 3-5 - Employee Transfer / Employee Feedback / Rejoining.
+           A single grouped tab rather than three scattered panels, so this
+           already-busy tab strip doesn't get any more cluttered than it
+           needs to be. See APP/Controllers/EmployeeTransferController.cs,
+           EmployeeFeedbackController.cs, RejoiningController.cs. ===== *@
+        <li>
+            <a href="#lifecycle" data-toggle="tab">
+                <i class="bi bi-arrow-repeat"></i>
+                Lifecycle
+            </a>
+        </li>
     </ul>
 
     <div class="tab-content">
@@ -693,6 +706,92 @@
                         </div>
                     </div>
                 </div>
+
+            </div>
+
+        </div>
+
+        @* =====================================================
+           ADDITIVE: "Probation & Confirmation" (Employee Lifecycle) -
+           Phases 3-5 (Employee Transfer / Employee Feedback / Rejoining).
+           Grouped into one "Lifecycle Actions" tab-pane with three simple
+           action cards rather than three separate embedded data tables -
+           this page doesn't otherwise call any lifecycle API, so each card
+           just links out to the relevant read-only list/create screen
+           instead of duplicating that data-loading here.
+           ===================================================== *@
+        <div class="tab-pane empdetail-section-body" id="lifecycle">
+
+            <div class="row">
+
+                <div class="col-md-4">
+                    <div class="myprofile-section" style="margin-bottom:0;">
+                        <div class="myprofile-section-header">
+                            <i class="bi bi-signpost-split"></i>
+                            <h6>Transfer History</h6>
+                        </div>
+                        <div class="myprofile-section-body">
+                            <p class="text-muted text-size-small">
+                                View this employee's past Company/Branch/Department/Designation/Reporting Manager
+                                transfers, or propose a new one (subject to Checker approval).
+                            </p>
+                            <a asp-controller="EmployeeTransfer" asp-action="History" asp-route-employeeId="@Model.Id" class="btn btn-default btn-sm">
+                                <i class="icon-list"></i>
+                                View History
+                            </a>
+                            <a asp-controller="EmployeeTransfer" asp-action="Create" asp-route-employeeId="@Model.Id" class="btn bg-primary btn-sm">
+                                <i class="icon-shuffle"></i>
+                                Transfer Employee
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="myprofile-section" style="margin-bottom:0;">
+                        <div class="myprofile-section-header">
+                            <i class="bi bi-chat-square-text"></i>
+                            <h6>Feedback</h6>
+                        </div>
+                        <div class="myprofile-section-body">
+                            <p class="text-muted text-size-small">
+                                View feedback recorded for this employee, or give new performance/behavioral
+                                feedback.
+                            </p>
+                            <a asp-controller="EmployeeFeedback" asp-action="Index" asp-route-employeeId="@Model.Id" class="btn btn-default btn-sm">
+                                <i class="icon-list"></i>
+                                View Feedback
+                            </a>
+                            <a asp-controller="EmployeeFeedback" asp-action="Create" asp-route-employeeId="@Model.Id" class="btn bg-primary btn-sm">
+                                <i class="icon-bubbles4"></i>
+                                Give Feedback
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                @if (Model.RelievingDate.HasValue)
+                {
+                    <div class="col-md-4">
+                        <div class="myprofile-section" style="margin-bottom:0;">
+                            <div class="myprofile-section-header">
+                                <i class="bi bi-person-plus"></i>
+                                <h6>Rejoin</h6>
+                            </div>
+                            <div class="myprofile-section-body">
+                                <p class="text-muted text-size-small">
+                                    This employee exited on
+                                    <strong>@Model.RelievingDate.Value.ToString("dd-MMM-yyyy")</strong>.
+                                    If they are coming back, process their rejoin here.
+                                </p>
+                                <a asp-controller="Rejoining" asp-action="Create" asp-route-employeeId="@Model.Id" class="btn bg-success btn-sm">
+                                    <i class="icon-plus22"></i>
+                                    Rejoin Employee
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                }
 
             </div>
 

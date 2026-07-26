@@ -1,0 +1,363 @@
+@model ProbationConfirmationDto
+
+@{
+    ViewData["Title"] = "Probation Confirmation Details";
+
+    string? currentUserId = ViewBag.CurrentUserId as string;
+
+    bool isPendingChecker = Model.Status == (int)EnumExtensions.ProbationConfirmationStatus.PendingChecker;
+
+    // Cosmetic only - the API (ProbationConfirmationService.EnsureCheckerIsNotMaker)
+    // is the real authority on who may approve/reject a given record; a 403
+    // there still bounces back here with a clear error message via
+    // TempData, whoever clicked the button.
+    bool canActOn = isPendingChecker && !string.IsNullOrEmpty(currentUserId) && Model.MakerId != currentUserId;
+
+    bool canCreatePip =
+        Model.Status == (int)EnumExtensions.ProbationConfirmationStatus.Approved &&
+        Model.Recommendation == (int)EnumExtensions.ProbationRecommendation.PlaceOnPIP;
+
+    string statusLabelClass = Model.Status switch
+    {
+        (int)EnumExtensions.ProbationConfirmationStatus.PendingChecker => "bg-warning",
+        (int)EnumExtensions.ProbationConfirmationStatus.Approved => "bg-success",
+        (int)EnumExtensions.ProbationConfirmationStatus.Rejected => "bg-danger",
+        _ => "bg-grey"
+    };
+
+    string alertClass = Model.Status switch
+    {
+        (int)EnumExtensions.ProbationConfirmationStatus.Approved => "alert-success",
+        (int)EnumExtensions.ProbationConfirmationStatus.Rejected => "alert-danger",
+        _ => "alert-info"
+    };
+
+    string statusText = !string.IsNullOrEmpty(Model.StatusName)
+        ? Model.StatusName
+        : ((EnumExtensions.ProbationConfirmationStatus)Model.Status).ToString();
+
+    string recommendationText = !string.IsNullOrEmpty(Model.RecommendationName)
+        ? Model.RecommendationName
+        : ((EnumExtensions.ProbationRecommendation)Model.Recommendation).ToString();
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-user-check position-left"></i>
+            Probation Confirmation Details
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Index" class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <!-- Status Banner -->
+
+        <div class="alert @alertClass">
+            <strong>Status :</strong>
+            <span class="label @statusLabelClass">@statusText</span>
+        </div>
+
+        <!-- Employee Information -->
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-user position-left"></i>
+                Employee Information
+            </legend>
+
+            <div class="row">
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Employee</label>
+                    <h6>@Model.EmployeeName</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Employee Code</label>
+                    <h6>@(Model.EmployeeCode ?? "-")</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Department</label>
+                    <h6>@(Model.DepartmentName ?? "-")</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Designation</label>
+                    <h6>@(Model.DesignationName ?? "-")</h6>
+                </div>
+
+            </div>
+
+        </fieldset>
+
+        <!-- Probation Window -->
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-calendar3 position-left"></i>
+                Probation Window
+            </legend>
+
+            <div class="row">
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Probation Start Date</label>
+                    <h6>@Model.ProbationStartDate.ToString("dd-MMM-yyyy")</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Original Probation End Date</label>
+                    <h6>@Model.OriginalProbationEndDate.ToString("dd-MMM-yyyy")</h6>
+                </div>
+
+                @if (Model.ExtendedProbationEndDate.HasValue)
+                {
+                    <div class="col-md-3">
+                        <label class="text-semibold text-muted">Extended Probation End Date</label>
+                        <h6>@Model.ExtendedProbationEndDate.Value.ToString("dd-MMM-yyyy")</h6>
+                    </div>
+                }
+
+                @if (Model.FinalConfirmationDate.HasValue)
+                {
+                    <div class="col-md-3">
+                        <label class="text-semibold text-muted">Final Confirmation Date</label>
+                        <h6>@Model.FinalConfirmationDate.Value.ToString("dd-MMM-yyyy")</h6>
+                    </div>
+                }
+
+            </div>
+
+        </fieldset>
+
+        <!-- Recommendation -->
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-clipboard4 position-left"></i>
+                Recommendation
+            </legend>
+
+            <div class="row">
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Recommendation</label>
+                    <h6><span class="label bg-primary">@recommendationText</span></h6>
+                </div>
+
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.MakerRemarks))
+            {
+                <div class="row">
+                    <div class="col-md-12">
+                        <label class="text-semibold text-muted">Maker Remarks</label>
+                        <div class="well">@Model.MakerRemarks</div>
+                    </div>
+                </div>
+            }
+
+        </fieldset>
+
+        <!-- Maker / Checker -->
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-clock position-left"></i>
+                Maker-Checker Timeline
+            </legend>
+
+            <div class="row">
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Proposed By</label>
+                    <h6>@(Model.MakerName ?? "-")</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Proposed On</label>
+                    <h6>@Model.MakerActionOn.ToString("dd-MMM-yyyy HH:mm")</h6>
+                </div>
+
+                @if (!isPendingChecker)
+                {
+                    <div class="col-md-3">
+                        <label class="text-semibold text-muted">@(Model.Status == (int)EnumExtensions.ProbationConfirmationStatus.Approved ? "Approved By" : "Rejected By")</label>
+                        <h6>@(Model.CheckerName ?? "-")</h6>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="text-semibold text-muted">Checker Action On</label>
+                        <h6>@(Model.CheckerActionOn?.ToString("dd-MMM-yyyy HH:mm") ?? "-")</h6>
+                    </div>
+                }
+
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.CheckerRemarks))
+            {
+                <div class="row">
+                    <div class="col-md-12">
+                        <label class="text-semibold text-muted">Checker Remarks</label>
+                        <div class="well">@Model.CheckerRemarks</div>
+                    </div>
+                </div>
+            }
+
+        </fieldset>
+
+        @if (canActOn || canCreatePip)
+        {
+            <hr />
+
+            <div class="text-right">
+
+                @if (canCreatePip)
+                {
+                    <a asp-controller="Pip"
+                       asp-action="Create"
+                       asp-route-probationConfirmationId="@Model.Id"
+                       class="btn bg-teal">
+                        <i class="icon-plus22"></i>
+                        Create PIP Record
+                    </a>
+                }
+
+                @if (canActOn)
+                {
+                    <button type="button" class="btn btn-danger btnReject">
+                        <i class="icon-cross2"></i>
+                        Reject
+                    </button>
+
+                    <button type="button" class="btn btn-success btnApprove">
+                        <i class="icon-checkmark4"></i>
+                        Approve
+                    </button>
+                }
+
+            </div>
+        }
+
+    </div>
+
+</div>
+
+@if (canActOn)
+{
+    <div class="modal fade" id="rejectModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5>Reject Probation Confirmation</h5>
+                </div>
+
+                <form asp-action="Reject" method="post">
+
+                    <div class="modal-body">
+
+                        <input type="hidden" name="id" value="@Model.Id" />
+
+                        <label>Checker Remarks (required)</label>
+
+                        <textarea class="form-control" name="remarks" required></textarea>
+
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-danger">Reject</button>
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+    <form id="approveForm" asp-action="Approve" method="post" style="display:none;">
+        <input type="hidden" name="id" value="@Model.Id" />
+    </form>
+}
+
+<script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+
+@section Scripts {
+
+    <script>
+
+        @if (TempData["Success"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Success',
+                    text: '@Html.Raw(TempData["Success"])',
+                    type: 'success',
+                    confirmButtonColor: '#66BB6A'
+                });
+            </text>
+        }
+
+        @if (TempData["GlobalError"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Error',
+                    text: '@Html.Raw(TempData["GlobalError"])',
+                    type: 'error',
+                    confirmButtonColor: '#EF5350'
+                });
+            </text>
+        }
+
+    </script>
+
+    <script>
+
+        $(document).ready(function () {
+
+            $(document).on('click', '.btnReject', function () {
+                $('#rejectModal').modal('show');
+            });
+
+            $(document).on('click', '.btnApprove', function () {
+
+                swal({
+                    title: 'Approve this Probation Confirmation?',
+                    text: 'The recommended outcome will be applied to the employee record.',
+                    type: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#66BB6A',
+                    confirmButtonText: 'Yes, approve it'
+                }, function (isConfirm) {
+                    if (isConfirm) {
+                        $('#approveForm').submit();
+                    }
+                });
+
+            });
+
+        });
+
+    </script>
+
+}

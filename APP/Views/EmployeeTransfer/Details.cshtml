@@ -1,0 +1,347 @@
+@model EmployeeTransferDto
+
+@{
+    ViewData["Title"] = "Employee Transfer Details";
+    string? currentUserId = ViewBag.CurrentUserId as string;
+
+    bool isPendingChecker = Model.Status == (int)EnumExtensions.TransferStatus.PendingChecker;
+
+    // Cosmetic only - the API enforces the actingUserId != MakerId
+    // invariant server-side regardless (no override, not even for
+    // HR/Admin); a 403 there still bounces back here with a clear
+    // TempData message.
+    bool canActOn = isPendingChecker && Model.MakerId != currentUserId;
+
+    string statusLabelClass = Model.Status switch
+    {
+        (int)EnumExtensions.TransferStatus.PendingChecker => "bg-warning",
+        (int)EnumExtensions.TransferStatus.Approved => "bg-success",
+        (int)EnumExtensions.TransferStatus.Rejected => "bg-danger",
+        _ => "bg-grey"
+    };
+
+    string alertClass = Model.Status switch
+    {
+        (int)EnumExtensions.TransferStatus.Approved => "alert-success",
+        (int)EnumExtensions.TransferStatus.Rejected => "alert-danger",
+        _ => "alert-info"
+    };
+
+    string statusText = !string.IsNullOrEmpty(Model.StatusName)
+        ? Model.StatusName
+        : ((EnumExtensions.TransferStatus)Model.Status).ToString();
+
+    string Cell(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
+
+    (string label, string from, string? to)[] rows =
+    {
+        ("Company", Model.FromCompanyName ?? Model.FromCompanyId, Model.ToCompanyName),
+        ("Branch", Model.FromBranchName ?? "-", Model.ToBranchName),
+        ("Department", Model.FromDepartmentName ?? Model.FromDepartmentId, Model.ToDepartmentName),
+        ("Designation", Model.FromDesignationName ?? Model.FromDesignationId, Model.ToDesignationName),
+        ("Reporting Manager", Model.FromReportingManagerName ?? "-", Model.ToReportingManagerName),
+    };
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-shuffle position-left"></i>
+            Employee Transfer Details
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Index" class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <div class="alert @alertClass">
+            <strong>Status :</strong>
+            <span class="label @statusLabelClass">@statusText</span>
+        </div>
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-user position-left"></i>
+                Employee Information
+            </legend>
+
+            <div class="row">
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Employee</label>
+                    <h6>@Model.EmployeeName</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Employee Code</label>
+                    <h6>@(Model.EmployeeCode ?? "-")</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Effective Date</label>
+                    <h6>@Model.EffectiveDate.ToString("dd-MMM-yyyy")</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Proposed On</label>
+                    <h6>@Model.CreatedOn.ToString("dd-MMM-yyyy HH:mm")</h6>
+                </div>
+
+            </div>
+
+        </fieldset>
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-file-text2 position-left"></i>
+                Reason
+            </legend>
+
+            <div class="well">@Model.Reason</div>
+
+        </fieldset>
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-transmission position-left"></i>
+                Organization Placement (From -&gt; To)
+            </legend>
+
+            <div class="table-responsive">
+
+                <table class="table table-bordered">
+
+                    <thead>
+                        <tr>
+                            <th>Dimension</th>
+                            <th>From (Current)</th>
+                            <th>To (Proposed)</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        @foreach (var row in rows)
+                        {
+                            bool changing = !string.IsNullOrWhiteSpace(row.to);
+
+                            <tr class="@(changing ? "bg-warning-50" : "")">
+                                <td class="text-semibold">@row.label</td>
+                                <td>@Cell(row.from)</td>
+                                <td>
+                                    @if (changing)
+                                    {
+                                        <span class="label bg-primary">@row.to</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">No change</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </fieldset>
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-clock position-left"></i>
+                Maker - Checker
+            </legend>
+
+            <div class="row">
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Proposed By (Maker)</label>
+                    <h6>@(Model.MakerName ?? "-")</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Proposed On</label>
+                    <h6>@Model.MakerActionOn.ToString("dd-MMM-yyyy HH:mm")</h6>
+                </div>
+
+                @if (Model.Status != (int)EnumExtensions.TransferStatus.PendingChecker)
+                {
+                    <div class="col-md-3">
+                        <label class="text-semibold text-muted">Checker</label>
+                        <h6>@(Model.CheckerName ?? "-")</h6>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="text-semibold text-muted">Actioned On</label>
+                        <h6>@(Model.CheckerActionOn?.ToString("dd-MMM-yyyy HH:mm") ?? "-")</h6>
+                    </div>
+                }
+
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.MakerRemarks))
+            {
+                <div class="row">
+                    <div class="col-md-12">
+                        <label class="text-semibold text-muted">Maker Remarks</label>
+                        <h6>@Model.MakerRemarks</h6>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(Model.CheckerRemarks))
+            {
+                <div class="row">
+                    <div class="col-md-12">
+                        <label class="text-semibold text-muted">Checker Remarks</label>
+                        <h6>@Model.CheckerRemarks</h6>
+                    </div>
+                </div>
+            }
+
+        </fieldset>
+
+        @if (canActOn)
+        {
+            <hr />
+
+            <div class="text-right">
+
+                <button type="button" class="btn btn-danger btnReject" data-id="@Model.Id">
+                    <i class="icon-cross2"></i>
+                    Reject
+                </button>
+
+                <button type="button" class="btn btn-success btnApprove" data-id="@Model.Id">
+                    <i class="icon-checkmark4"></i>
+                    Approve
+                </button>
+
+            </div>
+        }
+        else if (isPendingChecker)
+        {
+            <div class="alert alert-warning">
+                <i class="icon-info22 position-left"></i>
+                You proposed this transfer, so you cannot also approve/reject it (segregation of duties) - a different Checker must act on it.
+            </div>
+        }
+
+    </div>
+
+</div>
+
+@if (canActOn)
+{
+    <!-- Reject modal - remarks required. -->
+    <div class="modal fade" id="rejectModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5>Reject Employee Transfer</h5>
+                </div>
+                <form asp-action="Reject" method="post">
+                    <div class="modal-body">
+                        <input type="hidden" id="RejectTransferId" name="id" />
+                        <label>Remarks <span class="text-danger">*</span></label>
+                        <textarea class="form-control" name="checkerRemarks" required></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-danger">Reject</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Approve form - remarks optional, submitted via confirm dialog. -->
+    <form id="approveForm" asp-action="Approve" method="post" style="display:none;">
+        <input type="hidden" id="ApproveTransferId" name="id" />
+        <input type="hidden" id="ApproveTransferRemarks" name="checkerRemarks" />
+    </form>
+}
+
+<script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+
+@section Scripts {
+
+    <script>
+
+        @if (TempData["Success"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Success',
+                    text: '@Html.Raw(TempData["Success"])',
+                    type: 'success',
+                    confirmButtonColor: '#66BB6A'
+                });
+            </text>
+        }
+
+        @if (TempData["GlobalError"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Error',
+                    text: '@Html.Raw(TempData["GlobalError"])',
+                    type: 'error',
+                    confirmButtonColor: '#EF5350'
+                });
+            </text>
+        }
+
+    </script>
+
+    <script>
+
+        $(document).ready(function () {
+
+            $(document).on('click', '.btnReject', function () {
+                var id = $(this).data('id');
+                $('#RejectTransferId').val(id);
+                $('#rejectModal').modal('show');
+            });
+
+            $(document).on('click', '.btnApprove', function () {
+                var id = $(this).data('id');
+
+                swal({
+                    title: 'Approve this transfer?',
+                    text: 'The employee\'s org placement will be updated immediately as proposed.',
+                    type: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#66BB6A',
+                    confirmButtonText: 'Yes, approve it'
+                }, function (isConfirm) {
+                    if (isConfirm) {
+                        $('#ApproveTransferId').val(id);
+                        $('#approveForm').submit();
+                    }
+                });
+            });
+
+        });
+
+    </script>
+
+}

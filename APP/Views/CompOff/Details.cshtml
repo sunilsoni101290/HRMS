@@ -1,0 +1,282 @@
+@model CompOffCandidateDto
+
+@{
+    ViewData["Title"] = "Comp Off Details";
+    bool isAdmin = ViewBag.IsAdmin ?? false;
+
+    bool isPendingReview = Model.Status == (int)EnumExtensions.CompOffCandidateStatus.PendingReview;
+
+    // Cosmetic only - the API is the real authority on who may
+    // approve/reject a given candidate; a 403 there still bounces back here
+    // with an error message via TempData.
+    bool canActOn = isAdmin && isPendingReview;
+
+    string statusLabelClass = Model.Status switch
+    {
+        (int)EnumExtensions.CompOffCandidateStatus.PendingReview => "bg-warning",
+        (int)EnumExtensions.CompOffCandidateStatus.Approved => "bg-success",
+        (int)EnumExtensions.CompOffCandidateStatus.Rejected => "bg-danger",
+        _ => "bg-grey"
+    };
+
+    string alertClass = Model.Status switch
+    {
+        (int)EnumExtensions.CompOffCandidateStatus.Approved => "alert-success",
+        (int)EnumExtensions.CompOffCandidateStatus.Rejected => "alert-danger",
+        _ => "alert-info"
+    };
+
+    string statusText = !string.IsNullOrEmpty(Model.StatusName)
+        ? Model.StatusName
+        : ((EnumExtensions.CompOffCandidateStatus)Model.Status).ToString();
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-calendar52 position-left"></i>
+            Comp Off Details
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="@(isAdmin ? "PendingReview" : "MyHistory")"
+               class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <!-- Status Banner -->
+
+        <div class="alert @alertClass">
+
+            <strong>Status :</strong>
+            <span class="label @statusLabelClass">@statusText</span>
+
+        </div>
+
+        <!-- Employee Information -->
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-user position-left"></i>
+                Employee Information
+            </legend>
+
+            <div class="row">
+
+                <div class="col-md-4">
+                    <label class="text-semibold text-muted">Employee</label>
+                    <h6>@Model.EmployeeName</h6>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="text-semibold text-muted">Employee Code</label>
+                    <h6>@(Model.EmployeeCode ?? "-")</h6>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="text-semibold text-muted">Department</label>
+                    <h6>@(Model.DepartmentName ?? "-")</h6>
+                </div>
+
+            </div>
+
+        </fieldset>
+
+        <!-- Trigger Details -->
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-calendar3 position-left"></i>
+                Trigger Details
+            </legend>
+
+            <div class="row">
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Worked Date</label>
+                    <h6>@Model.WorkedDate.ToString("dd-MMM-yyyy")</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Hours Worked</label>
+                    <h6>@Model.HoursWorked</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Credited Days</label>
+                    <h6>
+                        <span class="label bg-primary">@Model.CreditedDays</span>
+                    </h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Requested On</label>
+                    <h6>@Model.CreatedOn.ToString("dd-MMM-yyyy HH:mm")</h6>
+                </div>
+
+            </div>
+
+            <div class="row">
+
+                <div class="col-md-12">
+                    <label class="text-semibold text-muted">Trigger Reason</label>
+                    <div class="well">
+                        @(Model.TriggerReason ?? "-")
+                    </div>
+                </div>
+
+            </div>
+
+        </fieldset>
+
+        <!-- Review -->
+
+        @if (!isPendingReview)
+        {
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-clock position-left"></i>
+                    Review
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-4">
+                        <label class="text-semibold text-muted">Reviewed By</label>
+                        <h6>@(Model.ReviewedByName ?? "-")</h6>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="text-semibold text-muted">Reviewed On</label>
+                        <h6>@(Model.ReviewedOn?.ToString("dd-MMM-yyyy HH:mm") ?? "-")</h6>
+                    </div>
+
+                    @if (Model.Status == (int)EnumExtensions.CompOffCandidateStatus.Rejected)
+                    {
+                        <div class="col-md-4">
+                            <label class="text-semibold text-muted">Rejection Reason</label>
+                            <h6>@(Model.RejectionReason ?? "-")</h6>
+                        </div>
+                    }
+
+                </div>
+
+            </fieldset>
+        }
+
+        @if (canActOn)
+        {
+            <hr />
+
+            <div class="text-right">
+
+                <button type="button" class="btn btn-danger btnReject" data-id="@Model.Id">
+                    <i class="icon-cross2"></i>
+                    Reject
+                </button>
+
+                <button type="button" class="btn btn-success btnApprove" data-id="@Model.Id">
+                    <i class="icon-checkmark4"></i>
+                    Approve
+                </button>
+
+            </div>
+        }
+
+    </div>
+
+</div>
+
+@if (canActOn)
+{
+    <partial name="_RejectModal" />
+
+    <form id="approveForm" asp-action="Approve" method="post" style="display:none;">
+        <input type="hidden" id="ApproveCompOffId" name="id" />
+    </form>
+}
+
+<script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+
+@section Scripts {
+
+    <script>
+
+        @if (TempData["Success"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Success',
+                    text: '@Html.Raw(TempData["Success"])',
+                    type: 'success',
+                    confirmButtonColor: '#66BB6A'
+                });
+            </text>
+        }
+
+        @if (TempData["GlobalError"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Error',
+                    text: '@Html.Raw(TempData["GlobalError"])',
+                    type: 'error',
+                    confirmButtonColor: '#EF5350'
+                });
+            </text>
+        }
+
+    </script>
+
+    <script>
+
+        $(document).ready(function () {
+
+            $(document).on('click', '.btnReject', function () {
+
+                var id = $(this).data('id');
+
+                $('#RejectCompOffId').val(id);
+
+                $('#rejectModal').modal('show');
+
+            });
+
+            $(document).on('click', '.btnApprove', function () {
+
+                var id = $(this).data('id');
+
+                swal({
+                    title: 'Approve this Comp Off?',
+                    text: 'The employee will be credited Comp Off leave balance for this entry.',
+                    type: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#66BB6A',
+                    confirmButtonText: 'Yes, approve it'
+                }, function (isConfirm) {
+                    if (isConfirm) {
+                        $('#ApproveCompOffId').val(id);
+                        $('#approveForm').submit();
+                    }
+                });
+
+            });
+
+        });
+
+    </script>
+
+}

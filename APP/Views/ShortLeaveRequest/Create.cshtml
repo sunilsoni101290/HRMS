@@ -1,0 +1,288 @@
+@model CreateShortLeaveRequestDto
+
+@{
+    ViewData["Title"] = "Request Short Leave";
+    bool noEmployeeProfile = ViewBag.NoEmployeeProfile ?? false;
+    string employeeDisplayName = ViewBag.EmployeeDisplayName ?? "";
+    decimal shortLeaveHoursPerDay = ViewBag.ShortLeaveHoursPerDay is decimal d ? d : 8.0m;
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-clock2 position-left"></i>
+            Request Short Leave
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="MyRequests"
+               class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="Create"
+              method="post">
+
+            <div asp-validation-summary="ModelOnly"
+                 class="alert alert-danger"></div>
+
+            <!-- Employee Information -->
+
+            <div class="row">
+
+                <div class="col-md-12">
+
+                    <div class="form-group">
+
+                        <label>Employee</label>
+
+                        <!-- Self-service: always the logged-in employee, never a
+                             pickable dropdown - the server ignores any other
+                             value even if one were posted. -->
+                        <input type="text"
+                               class="form-control bg-slate-100"
+                               value="@employeeDisplayName"
+                               readonly
+                               disabled />
+
+                        <input asp-for="EmployeeId" type="hidden" />
+
+                        @if (noEmployeeProfile)
+                        {
+                            <span class="text-danger text-size-small">
+                                Your login isn't linked to an employee profile - you can't request Short Leave.
+                            </span>
+                        }
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Leave Type / Date -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-calendar3"></i>
+                    Leave Type &amp; Date
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="LeaveTypeId"></label>
+
+                            <select asp-for="LeaveTypeId"
+                                    asp-items="ViewBag.LeaveTypeList"
+                                    class="form-control">
+                                <option value="">-- Select Leave Type --</option>
+                            </select>
+
+                            <span asp-validation-for="LeaveTypeId"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="Date"></label>
+
+                            <input asp-for="Date"
+                                   id="Date"
+                                   type="date"
+                                   class="form-control" />
+
+                            <span asp-validation-for="Date"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- Time -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-watch2"></i>
+                    Time
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="FromTime"></label>
+
+                            <input asp-for="FromTime"
+                                   type="time"
+                                   class="form-control"
+                                   id="FromTime" />
+
+                            <span asp-validation-for="FromTime"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="ToTime"></label>
+
+                            <input asp-for="ToTime"
+                                   type="time"
+                                   class="form-control"
+                                   id="ToTime" />
+
+                            <span asp-validation-for="ToTime"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Live "X hours = Y.YY days" hint - purely a UI aid; the
+                     real calculation always happens server-side using
+                     AttendancePolicy.ShortLeaveHoursPerDay. -->
+                <div class="alert bg-slate-100 alert-styled-left" id="hoursHint">
+                    <span>Pick a From Time and To Time to see the hours / days this will use.</span>
+                </div>
+
+            </fieldset>
+
+            <!-- Reason -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-file-text2"></i>
+                    Reason
+                </legend>
+
+                <div class="form-group">
+
+                    <label asp-for="Reason"></label>
+
+                    <textarea asp-for="Reason"
+                              rows="4"
+                              maxlength="500"
+                              class="form-control"></textarea>
+
+                    <span asp-validation-for="Reason"
+                          class="text-danger"></span>
+
+                </div>
+
+            </fieldset>
+
+            <hr />
+
+            <div class="text-right">
+
+                <a asp-action="MyRequests"
+                   class="btn btn-default">
+
+                    Cancel
+
+                </a>
+
+                <button type="submit"
+                        id="btnSubmitShortLeaveRequest"
+                        class="btn bg-primary"
+                        @(noEmployeeProfile ? "disabled" : "")>
+
+                    <i class="icon-checkmark4"></i>
+                    Submit Request
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+@section Scripts {
+
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+
+        $(function () {
+
+            var shortLeaveHoursPerDay = @Html.Raw(shortLeaveHoursPerDay.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
+            function updateHoursHint() {
+
+                var fromVal = $("#FromTime").val();
+                var toVal = $("#ToTime").val();
+
+                if (!fromVal || !toVal) {
+                    $("#hoursHint").html("<span>Pick a From Time and To Time to see the hours / days this will use.</span>");
+                    return;
+                }
+
+                var fromParts = fromVal.split(":");
+                var toParts = toVal.split(":");
+
+                var fromMinutes = (parseInt(fromParts[0], 10) * 60) + parseInt(fromParts[1], 10);
+                var toMinutes = (parseInt(toParts[0], 10) * 60) + parseInt(toParts[1], 10);
+
+                var diffMinutes = toMinutes - fromMinutes;
+
+                if (diffMinutes <= 0) {
+                    $("#hoursHint").html("<span class='text-danger'>To Time must be after From Time.</span>");
+                    return;
+                }
+
+                var hours = diffMinutes / 60;
+                var days = shortLeaveHoursPerDay > 0 ? (hours / shortLeaveHoursPerDay) : 0;
+
+                $("#hoursHint").html(
+                    "<span><strong>" + hours.toFixed(2) + "</strong> hour(s) = <strong>" +
+                    days.toFixed(2) + "</strong> day(s) <span class='text-muted'>(based on " +
+                    shortLeaveHoursPerDay + " hrs/day)</span></span>"
+                );
+            }
+
+            $("#FromTime, #ToTime").on("change", updateHoursHint);
+
+            updateHoursHint();
+
+        });
+
+    </script>
+
+}

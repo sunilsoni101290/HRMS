@@ -65,6 +65,8 @@ namespace APP.Controllers
             // of letting them fill the whole form only to be rejected.
             ViewBag.HasPendingLeave = !_isAdmin && await EmployeeHasPendingLeave(_employeeId);
 
+            await LoadAvailableRestrictedHolidaysAsync();
+
             return View(new ApplyLeaveRequestDto
             {
                 // Self-service users always apply for their own linked employee
@@ -73,6 +75,64 @@ namespace APP.Controllers
                 FromDate = DateTime.Today,
                 ToDate = DateTime.Today
             });
+        }
+
+        // If a "Restricted Holiday" LeaveType exists (seeded once by
+        // Infrastructure/Data/DbSeeder.cs, looked up there by
+        // Name == "Restricted Holiday"), also fetch the list of optional
+        // holiday dates this employee can still claim, so the Create view
+        // can show a helper panel of clickable dates instead of the
+        // employee trial-and-error-guessing a valid date. Purely a UX
+        // nicety - the API independently re-validates the date regardless
+        // of what the client sends.
+        //
+        // Only resolvable for a self-service employee up front (their
+        // EmployeeId is known from the session as soon as the page loads);
+        // for admin/HR, who pick the Employee from a dropdown, EmployeeId
+        // isn't known until the form is already open, so the panel simply
+        // doesn't preload for them - same "keep this simple" scope as the
+        // rest of this UX nicety.
+        private async Task LoadAvailableRestrictedHolidaysAsync()
+        {
+            ViewBag.RestrictedHolidayLeaveTypeId = null;
+            ViewBag.AvailableRestrictedHolidays = new List<AvailableRestrictedHolidayDto>();
+
+            if (ViewBag.LeaveTypeNames is not Dictionary<string, string> leaveTypeNames)
+                return;
+
+            var restrictedHoliday = leaveTypeNames.FirstOrDefault(
+                x => string.Equals(x.Value, "Restricted Holiday", StringComparison.OrdinalIgnoreCase));
+
+            if (string.IsNullOrEmpty(restrictedHoliday.Key))
+                return;
+
+            ViewBag.RestrictedHolidayLeaveTypeId = restrictedHoliday.Key;
+
+            if (_isAdmin || string.IsNullOrEmpty(_employeeId))
+                return;
+
+            try
+            {
+                // This specific API endpoint does NOT use the claims-based
+                // TenantId/ActingUserId pattern other controllers in this
+                // batch use - it takes explicit employeeId/tenantId query
+                // params supplied by the caller, same convention this
+                // controller already follows for Calendar/EmployeeLeaves.
+                var url =
+                    $"LeaveApplication/available-restricted-holidays?employeeId={Uri.EscapeDataString(_employeeId)}" +
+                    $"&tenantId={Uri.EscapeDataString(_tenantId ?? string.Empty)}";
+
+                var data = await _apiService.GetAsync<List<AvailableRestrictedHolidayDto>>(url);
+
+                ViewBag.AvailableRestrictedHolidays = data ?? new List<AvailableRestrictedHolidayDto>();
+            }
+            catch
+            {
+                // Failing to load this shouldn't block the employee from
+                // still applying leave - the API re-validates the real
+                // rule server-side regardless.
+                ViewBag.AvailableRestrictedHolidays = new List<AvailableRestrictedHolidayDto>();
+            }
         }
 
         // Lets the Create view (admin's Employee dropdown included) ask,
