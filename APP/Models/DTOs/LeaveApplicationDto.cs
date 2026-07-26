@@ -222,6 +222,23 @@ namespace APP.Models.DTOs
         public List<DateTime> HolidayDates { get; set; } = new();
     }
 
+    // Mirrors Application.DTOs.Leaves.AvailableRestrictedHolidayDto exactly -
+    // read-only helper DTO for the "which optional holidays can I still
+    // claim as a Restricted Holiday" panel on the Apply Leave (Create) form.
+    // Backed by GET api/leaveapplication/available-restricted-holidays.
+    public class AvailableRestrictedHolidayDto
+    {
+        public DateTime HolidayDate { get; set; }
+
+        public string HolidayName { get; set; }
+
+        // True if this employee already has a Pending or Approved
+        // "Restricted Holiday" LeaveApplication for this date - the Create
+        // view uses this to show the date as already-claimed instead of a
+        // clickable option.
+        public bool AlreadyClaimed { get; set; }
+    }
+
     public class LeaveApplicationFilterRequestDto
     {
         [Display(Name = "Employee")]

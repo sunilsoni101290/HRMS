@@ -79,6 +79,8 @@
                 <th>Paid</th>
                 <th>Carry Forward</th>
                 <th>Half Day</th>
+                <th>Accrual</th>
+                <th>Restricted Holiday</th>
                 <th class="text-center">Actions</th>
 
             </tr>
@@ -152,6 +154,29 @@
                             <span class="label label-default">
                                 No
                             </span>
+                        }
+
+                    </td>
+
+                    <td>
+                        <span class="text-muted">
+                            @(!string.IsNullOrEmpty(item.AccrualFrequencyName)
+                                ? item.AccrualFrequencyName
+                                : item.AccrualFrequency.ToString())
+                        </span>
+                    </td>
+
+                    <td>
+
+                        @if (item.IsRestrictedHolidayType)
+                        {
+                            <span class="label bg-warning">
+                                Restricted Holiday
+                            </span>
+                        }
+                        else
+                        {
+                            <span>-</span>
                         }
 
                     </td>

@@ -1,0 +1,437 @@
+@model PipRecordDto
+
+@{
+    ViewData["Title"] = "PIP Record Details";
+
+    string? currentUserId = ViewBag.CurrentUserId as string;
+
+    bool isInProgress = Model.FinalOutcome == (int)EnumExtensions.PipFinalOutcome.InProgress;
+
+    // A record can be proposed on when it's still InProgress AND there is
+    // no LIVE proposal already awaiting checker action - a freshly-created
+    // record has MakerId == null even though Status defaults to
+    // PendingChecker (see PipService.ProposeOutcomeAsync's remarks), and
+    // after a Reject the Maker may propose again. Checking MakerId first
+    // avoids being fooled by that default-Status quirk.
+    bool canPropose = isInProgress &&
+        (string.IsNullOrEmpty(Model.MakerId) || Model.Status == (int)EnumExtensions.PipOutcomeStatus.Rejected);
+
+    // A genuinely pending checker action only exists once a Maker has
+    // actually proposed (MakerId set) AND Status is still PendingChecker.
+    bool isPendingRealProposal = !string.IsNullOrEmpty(Model.MakerId) && Model.Status == (int)EnumExtensions.PipOutcomeStatus.PendingChecker;
+
+    // Cosmetic only - the API (PipService's actingUserId != MakerId
+    // invariant) is the real authority; a 403 there still bounces back
+    // here with a clear error message via TempData.
+    bool canActOn = isPendingRealProposal && !string.IsNullOrEmpty(currentUserId) && Model.MakerId != currentUserId;
+
+    string outcomeBadgeClass = Model.FinalOutcome switch
+    {
+        (int)EnumExtensions.PipFinalOutcome.InProgress => "bg-warning",
+        (int)EnumExtensions.PipFinalOutcome.Successful => "bg-success",
+        (int)EnumExtensions.PipFinalOutcome.Unsuccessful => "bg-danger",
+        _ => "bg-grey"
+    };
+
+    string alertClass = Model.FinalOutcome switch
+    {
+        (int)EnumExtensions.PipFinalOutcome.Successful => "alert-success",
+        (int)EnumExtensions.PipFinalOutcome.Unsuccessful => "alert-danger",
+        _ => "alert-info"
+    };
+
+    string outcomeText = !string.IsNullOrEmpty(Model.FinalOutcomeName)
+        ? Model.FinalOutcomeName
+        : ((EnumExtensions.PipFinalOutcome)Model.FinalOutcome).ToString();
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-clipboard4 position-left"></i>
+            PIP Record Details
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Index" class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <!-- Final Outcome Banner -->
+
+        <div class="alert @alertClass">
+            <strong>Final Outcome :</strong>
+            <span class="label @outcomeBadgeClass">@outcomeText</span>
+
+            @if (isPendingRealProposal)
+            {
+                <span class="text-muted">
+                    - a proposal is currently pending checker action.
+                </span>
+            }
+        </div>
+
+        <!-- Employee Information -->
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-user position-left"></i>
+                Employee Information
+            </legend>
+
+            <div class="row">
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Employee</label>
+                    <h6>@Model.EmployeeName</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Employee Code</label>
+                    <h6>@(Model.EmployeeCode ?? "-")</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Department</label>
+                    <h6>@(Model.DepartmentName ?? "-")</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Designation</label>
+                    <h6>@(Model.DesignationName ?? "-")</h6>
+                </div>
+
+            </div>
+
+        </fieldset>
+
+        <!-- PIP Window / Goals -->
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-calendar3 position-left"></i>
+                PIP Window
+            </legend>
+
+            <div class="row">
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Start Date</label>
+                    <h6>@Model.StartDate.ToString("dd-MMM-yyyy")</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">End Date</label>
+                    <h6>@Model.EndDate.ToString("dd-MMM-yyyy")</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Triggering Probation Confirmation</label>
+                    <h6>
+                        <a asp-controller="ProbationConfirmation" asp-action="Details" asp-route-id="@Model.ProbationConfirmationId">
+                            View
+                        </a>
+                    </h6>
+                </div>
+
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <label class="text-semibold text-muted">Goals</label>
+                    <div class="well">@Model.Goals</div>
+                </div>
+            </div>
+
+        </fieldset>
+
+        <!-- Mid Review (display-only - no API action to set this exists yet) -->
+
+        @if (Model.MidReviewDate.HasValue || !string.IsNullOrEmpty(Model.MidReviewNotes))
+        {
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-eye position-left"></i>
+                    Mid Review
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-3">
+                        <label class="text-semibold text-muted">Mid Review Date</label>
+                        <h6>@(Model.MidReviewDate?.ToString("dd-MMM-yyyy") ?? "-")</h6>
+                    </div>
+
+                    <div class="col-md-9">
+                        <label class="text-semibold text-muted">Mid Review Notes</label>
+                        <div class="well">@(Model.MidReviewNotes ?? "-")</div>
+                    </div>
+
+                </div>
+
+            </fieldset>
+        }
+
+        <!-- Maker / Checker -->
+
+        @if (!string.IsNullOrEmpty(Model.MakerId))
+        {
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-clock position-left"></i>
+                    Maker-Checker Timeline
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-3">
+                        <label class="text-semibold text-muted">Proposed By</label>
+                        <h6>@(Model.MakerName ?? "-")</h6>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="text-semibold text-muted">Proposed On</label>
+                        <h6>@(Model.MakerActionOn?.ToString("dd-MMM-yyyy HH:mm") ?? "-")</h6>
+                    </div>
+
+                    @if (!isPendingRealProposal)
+                    {
+                        <div class="col-md-3">
+                            <label class="text-semibold text-muted">@(Model.Status == (int)EnumExtensions.PipOutcomeStatus.Approved ? "Approved By" : "Rejected By")</label>
+                            <h6>@(Model.CheckerName ?? "-")</h6>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="text-semibold text-muted">Checker Action On</label>
+                            <h6>@(Model.CheckerActionOn?.ToString("dd-MMM-yyyy HH:mm") ?? "-")</h6>
+                        </div>
+                    }
+
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.MakerRemarks))
+                {
+                    <div class="row">
+                        <div class="col-md-12">
+                            <label class="text-semibold text-muted">Maker Remarks</label>
+                            <div class="well">@Model.MakerRemarks</div>
+                        </div>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.CheckerRemarks))
+                {
+                    <div class="row">
+                        <div class="col-md-12">
+                            <label class="text-semibold text-muted">Checker Remarks</label>
+                            <div class="well">@Model.CheckerRemarks</div>
+                        </div>
+                    </div>
+                }
+
+            </fieldset>
+        }
+
+        @if (canPropose || canActOn)
+        {
+            <hr />
+
+            <div class="text-right">
+
+                @if (canPropose)
+                {
+                    <button type="button" class="btn bg-primary btnPropose">
+                        <i class="icon-clipboard4"></i>
+                        Propose Outcome
+                    </button>
+                }
+
+                @if (canActOn)
+                {
+                    <button type="button" class="btn btn-danger btnReject">
+                        <i class="icon-cross2"></i>
+                        Reject
+                    </button>
+
+                    <button type="button" class="btn btn-success btnApprove">
+                        <i class="icon-checkmark4"></i>
+                        Approve
+                    </button>
+                }
+
+            </div>
+        }
+
+    </div>
+
+</div>
+
+@if (canPropose)
+{
+    <div class="modal fade" id="proposeModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5>Propose PIP Outcome</h5>
+                </div>
+
+                <form asp-action="ProposeOutcome" method="post">
+
+                    <div class="modal-body">
+
+                        <input type="hidden" name="id" value="@Model.Id" />
+
+                        <div class="form-group">
+
+                            <label>Final Outcome</label><br />
+
+                            <label class="radio-inline">
+                                <input type="radio" name="FinalOutcome" value="@((int)EnumExtensions.PipFinalOutcome.Successful)" required />
+                                Successful
+                            </label>
+
+                            <label class="radio-inline">
+                                <input type="radio" name="FinalOutcome" value="@((int)EnumExtensions.PipFinalOutcome.Unsuccessful)" required />
+                                Unsuccessful
+                            </label>
+
+                        </div>
+
+                        <div class="form-group">
+                            <label>Maker Remarks</label>
+                            <textarea class="form-control" name="MakerRemarks" maxlength="1000"></textarea>
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        <button type="submit" class="btn bg-primary">Submit Proposal</button>
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+}
+
+@if (canActOn)
+{
+    <div class="modal fade" id="rejectModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5>Reject PIP Outcome Proposal</h5>
+                </div>
+
+                <form asp-action="RejectOutcome" method="post">
+
+                    <div class="modal-body">
+
+                        <input type="hidden" name="id" value="@Model.Id" />
+
+                        <label>Checker Remarks (required)</label>
+
+                        <textarea class="form-control" name="remarks" required></textarea>
+
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-danger">Reject</button>
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+    <form id="approveForm" asp-action="ApproveOutcome" method="post" style="display:none;">
+        <input type="hidden" name="id" value="@Model.Id" />
+    </form>
+}
+
+<script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+
+@section Scripts {
+
+    <script>
+
+        @if (TempData["Success"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Success',
+                    text: '@Html.Raw(TempData["Success"])',
+                    type: 'success',
+                    confirmButtonColor: '#66BB6A'
+                });
+            </text>
+        }
+
+        @if (TempData["GlobalError"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Error',
+                    text: '@Html.Raw(TempData["GlobalError"])',
+                    type: 'error',
+                    confirmButtonColor: '#EF5350'
+                });
+            </text>
+        }
+
+    </script>
+
+    <script>
+
+        $(document).ready(function () {
+
+            $(document).on('click', '.btnPropose', function () {
+                $('#proposeModal').modal('show');
+            });
+
+            $(document).on('click', '.btnReject', function () {
+                $('#rejectModal').modal('show');
+            });
+
+            $(document).on('click', '.btnApprove', function () {
+
+                swal({
+                    title: 'Approve this PIP outcome?',
+                    text: 'The resolved outcome will be applied to the employee record.',
+                    type: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#66BB6A',
+                    confirmButtonText: 'Yes, approve it'
+                }, function (isConfirm) {
+                    if (isConfirm) {
+                        $('#approveForm').submit();
+                    }
+                });
+
+            });
+
+        });
+
+    </script>
+
+}

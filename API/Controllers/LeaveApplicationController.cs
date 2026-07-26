@@ -336,6 +336,31 @@ namespace API.Controllers
 
         #endregion
 
+        #region Restricted Holiday
+
+        // Which tenant-wide optional holiday dates (from today onward) this
+        // employee can still claim as a Restricted Holiday, each flagged
+        // AlreadyClaimed if they already have a Pending/Approved
+        // "Restricted Holiday" LeaveApplication on that date. Read-only.
+        //
+        // employeeId/tenantId are taken as explicit query params, matching
+        // this controller's own existing convention (GetEmployeeLeaves,
+        // GetPendingForApprover, Calendar all take employeeId/tenantId the
+        // same way) rather than resolving via JWT claims - unlike the
+        // sibling Attendance-request controllers (Wfh/ShortLeave/OnDuty/
+        // CompOff), this controller has no TenantId/ActingUserId claim
+        // properties anywhere and always relies on the caller (the APP
+        // layer, via SessionHelper) to supply these explicitly.
+        [HttpGet("available-restricted-holidays")]
+        public async Task<IActionResult> GetAvailableRestrictedHolidays([FromQuery] string employeeId, [FromQuery] string tenantId)
+        {
+            var data = await _leaveApplicationService.GetAvailableRestrictedHolidaysAsync(employeeId, tenantId);
+
+            return Ok(data);
+        }
+
+        #endregion
+
         #region Approval History Details
         [HttpGet("approval-history")]
         public async Task<IActionResult>GetAllApprovalHistory()

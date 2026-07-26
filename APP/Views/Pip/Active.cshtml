@@ -1,0 +1,181 @@
+@model IEnumerable<PipRecordDto>
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"] = "Active PIPs";
+
+    string StatusBadgeClass(int status) => status switch
+    {
+        (int)EnumExtensions.PipOutcomeStatus.PendingChecker => "bg-warning",
+        (int)EnumExtensions.PipOutcomeStatus.Approved => "bg-success",
+        (int)EnumExtensions.PipOutcomeStatus.Rejected => "bg-danger",
+        _ => "bg-grey"
+    };
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-alarm position-left"></i>
+            Active PIPs
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Index" class="btn btn-default">
+                <i class="icon-list"></i>
+                All PIP Records
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="Active" method="get" class="row">
+
+            <div class="col-md-4">
+                <select name="departmentId" class="form-control">
+                    <option value="">-- All Departments --</option>
+                    @if (ViewBag.DepartmentList is SelectList deptList)
+                    {
+                        foreach (SelectListItem item in deptList)
+                        {
+                            <option value="@item.Value" selected="@(item.Value == (string)ViewBag.DepartmentId)">@item.Text</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <input type="text"
+                       name="search"
+                       value="@ViewBag.Search"
+                       class="form-control"
+                       placeholder="Search by employee name/code..." />
+            </div>
+
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-default">
+                    <i class="icon-search4"></i>
+                    Filter
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+
+    <div class="table-responsive">
+
+        <table class="table table-bordered table-striped">
+
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Department</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th>Days Remaining</th>
+                    <th>Outcome Proposal Status</th>
+                    <th width="100">Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @if (Model != null && Model.Any())
+                {
+                    var today = DateTime.Today;
+
+                    foreach (var item in Model)
+                    {
+                        var daysRemaining = (item.EndDate.Date - today).Days;
+
+                        <tr>
+
+                            <td>
+                                @item.EmployeeName
+                                <br />
+                                <span class="text-muted text-size-small">@item.EmployeeCode</span>
+                            </td>
+
+                            <td>@(item.DepartmentName ?? "-")</td>
+
+                            <td>@item.StartDate.ToString("dd-MMM-yyyy")</td>
+
+                            <td>@item.EndDate.ToString("dd-MMM-yyyy")</td>
+
+                            <td>
+                                @if (daysRemaining < 0)
+                                {
+                                    <span class="label bg-danger">Overdue by @Math.Abs(daysRemaining) day(s)</span>
+                                }
+                                else
+                                {
+                                    <span class="label bg-info">@daysRemaining day(s) left</span>
+                                }
+                            </td>
+
+                            <td>
+                                @if (!string.IsNullOrEmpty(item.MakerId))
+                                {
+                                    <span class="label @StatusBadgeClass(item.Status)">@(item.StatusName ?? ((EnumExtensions.PipOutcomeStatus)item.Status).ToString())</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">No proposal yet</span>
+                                }
+                            </td>
+
+                            <td style="padding: 10px 15px;">
+
+                                <a asp-action="Details"
+                                   asp-route-id="@item.Id"
+                                   class="btn btn-default btn-icon"
+                                   data-popup="tooltip"
+                                   title="View">
+
+                                    <i class="icon-eye"></i>
+
+                                </a>
+
+                            </td>
+
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7" class="text-center text-muted" style="padding:30px;">
+                            <i class="icon-checkmark-circle" style="font-size:32px;"></i><br />
+                            No active PIP records.
+                        </td>
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+<script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+
+@section Scripts {
+
+    <script>
+
+        $(document).ready(function () {
+            $('[data-popup="tooltip"]').tooltip();
+        });
+
+    </script>
+
+}

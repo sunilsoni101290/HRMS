@@ -1,0 +1,86 @@
+@model IEnumerable<RejoiningHistoryDto>
+
+@{
+    var employee = ViewBag.Employee as EmployeeListDto;
+    ViewData["Title"] = "Rejoin History" + (employee != null ? " - " + employee.FirstName + " " + employee.LastName : "");
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-user-plus position-left"></i>
+            Rejoin History
+            @if (employee != null)
+            {
+                <span class="text-muted"> - @employee.FirstName @employee.LastName (@employee.EmployeeCode)</span>
+            }
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-controller="Employee" asp-action="Details" asp-route-id="@ViewBag.EmployeeId" class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back to Employee
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="table-responsive">
+
+        <table class="table table-bordered table-striped">
+
+            <thead>
+                <tr>
+                    <th>Previous Relieving Date</th>
+                    <th>Previous Joining Date</th>
+                    <th>New Joining Date</th>
+                    <th>Reason</th>
+                    <th>Processed By</th>
+                    <th>Processed On</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+
+                            <td>@item.PreviousRelievingDate.ToString("dd-MMM-yyyy")</td>
+
+                            <td>@item.PreviousJoiningDate.ToString("dd-MMM-yyyy")</td>
+
+                            <td><span class="label bg-success">@item.NewJoiningDate.ToString("dd-MMM-yyyy")</span></td>
+
+                            <td>@(string.IsNullOrWhiteSpace(item.Reason) ? "-" : item.Reason)</td>
+
+                            <td>@(item.ProcessedByName ?? "-")</td>
+
+                            <td>@item.ProcessedOn.ToString("dd-MMM-yyyy HH:mm")</td>
+
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center text-muted" style="padding:30px;">
+                            <i class="icon-user-plus" style="font-size:32px;"></i><br />
+                            No rejoin history found for this employee.
+                        </td>
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>

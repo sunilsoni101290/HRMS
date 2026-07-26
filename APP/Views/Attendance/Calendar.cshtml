@@ -47,9 +47,9 @@
         _ => ("#fbfbfc", "#dde2ea", "#a7afbd", "", "No Data")
     };
 
-    string[] workingStatuses = { "Present", "WorkFromHome", "OnDuty", "Overtime", "CompOff" };
-    string[] lateStatuses = { "Late", "HalfDay", "EarlyExit" };
-    string[] absentStatuses = { "Absent", "MissPunch" };
+    string[] workingStatuses = { "Present", "WFH", "On Duty", "Overtime", "Comp Off" };
+    string[] lateStatuses = { "Late", "Half Day", "Early Exit" };
+    string[] absentStatuses = { "Absent", "Miss Punch" };
 
     int presentCount = byDay.Values.Count(x => workingStatuses.Contains(x.Status));
     int lateCount = byDay.Values.Count(x => lateStatuses.Contains(x.Status));

@@ -1,0 +1,137 @@
+@model RejoinEmployeeDto
+
+@{
+    ViewData["Title"] = "Rejoin Employee";
+    var employee = ViewBag.Employee as EmployeeListDto;
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-user-plus position-left"></i>
+            Rejoin Employee
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Eligible" class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        @if (employee != null)
+        {
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-user position-left"></i>
+                    Employee (read-only)
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-3">
+                        <label class="text-semibold text-muted">Name</label>
+                        <h6>@employee.FirstName @employee.LastName</h6>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="text-semibold text-muted">Employee Code</label>
+                        <h6>@employee.EmployeeCode</h6>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="text-semibold text-muted">Joining Date (Previous)</label>
+                        <h6>@(employee.JoiningDate?.ToString("dd-MMM-yyyy") ?? "-")</h6>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="text-semibold text-muted">Relieving Date</label>
+                        <h6><span class="label bg-danger">@(employee.RelievingDate?.ToString("dd-MMM-yyyy") ?? "-")</span></h6>
+                    </div>
+
+                </div>
+
+            </fieldset>
+        }
+
+        <form asp-action="Create" method="post">
+
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <input asp-for="EmployeeId" type="hidden" />
+
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-calendar3 position-left"></i>
+                    Rejoin Details
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-4">
+
+                        <div class="form-group">
+
+                            <label asp-for="NewJoiningDate"></label>
+
+                            <input asp-for="NewJoiningDate"
+                                   type="date"
+                                   class="form-control"
+                                   min="@(employee?.RelievingDate?.ToString("yyyy-MM-dd"))" />
+
+                            <span asp-validation-for="NewJoiningDate" class="text-danger"></span>
+
+                            <span class="text-muted text-size-small">Must be on/after the previous Relieving Date.</span>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-8">
+
+                        <div class="form-group">
+
+                            <label asp-for="Reason"></label>
+
+                            <textarea asp-for="Reason" rows="3" class="form-control"></textarea>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <hr />
+
+            <div class="text-right">
+
+                <a asp-action="Eligible" class="btn btn-default">Cancel</a>
+
+                <button type="submit" class="btn bg-primary">
+                    <i class="icon-checkmark4"></i>
+                    Rejoin Employee
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

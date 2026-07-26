@@ -1,0 +1,216 @@
+@model EmployeeFeedbackDto
+
+@{
+    ViewData["Title"] = "Feedback Details";
+    bool isAdmin = ViewBag.IsAdmin ?? false;
+    string? currentUserId = ViewBag.CurrentUserId as string;
+
+    // Cosmetic only - the API's Reporting-Manager-or-HR authorization rule
+    // is the real gate; a 403 there still bounces back with a clear
+    // TempData message.
+    bool canManage = isAdmin || Model.GivenByUserId == currentUserId;
+
+    string categoryText = !string.IsNullOrEmpty(Model.CategoryName)
+        ? Model.CategoryName
+        : ((EnumExtensions.FeedbackCategory)Model.Category).ToString();
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-bubbles4 position-left"></i>
+            Feedback Details
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Index" asp-route-employeeId="@Model.EmployeeId" class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-user position-left"></i>
+                Overview
+            </legend>
+
+            <div class="row">
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Employee</label>
+                    <h6>@Model.EmployeeName (@Model.EmployeeCode)</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Feedback Date</label>
+                    <h6>@Model.FeedbackDate.ToString("dd-MMM-yyyy")</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Category</label>
+                    <h6><span class="label bg-info">@categoryText</span></h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Rating</label>
+                    <h6>
+                        @if (Model.Rating.HasValue)
+                        {
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                <i class="icon-star-full2 @(i <= Model.Rating ? "text-warning" : "text-muted")"></i>
+                            }
+                        }
+                        else
+                        {
+                            <span class="text-muted">Not rated</span>
+                        }
+                    </h6>
+                </div>
+
+            </div>
+
+            <div class="row">
+
+                <div class="col-md-4">
+                    <label class="text-semibold text-muted">Given By</label>
+                    <h6>@(Model.GivenByName ?? "-")</h6>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="text-semibold text-muted">Visible To Employee</label>
+                    <h6>
+                        @if (Model.IsVisibleToEmployee)
+                        {
+                            <span class="label bg-success">Visible</span>
+                        }
+                        else
+                        {
+                            <span class="label bg-grey">Hidden</span>
+                        }
+                    </h6>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="text-semibold text-muted">Recorded On</label>
+                    <h6>@Model.CreatedOn.ToString("dd-MMM-yyyy HH:mm")</h6>
+                </div>
+
+            </div>
+
+        </fieldset>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Strengths))
+        {
+            <fieldset>
+                <legend class="text-semibold"><i class="icon-thumbs-up2 position-left"></i>Strengths</legend>
+                <div class="well">@Model.Strengths</div>
+            </fieldset>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Model.AreasOfImprovement))
+        {
+            <fieldset>
+                <legend class="text-semibold"><i class="icon-arrow-up8 position-left"></i>Areas Of Improvement</legend>
+                <div class="well">@Model.AreasOfImprovement</div>
+            </fieldset>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Model.Comments))
+        {
+            <fieldset>
+                <legend class="text-semibold"><i class="icon-file-text2 position-left"></i>Comments</legend>
+                <div class="well">@Model.Comments</div>
+            </fieldset>
+        }
+
+        @if (canManage)
+        {
+            <hr />
+
+            <div class="text-right">
+
+                <button type="button" class="btn btn-danger btnDelete" data-id="@Model.Id" data-employeeid="@Model.EmployeeId">
+                    <i class="icon-cross2"></i>
+                    Delete
+                </button>
+
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn bg-primary">
+                    <i class="icon-pencil7"></i>
+                    Edit
+                </a>
+
+            </div>
+        }
+
+    </div>
+
+</div>
+
+@if (canManage)
+{
+    <form id="deleteForm" asp-action="Delete" method="post" style="display:none;">
+        <input type="hidden" id="DeleteFeedbackId" name="id" />
+        <input type="hidden" id="DeleteFeedbackEmployeeId" name="employeeId" />
+    </form>
+}
+
+<script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+
+@section Scripts {
+
+    <script>
+
+        @if (TempData["GlobalError"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Error',
+                    text: '@Html.Raw(TempData["GlobalError"])',
+                    type: 'error',
+                    confirmButtonColor: '#EF5350'
+                });
+            </text>
+        }
+
+    </script>
+
+    <script>
+
+        $(document).ready(function () {
+
+            $(document).on('click', '.btnDelete', function () {
+                var id = $(this).data('id');
+                var employeeId = $(this).data('employeeid');
+
+                swal({
+                    title: 'Delete this feedback?',
+                    text: 'This cannot be undone.',
+                    type: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#EF5350',
+                    confirmButtonText: 'Yes, delete it'
+                }, function (isConfirm) {
+                    if (isConfirm) {
+                        $('#DeleteFeedbackId').val(id);
+                        $('#DeleteFeedbackEmployeeId').val(employeeId);
+                        $('#deleteForm').submit();
+                    }
+                });
+            });
+
+        });
+
+    </script>
+
+}

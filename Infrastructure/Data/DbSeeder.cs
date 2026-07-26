@@ -417,6 +417,87 @@ namespace Infrastructure.Data
                 await context.SaveChangesAsync();
             }
 
+            // =========================
+            // LEAVE TYPES (Leave Policy Engine foundation)
+            // =========================
+            // Seeds the two LeaveType rows the later Comp Off and Restricted
+            // Holiday features depend on. Idempotent per-row (checked by
+            // Name, matching the upsert-by-name convention already used for
+            // other seed blocks in this method), and placed BEFORE the
+            // Shifts early-return below so it also runs - and can still
+            // insert any still-missing row - on every subsequent app
+            // startup against an already-seeded database, not just on a
+            // brand-new install.
+            //
+            // Later agents: look these rows up by Name ("Comp Off" /
+            // "Restricted Holiday") via context.LeaveTypes, exactly like
+            // this block does, e.g.:
+            //   await context.LeaveTypes.FirstOrDefaultAsync(x => x.Name == "Comp Off");
+            if (!await context.LeaveTypes.AnyAsync(x => x.Name == "Comp Off"))
+            {
+                var compOff = new LeaveType
+                {
+                    Id = IDManager.GetNewId(new LeaveType()),
+                    Name = "Comp Off",
+
+                    // 0 = no fixed annual cap since Comp Off is earned (via
+                    // the Comp Off feature crediting it directly), not
+                    // allocated up front like Casual/Sick/Earned Leave.
+                    MaxDaysPerYear = 0,
+                    IsPaid = true,
+
+                    AllowCarryForward = false,
+                    MaxCarryForwardDays = null,
+                    AllowHalfDay = false,
+
+                    MinServiceDaysRequired = 0,
+                    AccrualFrequency = LeaveAccrualFrequency.None,
+                    AccrualDaysPerCycle = 0,
+                    IsEncashable = false,
+                    MaxEncashableDays = null,
+                    ApplicableGender = LeaveApplicableGender.All,
+                    IsRestrictedHolidayType = false,
+
+                    TenantId = tenantId,
+                    CreatedBy = "System"
+                };
+
+                await context.LeaveTypes.AddAsync(compOff);
+                await context.SaveChangesAsync();
+            }
+
+            if (!await context.LeaveTypes.AnyAsync(x => x.Name == "Restricted Holiday"))
+            {
+                var restrictedHoliday = new LeaveType
+                {
+                    Id = IDManager.GetNewId(new LeaveType()),
+                    Name = "Restricted Holiday",
+
+                    // Sensible default allowance - HR can edit it later via
+                    // the LeaveType CRUD screen.
+                    MaxDaysPerYear = 2,
+                    IsPaid = true,
+
+                    AllowCarryForward = false,
+                    MaxCarryForwardDays = null,
+                    AllowHalfDay = false,
+
+                    MinServiceDaysRequired = 0,
+                    AccrualFrequency = LeaveAccrualFrequency.None,
+                    AccrualDaysPerCycle = 0,
+                    IsEncashable = false,
+                    MaxEncashableDays = null,
+                    ApplicableGender = LeaveApplicableGender.All,
+                    IsRestrictedHolidayType = true,
+
+                    TenantId = tenantId,
+                    CreatedBy = "System"
+                };
+
+                await context.LeaveTypes.AddAsync(restrictedHoliday);
+                await context.SaveChangesAsync();
+            }
+
             #region Shift
 
             if (await context.Shifts.AnyAsync())
@@ -1480,6 +1561,46 @@ namespace Infrastructure.Data
                 AppFeatureConstants.ATTENDANCE_MANAGEMENT, "bi bi-house-door", AppFeatureType.Transaction, 63,
                 canAdd: true, canApprove: true);
 
+            // On Duty Request - employee-submitted date-range request for
+            // official work carried out away from the office, single-level
+            // approval (Reporting Manager or HR/Admin override), child of
+            // the existing Attendance Management group (same level as Work
+            // From Home Request). Reachable by both HR Manager (approve/
+            // view-all override) and plain Employee (create/view own +
+            // approve direct reports) - see the role-permission grants
+            // below.
+            Def("On Duty Request", AppFeatureConstants.ON_DUTY_REQUEST,
+                AppFeatureConstants.ON_DUTY_REQUEST_CONTROLLER, AppFeatureConstants.ON_DUTY_REQUEST_ACTION,
+                AppFeatureConstants.ATTENDANCE_MANAGEMENT, "bi bi-briefcase", AppFeatureType.Transaction, 64,
+                canAdd: true, canApprove: true);
+
+            // Short Leave Request - employee-submitted request for a few
+            // hours off during a working day, single-level approval
+            // (Reporting Manager or HR/Admin override), child of the
+            // existing Attendance Management group (same level as Work From
+            // Home Request/On Duty Request). Reachable by both HR Manager
+            // (approve/view-all override) and plain Employee (create/view
+            // own + approve direct reports) - see the role-permission
+            // grants below.
+            Def("Short Leave Request", AppFeatureConstants.SHORT_LEAVE_REQUEST,
+                AppFeatureConstants.SHORT_LEAVE_REQUEST_CONTROLLER, AppFeatureConstants.SHORT_LEAVE_REQUEST_ACTION,
+                AppFeatureConstants.ATTENDANCE_MANAGEMENT, "bi bi-clock-history", AppFeatureType.Transaction, 65,
+                canAdd: true, canApprove: true);
+
+            // Comp Off ("System-detected, HR-approved") - unlike Work From
+            // Home/On Duty/Short Leave Request above, there is no
+            // canAdd/Create here: candidates are only ever system-created by
+            // CompOffDetectionService, never submitted by an employee or
+            // created via the API. Child of the existing Attendance
+            // Management group (same level as the request features above).
+            // Reachable by both HR Manager (view/approve - the only role
+            // that can act on a candidate) and plain Employee (view own
+            // history only) - see the role-permission grants below.
+            Def("Comp Off", AppFeatureConstants.COMP_OFF,
+                AppFeatureConstants.COMP_OFF_CONTROLLER, AppFeatureConstants.COMP_OFF_ACTION,
+                AppFeatureConstants.ATTENDANCE_MANAGEMENT, "bi bi-calendar-plus", AppFeatureType.Transaction, 67,
+                canApprove: true);
+
             // ---------------- PAYROLL (ensure parent + children + fixes) ----------------
             Def("Payroll", AppFeatureConstants.PAYROLL, "", "",
                 null, "bi bi-cash-stack", AppFeatureType.Transaction, 70);
@@ -1580,6 +1701,78 @@ namespace Infrastructure.Data
                 AppFeatureConstants.ONBOARDING_TEMPLATE_CONTROLLER, AppFeatureConstants.ONBOARDING_TEMPLATE_ACTION,
                 AppFeatureConstants.ONBOARDING_MANAGEMENT, "bi bi-card-checklist", AppFeatureType.Master, 98,
                 canAdd: true, canEdit: true, canDelete: true);
+
+            // ---------------- PROBATION & CONFIRMATION (Maker-Checker) ----------------
+            // New top-level module (sibling of Onboarding/Asset
+            // Management/Recruitment above), NOT nested under Attendance
+            // Management or Employee Management - see the
+            // PROBATION_CONFIRMATION_MANAGEMENT constant in
+            // AppFeatureConstants.cs. This is the first feature in this
+            // codebase using the Maker-Checker (segregation of duties)
+            // pattern - HR-only (no Employee self-service grant below).
+            // LATER AGENTS building PIP/Transfer: add your child features
+            // here too (order 122/123+), nested under this same
+            // PROBATION_CONFIRMATION_MANAGEMENT parent - do not create a
+            // new parent group.
+            Def("Probation & Confirmation", AppFeatureConstants.PROBATION_CONFIRMATION_MANAGEMENT, "", "",
+                null, "bi bi-person-check", AppFeatureType.Transaction, 120);
+
+            Def("Probation Confirmation", AppFeatureConstants.PROBATION_CONFIRMATION,
+                AppFeatureConstants.PROBATION_CONFIRMATION_CONTROLLER, AppFeatureConstants.PROBATION_CONFIRMATION_ACTION,
+                AppFeatureConstants.PROBATION_CONFIRMATION_MANAGEMENT, "bi bi-person-check-fill", AppFeatureType.Transaction, 121,
+                canAdd: true, canApprove: true);
+
+            // PIP (Performance Improvement Plan) - Phase 2, a SIBLING
+            // child feature under the SAME PROBATION_CONFIRMATION_MANAGEMENT
+            // parent above (not a new parent). Creation (hand-off from an
+            // Approved Probation Confirmation with Recommendation ==
+            // PlaceOnPIP) has no maker-checker gate; the gate applies to
+            // the final outcome resolution (propose/approve/reject) - see
+            // Domain/Entities/PipRecord.cs / PipService.
+            Def("PIP", AppFeatureConstants.PIP,
+                AppFeatureConstants.PIP_CONTROLLER, AppFeatureConstants.PIP_ACTION,
+                AppFeatureConstants.PROBATION_CONFIRMATION_MANAGEMENT, "bi bi-graph-up-arrow", AppFeatureType.Transaction, 122,
+                canAdd: true, canApprove: true);
+
+            // Employee Transfer - Phase 3, a SIBLING child feature under
+            // the SAME PROBATION_CONFIRMATION_MANAGEMENT parent above (not
+            // a new parent). MAKER proposes new Company/Branch/Department/
+            // Designation/ReportingManager values for an Employee; a
+            // DIFFERENT person as CHECKER must Approve/Reject before the
+            // change is applied to the live Employee record - see
+            // Domain/Entities/EmployeeTransfer.cs / EmployeeTransferService.
+            Def("Employee Transfer", AppFeatureConstants.EMPLOYEE_TRANSFER,
+                AppFeatureConstants.EMPLOYEE_TRANSFER_CONTROLLER, AppFeatureConstants.EMPLOYEE_TRANSFER_ACTION,
+                AppFeatureConstants.PROBATION_CONFIRMATION_MANAGEMENT, "bi bi-arrow-left-right", AppFeatureType.Transaction, 123,
+                canAdd: true, canApprove: true);
+
+            // Employee Feedback - Phase 4, a SIBLING child feature under the
+            // SAME PROBATION_CONFIRMATION_MANAGEMENT parent above (not a new
+            // parent). UNLIKE the three phases above, this feature has NO
+            // maker-checker workflow - plain CRUD (View/Create/Edit/Delete),
+            // and a BROADER audience: Reporting Managers and Employees
+            // (self-view) interact with it directly, not just HR - see the
+            // dual RolePermission grant blocks below (hrManagerRole gets
+            // full CRUD, employeeRole gets View/Create since Reporting
+            // Managers giving feedback are ordinary Employee-role users in
+            // this codebase, not a separate role).
+            Def("Employee Feedback", AppFeatureConstants.EMPLOYEE_FEEDBACK,
+                AppFeatureConstants.EMPLOYEE_FEEDBACK_CONTROLLER, AppFeatureConstants.EMPLOYEE_FEEDBACK_ACTION,
+                AppFeatureConstants.PROBATION_CONFIRMATION_MANAGEMENT, "bi bi-chat-square-text-fill", AppFeatureType.Transaction, 124,
+                canAdd: true, canEdit: true, canDelete: true);
+
+            // Rejoining - Phase 5 (final), a SIBLING child feature under the
+            // SAME PROBATION_CONFIRMATION_MANAGEMENT parent above (not a
+            // new parent). Like Employee Feedback above, NO maker-checker
+            // workflow - a single-step, HR-only rehire action for a FORMER
+            // employee. Only View/Create are needed (canAdd: true; no
+            // canEdit/canDelete) - rejoining history is an append-only
+            // audit log - see Domain/Entities/RejoiningHistory.cs /
+            // RejoiningService.
+            Def("Rejoining", AppFeatureConstants.REJOINING,
+                AppFeatureConstants.REJOINING_CONTROLLER, AppFeatureConstants.REJOINING_ACTION,
+                AppFeatureConstants.PROBATION_CONFIRMATION_MANAGEMENT, "bi bi-arrow-repeat", AppFeatureType.Transaction, 125,
+                canAdd: true);
 
             // ---------------- COMMUNICATION ----------------
             Def("Communication", AppFeatureConstants.COMMUNICATION, "", "",
@@ -2052,6 +2245,243 @@ namespace Infrastructure.Data
                 }
             }
 
+            // On Duty Request - same dual-audience shape as Work From Home
+            // Request above:
+            //   - HR Manager -> View/Create/Approve (the HR override path
+            //     inside OnDutyRequestService.EnsureApproverAuthorizedAsync).
+            //   - Employee -> View/Create (create their own request, view
+            //     their own list; a Reporting Manager approving a direct
+            //     report's request is still authorized purely by
+            //     Employee.ReportingManagerId inside the service - no
+            //     RolePermission check gates the Approve/Reject/Cancel API
+            //     actions themselves, only menu visibility does).
+            // Super Admin / System Configurator already received every
+            // permission from the fullAccessRoles loop above.
+            if (hrManagerRole != null)
+            {
+                var onDutyPermissionIds = await context.Permissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.ON_DUTY_REQUEST)
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == hrManagerRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var onDutyNewLinks = onDutyPermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = hrManagerRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (onDutyNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(onDutyNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            if (employeeRole != null)
+            {
+                var onDutySelfServicePermissionIds = await context.Permissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.ON_DUTY_REQUEST
+                             && (p.Action == Actions.View || p.Action == Actions.Create))
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == employeeRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var onDutyEmployeeNewLinks = onDutySelfServicePermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = employeeRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (onDutyEmployeeNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(onDutyEmployeeNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            // Short Leave Request - same dual-audience shape as Work From
+            // Home Request/On Duty Request above:
+            //   - HR Manager -> View/Create/Approve (the HR override path
+            //     inside ShortLeaveRequestService.EnsureApproverAuthorizedAsync).
+            //   - Employee -> View/Create (create their own request, view
+            //     their own list; a Reporting Manager approving a direct
+            //     report's request is still authorized purely by
+            //     Employee.ReportingManagerId inside the service - no
+            //     RolePermission check gates the Approve/Reject/Cancel API
+            //     actions themselves, only menu visibility does).
+            // Super Admin / System Configurator already received every
+            // permission from the fullAccessRoles loop above.
+            if (hrManagerRole != null)
+            {
+                var shortLeavePermissionIds = await context.Permissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.SHORT_LEAVE_REQUEST)
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == hrManagerRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var shortLeaveNewLinks = shortLeavePermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = hrManagerRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (shortLeaveNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(shortLeaveNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            if (employeeRole != null)
+            {
+                var shortLeaveSelfServicePermissionIds = await context.Permissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.SHORT_LEAVE_REQUEST
+                             && (p.Action == Actions.View || p.Action == Actions.Create))
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == employeeRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var shortLeaveEmployeeNewLinks = shortLeaveSelfServicePermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = employeeRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (shortLeaveEmployeeNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(shortLeaveEmployeeNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            // Comp Off - unlike Work From Home Request/On Duty Request/Short
+            // Leave Request above, this is NOT dual-audience for ACTING:
+            //   - HR Manager -> View/Approve (full: review + Approve/Reject
+            //     every candidate tenant-wide - the only role that can act,
+            //     enforced inside CompOffService.ApproveAsync/RejectAsync
+            //     via IsHrOrAdminForAttendanceAsync).
+            //   - Employee -> View only (their own Comp Off history/status,
+            //     for transparency - they never create or act on a
+            //     candidate; candidates are only ever system-created by
+            //     CompOffDetectionService).
+            // Super Admin / System Configurator already received every
+            // permission from the fullAccessRoles loop above.
+            if (hrManagerRole != null)
+            {
+                var compOffPermissionIds = await context.Permissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.COMP_OFF)
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == hrManagerRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var compOffNewLinks = compOffPermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = hrManagerRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (compOffNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(compOffNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            if (employeeRole != null)
+            {
+                var compOffSelfServicePermissionIds = await context.Permissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.COMP_OFF
+                             && p.Action == Actions.View)
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == employeeRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var compOffEmployeeNewLinks = compOffSelfServicePermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = employeeRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (compOffEmployeeNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(compOffEmployeeNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
             // HR Manager -> access to the 4 new Attendance Insights screens
             // (Calendar/Team/Summary/Dashboard). Team Attendance also works
             // for Reporting Managers who aren't HR Manager - that scoping is
@@ -2095,6 +2525,273 @@ namespace Infrastructure.Data
                 if (insightsNewLinks.Count > 0)
                 {
                     await context.RolePermissions.AddRangeAsync(insightsNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            // Probation Confirmation (Maker-Checker) - HR-only feature, no
+            // Employee self-service grant (unlike WFH/On Duty/Short Leave
+            // above): a Probation Confirmation is proposed by HR (the
+            // Maker) about an employee, never self-submitted. HR Manager
+            // gets full View/Create/Approve so the same role can both
+            // propose AND check records - the actingUserId != MakerId
+            // invariant enforced inside
+            // ProbationConfirmationService.ApproveAsync/RejectAsync (not a
+            // RolePermission grant) is what stops a single HR Manager user
+            // from checking their own submission; a different HR Manager
+            // user still can. Super Admin / System Configurator already
+            // received every permission from the fullAccessRoles loop
+            // above. LATER AGENTS building PIP/Transfer: mirror this exact
+            // grant block for your own feature's FeatureId constant.
+            if (hrManagerRole != null)
+            {
+                var probationConfirmationPermissionIds = await context.Permissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.PROBATION_CONFIRMATION)
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == hrManagerRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var probationConfirmationNewLinks = probationConfirmationPermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = hrManagerRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (probationConfirmationNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(probationConfirmationNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            // PIP (Performance Improvement Plan) - Phase 2, same HR-only
+            // model as Probation Confirmation above (no Employee self-
+            // service grant): HR Manager gets full View/Create/Approve so
+            // the same role can both propose AND check outcome
+            // resolutions - the actingUserId != MakerId invariant enforced
+            // inside PipService.ApproveOutcomeAsync/RejectOutcomeAsync
+            // (not a RolePermission grant) is what stops a single HR
+            // Manager user from checking their own proposal; a different
+            // HR Manager user still can. Super Admin / System Configurator
+            // already received every permission from the fullAccessRoles
+            // loop above.
+            if (hrManagerRole != null)
+            {
+                var pipPermissionIds = await context.Permissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.PIP)
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == hrManagerRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var pipNewLinks = pipPermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = hrManagerRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (pipNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(pipNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            // Employee Transfer - Phase 3, same HR-only model as Probation
+            // Confirmation/PIP above (no Employee self-service grant): HR
+            // Manager gets full View/Create/Approve so the same role can
+            // both propose AND check transfers - the actingUserId !=
+            // MakerId invariant enforced inside
+            // EmployeeTransferService.ApproveAsync/RejectAsync (not a
+            // RolePermission grant) is what stops a single HR Manager user
+            // from checking their own submission; a different HR Manager
+            // user still can. Super Admin / System Configurator already
+            // received every permission from the fullAccessRoles loop
+            // above.
+            if (hrManagerRole != null)
+            {
+                var employeeTransferPermissionIds = await context.Permissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.EMPLOYEE_TRANSFER)
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == hrManagerRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var employeeTransferNewLinks = employeeTransferPermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = hrManagerRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (employeeTransferNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(employeeTransferNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            // Employee Feedback - Phase 4, UNLIKE Probation Confirmation/
+            // PIP/Employee Transfer above (all HR-only, no maker-checker),
+            // this feature is plain CRUD with a BROADER audience:
+            //   - HR Manager -> full View/Create/Edit/Delete (the HR
+            //     override path inside EmployeeFeedbackService's Update/
+            //     Delete author-or-Edit-permission check, and the HR path
+            //     inside the Create reporting-manager-or-Create-permission
+            //     check).
+            //   - Employee -> View/Create. There is no separate "Manager"
+            //     role in this codebase (see the dual-audience WFH/On Duty/
+            //     Short Leave grants above) - a Reporting Manager giving
+            //     feedback about a direct report is an ordinary Employee-
+            //     role user, authorized purely by
+            //     Employee.ReportingManagerId inside
+            //     EmployeeFeedbackService.CreateAsync (no RolePermission
+            //     check gates that comparison, only menu visibility does).
+            //     The SAME View grant also covers an Employee viewing
+            //     feedback about themself - filtered to
+            //     IsVisibleToEmployee == true by
+            //     EmployeeFeedbackService.GetForEmployeeAsync/GetByIdAsync,
+            //     not by a separate permission.
+            // Super Admin / System Configurator already received every
+            // permission from the fullAccessRoles loop above.
+            if (hrManagerRole != null)
+            {
+                var employeeFeedbackPermissionIds = await context.Permissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.EMPLOYEE_FEEDBACK)
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == hrManagerRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var employeeFeedbackNewLinks = employeeFeedbackPermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = hrManagerRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (employeeFeedbackNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(employeeFeedbackNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            if (employeeRole != null)
+            {
+                var employeeFeedbackSelfServicePermissionIds = await context.Permissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.EMPLOYEE_FEEDBACK
+                             && (p.Action == Actions.View || p.Action == Actions.Create))
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == employeeRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var employeeFeedbackEmployeeNewLinks = employeeFeedbackSelfServicePermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = employeeRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (employeeFeedbackEmployeeNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(employeeFeedbackEmployeeNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            // Rejoining - Phase 5 (final), same HR-only model as Probation
+            // Confirmation/PIP/Employee Transfer above (no Employee self-
+            // service grant): rejoining is a simple, single-step,
+            // HR-permission-gated rehire action for a FORMER employee, not
+            // self-submitted. HR Manager gets View/Create only (no
+            // Edit/Delete were seeded for this feature - rejoining history
+            // is an append-only audit log). Super Admin / System
+            // Configurator already received every permission from the
+            // fullAccessRoles loop above.
+            if (hrManagerRole != null)
+            {
+                var rejoiningPermissionIds = await context.Permissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.REJOINING)
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == hrManagerRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var rejoiningNewLinks = rejoiningPermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = hrManagerRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (rejoiningNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(rejoiningNewLinks);
                     await context.SaveChangesAsync();
                 }
             }

@@ -85,6 +85,57 @@ namespace Infrastructure
         // Domain/Entities/WfhRequest.cs / WfhRequestService.
         public DbSet<WfhRequest> WfhRequests { get; set; }
 
+        // On Duty requests (date-range, single-level approval) - near-exact
+        // mirror of WfhRequests, no monthly limit - see
+        // Domain/Entities/OnDutyRequest.cs / OnDutyRequestService.
+        public DbSet<OnDutyRequest> OnDutyRequests { get; set; }
+
+        // Short Leave requests (a few hours off during a working day,
+        // single-level approval) - unlike WfhRequests/OnDutyRequests, does
+        // NOT write back to Attendance; deducts a fractional day from a
+        // chosen LeaveType's balance instead - see
+        // Domain/Entities/ShortLeaveRequest.cs / ShortLeaveRequestService.
+        public DbSet<ShortLeaveRequest> ShortLeaveRequests { get; set; }
+
+        // Comp Off candidates ("System-detected, HR-approved") - created only
+        // by CompOffDetectionService, reviewed (Approve/Reject) by HR - see
+        // Domain/Entities/CompOffCandidate.cs / CompOffService.
+        public DbSet<CompOffCandidate> CompOffCandidates { get; set; }
+
+        #endregion
+
+        #region 🧾 PROBATION & CONFIRMATION (Maker-Checker)
+        // Foundational Maker-Checker (segregation-of-duties) workflow - see
+        // Domain/Entities/ProbationConfirmation.cs / ProbationConfirmationService.
+        public DbSet<ProbationConfirmation> ProbationConfirmations { get; set; }
+        #endregion
+
+        #region 🧾 PIP (Performance Improvement Plan) (Maker-Checker)
+        // Phase 2 of Probation & Confirmation - see
+        // Domain/Entities/PipRecord.cs / PipService. Maker-checker applies
+        // to the final outcome resolution, not creation.
+        public DbSet<PipRecord> PipRecords { get; set; }
+        #endregion
+
+        #region 🧾 EMPLOYEE TRANSFER (Maker-Checker)
+        // Phase 3 of Probation & Confirmation (Employee Lifecycle) - see
+        // Domain/Entities/EmployeeTransfer.cs / EmployeeTransferService.
+        public DbSet<EmployeeTransfer> EmployeeTransfers { get; set; }
+        #endregion
+
+        #region 🧾 EMPLOYEE FEEDBACK
+        // Phase 4 of Probation & Confirmation (Employee Lifecycle) - plain
+        // CRUD, no maker-checker - see Domain/Entities/EmployeeFeedback.cs /
+        // EmployeeFeedbackService.
+        public DbSet<EmployeeFeedback> EmployeeFeedbacks { get; set; }
+        #endregion
+
+        #region 🧾 REJOINING
+        // Phase 5 (final) of Probation & Confirmation (Employee Lifecycle) -
+        // simple, single-step, HR-permission-gated rehire action, no
+        // maker-checker - see Domain/Entities/RejoiningHistory.cs /
+        // RejoiningService.
+        public DbSet<RejoiningHistory> RejoiningHistories { get; set; }
         #endregion
 
         #region  📅 LEAVE
@@ -381,6 +432,86 @@ namespace Infrastructure
 
             modelBuilder.Entity<WfhRequest>()
                 .HasIndex(x => new { x.TenantId, x.Status });
+
+            // On Duty requests - same indexing rationale as WfhRequest
+            // above: EmployeeId for "my requests"/approver-scoped lookups,
+            // (TenantId, Status) for admin/HR list + pending-count queries.
+            modelBuilder.Entity<OnDutyRequest>()
+                .HasIndex(x => x.EmployeeId);
+
+            modelBuilder.Entity<OnDutyRequest>()
+                .HasIndex(x => new { x.TenantId, x.Status });
+
+            // Short Leave requests - same indexing rationale as
+            // WfhRequest/OnDutyRequest above: EmployeeId for "my requests"/
+            // approver-scoped lookups, (TenantId, Status) for admin/HR
+            // list + pending-count queries.
+            modelBuilder.Entity<ShortLeaveRequest>()
+                .HasIndex(x => x.EmployeeId);
+
+            modelBuilder.Entity<ShortLeaveRequest>()
+                .HasIndex(x => new { x.TenantId, x.Status });
+
+            // Comp Off candidates - EmployeeId for "my history"/employee-scoped
+            // lookups, (TenantId, Status) for the HR pending-review list, and
+            // a UNIQUE (EmployeeId, AttendanceId) index as a DB-level backstop
+            // against CompOffDetectionService creating duplicate candidates
+            // for the same Attendance row on re-runs (the job also checks
+            // this explicitly before inserting - see
+            // CompOffDetectionService.RunCycleAsync - this index is the
+            // belt-and-braces safety net).
+            modelBuilder.Entity<CompOffCandidate>()
+                .HasIndex(x => x.EmployeeId);
+
+            modelBuilder.Entity<CompOffCandidate>()
+                .HasIndex(x => new { x.TenantId, x.Status });
+
+            modelBuilder.Entity<CompOffCandidate>()
+                .HasIndex(x => new { x.EmployeeId, x.AttendanceId })
+                .IsUnique();
+
+            // Probation Confirmations (Maker-Checker) - EmployeeId for
+            // "does this employee already have a PendingChecker record
+            // open" checks and history lookups, (TenantId, Status) for the
+            // HR pending-review / status-filtered list.
+            modelBuilder.Entity<ProbationConfirmation>()
+                .HasIndex(x => x.EmployeeId);
+
+            modelBuilder.Entity<ProbationConfirmation>()
+                .HasIndex(x => new { x.TenantId, x.Status });
+
+            // PipRecord - EmployeeId for "does this employee already have
+            // an active PIP" lookups, (TenantId, FinalOutcome) for the HR
+            // "active PIPs" tracking view / outcome-filtered list.
+            modelBuilder.Entity<PipRecord>()
+                .HasIndex(x => x.EmployeeId);
+
+            modelBuilder.Entity<PipRecord>()
+                .HasIndex(x => new { x.TenantId, x.FinalOutcome });
+
+            // EmployeeTransfer - EmployeeId for "does this employee already
+            // have a PendingChecker transfer open" checks and transfer-
+            // history lookups, (TenantId, Status) for the HR pending-
+            // review / status-filtered list.
+            modelBuilder.Entity<EmployeeTransfer>()
+                .HasIndex(x => x.EmployeeId);
+
+            modelBuilder.Entity<EmployeeTransfer>()
+                .HasIndex(x => new { x.TenantId, x.Status });
+
+            // EmployeeFeedback - (TenantId, EmployeeId) for the primary
+            // "all feedback about this employee" listing (self-service "my
+            // feedback" view and HR/manager "feedback about employee X"
+            // view both go through GetForEmployeeAsync).
+            modelBuilder.Entity<EmployeeFeedback>()
+                .HasIndex(x => new { x.TenantId, x.EmployeeId });
+
+            // RejoiningHistory - EmployeeId for "all rejoin history for this
+            // employee" lookups (an employee may rejoin more than once over
+            // their lifetime), mirroring the other Phase 1-4 entities' index
+            // on EmployeeId.
+            modelBuilder.Entity<RejoiningHistory>()
+                .HasIndex(x => x.EmployeeId);
 
             modelBuilder.Entity<Payroll>()
                 .HasIndex(x => new { x.EmployeeId, x.SalaryMonth });

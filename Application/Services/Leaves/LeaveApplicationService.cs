@@ -544,6 +544,79 @@ namespace Application.Services.Leaves
 
         #endregion
 
+        #region Restricted Holiday Validation
+
+        // "Restricted Holiday" (Domain design decision - "Pick from
+        // optional holiday dates only"): an employee may only claim this
+        // specific LeaveType (identified by LeaveType.IsRestrictedHolidayType,
+        // NOT by matching on Name) on a date that is already published as
+        // an OPTIONAL holiday (HolidayGroupDetail.IsOptional = true).
+        //
+        // Scope: tenant-wide, not per-employee/HolidayGroup. Every other
+        // consumer of HolidayGroupDetails in this codebase already treats
+        // holidays as tenant-wide with no per-employee HolidayGroup
+        // scoping - WeekOffService.IsHoliday, AttendanceService's calendar
+        // / today / trend holiday cross-references, and
+        // DashboardService's upcoming-holidays widget all query
+        // HolidayGroupDetails filtered only by TenantId (+ date), never by
+        // any Employee-to-HolidayGroup link (no such link exists anywhere
+        // in Employee/Company/Branch). So this validation mirrors that
+        // same tenant-wide convention rather than inventing a new
+        // per-employee scoping concept the rest of the app doesn't have.
+        //
+        // Only triggers when leaveType.IsRestrictedHolidayType is true -
+        // completely inert (returns immediately) for every other
+        // LeaveType, so no other leave type's validation path is affected.
+        private async Task ValidateRestrictedHolidayRequestAsync(
+            LeaveType? leaveType,
+            DateTime fromDate,
+            DateTime toDate,
+            bool isHalfDay,
+            string? tenantId)
+        {
+            if (leaveType == null || !leaveType.IsRestrictedHolidayType)
+                return;
+
+            if (fromDate.Date != toDate.Date)
+                throw new Exception(
+                    "Restricted Holiday can only be applied for a single day - From Date and To Date must be the same.");
+
+            if (isHalfDay)
+                throw new Exception(
+                    "Restricted Holiday cannot be applied as a half day.");
+
+            bool isOptionalHoliday = await _context.HolidayGroupDetails
+                .AnyAsync(x =>
+                    x.HolidayDate.Date == fromDate.Date &&
+                    x.IsOptional &&
+                    x.TenantId == tenantId);
+
+            if (isOptionalHoliday)
+                return;
+
+            // Not a valid optional holiday date - build a helpful message
+            // listing the upcoming optional holidays still available so the
+            // caller can immediately see valid alternatives.
+            var upcoming = await _context.HolidayGroupDetails
+                .Where(x =>
+                    x.IsOptional &&
+                    x.TenantId == tenantId &&
+                    x.HolidayDate.Date >= DateTime.Today)
+                .OrderBy(x => x.HolidayDate)
+                .Select(x => x.HolidayDate)
+                .Take(10)
+                .ToListAsync();
+
+            string availability = upcoming.Count > 0
+                ? " Available optional holidays: " + string.Join(", ", upcoming.Select(d => d.ToString("dd-MMM-yyyy")))
+                : " There are currently no upcoming optional holidays configured for your calendar.";
+
+            throw new Exception(
+                "Restricted Holiday can only be claimed on an optional holiday date." + availability);
+        }
+
+        #endregion
+
         #region CRUD
 
         public async Task<LeaveApplicationDto> CreateAsync(ApplyLeaveRequestDto request)
@@ -568,13 +641,40 @@ namespace Application.Services.Leaves
             if (applicant == null)
                 throw new Exception("Employee not found.");
 
-            try
-            {
-            decimal totalDays = await CalculateTotalDaysAsync(
+            // Restricted Holiday validation - only branches for the
+            // seeded "Restricted Holiday" LeaveType (IsRestrictedHolidayType
+            // = true); every other LeaveType falls straight through
+            // unaffected. Kept outside the try/catch below (like the
+            // pending-leave and employee-not-found checks above) so the
+            // real rejection reason propagates to the API controller's
+            // catch block instead of being swallowed into a generic
+            // "Unable to submit leave application." message.
+            var leaveType = await _context.LeaveTypes.FirstOrDefaultAsync(x => x.Id == request.LeaveTypeId);
+
+            await ValidateRestrictedHolidayRequestAsync(
+                leaveType,
                 request.FromDate,
                 request.ToDate,
                 request.IsHalfDay,
                 request.TenantId);
+
+            try
+            {
+            // A Restricted Holiday claim is deliberately placed ON a
+            // holiday date, so it must always count as exactly 1 day -
+            // CalculateTotalDaysAsync would otherwise exclude that date as
+            // a tenant holiday and return 0, silently defeating the whole
+            // point of consuming 1 day of "Restricted Holiday" balance.
+            // This bypasses that generic holiday-exclusion logic only for
+            // this LeaveType; CalculateTotalDaysAsync itself is untouched
+            // and still applies exactly as before for every other type.
+            decimal totalDays = leaveType != null && leaveType.IsRestrictedHolidayType
+                ? 1m
+                : await CalculateTotalDaysAsync(
+                    request.FromDate,
+                    request.ToDate,
+                    request.IsHalfDay,
+                    request.TenantId);
 
             int startingLevel = await ResolveStartingLevelAsync(applicant);
 
@@ -651,11 +751,27 @@ namespace Application.Services.Leaves
             if (entity.Status == ApprovalStatus.Approved)
                 throw new Exception("Approved leave cannot be modified.");
 
-            decimal totalDays = await CalculateTotalDaysAsync(
+            // Same Restricted Holiday guard as CreateAsync/ApplyLeaveAsync -
+            // without this, switching LeaveTypeId to the Restricted Holiday
+            // type via an Update would bypass the single-day/optional-date
+            // rules entirely and could compute TotalDays=0 via the generic
+            // holiday-exclusion path below. See ValidateRestrictedHolidayRequestAsync.
+            var updateLeaveType = await _context.LeaveTypes.FirstOrDefaultAsync(x => x.Id == request.LeaveTypeId);
+
+            await ValidateRestrictedHolidayRequestAsync(
+                updateLeaveType,
                 request.FromDate,
                 request.ToDate,
                 request.IsHalfDay,
                 request.TenantId ?? entity.TenantId);
+
+            decimal totalDays = updateLeaveType != null && updateLeaveType.IsRestrictedHolidayType
+                ? 1m
+                : await CalculateTotalDaysAsync(
+                    request.FromDate,
+                    request.ToDate,
+                    request.IsHalfDay,
+                    request.TenantId ?? entity.TenantId);
 
             entity.CompanyId = request.CompanyId;
             entity.BranchId = request.BranchId;
@@ -757,11 +873,30 @@ namespace Application.Services.Leaves
         {
             try
             {
-            decimal totalDays = await CalculateTotalDaysAsync(
+            // Same Restricted Holiday validation/bypass as CreateAsync -
+            // see ValidateRestrictedHolidayRequestAsync and the comments
+            // there. Inert (no-op) for every LeaveType other than the
+            // seeded "Restricted Holiday" one. Any rejection here still
+            // just results in this method returning false, exactly like
+            // every other validation failure already caught below (e.g.
+            // "Insufficient leave balance") - no behavior change to how
+            // failures surface for other LeaveTypes.
+            var leaveType = await _context.LeaveTypes.FirstOrDefaultAsync(x => x.Id == request.LeaveTypeId);
+
+            await ValidateRestrictedHolidayRequestAsync(
+                leaveType,
                 request.FromDate,
                 request.ToDate,
                 request.IsHalfDay,
                 request.TenantId);
+
+            decimal totalDays = leaveType != null && leaveType.IsRestrictedHolidayType
+                ? 1m
+                : await CalculateTotalDaysAsync(
+                    request.FromDate,
+                    request.ToDate,
+                    request.IsHalfDay,
+                    request.TenantId);
 
             // Check Leave Balance
             var leaveBalance =
@@ -1104,13 +1239,30 @@ namespace Application.Services.Leaves
             if (leave.EmployeeId != request.EmployeeId)
                 throw new UnauthorizedAccessException("You can only resubmit your own leave request.");
 
-            try
-            {
-            decimal totalDays = await CalculateTotalDaysAsync(
+            // Same Restricted Holiday guard as CreateAsync/ApplyLeaveAsync/
+            // UpdateAsync - resubmitting is another path that can change
+            // LeaveTypeId, so it needs the same bypass-prevention. Kept
+            // outside the try/catch below (like the checks above it) so the
+            // real rejection reason propagates instead of collapsing to a
+            // generic failure.
+            var resubmitLeaveType = await _context.LeaveTypes.FirstOrDefaultAsync(x => x.Id == request.LeaveTypeId);
+
+            await ValidateRestrictedHolidayRequestAsync(
+                resubmitLeaveType,
                 request.FromDate,
                 request.ToDate,
                 request.IsHalfDay,
                 request.TenantId ?? leave.TenantId);
+
+            try
+            {
+            decimal totalDays = resubmitLeaveType != null && resubmitLeaveType.IsRestrictedHolidayType
+                ? 1m
+                : await CalculateTotalDaysAsync(
+                    request.FromDate,
+                    request.ToDate,
+                    request.IsHalfDay,
+                    request.TenantId ?? leave.TenantId);
 
             leave.LeaveTypeId = request.LeaveTypeId;
             leave.FromDate = request.FromDate;
@@ -1832,6 +1984,73 @@ namespace Application.Services.Leaves
             }
 
             return response;
+        }
+
+        #endregion
+
+        #region Restricted Holiday
+
+        // Read-only helper for the frontend's "which optional holidays can
+        // I still claim as a Restricted Holiday" widget - see
+        // ILeaveApplicationService.GetAvailableRestrictedHolidaysAsync.
+        // Tenant-wide IsOptional=true HolidayGroupDetail rows from today
+        // onward (past optional holidays aren't worth showing), each
+        // flagged AlreadyClaimed if this employee already has a
+        // Pending or Approved "Restricted Holiday" LeaveApplication on
+        // that exact date - Pending counts too, so the employee doesn't
+        // try to double-claim the same date while an earlier request is
+        // still awaiting approval. Never creates or modifies anything.
+        public async Task<List<AvailableRestrictedHolidayDto>> GetAvailableRestrictedHolidaysAsync(string employeeId, string tenantId)
+        {
+            var today = DateTime.Today;
+
+            var optionalHolidays = await _context.HolidayGroupDetails
+                .AsNoTracking()
+                .Where(x =>
+                    x.IsOptional &&
+                    x.TenantId == tenantId &&
+                    x.HolidayDate.Date >= today)
+                .OrderBy(x => x.HolidayDate)
+                .Select(x => new { x.HolidayDate, x.HolidayName })
+                .ToListAsync();
+
+            if (optionalHolidays.Count == 0)
+                return new List<AvailableRestrictedHolidayDto>();
+
+            // Resolved by the IsRestrictedHolidayType flag (not by Name) -
+            // the same flag ValidateRestrictedHolidayRequestAsync branches
+            // on - so this stays correct even if HR ever renames the
+            // seeded LeaveType.
+            var restrictedHolidayLeaveTypeId = await _context.LeaveTypes
+                .Where(x => x.IsRestrictedHolidayType && x.TenantId == tenantId)
+                .Select(x => x.Id)
+                .FirstOrDefaultAsync();
+
+            var claimedDates = new HashSet<DateTime>();
+
+            if (!string.IsNullOrEmpty(restrictedHolidayLeaveTypeId) && !string.IsNullOrEmpty(employeeId))
+            {
+                var claimed = await _context.LeaveApplications
+                    .AsNoTracking()
+                    .Where(x =>
+                        x.EmployeeId == employeeId &&
+                        x.TenantId == tenantId &&
+                        x.LeaveTypeId == restrictedHolidayLeaveTypeId &&
+                        (x.Status == ApprovalStatus.Pending || x.Status == ApprovalStatus.Approved))
+                    .Select(x => x.FromDate.Date)
+                    .ToListAsync();
+
+                claimedDates = claimed.ToHashSet();
+            }
+
+            return optionalHolidays
+                .Select(x => new AvailableRestrictedHolidayDto
+                {
+                    HolidayDate = x.HolidayDate.Date,
+                    HolidayName = x.HolidayName,
+                    AlreadyClaimed = claimedDates.Contains(x.HolidayDate.Date)
+                })
+                .ToList();
         }
 
         #endregion

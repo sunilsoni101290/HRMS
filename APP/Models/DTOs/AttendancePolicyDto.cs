@@ -51,6 +51,14 @@ namespace APP.Models.DTOs
         [Display(Name = "Comp-Off Eligible Extra Hours")]
         public decimal CompOffEligibleExtraHours { get; set; }
 
+        // Used by ShortLeaveRequestController's Create form to show a live
+        // "X hours = Y.YY days" hint as the employee picks From/To time -
+        // see Application.DTOs.Attendances.AttendancePolicyDto and
+        // Domain/Entities/AttendancePolicy.cs.ShortLeaveHoursPerDay. The real
+        // calculation always happens server-side in ShortLeaveRequestService.
+        [Display(Name = "Short Leave Hours / Day")]
+        public decimal ShortLeaveHoursPerDay { get; set; }
+
         [MaxLength(500)]
         public string? Remarks { get; set; }
 

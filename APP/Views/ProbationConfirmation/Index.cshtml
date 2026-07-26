@@ -1,0 +1,217 @@
+@model IEnumerable<ProbationConfirmationDto>
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"] = "Probation Confirmations";
+
+    string StatusBadgeClass(int status) => status switch
+    {
+        (int)EnumExtensions.ProbationConfirmationStatus.PendingChecker => "bg-warning",
+        (int)EnumExtensions.ProbationConfirmationStatus.Approved => "bg-success",
+        (int)EnumExtensions.ProbationConfirmationStatus.Rejected => "bg-danger",
+        _ => "bg-grey"
+    };
+
+    string StatusText(ProbationConfirmationDto item) =>
+        !string.IsNullOrEmpty(item.StatusName)
+            ? item.StatusName
+            : ((EnumExtensions.ProbationConfirmationStatus)item.Status).ToString();
+
+    string RecommendationText(ProbationConfirmationDto item) =>
+        !string.IsNullOrEmpty(item.RecommendationName)
+            ? item.RecommendationName
+            : ((EnumExtensions.ProbationRecommendation)item.Recommendation).ToString();
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-user-check position-left"></i>
+            Probation Confirmations
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="DueForReview" class="btn btn-default">
+                <i class="icon-alarm"></i>
+                Due For Review
+            </a>
+
+            <a asp-action="Create" class="btn bg-primary">
+                <i class="icon-plus22"></i>
+                New Proposal
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="Index" method="get" class="row">
+
+            <div class="col-md-3">
+                <select name="status" class="form-control">
+                    <option value="">-- All Statuses --</option>
+                    @if (ViewBag.StatusList is List<SelectListItem> statusList)
+                    {
+                        foreach (var item in statusList)
+                        {
+                            <option value="@item.Value" selected="@(item.Value == (string)ViewBag.Status)">@item.Text</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <select name="departmentId" class="form-control">
+                    <option value="">-- All Departments --</option>
+                    @if (ViewBag.DepartmentList is SelectList deptList)
+                    {
+                        foreach (SelectListItem item in deptList)
+                        {
+                            <option value="@item.Value" selected="@(item.Value == (string)ViewBag.DepartmentId)">@item.Text</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <input type="text"
+                       name="search"
+                       value="@ViewBag.Search"
+                       class="form-control"
+                       placeholder="Search by employee name/code..." />
+            </div>
+
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-default">
+                    <i class="icon-search4"></i>
+                    Filter
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+
+    <div class="table-responsive">
+
+        <table class="table table-bordered table-striped">
+
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Department</th>
+                    <th>Recommendation</th>
+                    <th>Status</th>
+                    <th>Maker</th>
+                    <th>Checker</th>
+                    <th width="100">Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+
+                            <td>
+                                @item.EmployeeName
+                                <br />
+                                <span class="text-muted text-size-small">@item.EmployeeCode</span>
+                            </td>
+
+                            <td>@(item.DepartmentName ?? "-")</td>
+
+                            <td>@RecommendationText(item)</td>
+
+                            <td>
+                                <span class="label @StatusBadgeClass(item.Status)">@StatusText(item)</span>
+                            </td>
+
+                            <td>@(item.MakerName ?? "-")</td>
+
+                            <td>@(item.CheckerName ?? "-")</td>
+
+                            <td style="padding: 10px 15px;">
+
+                                <a asp-action="Details"
+                                   asp-route-id="@item.Id"
+                                   class="btn btn-default btn-icon"
+                                   data-popup="tooltip"
+                                   title="View">
+
+                                    <i class="icon-eye"></i>
+
+                                </a>
+
+                            </td>
+
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7" class="text-center text-muted" style="padding:30px;">
+                            <i class="icon-user-check" style="font-size:32px;"></i><br />
+                            No Probation Confirmation records found.
+                        </td>
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+<script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+
+@section Scripts {
+
+    <script>
+
+        @if (TempData["Success"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Success',
+                    text: '@Html.Raw(TempData["Success"])',
+                    type: 'success',
+                    confirmButtonColor: '#66BB6A'
+                });
+            </text>
+        }
+
+        @if (TempData["GlobalError"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Error',
+                    text: '@Html.Raw(TempData["GlobalError"])',
+                    type: 'error',
+                    confirmButtonColor: '#EF5350'
+                });
+            </text>
+        }
+
+    </script>
+
+    <script>
+
+        $(document).ready(function () {
+            $('[data-popup="tooltip"]').tooltip();
+        });
+
+    </script>
+
+}

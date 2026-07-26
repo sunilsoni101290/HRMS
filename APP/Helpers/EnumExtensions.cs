@@ -602,6 +602,134 @@ namespace APP.Helpers
             Rejected = 3,
             Cancelled = 4
         }
+
+        // On Duty request - mirrors Domain.Enums.EnumExtensions exactly (see
+        // Domain/Enums/EnumExtensions.cs) so the int values sent to/received
+        // from the API line up on both sides.
+        public enum OnDutyRequestStatus
+        {
+            Pending = 1,
+            Approved = 2,
+            Rejected = 3,
+            Cancelled = 4
+        }
+
+        // Short Leave request - mirrors Domain.Enums.EnumExtensions exactly
+        // (see Domain/Enums/EnumExtensions.cs) so the int values sent
+        // to/received from the API line up on both sides.
+        public enum ShortLeaveRequestStatus
+        {
+            Pending = 1,
+            Approved = 2,
+            Rejected = 3,
+            Cancelled = 4
+        }
+
+        // Comp Off candidate - mirrors Domain.Enums.EnumExtensions exactly
+        // (see Domain/Enums/EnumExtensions.cs) so the int values sent
+        // to/received from the API line up on both sides. Candidates are
+        // system-created by a background job (never a user action); HR
+        // reviews each one via CompOffController.
+        public enum CompOffCandidateStatus
+        {
+            PendingReview = 1,
+            Approved = 2,
+            Rejected = 3
+        }
+
+        // Leave Policy Engine (foundational phase) - mirrors
+        // Domain.Enums.EnumExtensions exactly (see
+        // Domain/Enums/EnumExtensions.cs) so the int values sent to/received
+        // from the API line up on both sides.
+        public enum LeaveAccrualFrequency
+        {
+            None = 1,
+            Monthly = 2,
+            Quarterly = 3,
+            Yearly = 4
+        }
+
+        // Leave Policy Engine (foundational phase) - restricts a LeaveType
+        // to a specific gender ("All" being the common case). Mirrors
+        // Domain.Enums.EnumExtensions exactly.
+        public enum LeaveApplicableGender
+        {
+            All = 1,
+            Male = 2,
+            Female = 3
+        }
+
+        // Probation Confirmation (Maker-Checker) - Phase 1 of the
+        // "Probation & Confirmation" module. Mirrors
+        // Domain.Enums.EnumExtensions.ProbationConfirmationStatus exactly
+        // (see Domain/Enums/EnumExtensions.cs) so the int values sent
+        // to/received from the API line up on both sides.
+        public enum ProbationConfirmationStatus
+        {
+            PendingChecker = 1,
+            Approved = 2,
+            Rejected = 3
+        }
+
+        // The Maker's proposed outcome for an employee's probation review -
+        // mirrors Domain.Enums.EnumExtensions.ProbationRecommendation
+        // exactly.
+        public enum ProbationRecommendation
+        {
+            Confirm = 1,
+            Extend = 2,
+            PlaceOnPIP = 3,
+            Terminate = 4
+        }
+
+        // Performance Improvement Plan (PIP) - Phase 2 of the "Probation &
+        // Confirmation" module. Mirrors
+        // Domain.Enums.EnumExtensions.PipOutcomeStatus exactly. Applies to
+        // the FINAL OUTCOME RESOLUTION maker-checker gate only (PIP
+        // creation itself has no maker-checker gate).
+        public enum PipOutcomeStatus
+        {
+            PendingChecker = 1,
+            Approved = 2,
+            Rejected = 3
+        }
+
+        // The PIP's live/proposed final outcome - mirrors
+        // Domain.Enums.EnumExtensions.PipFinalOutcome exactly.
+        public enum PipFinalOutcome
+        {
+            InProgress = 1,
+            Successful = 2,
+            Unsuccessful = 3
+        }
+
+        // Employee Transfer - Phase 3 of the "Probation & Confirmation"
+        // (Employee Lifecycle) module. Mirrors Domain.Enums.EnumExtensions
+        // exactly (see Domain/Enums/EnumExtensions.cs) so the int values
+        // sent to/received from the API line up on both sides. Maker-Checker
+        // workflow - identical shape to ProbationConfirmationStatus/
+        // PipOutcomeStatus.
+        public enum TransferStatus
+        {
+            PendingChecker = 1,
+            Approved = 2,
+            Rejected = 3
+        }
+
+        // Employee Feedback - Phase 4 of the "Probation & Confirmation"
+        // (Employee Lifecycle) module. Mirrors Domain.Enums.EnumExtensions
+        // exactly (see Domain/Enums/EnumExtensions.cs) so the int values
+        // sent to/received from the API line up on both sides. NO
+        // maker-checker workflow - plain CRUD.
+        public enum FeedbackCategory
+        {
+            General = 1,
+            Performance = 2,
+            Behavioral = 3,
+            Skill = 4,
+            Attendance = 5,
+            Other = 6
+        }
     }
 
     public static class EnumHelper

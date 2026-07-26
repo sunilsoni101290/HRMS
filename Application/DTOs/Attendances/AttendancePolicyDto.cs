@@ -43,6 +43,9 @@ namespace Application.DTOs.Attendances
         [Display(Name = "Comp-Off Eligible Extra Hours")]
         public decimal CompOffEligibleExtraHours { get; set; }
 
+        [Display(Name = "Short Leave Hours / Day")]
+        public decimal ShortLeaveHoursPerDay { get; set; }
+
         [MaxLength(500)]
         public string? Remarks { get; set; }
 

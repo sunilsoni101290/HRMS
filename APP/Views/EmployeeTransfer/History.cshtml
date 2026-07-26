@@ -1,0 +1,132 @@
+@model IEnumerable<EmployeeTransferDto>
+
+@{
+    var employee = ViewBag.Employee as EmployeeListDto;
+    ViewData["Title"] = "Transfer History" + (employee != null ? " - " + employee.FirstName + " " + employee.LastName : "");
+
+    string StatusBadgeClass(int status) => status switch
+    {
+        (int)EnumExtensions.TransferStatus.PendingChecker => "bg-warning",
+        (int)EnumExtensions.TransferStatus.Approved => "bg-success",
+        (int)EnumExtensions.TransferStatus.Rejected => "bg-danger",
+        _ => "bg-grey"
+    };
+
+    string StatusText(EmployeeTransferDto item) =>
+        !string.IsNullOrEmpty(item.StatusName)
+            ? item.StatusName
+            : ((EnumExtensions.TransferStatus)item.Status).ToString();
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-shuffle position-left"></i>
+            Transfer History
+            @if (employee != null)
+            {
+                <span class="text-muted"> - @employee.FirstName @employee.LastName (@employee.EmployeeCode)</span>
+            }
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-controller="Employee" asp-action="Details" asp-route-id="@ViewBag.EmployeeId" class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back to Employee
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="table-responsive">
+
+        <table class="table table-bordered table-striped">
+
+            <thead>
+                <tr>
+                    <th>Effective Date</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Status</th>
+                    <th>Maker</th>
+                    <th>Checker</th>
+                    <th width="80">Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+
+                            <td>@item.EffectiveDate.ToString("dd-MMM-yyyy")</td>
+
+                            <td>
+                                <span class="text-muted text-size-small">
+                                    @item.FromDepartmentName / @item.FromDesignationName
+                                </span>
+                            </td>
+
+                            <td>
+                                <span class="text-muted text-size-small">
+                                    @(item.ToDepartmentName ?? item.ToDesignationName ?? item.ToCompanyName ?? item.ToBranchName ?? item.ToReportingManagerName ?? "-")
+                                </span>
+                            </td>
+
+                            <td>
+                                <span class="label @StatusBadgeClass(item.Status)">@StatusText(item)</span>
+                            </td>
+
+                            <td>@(item.MakerName ?? "-")</td>
+
+                            <td>@(item.CheckerName ?? "-")</td>
+
+                            <td style="padding: 10px 15px;">
+
+                                <a asp-action="Details"
+                                   asp-route-id="@item.Id"
+                                   class="btn btn-default btn-icon"
+                                   data-popup="tooltip"
+                                   title="View">
+
+                                    <i class="icon-eye"></i>
+
+                                </a>
+
+                            </td>
+
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7" class="text-center text-muted" style="padding:30px;">
+                            <i class="icon-shuffle" style="font-size:32px;"></i><br />
+                            No transfer history found for this employee.
+                        </td>
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('[data-popup="tooltip"]').tooltip();
+        });
+    </script>
+}

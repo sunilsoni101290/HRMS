@@ -1,0 +1,273 @@
+@model CreateProbationConfirmationDto
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"] = "Propose Probation Recommendation";
+
+    bool isPrefilled = ViewBag.IsPrefilled ?? false;
+    var prefilledEmployee = ViewBag.PrefilledEmployee as ProbationDueForReviewDto;
+
+    string? prefilledEmployeeDisplay = prefilledEmployee != null
+        ? $"{prefilledEmployee.EmployeeName} ({prefilledEmployee.EmployeeCode}) - {prefilledEmployee.DepartmentName ?? "-"}"
+        : null;
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-user-check position-left"></i>
+            Propose Probation Recommendation
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="Index" class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="Create" method="post">
+
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <!-- Employee -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-user position-left"></i>
+                    Employee
+                </legend>
+
+                @if (isPrefilled)
+                {
+                    <div class="row">
+
+                        <div class="col-md-12">
+
+                            <div class="form-group">
+
+                                <label>Employee</label>
+
+                                @if (prefilledEmployee != null)
+                                {
+                                    <input type="text"
+                                           class="form-control bg-slate-100"
+                                           value="@prefilledEmployeeDisplay"
+                                           readonly
+                                           disabled />
+                                }
+                                else
+                                {
+                                    <input type="text"
+                                           class="form-control bg-slate-100"
+                                           value="Employee Id: @Model.EmployeeId"
+                                           readonly
+                                           disabled />
+
+                                    <span class="text-warning text-size-small">
+                                        This employee is not currently in the due-for-review list - the server will
+                                        still validate eligibility on submit.
+                                    </span>
+                                }
+
+                                <input asp-for="EmployeeId" type="hidden" />
+
+                            </div>
+
+                        </div>
+
+                    </div>
+                }
+                else
+                {
+                    <div class="row">
+
+                        <div class="col-md-12">
+
+                            <div class="form-group">
+
+                                <label asp-for="EmployeeId"></label>
+
+                                <select asp-for="EmployeeId" class="form-control">
+                                    <option value="">-- Select Employee --</option>
+                                    @if (ViewBag.EligibleEmployees is SelectList empList)
+                                    {
+                                        foreach (SelectListItem item in empList)
+                                        {
+                                            <option value="@item.Value">@item.Text</option>
+                                        }
+                                    }
+                                </select>
+
+                                <span asp-validation-for="EmployeeId" class="text-danger"></span>
+
+                                <span class="text-muted text-size-small">
+                                    Only employees currently on probation and due for review are listed here.
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+                }
+
+            </fieldset>
+
+            <!-- Recommendation -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-clipboard4 position-left"></i>
+                    Recommendation
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-6">
+
+                        <div class="form-group">
+
+                            <label asp-for="Recommendation"></label>
+
+                            <select asp-for="Recommendation" id="Recommendation" class="form-control">
+                                <option value="">-- Select Recommendation --</option>
+                                @if (ViewBag.RecommendationList is List<SelectListItem> recList)
+                                {
+                                    foreach (var item in recList)
+                                    {
+                                        <option value="@item.Value">@item.Text</option>
+                                    }
+                                }
+                            </select>
+
+                            <span asp-validation-for="Recommendation" class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-6" id="extendedDateGroup" style="display:none;">
+
+                        <div class="form-group">
+
+                            <label asp-for="ExtendedProbationEndDate"></label>
+
+                            <input asp-for="ExtendedProbationEndDate"
+                                   id="ExtendedProbationEndDate"
+                                   type="date"
+                                   class="form-control" />
+
+                            <span asp-validation-for="ExtendedProbationEndDate" class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- Remarks -->
+
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-file-text2 position-left"></i>
+                    Remarks
+                </legend>
+
+                <div class="form-group">
+
+                    <label asp-for="MakerRemarks"></label>
+
+                    <textarea asp-for="MakerRemarks"
+                              rows="4"
+                              maxlength="1000"
+                              class="form-control"></textarea>
+
+                    <span asp-validation-for="MakerRemarks" class="text-danger"></span>
+
+                </div>
+
+            </fieldset>
+
+            <hr />
+
+            <div class="text-right">
+
+                <a asp-action="Index" class="btn btn-default">
+                    Cancel
+                </a>
+
+                <button type="submit" class="btn bg-primary">
+                    <i class="icon-checkmark4"></i>
+                    Submit Proposal
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+@section Scripts {
+
+    <partial name="_ValidationScriptsPartial" />
+
+    <script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+
+    <script>
+
+        @if (TempData["GlobalError"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Error',
+                    text: '@Html.Raw(TempData["GlobalError"])',
+                    type: 'error',
+                    confirmButtonColor: '#EF5350'
+                });
+            </text>
+        }
+
+    </script>
+
+    <script>
+
+        // Simple show/hide: Extended Probation End Date is only relevant
+        // (and only required, server-side) when Recommendation == Extend
+        // (2). No plugin needed, same approach as other Create screens in
+        // this app.
+        $(function () {
+
+            function toggleExtendedDate() {
+                var isExtend = $('#Recommendation').val() === '2';
+                $('#extendedDateGroup').toggle(isExtend);
+
+                if (!isExtend) {
+                    $('#ExtendedProbationEndDate').val('');
+                }
+            }
+
+            $('#Recommendation').on('change', toggleExtendedDate);
+
+            toggleExtendedDate();
+
+        });
+
+    </script>
+
+}

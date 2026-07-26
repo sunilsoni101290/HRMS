@@ -1,0 +1,235 @@
+@model IEnumerable<ShortLeaveRequestDto>
+
+@{
+    ViewData["Title"] = "Pending My Approval - Short Leave";
+
+    string StatusBadgeClass(int status) => status switch
+    {
+        (int)EnumExtensions.ShortLeaveRequestStatus.Pending => "bg-warning",
+        (int)EnumExtensions.ShortLeaveRequestStatus.Approved => "bg-success",
+        (int)EnumExtensions.ShortLeaveRequestStatus.Rejected => "bg-danger",
+        (int)EnumExtensions.ShortLeaveRequestStatus.Cancelled => "bg-grey",
+        _ => "bg-grey"
+    };
+
+    string StatusText(ShortLeaveRequestDto item) =>
+        !string.IsNullOrEmpty(item.StatusName)
+            ? item.StatusName
+            : ((EnumExtensions.ShortLeaveRequestStatus)item.Status).ToString();
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-checkmark4 position-left"></i>
+            Short Leave - Pending My Approval
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="MyRequests" class="btn btn-default">
+                <i class="icon-list"></i>
+                My Requests
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="table-responsive">
+
+        <table class="table table-bordered table-striped">
+
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Department</th>
+                    <th>Date</th>
+                    <th>Leave Type</th>
+                    <th>From Time</th>
+                    <th>To Time</th>
+                    <th>Total Hours</th>
+                    <th>Reason</th>
+                    <th>Status</th>
+                    <th width="160">Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+
+                            <td>@item.EmployeeName</td>
+
+                            <td>@(item.DepartmentName ?? "-")</td>
+
+                            <td>@item.Date.ToString("dd-MMM-yyyy")</td>
+
+                            <td>@(item.LeaveTypeName ?? "-")</td>
+
+                            <td>@item.FromTime.ToString(@"hh\:mm")</td>
+
+                            <td>@item.ToTime.ToString(@"hh\:mm")</td>
+
+                            <td class="text-center">@item.TotalHours</td>
+
+                            <td>
+                                <span class="text-muted text-size-small">
+                                    @(item.Reason?.Length > 40 ? item.Reason.Substring(0, 40) + "..." : item.Reason)
+                                </span>
+                            </td>
+
+                            <td>
+                                <span class="label @StatusBadgeClass(item.Status)">@StatusText(item)</span>
+                            </td>
+
+                            <td style="padding: 10px 15px;">
+
+                                <div class="btn-group">
+
+                                    <a asp-action="Details"
+                                       asp-route-id="@item.Id"
+                                       class="btn btn-default btn-icon"
+                                       data-popup="tooltip"
+                                       title="View">
+
+                                        <i class="icon-eye"></i>
+
+                                    </a>
+
+                                    @if (item.Status == (int)EnumExtensions.ShortLeaveRequestStatus.Pending)
+                                    {
+                                        <button type="button"
+                                                class="btn btn-success btn-icon btnApprove"
+                                                data-id="@item.Id"
+                                                data-popup="tooltip"
+                                                title="Approve">
+
+                                            <i class="icon-checkmark4"></i>
+
+                                        </button>
+
+                                        <button type="button"
+                                                class="btn btn-danger btn-icon btnReject"
+                                                data-id="@item.Id"
+                                                data-popup="tooltip"
+                                                title="Reject">
+
+                                            <i class="icon-cross2"></i>
+
+                                        </button>
+                                    }
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="10" class="text-center text-muted" style="padding:30px;">
+                            <i class="icon-checkmark-circle" style="font-size:32px;"></i><br />
+                            Nothing pending your approval.
+                        </td>
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+<!-- Approve form (no extra input needed - simple hidden-id POST) -->
+<form id="approveForm" asp-action="Approve" method="post" style="display:none;">
+    <input type="hidden" id="ApproveShortLeaveRequestId" name="id" />
+</form>
+
+<partial name="_RejectModal" />
+
+<script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+
+@section Scripts {
+
+    <script>
+
+        @if (TempData["Success"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Success',
+                    text: '@Html.Raw(TempData["Success"])',
+                    type: 'success',
+                    confirmButtonColor: '#66BB6A'
+                });
+            </text>
+        }
+
+        @if (TempData["GlobalError"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Error',
+                    text: '@Html.Raw(TempData["GlobalError"])',
+                    type: 'error',
+                    confirmButtonColor: '#EF5350'
+                });
+            </text>
+        }
+
+    </script>
+
+    <script>
+
+        $(document).ready(function () {
+
+            $('[data-popup="tooltip"]').tooltip();
+
+            // Approve - confirm, then submit the hidden form.
+            $(document).on('click', '.btnApprove', function () {
+
+                var id = $(this).data('id');
+
+                swal({
+                    title: 'Approve this request?',
+                    text: 'The requested fractional day will be deducted from the employee\'s leave balance.',
+                    type: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#66BB6A',
+                    confirmButtonText: 'Yes, approve it'
+                }, function (isConfirm) {
+                    if (isConfirm) {
+                        $('#ApproveShortLeaveRequestId').val(id);
+                        $('#approveForm').submit();
+                    }
+                });
+
+            });
+
+            // Reject
+            $(document).on('click', '.btnReject', function () {
+
+                var id = $(this).data('id');
+
+                $('#RejectShortLeaveRequestId').val(id);
+
+                $('#rejectModal').modal('show');
+
+            });
+
+        });
+
+    </script>
+
+}

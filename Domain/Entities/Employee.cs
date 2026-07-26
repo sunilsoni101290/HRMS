@@ -74,6 +74,15 @@ namespace Domain.Entities
         public DateTime? ConfirmationDate { get; set; }
         public DateTime? RelievingDate { get; set; }
 
+        // Probation end date - set/updated by ProbationConfirmationService
+        // (via its own maker-checker workflow, never directly by
+        // EmployeeService) once probation review begins for this employee.
+        // Additive-only field; not yet populated automatically at
+        // Employee-create time (nice-to-have for a future
+        // EmployeeService.CreateAsync enhancement: JoiningDate +
+        // Designation.ProbationPeriodMonths).
+        public DateTime? ProbationEndDate { get; set; }
+
         #region Passport Details 
         public string? PassportNumber { get; set; }
         public DateTime? IssueDate { get; set; }

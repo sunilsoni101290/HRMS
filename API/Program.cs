@@ -6,6 +6,7 @@ using Application.Interfaces.Attendances;
 using Application.Interfaces.Auth;
 using Application.Interfaces.Company;
 using Application.Interfaces.EmployeeInterface;
+using Application.Interfaces.EmployeeLifecycle;
 using Application.Interfaces.ErrorLog;
 using Application.Interfaces.JWT_TOKEN;
 using Application.Interfaces.Leaves;
@@ -14,6 +15,7 @@ using Application.Services;
 using Application.Services.Attendances;
 using Application.Services.Auth;
 using Application.Services.CompanyService;
+using Application.Services.EmployeeLifecycle;
 using Application.Services.EmployeeServices;
 using Application.Services.ErrorLogs;
 using Application.Services.JWT_Token;
@@ -150,6 +152,14 @@ builder.Services.AddScoped<Application.Interfaces.Leaves.IApprovalDelegationServ
 builder.Services.AddScoped<IAttendanceRegularizationService, AttendanceRegularizationService>();
 builder.Services.AddScoped<IAttendancePolicyService, AttendancePolicyService>();
 builder.Services.AddScoped<IWfhRequestService, WfhRequestService>();
+builder.Services.AddScoped<IOnDutyRequestService, OnDutyRequestService>();
+builder.Services.AddScoped<IShortLeaveRequestService, ShortLeaveRequestService>();
+builder.Services.AddScoped<ICompOffService, CompOffService>();
+builder.Services.AddScoped<IProbationConfirmationService, ProbationConfirmationService>();
+builder.Services.AddScoped<IPipService, PipService>();
+builder.Services.AddScoped<IEmployeeTransferService, EmployeeTransferService>();
+builder.Services.AddScoped<IEmployeeFeedbackService, EmployeeFeedbackService>();
+builder.Services.AddScoped<IRejoiningService, RejoiningService>();
 builder.Services.AddScoped<IHolidayGroupService, HolidayGroupService>();
 builder.Services.AddScoped<ICompanyService, CompanyService>();
 builder.Services.AddScoped<IBranchService, BranchService>();
@@ -220,6 +230,19 @@ builder.Services.AddHttpClient();
 // only) hosted service in this API, so there is no prior registration
 // pattern to match here.
 builder.Services.AddHostedService<LeaveEscalationService>();
+
+// Leave Policy Engine - automatic leave accrual (per LeaveType.
+// AccrualFrequency) and January 1st year-end carry-forward - see
+// API/BackgroundServices/LeaveAccrualService.cs.
+builder.Services.AddHostedService<LeaveAccrualService>();
+
+// Comp Off detection - "System-detected, HR-approved": scans recent
+// Attendance rows for Holiday/WeekOff days worked beyond
+// AttendancePolicy.CompOffEligibleExtraHours and creates a PendingReview
+// CompOffCandidate for HR to Approve/Reject (see CompOffService) - never
+// credits the balance itself. See
+// API/BackgroundServices/CompOffDetectionService.cs.
+builder.Services.AddHostedService<CompOffDetectionService>();
 
 // ======================================================
 // SWAGGER

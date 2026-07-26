@@ -40,6 +40,16 @@ namespace Domain.Entities
         // Salary Range
         public decimal MinSalary { get; set; } = 0.00m;
         public decimal MaxSalary { get; set; } = 0.00m;
+
+        // Default probation length (in months) for employees hired into
+        // this Designation - used by ProbationConfirmationService as the
+        // fallback when computing an Employee's OriginalProbationEndDate
+        // if Employee.ProbationEndDate was never explicitly set
+        // (JoiningDate.AddMonths(ProbationPeriodMonths)). Populating
+        // Employee.ProbationEndDate itself at Employee-create time is a
+        // separate, out-of-scope enhancement for EmployeeService.CreateAsync.
+        public int ProbationPeriodMonths { get; set; } = 3;
+
         public override string GetSequencePrefix() => "DSG";
     }
 
