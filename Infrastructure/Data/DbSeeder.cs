@@ -1832,6 +1832,107 @@ namespace Infrastructure.Data
                 AppFeatureConstants.SECURITY, "bi bi-diagram-3", AppFeatureType.Security, 25,
                 canAdd: true, canEdit: true, canDelete: true);
 
+
+            // =====================================================
+            // TAXATION
+            // =====================================================
+
+            // Parent Menu
+            Def("Taxation", AppFeatureConstants.TAXATION, "", "",
+                null, "bi bi-cash-stack", AppFeatureType.Transaction, 70);
+
+            // Income Tax
+            Def("Income Tax", AppFeatureConstants.INCOME_TAX,
+                AppFeatureConstants.INCOME_TAX_CONTROLLER,
+                AppFeatureConstants.INCOME_TAX_ACTION,
+                AppFeatureConstants.TAXATION,
+                "bi bi-cash-coin",
+                AppFeatureType.Master,
+                71,
+                canAdd: true,
+                canEdit: true,
+                canDelete: true);
+
+            // Tax Declaration
+            Def("Tax Declaration", AppFeatureConstants.TAX_DECLARATION,
+                AppFeatureConstants.TAX_DECLARATION_CONTROLLER,
+                AppFeatureConstants.TAX_DECLARATION_ACTION,
+                AppFeatureConstants.TAXATION,
+                "bi bi-wallet-fill",
+                AppFeatureType.Transaction,
+                72,
+                canAdd: true,
+                canEdit: true,
+                canDelete: true);
+
+            // Investment Declaration
+            Def("Investment Declaration", AppFeatureConstants.INVESTMENT_DECLARATION,
+                AppFeatureConstants.INVESTMENT_DECLARATION_CONTROLLER,
+                AppFeatureConstants.INVESTMENT_DECLARATION_ACTION,
+                AppFeatureConstants.TAXATION,
+                "bi bi-piggy-bank",
+                AppFeatureType.Transaction,
+                73,
+                canAdd: true,
+                canEdit: true,
+                canApprove: true);
+
+            // House Property
+            Def("House Property", AppFeatureConstants.HOUSE_PROPERTY,
+                AppFeatureConstants.HOUSE_PROPERTY_CONTROLLER,
+                AppFeatureConstants.HOUSE_PROPERTY_ACTION,
+                AppFeatureConstants.TAXATION,
+                "bi bi-house-door",
+                AppFeatureType.Transaction,
+                74,
+                canAdd: true,
+                canEdit: true);
+
+            // Other Income
+            Def("Other Income", AppFeatureConstants.OTHER_INCOME,
+                AppFeatureConstants.OTHER_INCOME_CONTROLLER,
+                AppFeatureConstants.OTHER_INCOME_ACTION,
+                AppFeatureConstants.TAXATION,
+                "bi bi-receipt",
+                AppFeatureType.Transaction,
+                75,
+                canAdd: true,
+                canEdit: true);
+
+            // TDS Projection
+            Def("TDS Projection", AppFeatureConstants.TDS_PROJECTION,
+                AppFeatureConstants.TDS_PROJECTION_CONTROLLER,
+                AppFeatureConstants.TDS_PROJECTION_ACTION,
+                AppFeatureConstants.TAXATION,
+                "bi bi-file-earmark-spreadsheet",
+                AppFeatureType.Report,
+                76,
+                canExport: true,
+                canPrint: true);
+
+            // Tax Regime
+            Def("Tax Regime", AppFeatureConstants.TAX_REGIME,
+                AppFeatureConstants.TAX_REGIME_CONTROLLER,
+                AppFeatureConstants.TAX_REGIME_ACTION,
+                AppFeatureConstants.TAXATION,
+                "bi bi-list-check",
+                AppFeatureType.Transaction,
+                77,
+                canAdd: true,
+                canEdit: true);
+
+            // Form 16
+            Def("Form 16", AppFeatureConstants.FORM_16,
+                AppFeatureConstants.FORM_16_CONTROLLER,
+                AppFeatureConstants.FORM_16_ACTION,
+                AppFeatureConstants.TAXATION,
+                "bi bi-file-earmark-pdf",
+                AppFeatureType.Report,
+                78,
+                canPrint: true,
+                canExport: true);
+
+
             // ---------------- RECONCILE (upsert by Code) ----------------
             var existing = await context.AppFeatures.ToListAsync();
 

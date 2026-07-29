@@ -64,6 +64,16 @@ builder.Services.AddCors(options =>
 });
  */
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowMVC", policy =>
+    {
+        policy.WithOrigins("http://localhost:8081")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 // ======================================================
 // CONTROLLERS
 // ======================================================
@@ -277,7 +287,9 @@ app.UseHttpsRedirection();
 app.UseRouting();
 
 // CORS
-app.UseCors("AllowAngular");
+//app.UseCors("AllowAngular");
+
+app.UseCors("AllowMVC");
 
 // Authentication
 app.UseAuthentication();

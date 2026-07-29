@@ -507,5 +507,44 @@ namespace Domain.Helper
         public const string FAQ = "FAQ";
         public const string FAQ_CONTROLLER = "Faq";
         public const string FAQ_ACTION = ACTION_INDEX;
+
+
+        // =====================================================
+        // TAXATION
+        // =====================================================
+
+        public const string TAXATION = "TAXATION";
+
+        public const string INCOME_TAX = "INCOME_TAX";
+        public const string INCOME_TAX_CONTROLLER = "IncomeTax";
+        public const string INCOME_TAX_ACTION = ACTION_INDEX;
+
+        public const string TAX_DECLARATION = "TAX_DECLARATION";
+        public const string TAX_DECLARATION_CONTROLLER = "TaxDeclaration";
+        public const string TAX_DECLARATION_ACTION = ACTION_INDEX;
+
+        public const string INVESTMENT_DECLARATION = "INVESTMENT_DECLARATION";
+        public const string INVESTMENT_DECLARATION_CONTROLLER = "InvestmentDeclaration";
+        public const string INVESTMENT_DECLARATION_ACTION = ACTION_INDEX;
+
+        public const string HOUSE_PROPERTY = "HOUSE_PROPERTY";
+        public const string HOUSE_PROPERTY_CONTROLLER = "HouseProperty";
+        public const string HOUSE_PROPERTY_ACTION = ACTION_INDEX;
+
+        public const string OTHER_INCOME = "OTHER_INCOME";
+        public const string OTHER_INCOME_CONTROLLER = "OtherIncome";
+        public const string OTHER_INCOME_ACTION = ACTION_INDEX;
+
+        public const string TDS_PROJECTION = "TDS_PROJECTION";
+        public const string TDS_PROJECTION_CONTROLLER = "TDSProjection";
+        public const string TDS_PROJECTION_ACTION = ACTION_INDEX;
+
+        public const string TAX_REGIME = "TAX_REGIME";
+        public const string TAX_REGIME_CONTROLLER = "TaxRegime";
+        public const string TAX_REGIME_ACTION = ACTION_INDEX;
+
+        public const string FORM_16 = "FORM_16";
+        public const string FORM_16_CONTROLLER = "Form16";
+        public const string FORM_16_ACTION = ACTION_INDEX;
     }
 }
