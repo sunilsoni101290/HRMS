@@ -157,7 +157,7 @@
             <text>
                 swal({
                     title: 'Success',
-                    text: '@Html.Raw(TempData["Success"])',
+                    text: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(TempData["Success"]?.ToString() ?? string.Empty)),
                     type: 'success',
                     confirmButtonColor: '#66BB6A'
                 });
@@ -169,7 +169,7 @@
             <text>
                 swal({
                     title: 'Error',
-                    text: '@Html.Raw(TempData["GlobalError"])',
+                    text: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(TempData["GlobalError"]?.ToString() ?? string.Empty)),
                     type: 'error',
                     confirmButtonColor: '#EF5350'
                 });

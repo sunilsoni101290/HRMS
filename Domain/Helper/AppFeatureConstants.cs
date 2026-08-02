@@ -321,6 +321,18 @@ namespace Domain.Helper
         public const string PAYSLIP_CONTROLLER = "Payroll";
         public const string PAYSLIP_ACTION = "Payslip";
 
+        // Payslip Request approval workflow (Employee -> Reporting Manager
+        // -> Finance) - see Domain/Entities/PayslipRequest.cs. The Approve
+        // action on THIS feature is the hand-rolled permission check that
+        // makes someone "Finance" for PayslipRequestService's purposes
+        // (there is no fixed "Finance" role concept in this codebase - a
+        // tenant creates one via the existing Role/Permission admin screens
+        // and grants Approve on this feature, same convention as every
+        // other permission-gated override here).
+        public const string PAYROLL_PAYSLIP_REQUEST = "PAYROLL_PAYSLIP_REQUEST";
+        public const string PAYROLL_PAYSLIP_REQUEST_CONTROLLER = "PayslipRequest";
+        public const string PAYROLL_PAYSLIP_REQUEST_ACTION = ACTION_INDEX;
+
         // =====================================================
         // RECRUITMENT
         // =====================================================
@@ -461,6 +473,41 @@ namespace Domain.Helper
         public const string REJOINING_ACTION = ACTION_INDEX;
 
         // =====================================================
+        // TAXATION (Income Tax / TDS - India)
+        // =====================================================
+        // New top-level module (sibling of Probation & Confirmation/
+        // Onboarding/Payroll above) - see Domain/Entities/TaxSlab.cs,
+        // TaxDeclaration.cs, EmployeeTaxComputation.cs and
+        // Application/Services/Taxation/*.
+        public const string TAXATION_MANAGEMENT = "TAXATION_MANAGEMENT";
+
+        // Tax Slabs - Admin-only master data (income slab rates per
+        // Financial Year + Regime), plain CRUD, no maker-checker/self-
+        // service concept.
+        public const string TAX_SLAB = "TAX_SLAB";
+        public const string TAX_SLAB_CONTROLLER = "TaxSlab";
+        public const string TAX_SLAB_ACTION = ACTION_INDEX;
+
+        // Tax Declaration - employee self-service annual investment
+        // declaration (Draft -> Submitted by the employee), verified or
+        // rejected by HR/Payroll (holding Approve permission on this
+        // feature) - see TaxDeclarationService. Broader audience than
+        // Probation & Confirmation: every Employee needs Create/View on
+        // their OWN declaration in addition to the HR/Admin grant below.
+        public const string TAX_DECLARATION = "TAX_DECLARATION";
+        public const string TAX_DECLARATION_CONTROLLER = "TaxDeclaration";
+        public const string TAX_DECLARATION_ACTION = ACTION_INDEX;
+
+        // Tax Computation - HR/Payroll-only read+trigger surface over
+        // EmployeeTaxComputation (annual tax liability / TDS projection)
+        // - see TaxComputationService. No employee self-service grant;
+        // employees view their own numbers through Tax Declaration
+        // Details instead, not this feature directly.
+        public const string TAX_COMPUTATION = "TAX_COMPUTATION";
+        public const string TAX_COMPUTATION_CONTROLLER = "TaxComputation";
+        public const string TAX_COMPUTATION_ACTION = ACTION_INDEX;
+
+        // =====================================================
         // COMMUNICATION
         // =====================================================
 
@@ -507,5 +554,40 @@ namespace Domain.Helper
         public const string FAQ = "FAQ";
         public const string FAQ_CONTROLLER = "Faq";
         public const string FAQ_ACTION = ACTION_INDEX;
+
+
+        // =====================================================
+        // TAXATION
+        // =====================================================
+
+        public const string TAXATION = "TAXATION";
+
+        public const string INCOME_TAX = "INCOME_TAX";
+        public const string INCOME_TAX_CONTROLLER = "IncomeTax";
+        public const string INCOME_TAX_ACTION = ACTION_INDEX;
+
+        public const string INVESTMENT_DECLARATION = "INVESTMENT_DECLARATION";
+        public const string INVESTMENT_DECLARATION_CONTROLLER = "InvestmentDeclaration";
+        public const string INVESTMENT_DECLARATION_ACTION = ACTION_INDEX;
+
+        public const string HOUSE_PROPERTY = "HOUSE_PROPERTY";
+        public const string HOUSE_PROPERTY_CONTROLLER = "HouseProperty";
+        public const string HOUSE_PROPERTY_ACTION = ACTION_INDEX;
+
+        public const string OTHER_INCOME = "OTHER_INCOME";
+        public const string OTHER_INCOME_CONTROLLER = "OtherIncome";
+        public const string OTHER_INCOME_ACTION = ACTION_INDEX;
+
+        public const string TDS_PROJECTION = "TDS_PROJECTION";
+        public const string TDS_PROJECTION_CONTROLLER = "TDSProjection";
+        public const string TDS_PROJECTION_ACTION = ACTION_INDEX;
+
+        public const string TAX_REGIME = "TAX_REGIME";
+        public const string TAX_REGIME_CONTROLLER = "TaxRegime";
+        public const string TAX_REGIME_ACTION = ACTION_INDEX;
+
+        public const string FORM_16 = "FORM_16";
+        public const string FORM_16_CONTROLLER = "Form16";
+        public const string FORM_16_ACTION = ACTION_INDEX;
     }
 }

@@ -2698,6 +2698,98 @@ namespace Infrastructure.Migrations
                     b.ToTable("EmployeeTasks");
                 });
 
+            modelBuilder.Entity("Domain.Entities.EmployeeTaxComputation", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal>("AnnualGrossSalary")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("AnnualTaxLiability")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ComputedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ComputedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("EmployeeId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("FinancialYearId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal>("HealthEducationCess")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("HraExemption")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("MonthlyTdsForRemainingMonths")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Rebate87A")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Regime")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("StandardDeduction")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TaxBeforeCess")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("TaxDeclarationId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal>("TaxableIncome")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TdsDeductedTillDate")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("TenantId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("TotalChapterVIADeductions")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FinancialYearId");
+
+                    b.HasIndex("TaxDeclarationId");
+
+                    b.HasIndex("EmployeeId", "FinancialYearId")
+                        .IsUnique();
+
+                    b.ToTable("EmployeeTaxComputations");
+                });
+
             modelBuilder.Entity("Domain.Entities.EmployeeTransfer", b =>
                 {
                     b.Property<string>("Id")
@@ -4575,6 +4667,150 @@ namespace Infrastructure.Migrations
                     b.ToTable("Payslips");
                 });
 
+            modelBuilder.Entity("Domain.Entities.PayslipRequest", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CompletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("CompletedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DocumentFileName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DocumentUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("EmployeeId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("FinanceActionBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("FinanceActionOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FinanceRemarks")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("GeneratedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("GeneratedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ManagerActionBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ManagerActionOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ManagerRemarks")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PayrollId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("PayrollMonth")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PayrollYear")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TenantId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.HasIndex("PayrollId");
+
+                    b.ToTable("PayslipRequests");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PayslipRequestAudit", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PayslipRequestId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("PerformedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("PerformedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("TenantId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PayslipRequestId");
+
+                    b.ToTable("PayslipRequestAudits");
+                });
+
             modelBuilder.Entity("Domain.Entities.Permission", b =>
                 {
                     b.Property<string>("Id")
@@ -5617,6 +5853,150 @@ namespace Infrastructure.Migrations
                     b.ToTable("SupportTicketReplies");
                 });
 
+            modelBuilder.Entity("Domain.Entities.TaxDeclaration", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal>("AnnualRentPaid")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("EmployeeId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("FinancialYearId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsMetroCity")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LandlordPAN")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("OtherDeductions")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Regime")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Section24B")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Section80C")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Section80CCD1B")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Section80D")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("SubmittedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TenantId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("VerifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("VerifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("VerifierRemarks")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FinancialYearId");
+
+                    b.HasIndex("EmployeeId", "FinancialYearId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "Status");
+
+                    b.ToTable("TaxDeclarations");
+                });
+
+            modelBuilder.Entity("Domain.Entities.TaxSlab", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FinancialYearId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("MaxIncome")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("MinIncome")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("RatePercent")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Regime")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SlabOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TenantId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FinancialYearId", "Regime");
+
+                    b.ToTable("TaxSlabs");
+                });
+
             modelBuilder.Entity("Domain.Entities.Tenant", b =>
                 {
                     b.Property<string>("Id")
@@ -6599,6 +6979,32 @@ namespace Infrastructure.Migrations
                     b.Navigation("Employee");
                 });
 
+            modelBuilder.Entity("Domain.Entities.EmployeeTaxComputation", b =>
+                {
+                    b.HasOne("Domain.Entities.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.FinancialYear", "FinancialYear")
+                        .WithMany()
+                        .HasForeignKey("FinancialYearId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.TaxDeclaration", "TaxDeclaration")
+                        .WithMany()
+                        .HasForeignKey("TaxDeclarationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("FinancialYear");
+
+                    b.Navigation("TaxDeclaration");
+                });
+
             modelBuilder.Entity("Domain.Entities.EmployeeTransfer", b =>
                 {
                     b.HasOne("Domain.Entities.Employee", "Employee")
@@ -6941,6 +7347,36 @@ namespace Infrastructure.Migrations
                     b.Navigation("Payroll");
                 });
 
+            modelBuilder.Entity("Domain.Entities.PayslipRequest", b =>
+                {
+                    b.HasOne("Domain.Entities.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.Payroll", "Payroll")
+                        .WithMany()
+                        .HasForeignKey("PayrollId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("Payroll");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PayslipRequestAudit", b =>
+                {
+                    b.HasOne("Domain.Entities.PayslipRequest", "PayslipRequest")
+                        .WithMany()
+                        .HasForeignKey("PayslipRequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("PayslipRequest");
+                });
+
             modelBuilder.Entity("Domain.Entities.PipRecord", b =>
                 {
                     b.HasOne("Domain.Entities.Employee", "Employee")
@@ -7122,6 +7558,36 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("SupportTicket");
+                });
+
+            modelBuilder.Entity("Domain.Entities.TaxDeclaration", b =>
+                {
+                    b.HasOne("Domain.Entities.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.FinancialYear", "FinancialYear")
+                        .WithMany()
+                        .HasForeignKey("FinancialYearId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("FinancialYear");
+                });
+
+            modelBuilder.Entity("Domain.Entities.TaxSlab", b =>
+                {
+                    b.HasOne("Domain.Entities.FinancialYear", "FinancialYear")
+                        .WithMany()
+                        .HasForeignKey("FinancialYearId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("FinancialYear");
                 });
 
             modelBuilder.Entity("Domain.Entities.Tenant", b =>

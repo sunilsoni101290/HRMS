@@ -11,7 +11,8 @@ namespace Application.DTOs.EmployeeLifecycle
     {
         [MaxLength(1000)]
         public string? CheckerRemarks { get; set; }
-        public string? TenantId { get; set; }
-        public string? ActingUserId { get; set; }
+        // FIX (defect C1): TenantId/ActingUserId intentionally removed - see
+        // CreateProbationConfirmationDto.cs for rationale. The API resolves
+        // both from JWT claims.
     }
 }

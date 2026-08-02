@@ -1,0 +1,157 @@
+@model IEnumerable<EmployeeTaxComputationDto>
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"] = "Tax Computations";
+    string financialYearId = ViewBag.FinancialYearId;
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-calculator position-left"></i>
+            Tax Computations
+        </h5>
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="Index" method="get" class="row">
+
+            <div class="col-md-4">
+                <select name="financialYearId" class="form-control" onchange="this.form.submit()">
+                    @if (ViewBag.FinancialYearList is SelectList fyList)
+                    {
+                        foreach (SelectListItem item in fyList)
+                        {
+                            <option value="@item.Value" selected="@(item.Value == financialYearId)">@item.Text</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <select name="departmentId" class="form-control">
+                    <option value="">-- All Departments --</option>
+                    @if (ViewBag.DepartmentList is SelectList deptList)
+                    {
+                        foreach (SelectListItem item in deptList)
+                        {
+                            <option value="@item.Value" selected="@(item.Value == (string)ViewBag.DepartmentId)">@item.Text</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-default">
+                    <i class="icon-search4"></i>
+                    Filter
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+
+    <div class="table-responsive">
+
+        <table class="table table-bordered table-striped">
+
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Regime</th>
+                    <th>Annual Gross</th>
+                    <th>Taxable Income</th>
+                    <th>Annual Tax</th>
+                    <th>TDS Deducted</th>
+                    <th>Monthly TDS</th>
+                    <th width="120">Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>
+                                @item.EmployeeName
+                                <br />
+                                <span class="text-muted text-size-small">@item.EmployeeCode</span>
+                            </td>
+                            <td>@item.RegimeName</td>
+                            <td>@item.AnnualGrossSalary.ToString("N2")</td>
+                            <td>@item.TaxableIncome.ToString("N2")</td>
+                            <td>@item.AnnualTaxLiability.ToString("N2")</td>
+                            <td>@item.TdsDeductedTillDate.ToString("N2")</td>
+                            <td>@item.MonthlyTdsForRemainingMonths.ToString("N2")</td>
+                            <td style="padding: 10px 15px;">
+                                <form asp-action="Compute" method="post" style="display:inline;">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="employeeId" value="@item.EmployeeId" />
+                                    <input type="hidden" name="financialYearId" value="@item.FinancialYearId" />
+                                    <button type="submit" class="btn btn-default btn-icon" title="Recompute">
+                                        <i class="icon-reload-alt"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" class="text-center text-muted" style="padding:30px;">
+                            <i class="icon-calculator" style="font-size:32px;"></i><br />
+                            No Tax Computations found for this Financial Year yet - computations are generated
+                            automatically when a Tax Declaration is Verified.
+                        </td>
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+<script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+
+@section Scripts {
+
+    <script>
+
+        @if (TempData["Success"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Success',
+                    text: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(TempData["Success"]?.ToString() ?? string.Empty)),
+                    type: 'success',
+                    confirmButtonColor: '#66BB6A'
+                });
+            </text>
+        }
+
+        @if (TempData["GlobalError"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Error',
+                    text: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(TempData["GlobalError"]?.ToString() ?? string.Empty)),
+                    type: 'error',
+                    confirmButtonColor: '#EF5350'
+                });
+            </text>
+        }
+
+    </script>
+
+}

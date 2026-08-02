@@ -31,6 +31,12 @@
     bool leaveActive = IsActive("LeaveApplication", "Create") ||
                         IsActive("LeaveApplication", "EmployeeLeaves") ||
                         IsActive("LeaveApplication", "MyApprovals");
+    bool payslipRequestActive = IsActive("PayslipRequest", "MyRequests") ||
+                                 IsActive("PayslipRequest", "Create") ||
+                                 IsActive("PayslipRequest", "Details") ||
+                                 IsActive("PayslipRequest", "PendingApprovals") ||
+                                 IsActive("PayslipRequest", "FinanceQueue") ||
+                                 IsActive("PayslipRequest", "FinanceUpload");
     bool helpSupportActive = IsActive("SupportTicket", "MyTickets") ||
                               IsActive("SupportTicket", "Create") ||
                               IsActive("SupportTicket", "Details") ||
@@ -259,12 +265,77 @@
 
                     </li>
 
-                    <li class="@(IsActive("Payroll", "MyPayslips") ? "active" : "")">
-                        <a asp-controller="Payroll"
-                           asp-action="MyPayslips">
+                    <!-- Payslip Request - direct payslip access is disabled;
+                         an employee must submit a request and it must clear
+                         Reporting Manager approval + Finance generation/
+                         completion. See PayslipRequestController. -->
+
+                    <li class="has-children @(payslipRequestActive ? "active" : "")">
+
+                        <a href="#">
+
                             <i class="icon-cash3"></i>
-                            <span>My Payslip</span>
+
+                            <span>Payslip</span>
+
                         </a>
+
+                        <ul style="@(payslipRequestActive ? "display:block;" : "")">
+
+                            <li class="@(IsActive("PayslipRequest", "MyRequests") ? "active" : "")">
+
+                                <a asp-controller="PayslipRequest"
+                                   asp-action="MyRequests">
+
+                                    My Payslip Requests
+
+                                </a>
+
+                            </li>
+
+                            <li class="@(IsActive("PayslipRequest", "Create") ? "active" : "")">
+
+                                <a asp-controller="PayslipRequest"
+                                   asp-action="Create">
+
+                                    Request Payslip
+
+                                </a>
+
+                            </li>
+
+                            <!-- Only meaningful for a Reporting Manager or
+                                 HR/Admin override - shows an empty queue for
+                                 everyone else, so it's always safe to show
+                                 here (same as Leave's "Pending My Approval"
+                                 above). -->
+                            <li class="@(IsActive("PayslipRequest", "PendingApprovals") ? "active" : "")">
+
+                                <a asp-controller="PayslipRequest"
+                                   asp-action="PendingApprovals">
+
+                                    Payslip Approvals
+
+                                </a>
+
+                            </li>
+
+                            <!-- Only meaningful for a Finance-permissioned
+                                 user or HR/Admin override - shows an empty
+                                 queue for everyone else. -->
+                            <li class="@(IsActive("PayslipRequest", "FinanceQueue") ? "active" : "")">
+
+                                <a asp-controller="PayslipRequest"
+                                   asp-action="FinanceQueue">
+
+                                    Finance Payslip Queue
+
+                                </a>
+
+                            </li>
+
+                        </ul>
+
                     </li>
 
                     <li class="@(IsActive("EmployeeDocument", "MyDocuments") ? "active" : "")">

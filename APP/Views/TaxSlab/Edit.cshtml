@@ -1,0 +1,106 @@
+@model TaxSlabDto
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"] = "Edit Tax Slab";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-calculator position-left"></i>
+            Edit Tax Slab
+        </h5>
+        <div class="heading-elements">
+            <a asp-action="Index" class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="Edit" asp-route-id="@Model.Id" method="post">
+
+            <input asp-for="Id" type="hidden" />
+
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <div class="row">
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="FinancialYearId">Financial Year</label>
+                        <select asp-for="FinancialYearId" asp-items="ViewBag.FinancialYearList as SelectList" class="form-control">
+                            <option value="">-- Select Financial Year --</option>
+                        </select>
+                        <span asp-validation-for="FinancialYearId" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="Regime">Regime</label>
+                        <select asp-for="Regime" class="form-control">
+                            @if (ViewBag.RegimeList is List<SelectListItem> regimeList)
+                            {
+                                foreach (var item in regimeList)
+                                {
+                                    <option value="@item.Value" selected="@(item.Value == Model.Regime.ToString())">@item.Text</option>
+                                }
+                            }
+                        </select>
+                        <span asp-validation-for="Regime" class="text-danger"></span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="row">
+
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="SlabOrder">Slab Order</label>
+                        <input asp-for="SlabOrder" class="form-control" />
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="MinIncome">Minimum Income</label>
+                        <input asp-for="MinIncome" class="form-control" />
+                        <span asp-validation-for="MinIncome" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="MaxIncome">Maximum Income (blank = no upper limit)</label>
+                        <input asp-for="MaxIncome" class="form-control" />
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="RatePercent">Rate (%)</label>
+                        <input asp-for="RatePercent" class="form-control" />
+                        <span asp-validation-for="RatePercent" class="text-danger"></span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="text-right">
+                <button type="submit" class="btn btn-primary">
+                    <i class="icon-checkmark3"></i>
+                    Update
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+
+</div>

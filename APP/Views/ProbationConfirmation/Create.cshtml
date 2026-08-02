@@ -236,7 +236,7 @@
             <text>
                 swal({
                     title: 'Error',
-                    text: '@Html.Raw(TempData["GlobalError"])',
+                    text: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(TempData["GlobalError"]?.ToString() ?? string.Empty)),
                     type: 'error',
                     confirmButtonColor: '#EF5350'
                 });

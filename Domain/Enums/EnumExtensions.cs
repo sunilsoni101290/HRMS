@@ -242,6 +242,28 @@ namespace Domain.Enums
             Cancelled = 4
         }
 
+        // Payslip Request approval workflow - unlike WfhRequestStatus/
+        // OnDutyRequestStatus's single-level approval, this is TWO stages:
+        // the requesting employee's direct Reporting Manager (or HR/Admin
+        // override) first, then Finance (a permission-based role, see
+        // AppFeatureConstants.PAYROLL_PAYSLIP_REQUEST) second. Manager
+        // approval auto-forwards straight to PendingFinanceAction in the
+        // same call (there is no separate manual "forward" step) - see
+        // PayslipRequestService.ManagerApproveAsync. Either stage can
+        // reject, which is terminal (RejectedByManager / RejectedByFinance)
+        // - the employee only ever gets file access after Finance marks the
+        // request Completed. See Domain/Entities/PayslipRequest.cs.
+        public enum PayslipRequestStatus
+        {
+            PendingManagerApproval = 1,
+            RejectedByManager = 2,
+            ApprovedByManager = 3,
+            PendingFinanceAction = 4,
+            PayslipGenerated = 5,
+            Completed = 6,
+            RejectedByFinance = 7
+        }
+
         // On Duty request approval workflow - single-level approval (the
         // requesting employee's direct ReportingManagerId, or HR/Admin as
         // an override), identical shape to WfhRequestStatus above but kept
@@ -744,6 +766,40 @@ namespace Domain.Enums
             Extend = 2,        // Extend probation - Employee.ProbationEndDate set to ExtendedProbationEndDate
             PlaceOnPIP = 3,    // Hand-off to the (later) PIP module - no Employee change made here
             Terminate = 4      // Terminate during probation - Employee.RelievingDate set
+        }
+
+        // =====================================================
+        // TAXATION (Income Tax / TDS - India)
+        // =====================================================
+        // Enterprise Taxation Module - Domain/Entities/TaxSlab.cs,
+        // TaxDeclaration.cs, EmployeeTaxComputation.cs and
+        // Application/Services/Taxation/*. Indian Income Tax offers
+        // salaried employees a choice each Financial Year between the Old
+        // Regime (higher slab rates, but Chapter VI-A deductions such as
+        // 80C/80D/HRA/24(b) are allowed) and the New Regime (lower slab
+        // rates, but almost no deductions) - see
+        // TaxComputationService.ComputeAsync for the exact calculation.
+        public enum TaxRegime
+        {
+            Old = 1,
+            New = 2
+        }
+
+        // Employee self-service investment declaration workflow - NOT a
+        // Maker-Checker (segregation-of-duties) feature like
+        // ProbationConfirmationStatus above, since the "maker" (the
+        // employee) is declaring facts about themselves, not proposing an
+        // action on someone else - the closest existing pattern is
+        // WfhRequestStatus's employee-submits/manager-or-HR-approves shape.
+        // Draft -> Submitted (by the employee) -> Verified/Rejected (by
+        // HR, holding Approve permission on TAX_DECLARATION). Only a
+        // Verified declaration feeds EmployeeTaxComputation.
+        public enum TaxDeclarationStatus
+        {
+            Draft = 1,
+            Submitted = 2,
+            Verified = 3,
+            Rejected = 4
         }
 
         // =====================================================

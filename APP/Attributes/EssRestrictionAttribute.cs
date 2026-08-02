@@ -178,7 +178,15 @@ namespace APP.Attributes
                 ["Payroll"] = new(StringComparer.OrdinalIgnoreCase)
                 {
                     "Index", "Generate", "Details", "Process", "MarkPaid",
-                    "Delete", "Dashboard", "Report"
+                    "Delete", "Dashboard", "Report",
+                    // MyPayslips/Payslip used to be the self-service direct-
+                    // access path (no approval gate) - now superseded by
+                    // PayslipRequestController's Employee -> Reporting
+                    // Manager -> Finance workflow, so these two are admin-
+                    // only the same as the rest of Payroll. PayslipRequest
+                    // itself is deliberately NOT listed anywhere in this
+                    // file - see the comment on that controller.
+                    "MyPayslips", "Payslip"
                 },
                 ["Announcement"] = new(StringComparer.OrdinalIgnoreCase)
                 {
