@@ -194,6 +194,17 @@ builder.Services.AddScoped<Application.Interfaces.Assets.IAssetAllocationService
 builder.Services.AddScoped<Application.Interfaces.Payroll.ISalaryComponentService, Application.Services.PayrollService.SalaryComponentService>();
 builder.Services.AddScoped<Application.Interfaces.Payroll.ISalaryStructureService, Application.Services.PayrollService.SalaryStructureService>();
 builder.Services.AddScoped<Application.Interfaces.Payroll.IPayrollBusinessService, Application.Services.PayrollService.PayrollBusinessService>();
+builder.Services.AddScoped<Application.Interfaces.Payroll.IPayslipRequestService, Application.Services.PayrollService.PayslipRequestService>();
+
+// ===================== Taxation Module =====================
+// TaxComputationService is registered first since TaxDeclarationService
+// takes an ITaxComputationService dependency (Verify triggers a
+// recompute) - order doesn't matter to the DI container itself, but
+// matches this codebase's habit of listing dependencies before
+// dependents within a module block.
+builder.Services.AddScoped<Application.Interfaces.Taxation.ITaxComputationService, Application.Services.Taxation.TaxComputationService>();
+builder.Services.AddScoped<Application.Interfaces.Taxation.ITaxSlabService, Application.Services.Taxation.TaxSlabService>();
+builder.Services.AddScoped<Application.Interfaces.Taxation.ITaxDeclarationService, Application.Services.Taxation.TaxDeclarationService>();
 
 // ===================== Recruitment Module =====================
 builder.Services.AddScoped<Application.Interfaces.Recruitment.IJobOpeningService, Application.Services.Recruitment.JobOpeningService>();

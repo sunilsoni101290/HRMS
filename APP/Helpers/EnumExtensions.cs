@@ -603,6 +603,21 @@ namespace APP.Helpers
             Cancelled = 4
         }
 
+        // Payslip Request approval workflow - mirrors
+        // Domain.Enums.EnumExtensions.PayslipRequestStatus exactly (see
+        // Domain/Enums/EnumExtensions.cs) so the int values sent to/received
+        // from the API line up on both sides.
+        public enum PayslipRequestStatus
+        {
+            PendingManagerApproval = 1,
+            RejectedByManager = 2,
+            ApprovedByManager = 3,
+            PendingFinanceAction = 4,
+            PayslipGenerated = 5,
+            Completed = 6,
+            RejectedByFinance = 7
+        }
+
         // On Duty request - mirrors Domain.Enums.EnumExtensions exactly (see
         // Domain/Enums/EnumExtensions.cs) so the int values sent to/received
         // from the API line up on both sides.
@@ -680,6 +695,24 @@ namespace APP.Helpers
             Extend = 2,
             PlaceOnPIP = 3,
             Terminate = 4
+        }
+
+        // Taxation Module - mirrors Domain.Enums.EnumExtensions.TaxRegime
+        // exactly.
+        public enum TaxRegime
+        {
+            Old = 1,
+            New = 2
+        }
+
+        // Taxation Module - mirrors
+        // Domain.Enums.EnumExtensions.TaxDeclarationStatus exactly.
+        public enum TaxDeclarationStatus
+        {
+            Draft = 1,
+            Submitted = 2,
+            Verified = 3,
+            Rejected = 4
         }
 
         // Performance Improvement Plan (PIP) - Phase 2 of the "Probation &

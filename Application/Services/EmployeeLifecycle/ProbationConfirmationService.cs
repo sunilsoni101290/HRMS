@@ -94,6 +94,7 @@ namespace Application.Services.EmployeeLifecycle
             var pendingEmployeeIds = (await _context.ProbationConfirmations
                     .Where(x =>
                         x.TenantId == tenantId &&
+                        !x.IsDeleted &&
                         employeeIds.Contains(x.EmployeeId) &&
                         x.Status == ProbationConfirmationStatus.PendingChecker)
                     .Select(x => x.EmployeeId)
@@ -166,6 +167,7 @@ namespace Application.Services.EmployeeLifecycle
                 .AnyAsync(x =>
                     x.EmployeeId == dto.EmployeeId &&
                     x.TenantId == tenantId &&
+                    !x.IsDeleted &&
                     x.Status == ProbationConfirmationStatus.PendingChecker);
 
             if (hasPending)
@@ -209,10 +211,13 @@ namespace Application.Services.EmployeeLifecycle
 
         private async Task<ProbationConfirmation> GetEntityByIdAsync(string id, string tenantId)
         {
+            // FIX (defect M2): filter out soft-deleted records for
+            // consistency with the rest of the codebase's soft-delete
+            // convention (BaseEntity.IsDeleted).
             var entity = await _context.ProbationConfirmations
                 .Include(x => x.Employee).ThenInclude(e => e.Department)
                 .Include(x => x.Employee).ThenInclude(e => e.Designation)
-                .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId);
+                .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted);
 
             if (entity == null)
                 throw new Exception("Probation Confirmation record not found.");
@@ -251,7 +256,7 @@ namespace Application.Services.EmployeeLifecycle
             var query = _context.ProbationConfirmations
                 .Include(x => x.Employee).ThenInclude(e => e.Department)
                 .Include(x => x.Employee).ThenInclude(e => e.Designation)
-                .Where(x => x.TenantId == tenantId)
+                .Where(x => x.TenantId == tenantId && !x.IsDeleted)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<ProbationConfirmationStatus>(status, true, out var statusEnum))
@@ -281,7 +286,7 @@ namespace Application.Services.EmployeeLifecycle
         {
             var record = await _context.ProbationConfirmations
                 .Include(x => x.Employee)
-                .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId);
+                .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted);
 
             if (record == null)
                 throw new Exception("Probation Confirmation record not found.");
@@ -357,7 +362,7 @@ namespace Application.Services.EmployeeLifecycle
         public async Task<ProbationConfirmationDto> RejectAsync(string id, CheckerActionDto dto, string actingUserId, string tenantId)
         {
             var record = await _context.ProbationConfirmations
-                .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId);
+                .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted);
 
             if (record == null)
                 throw new Exception("Probation Confirmation record not found.");

@@ -62,8 +62,10 @@ namespace APP.Models.DTOs
         [Required]
         [Display(Name = "Employee")]
         public string EmployeeId { get; set; }
-        public string TenantId { get; set; }
-        public string ActingUserId { get; set; }
+        // FIX (defect C1): TenantId/ActingUserId intentionally removed from
+        // this DTO - see Application/DTOs/EmployeeLifecycle/
+        // CreateProbationConfirmationDto.cs for rationale. The API resolves
+        // both from the caller's JWT claims, never from posted data.
 
         // EnumExtensions.ProbationRecommendation.
         [Required]

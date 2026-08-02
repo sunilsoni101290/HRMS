@@ -1,0 +1,116 @@
+@model TaxDeclarationDto
+
+@{
+    ViewData["Title"] = "My Tax Declaration";
+    string financialYearId = ViewBag.FinancialYearId;
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-file-text2 position-left"></i>
+            My Tax Declaration
+        </h5>
+        <div class="heading-elements">
+            <a asp-action="CreateOrEdit" asp-route-financialYearId="@financialYearId" class="btn bg-primary">
+                <i class="icon-pencil7"></i>
+                @(Model == null ? "Create Declaration" : "Edit Declaration")
+            </a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+
+        @if (Model == null)
+        {
+            <p class="text-muted">You have not created a Tax Declaration for this Financial Year yet.</p>
+        }
+        else
+        {
+            <dl class="dl-horizontal">
+                <dt>Financial Year</dt>
+                <dd>@Model.FinancialYearName</dd>
+
+                <dt>Regime</dt>
+                <dd>@Model.RegimeName</dd>
+
+                <dt>Status</dt>
+                <dd>@Model.StatusName</dd>
+
+                <dt>Section 80C</dt>
+                <dd>@Model.Section80C.ToString("N2")</dd>
+
+                <dt>Section 80CCD(1B)</dt>
+                <dd>@Model.Section80CCD1B.ToString("N2")</dd>
+
+                <dt>Section 80D</dt>
+                <dd>@Model.Section80D.ToString("N2")</dd>
+
+                <dt>Section 24(b)</dt>
+                <dd>@Model.Section24B.ToString("N2")</dd>
+
+                <dt>Other Deductions</dt>
+                <dd>@Model.OtherDeductions.ToString("N2")</dd>
+
+                <dt>Annual Rent Paid</dt>
+                <dd>@Model.AnnualRentPaid.ToString("N2") (@(Model.IsMetroCity ? "Metro" : "Non-Metro"))</dd>
+
+                @if (!string.IsNullOrEmpty(Model.VerifierRemarks))
+                {
+                    <dt>Verifier Remarks</dt>
+                    <dd>@Model.VerifierRemarks</dd>
+                }
+            </dl>
+
+            if (Model.Status == (int)EnumExtensions.TaxDeclarationStatus.Draft || Model.Status == (int)EnumExtensions.TaxDeclarationStatus.Rejected)
+            {
+                <form asp-action="Submit" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <input type="hidden" name="financialYearId" value="@Model.FinancialYearId" />
+                    <button type="submit" class="btn btn-primary">
+                        <i class="icon-checkmark3"></i>
+                        Submit for Verification
+                    </button>
+                </form>
+            }
+        }
+
+    </div>
+
+</div>
+
+<script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+
+@section Scripts {
+
+    <script>
+
+        @if (TempData["Success"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Success',
+                    text: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(TempData["Success"]?.ToString() ?? string.Empty)),
+                    type: 'success',
+                    confirmButtonColor: '#66BB6A'
+                });
+            </text>
+        }
+
+        @if (TempData["GlobalError"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Error',
+                    text: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(TempData["GlobalError"]?.ToString() ?? string.Empty)),
+                    type: 'error',
+                    confirmButtonColor: '#EF5350'
+                });
+            </text>
+        }
+
+    </script>
+
+}

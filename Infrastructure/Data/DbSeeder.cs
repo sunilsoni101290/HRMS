@@ -1774,6 +1774,37 @@ namespace Infrastructure.Data
                 AppFeatureConstants.PROBATION_CONFIRMATION_MANAGEMENT, "bi bi-arrow-repeat", AppFeatureType.Transaction, 125,
                 canAdd: true);
 
+            // ---------------- TAXATION (Income Tax / TDS - India) ----------------
+            // New top-level module (sibling of Probation & Confirmation/
+            // Payroll above) - see AppFeatureConstants.TAXATION_MANAGEMENT.
+            Def("Taxation", AppFeatureConstants.TAXATION_MANAGEMENT, "", "",
+                null, "bi bi-cash-coin", AppFeatureType.Transaction, 126);
+
+            // Tax Slabs - Admin-only master data, plain CRUD.
+            Def("Tax Slabs", AppFeatureConstants.TAX_SLAB,
+                AppFeatureConstants.TAX_SLAB_CONTROLLER, AppFeatureConstants.TAX_SLAB_ACTION,
+                AppFeatureConstants.TAXATION_MANAGEMENT, "bi bi-bar-chart-steps", AppFeatureType.Master, 127,
+                canAdd: true, canEdit: true, canDelete: true);
+
+            // Tax Declaration - BROADER audience than most Probation &
+            // Confirmation siblings (like Employee Feedback): every
+            // Employee needs Create/View on their OWN declaration in
+            // addition to the HR Manager's full View/Create/Approve grant
+            // below - see the dual RolePermission grant blocks.
+            Def("Tax Declaration", AppFeatureConstants.TAX_DECLARATION,
+                AppFeatureConstants.TAX_DECLARATION_CONTROLLER, AppFeatureConstants.TAX_DECLARATION_ACTION,
+                AppFeatureConstants.TAXATION_MANAGEMENT, "bi bi-file-earmark-text", AppFeatureType.Transaction, 128,
+                canAdd: true, canApprove: true);
+
+            // Tax Computation - HR/Payroll-only (View only; the actual
+            // compute-trigger action is gated by TAX_DECLARATION's Approve
+            // permission inside TaxComputationService, not a separate
+            // permission check - this feature entry exists for menu/
+            // routing purposes on the APP side).
+            Def("Tax Computation", AppFeatureConstants.TAX_COMPUTATION,
+                AppFeatureConstants.TAX_COMPUTATION_CONTROLLER, AppFeatureConstants.TAX_COMPUTATION_ACTION,
+                AppFeatureConstants.TAXATION_MANAGEMENT, "bi bi-calculator", AppFeatureType.Transaction, 129);
+
             // ---------------- COMMUNICATION ----------------
             Def("Communication", AppFeatureConstants.COMMUNICATION, "", "",
                 null, "bi bi-megaphone-fill", AppFeatureType.Transaction, 100);
@@ -2893,6 +2924,159 @@ namespace Infrastructure.Data
                 if (rejoiningNewLinks.Count > 0)
                 {
                     await context.RolePermissions.AddRangeAsync(rejoiningNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            // Tax Slabs - Admin-only master data, HR Manager gets full
+            // View/Create/Edit/Delete (no Employee self-service grant -
+            // slab rates are configured by HR/Payroll admins, never by
+            // employees). Super Admin / System Configurator already
+            // received every permission from the fullAccessRoles loop
+            // above.
+            if (hrManagerRole != null)
+            {
+                var taxSlabPermissionIds = await context.Permissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.TAX_SLAB)
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == hrManagerRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var taxSlabNewLinks = taxSlabPermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = hrManagerRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (taxSlabNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(taxSlabNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            // Tax Computation - HR Manager gets View only, same reasoning
+            // as the feature's Def() comment above (menu/routing only, the
+            // actual compute-trigger authorization goes through
+            // TAX_DECLARATION's Approve permission).
+            if (hrManagerRole != null)
+            {
+                var taxComputationPermissionIds = await context.Permissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.TAX_COMPUTATION && p.Action == Actions.View)
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == hrManagerRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var taxComputationNewLinks = taxComputationPermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = hrManagerRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (taxComputationNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(taxComputationNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            // Tax Declaration - BROADER audience, same dual-grant shape as
+            // Employee Feedback above: HR Manager gets full View/Create/
+            // Approve (so HR can both submit on an employee's behalf AND
+            // verify/reject); every Employee additionally gets View/Create
+            // on their OWN declaration - TaxDeclarationService's
+            // actingEmployeeId == dto.EmployeeId check (not a
+            // RolePermission grant) is what stops an Employee from
+            // declaring on someone else's behalf. Super Admin / System
+            // Configurator already received every permission from the
+            // fullAccessRoles loop above.
+            if (hrManagerRole != null)
+            {
+                var taxDeclarationPermissionIds = await context.Permissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.TAX_DECLARATION)
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == hrManagerRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var taxDeclarationNewLinks = taxDeclarationPermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = hrManagerRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (taxDeclarationNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(taxDeclarationNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            if (employeeRole != null)
+            {
+                var taxDeclarationSelfServicePermissionIds = await context.Permissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.TAX_DECLARATION
+                             && (p.Action == Actions.View || p.Action == Actions.Create))
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == employeeRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var taxDeclarationEmployeeNewLinks = taxDeclarationSelfServicePermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = employeeRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (taxDeclarationEmployeeNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(taxDeclarationEmployeeNewLinks);
                     await context.SaveChangesAsync();
                 }
             }

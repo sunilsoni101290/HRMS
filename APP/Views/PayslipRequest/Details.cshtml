@@ -1,0 +1,377 @@
+@model PayslipRequestDto
+
+@{
+    ViewData["Title"] = "Payslip Request Details";
+    string? currentEmployeeId = ViewBag.CurrentEmployeeId as string;
+
+    bool isOwnRequest = Model.EmployeeId == currentEmployeeId;
+
+    bool isPendingManager = Model.Status == (int)EnumExtensions.PayslipRequestStatus.PendingManagerApproval;
+    bool isPendingFinance = Model.Status == (int)EnumExtensions.PayslipRequestStatus.PendingFinanceAction;
+    bool isGenerated = Model.Status == (int)EnumExtensions.PayslipRequestStatus.PayslipGenerated;
+    bool isCompleted = Model.Status == (int)EnumExtensions.PayslipRequestStatus.Completed;
+
+    // Cosmetic only - the API is the real authority on who may act on a
+    // given request; a 403 there still bounces back here via TempData.
+    bool canActAsManager = isPendingManager && !isOwnRequest;
+    bool canActAsFinance = (isPendingFinance || isGenerated) && !isOwnRequest;
+
+    string statusLabelClass = Model.Status switch
+    {
+        (int)EnumExtensions.PayslipRequestStatus.PendingManagerApproval => "bg-warning",
+        (int)EnumExtensions.PayslipRequestStatus.RejectedByManager => "bg-danger",
+        (int)EnumExtensions.PayslipRequestStatus.ApprovedByManager => "bg-info",
+        (int)EnumExtensions.PayslipRequestStatus.PendingFinanceAction => "bg-warning",
+        (int)EnumExtensions.PayslipRequestStatus.PayslipGenerated => "bg-info",
+        (int)EnumExtensions.PayslipRequestStatus.Completed => "bg-success",
+        (int)EnumExtensions.PayslipRequestStatus.RejectedByFinance => "bg-danger",
+        _ => "bg-grey"
+    };
+
+    string alertClass = Model.Status switch
+    {
+        (int)EnumExtensions.PayslipRequestStatus.Completed => "alert-success",
+        (int)EnumExtensions.PayslipRequestStatus.RejectedByManager => "alert-danger",
+        (int)EnumExtensions.PayslipRequestStatus.RejectedByFinance => "alert-danger",
+        _ => "alert-info"
+    };
+
+    string statusText = !string.IsNullOrEmpty(Model.StatusName)
+        ? Model.StatusName
+        : ((EnumExtensions.PayslipRequestStatus)Model.Status).ToString();
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-cash3 position-left"></i>
+            Payslip Request Details
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="MyRequests"
+               class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <div class="alert @alertClass">
+
+            <strong>Status :</strong>
+            <span class="label @statusLabelClass">@statusText</span>
+
+            @if (Model.Status == (int)EnumExtensions.PayslipRequestStatus.RejectedByManager)
+            {
+                <div style="margin-top:8px;">Rejected by Reporting Manager. Reason: @Model.ManagerRemarks</div>
+            }
+            @if (Model.Status == (int)EnumExtensions.PayslipRequestStatus.RejectedByFinance)
+            {
+                <div style="margin-top:8px;">Rejected by Finance. Reason: @Model.FinanceRemarks</div>
+            }
+
+        </div>
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-user position-left"></i>
+                Employee Information
+            </legend>
+
+            <div class="row">
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Employee</label>
+                    <h6>@Model.EmployeeName</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Employee Code</label>
+                    <h6>@(Model.EmployeeCode ?? "-")</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Department</label>
+                    <h6>@(Model.DepartmentName ?? "-")</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="text-semibold text-muted">Reporting Manager</label>
+                    <h6>@(Model.ReportingManagerName ?? "-")</h6>
+                </div>
+
+            </div>
+
+        </fieldset>
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-calendar3 position-left"></i>
+                Payroll Period
+            </legend>
+
+            <div class="row">
+
+                <div class="col-md-4">
+                    <label class="text-semibold text-muted">Period</label>
+                    <h6>@Model.PayrollMonth/@Model.PayrollYear</h6>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="text-semibold text-muted">Requested On</label>
+                    <h6>@Model.CreatedOn.ToString("dd-MMM-yyyy HH:mm")</h6>
+                </div>
+
+            </div>
+
+        </fieldset>
+
+        @if (isCompleted)
+        {
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-file-download position-left"></i>
+                    Payslip
+                </legend>
+
+                <a asp-action="Download" asp-route-id="@Model.Id" class="btn btn-success">
+                    <i class="icon-download7"></i>
+                    Download Payslip
+                </a>
+
+            </fieldset>
+        }
+
+        <fieldset>
+
+            <legend class="text-semibold">
+                <i class="icon-clock position-left"></i>
+                Status Timeline
+            </legend>
+
+            @if (Model.Timeline != null && Model.Timeline.Any())
+            {
+                <ul class="media-list">
+                    @foreach (var t in Model.Timeline)
+                    {
+                        <li class="media">
+                            <div class="media-body">
+                                <div>
+                                    <span class="text-semibold">@t.Action</span>
+                                    - <span class="text-muted">@(t.PerformedByName ?? "-")</span>
+                                    <span class="text-muted text-size-small">(@t.PerformedOn.ToString("dd-MMM-yyyy HH:mm"))</span>
+                                </div>
+                                @if (!string.IsNullOrEmpty(t.Remarks))
+                                {
+                                    <div class="text-muted text-size-small">@t.Remarks</div>
+                                }
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <p class="text-muted">No history yet.</p>
+            }
+
+        </fieldset>
+
+        @if (canActAsManager || canActAsFinance)
+        {
+            <hr />
+
+            <div class="text-right">
+
+                @if (canActAsManager)
+                {
+                    <button type="button" class="btn btn-danger btnManagerReject" data-id="@Model.Id">
+                        <i class="icon-cross2"></i>
+                        Reject
+                    </button>
+
+                    <button type="button" class="btn btn-success btnManagerApprove" data-id="@Model.Id">
+                        <i class="icon-checkmark4"></i>
+                        Approve &amp; Forward to Finance
+                    </button>
+                }
+
+                @if (canActAsFinance)
+                {
+                    <button type="button" class="btn btn-danger btnFinanceReject" data-id="@Model.Id">
+                        <i class="icon-cross2"></i>
+                        Reject
+                    </button>
+
+                    @if (isPendingFinance)
+                    {
+                        <a asp-action="FinanceUpload" asp-route-id="@Model.Id" class="btn btn-primary">
+                            <i class="icon-upload7"></i>
+                            Upload Payslip
+                        </a>
+                    }
+
+                    @if (isGenerated)
+                    {
+                        <button type="button" class="btn btn-success btnFinanceComplete" data-id="@Model.Id">
+                            <i class="icon-checkmark4"></i>
+                            Mark Completed
+                        </button>
+                    }
+                }
+
+            </div>
+        }
+
+    </div>
+
+</div>
+
+@if (canActAsManager)
+{
+    <div class="modal fade" id="managerRejectModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Reject Payslip Request</h5></div>
+                <form asp-action="ManagerReject" method="post">
+                    <div class="modal-body">
+                        <input type="hidden" id="ManagerRejectId" name="id" />
+                        <label>Reason</label>
+                        <textarea class="form-control" name="reason" required></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-danger">Reject</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <form id="managerApproveForm" asp-action="ManagerApprove" method="post" style="display:none;">
+        <input type="hidden" id="ManagerApproveId" name="id" />
+    </form>
+}
+
+@if (canActAsFinance)
+{
+    <div class="modal fade" id="financeRejectModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Reject Payslip Request (Finance)</h5></div>
+                <form asp-action="FinanceReject" method="post">
+                    <div class="modal-body">
+                        <input type="hidden" id="FinanceRejectId" name="id" />
+                        <label>Reason</label>
+                        <textarea class="form-control" name="reason" required></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-danger">Reject</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <form id="financeCompleteForm" asp-action="FinanceComplete" method="post" style="display:none;">
+        <input type="hidden" id="FinanceCompleteId" name="id" />
+    </form>
+}
+
+<script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+
+@section Scripts {
+
+    <script>
+
+        @if (TempData["Success"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Success',
+                    text: '@Html.Raw(TempData["Success"])',
+                    type: 'success',
+                    confirmButtonColor: '#66BB6A'
+                });
+            </text>
+        }
+
+        @if (TempData["GlobalError"] != null)
+        {
+            <text>
+                swal({
+                    title: 'Error',
+                    text: '@Html.Raw(TempData["GlobalError"])',
+                    type: 'error',
+                    confirmButtonColor: '#EF5350'
+                });
+            </text>
+        }
+
+    </script>
+
+    <script>
+
+        $(document).ready(function () {
+
+            $(document).on('click', '.btnManagerReject', function () {
+                $('#ManagerRejectId').val($(this).data('id'));
+                $('#managerRejectModal').modal('show');
+            });
+
+            $(document).on('click', '.btnManagerApprove', function () {
+                var id = $(this).data('id');
+                swal({
+                    title: 'Approve this request?',
+                    text: 'It will be forwarded to Finance for payslip generation.',
+                    type: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#66BB6A',
+                    confirmButtonText: 'Yes, approve it'
+                }, function (isConfirm) {
+                    if (isConfirm) {
+                        $('#ManagerApproveId').val(id);
+                        $('#managerApproveForm').submit();
+                    }
+                });
+            });
+
+            $(document).on('click', '.btnFinanceReject', function () {
+                $('#FinanceRejectId').val($(this).data('id'));
+                $('#financeRejectModal').modal('show');
+            });
+
+            $(document).on('click', '.btnFinanceComplete', function () {
+                var id = $(this).data('id');
+                swal({
+                    title: 'Mark this request as Completed?',
+                    text: 'The employee will be notified and can then download the payslip.',
+                    type: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#66BB6A',
+                    confirmButtonText: 'Yes, complete it'
+                }, function (isConfirm) {
+                    if (isConfirm) {
+                        $('#FinanceCompleteId').val(id);
+                        $('#financeCompleteForm').submit();
+                    }
+                });
+            });
+
+        });
+
+    </script>
+
+}

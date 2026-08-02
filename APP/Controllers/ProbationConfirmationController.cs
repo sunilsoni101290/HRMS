@@ -51,12 +51,14 @@ namespace APP.Controllers
             await BindDepartmentDropdown(departmentId);
             ViewBag.StatusList = EnumHelper.GetEnumList<ProbationConfirmationStatus>();
 
+            // FIX (defect C1): TenantId/ActingUserId are no longer sent as
+            // query params - the API resolves both from the JWT claims on
+            // the authenticated request (forwarded automatically by
+            // IApiService), never from client-supplied values.
             var url =
                 $"probationconfirmation?status={Uri.EscapeDataString(status ?? string.Empty)}" +
                 $"&departmentId={Uri.EscapeDataString(departmentId ?? string.Empty)}" +
-                $"&search={Uri.EscapeDataString(search ?? string.Empty)}"+
-                $"&TenantId={Uri.EscapeDataString(_tenantId ?? string.Empty)}" +
-                $"&ActingUserId={Uri.EscapeDataString(_userId ?? string.Empty)}";
+                $"&search={Uri.EscapeDataString(search ?? string.Empty)}";
 
             try
             {
@@ -84,9 +86,7 @@ namespace APP.Controllers
 
             var url =
                 $"probationconfirmation/due-for-review?departmentId={Uri.EscapeDataString(departmentId ?? string.Empty)}" +
-                $"&search={Uri.EscapeDataString(search ?? string.Empty)}" +
-                $"&TenantId={Uri.EscapeDataString(_tenantId ?? string.Empty)}" +
-                $"&ActingUserId={Uri.EscapeDataString(_userId ?? string.Empty)}"; ;
+                $"&search={Uri.EscapeDataString(search ?? string.Empty)}";
 
             try
             {
@@ -111,8 +111,6 @@ namespace APP.Controllers
 
             return View(new CreateProbationConfirmationDto
             {
-                TenantId=_tenantId,
-                ActingUserId=_userId,
                 EmployeeId = employeeId ?? string.Empty
             });
         }
@@ -217,11 +215,7 @@ namespace APP.Controllers
 
             try
             {
-                var url = $"probationconfirmation/{id}" +
-                  $"?TenantId={Uri.EscapeDataString(_tenantId ?? string.Empty)}" +
-                  $"&ActingUserId={Uri.EscapeDataString(_userId ?? string.Empty)}";
-
-                data = await _apiService.GetAsync<ProbationConfirmationDto>(url);
+                data = await _apiService.GetAsync<ProbationConfirmationDto>($"probationconfirmation/{id}");
             }
             catch (UnauthorizedAccessException ex) when (ex.Message.StartsWith("Access Denied"))
             {
@@ -260,7 +254,7 @@ namespace APP.Controllers
             {
                 var result = await _apiService.PutAsync<ProbationConfirmationDto>(
                     $"probationconfirmation/{id}/approve",
-                    new CheckerActionDto { CheckerRemarks = remarks,TenantId=_tenantId,ActingUserId=_userId });
+                    new CheckerActionDto { CheckerRemarks = remarks });
 
                 TempData[result != null ? "Success" : "GlobalError"] = result != null
                     ? "Probation Confirmation approved successfully."
@@ -298,7 +292,7 @@ namespace APP.Controllers
             {
                 var result = await _apiService.PutAsync<ProbationConfirmationDto>(
                     $"probationconfirmation/{id}/reject",
-                    new CheckerActionDto { CheckerRemarks = remarks, TenantId = _tenantId, ActingUserId = _userId });
+                    new CheckerActionDto { CheckerRemarks = remarks });
 
                 TempData[result != null ? "Success" : "GlobalError"] = result != null
                     ? "Probation Confirmation rejected."

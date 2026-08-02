@@ -1,0 +1,138 @@
+@model CreatePayslipRequestDto
+
+@{
+    ViewData["Title"] = "Request Payslip";
+    bool noEmployeeProfile = ViewBag.NoEmployeeProfile ?? false;
+    string employeeDisplayName = ViewBag.EmployeeDisplayName ?? "";
+    var periods = ViewBag.PeriodList as List<PayrollListDto> ?? new List<PayrollListDto>();
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-cash3 position-left"></i>
+            Request Payslip
+        </h5>
+
+        <div class="heading-elements">
+
+            <a asp-action="MyRequests"
+               class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="Create"
+              method="post">
+
+            <div asp-validation-summary="ModelOnly"
+                 class="alert alert-danger"></div>
+
+            <div class="row">
+
+                <div class="col-md-12">
+
+                    <div class="form-group">
+
+                        <label>Employee</label>
+
+                        <!-- Self-service: always the logged-in employee, never a
+                             pickable dropdown - the server ignores any other
+                             value even if one were posted. -->
+                        <input type="text"
+                               class="form-control bg-slate-100"
+                               value="@employeeDisplayName"
+                               readonly
+                               disabled />
+
+                        <input asp-for="EmployeeId" type="hidden" />
+
+                        @if (noEmployeeProfile)
+                        {
+                            <span class="text-danger text-size-small">
+                                Your login isn't linked to an employee profile - you can't request a payslip.
+                            </span>
+                        }
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-calendar3"></i>
+                    Payroll Period
+                </legend>
+
+                @if (!noEmployeeProfile && !periods.Any())
+                {
+                    <div class="alert alert-warning">
+                        You have no eligible payroll periods to request a payslip for right now - either
+                        none have been processed yet, or you already have an open request for every
+                        available period.
+                    </div>
+                }
+
+                <div class="form-group">
+
+                    <label asp-for="PayrollId"></label>
+
+                    <select asp-for="PayrollId" class="form-control">
+                        <option value="">-- Select Payroll Period --</option>
+                        @foreach (var p in periods)
+                        {
+                            <option value="@p.Id">@p.MonthName @p.SalaryYear (@p.Status)</option>
+                        }
+                    </select>
+
+                    <span asp-validation-for="PayrollId"
+                          class="text-danger"></span>
+
+                </div>
+
+            </fieldset>
+
+            <hr />
+
+            <div class="text-right">
+
+                <a asp-action="MyRequests"
+                   class="btn btn-default">
+
+                    Cancel
+
+                </a>
+
+                <button type="submit"
+                        class="btn bg-primary"
+                        @(noEmployeeProfile || !periods.Any() ? "disabled" : "")>
+
+                    <i class="icon-checkmark4"></i>
+                    Submit Request
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+@section Scripts {
+
+    <partial name="_ValidationScriptsPartial" />
+
+}

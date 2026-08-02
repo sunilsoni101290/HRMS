@@ -1,0 +1,140 @@
+@model CreateTaxDeclarationDto
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"] = "Tax Declaration";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-file-text2 position-left"></i>
+            Tax Declaration
+        </h5>
+        <div class="heading-elements">
+            <a asp-action="MyDeclaration" asp-route-financialYearId="@Model.FinancialYearId" class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="CreateOrEdit" method="post">
+
+            <input asp-for="FinancialYearId" type="hidden" />
+            <input asp-for="EmployeeId" type="hidden" />
+
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Financial Year</label>
+                        <select class="form-control" disabled>
+                            @if (ViewBag.FinancialYearList is SelectList fyList)
+                            {
+                                foreach (SelectListItem item in fyList)
+                                {
+                                    <option value="@item.Value" selected="@(item.Value == Model.FinancialYearId)">@item.Text</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="Regime"></label>
+                        <select asp-for="Regime" class="form-control">
+                            <option value="">-- Select Regime --</option>
+                            @if (ViewBag.RegimeList is List<SelectListItem> regimeList)
+                            {
+                                foreach (var item in regimeList)
+                                {
+                                    <option value="@item.Value">@item.Text</option>
+                                }
+                            }
+                        </select>
+                        <span asp-validation-for="Regime" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <fieldset>
+                <legend class="text-semibold">Chapter VI-A Deductions (Old Regime only)</legend>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="Section80C"></label>
+                            <input asp-for="Section80C" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="Section80CCD1B"></label>
+                            <input asp-for="Section80CCD1B" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="Section80D"></label>
+                            <input asp-for="Section80D" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="Section24B"></label>
+                            <input asp-for="Section24B" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="OtherDeductions"></label>
+                            <input asp-for="OtherDeductions" class="form-control" />
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend class="text-semibold">HRA Exemption (Old Regime only)</legend>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="AnnualRentPaid"></label>
+                            <input asp-for="AnnualRentPaid" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="LandlordPAN"></label>
+                            <input asp-for="LandlordPAN" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="checkbox">
+                            <label>
+                                <input asp-for="IsMetroCity" type="checkbox" /> Residing in a Metro City
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <div class="text-right">
+                <button type="submit" class="btn btn-primary">
+                    <i class="icon-checkmark3"></i>
+                    Save Draft
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+
+</div>

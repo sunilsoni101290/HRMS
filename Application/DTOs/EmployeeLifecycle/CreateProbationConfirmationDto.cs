@@ -11,8 +11,12 @@ namespace Application.DTOs.EmployeeLifecycle
         [Required]
         [Display(Name = "Employee")]
         public string EmployeeId { get; set; }
-        public string? TenantId { get; set; }
-        public string? ActingUserId { get; set; }
+        // FIX (defect C1): TenantId/ActingUserId intentionally removed from
+        // this DTO - they must NEVER be client-suppliable. The API controller
+        // resolves both from the caller's JWT claims (see
+        // API/Controllers/ProbationConfirmationController.cs) and passes them
+        // into the service explicitly; trusting client-posted values here
+        // previously allowed cross-tenant impersonation.
 
         // Domain.Enums.EnumExtensions.ProbationRecommendation.
         [Required]

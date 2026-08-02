@@ -25,13 +25,20 @@ namespace API.Controllers
         // TenantId/UserId are read from the JWT claims exactly like
         // WfhRequestController / AttendancePolicyController - see
         // Application/Services/JWT Token/JwtService.cs for how these
-        // claims are issued at login.
-        //private string? TenantId => User.FindFirst("TenantId")?.Value;
-        //private string? ActingUserId => User.FindFirst("UserId")?.Value;
+        // claims are issued at login. FIX (defect C1): these were
+        // previously accepted as plain query-string/body parameters, which
+        // let any authenticated user impersonate any other user/tenant by
+        // simply supplying different values - the [Authorize] attribute
+        // only proves *a* valid JWT exists, it does not validate which
+        // tenant/user the caller claims to be unless the values are pulled
+        // from the token itself. Do NOT reintroduce TenantId/ActingUserId
+        // as bindable action parameters or DTO properties.
+        private string? TenantId => User.FindFirst("TenantId")?.Value;
+        private string? ActingUserId => User.FindFirst("UserId")?.Value;
 
         // GET api/probationconfirmation/due-for-review?departmentId=&search=
         [HttpGet("due-for-review")]
-        public async Task<IActionResult> GetDueForReview([FromQuery] string? departmentId, [FromQuery] string? search, string TenantId, string ActingUserId)
+        public async Task<IActionResult> GetDueForReview([FromQuery] string? departmentId, [FromQuery] string? search)
         {
             try
             {
@@ -53,7 +60,7 @@ namespace API.Controllers
 
             try
             {
-                var result = await _probationConfirmationService.CreateAsync(dto, dto.TenantId, dto.ActingUserId);
+                var result = await _probationConfirmationService.CreateAsync(dto, TenantId, ActingUserId);
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)
@@ -68,7 +75,7 @@ namespace API.Controllers
 
         // GET api/probationconfirmation?status=&departmentId=&search=
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] string? status, [FromQuery] string? departmentId, [FromQuery] string? search, string TenantId, string ActingUserId)
+        public async Task<IActionResult> GetAll([FromQuery] string? status, [FromQuery] string? departmentId, [FromQuery] string? search)
         {
             try
             {
@@ -82,7 +89,7 @@ namespace API.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(string id, string TenantId, string ActingUserId)
+        public async Task<IActionResult> GetById(string id)
         {
             try
             {
@@ -105,7 +112,7 @@ namespace API.Controllers
         {
             try
             {
-                var result = await _probationConfirmationService.ApproveAsync(id, dto, dto.ActingUserId, dto.TenantId);
+                var result = await _probationConfirmationService.ApproveAsync(id, dto, ActingUserId, TenantId);
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)
@@ -124,7 +131,7 @@ namespace API.Controllers
         {
             try
             {
-                var result = await _probationConfirmationService.RejectAsync(id, dto, dto.ActingUserId, dto.TenantId);
+                var result = await _probationConfirmationService.RejectAsync(id, dto, ActingUserId, TenantId);
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)

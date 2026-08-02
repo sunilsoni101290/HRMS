@@ -154,6 +154,20 @@ namespace Infrastructure
         public DbSet<SalaryComponent> SalaryComponents { get; set; }
         public DbSet<SalaryStructure> SalaryStructures { get; set; }
         public DbSet<SalaryDetail> SalaryDetails { get; set; }
+
+        // Payslip Request approval workflow (Employee -> Reporting Manager
+        // -> Finance) - see Domain/Entities/PayslipRequest.cs.
+        public DbSet<PayslipRequest> PayslipRequests { get; set; }
+        public DbSet<PayslipRequestAudit> PayslipRequestAudits { get; set; }
+        #endregion
+
+        #region 🧾 TAXATION (Income Tax / TDS - India)
+        // Enterprise Taxation Module - see Domain/Entities/TaxSlab.cs,
+        // TaxDeclaration.cs, EmployeeTaxComputation.cs and
+        // Application/Services/Taxation/*.
+        public DbSet<TaxSlab> TaxSlabs { get; set; }
+        public DbSet<TaxDeclaration> TaxDeclarations { get; set; }
+        public DbSet<EmployeeTaxComputation> EmployeeTaxComputations { get; set; }
         #endregion
 
         #region 💼 ASSET
@@ -512,6 +526,69 @@ namespace Infrastructure
             // on EmployeeId.
             modelBuilder.Entity<RejoiningHistory>()
                 .HasIndex(x => x.EmployeeId);
+
+            // =====================================================
+            // 🧾 TAXATION (Income Tax / TDS - India)
+            // =====================================================
+            // TaxSlab - (FinancialYearId, Regime) for the ComputeAsync
+            // slab walk.
+            modelBuilder.Entity<TaxSlab>()
+                .HasOne(x => x.FinancialYear)
+                .WithMany()
+                .HasForeignKey(x => x.FinancialYearId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<TaxSlab>()
+                .HasIndex(x => new { x.FinancialYearId, x.Regime });
+
+            // TaxDeclaration - one declaration per (EmployeeId,
+            // FinancialYearId) - enforced in TaxDeclarationService as an
+            // upsert, backed here by a unique index as the belt-and-
+            // braces safety net (same pattern as
+            // CompOffCandidate.(EmployeeId, AttendanceId)).
+            modelBuilder.Entity<TaxDeclaration>()
+                .HasOne(x => x.Employee)
+                .WithMany()
+                .HasForeignKey(x => x.EmployeeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<TaxDeclaration>()
+                .HasOne(x => x.FinancialYear)
+                .WithMany()
+                .HasForeignKey(x => x.FinancialYearId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<TaxDeclaration>()
+                .HasIndex(x => new { x.EmployeeId, x.FinancialYearId })
+                .IsUnique();
+
+            modelBuilder.Entity<TaxDeclaration>()
+                .HasIndex(x => new { x.TenantId, x.Status });
+
+            // EmployeeTaxComputation - one computed row per (EmployeeId,
+            // FinancialYearId), same uniqueness shape as TaxDeclaration
+            // above.
+            modelBuilder.Entity<EmployeeTaxComputation>()
+                .HasOne(x => x.Employee)
+                .WithMany()
+                .HasForeignKey(x => x.EmployeeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<EmployeeTaxComputation>()
+                .HasOne(x => x.FinancialYear)
+                .WithMany()
+                .HasForeignKey(x => x.FinancialYearId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<EmployeeTaxComputation>()
+                .HasOne(x => x.TaxDeclaration)
+                .WithMany()
+                .HasForeignKey(x => x.TaxDeclarationId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<EmployeeTaxComputation>()
+                .HasIndex(x => new { x.EmployeeId, x.FinancialYearId })
+                .IsUnique();
 
             modelBuilder.Entity<Payroll>()
                 .HasIndex(x => new { x.EmployeeId, x.SalaryMonth });

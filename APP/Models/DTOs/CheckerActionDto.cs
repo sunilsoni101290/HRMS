@@ -15,7 +15,7 @@ namespace APP.Models.DTOs
     {
         [MaxLength(1000)]
         public string? CheckerRemarks { get; set; }
-        public string? TenantId { get; set; }
-        public string? ActingUserId { get; set; }
+        // FIX (defect C1): TenantId/ActingUserId intentionally removed - the
+        // API resolves both from JWT claims, never from posted data.
     }
 }

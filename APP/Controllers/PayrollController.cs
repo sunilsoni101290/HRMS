@@ -53,27 +53,26 @@ namespace APP.Controllers
         }
 
         /// <summary>
-        /// Self-service "my payslips" list - filters the payroll list down
-        /// to the logged-in user's own employee record, so an employee can
-        /// never browse another employee's salary data from this page.
+        /// Formerly the self-service "my payslips" list - an employee could
+        /// view/print their own payslip here directly, with no approval
+        /// gate. That self-service purpose is now fully superseded by
+        /// PayslipRequestController's Employee -> Reporting Manager ->
+        /// Finance approval workflow (see Domain/Entities/PayslipRequest.cs
+        /// and APP/Attributes/EssRestrictionAttribute.cs, which now lists
+        /// this action as admin-only). A non-admin caller is redirected to
+        /// PayslipRequestController.MyRequests instead of ever seeing
+        /// payroll data directly; an admin lands on the org-wide Index
+        /// (this action's own list view is retained only as an admin-side
+        /// alias of Index for any bookmarked links).
         /// </summary>
         public async Task<IActionResult> MyPayslips()
         {
-            if (string.IsNullOrEmpty(_employeeId))
-            {
-                ViewBag.NoEmployeeProfile = true;
-                return View(new List<PayrollListDto>());
-            }
+            if (!_isAdmin)
+                return RedirectToAction("MyRequests", "PayslipRequest");
 
             var data = await _apiService.GetAsync<List<PayrollListDto>>("payroll");
 
-            var mine = (data ?? new List<PayrollListDto>())
-                .Where(p => p.EmployeeId == _employeeId)
-                .OrderByDescending(p => p.SalaryYear)
-                .ThenByDescending(p => p.SalaryMonth)
-                .ToList();
-
-            return View(mine);
+            return View(data ?? new List<PayrollListDto>());
         }
 
         [HttpGet]
@@ -192,18 +191,23 @@ namespace APP.Controllers
             return View(data);
         }
 
+        // Admin-only direct payslip lookup by Payroll id, kept for HR/Admin
+        // support purposes (e.g. troubleshooting a specific salary period).
+        // An employee can no longer reach a payslip this way at all - see
+        // PayslipRequestController.MyRequests/Create/Details/Download for
+        // the only path a self-service user now has to their own payslip,
+        // gated behind Reporting Manager approval and Finance
+        // generation/completion.
         [HttpGet]
         public async Task<IActionResult> Payslip(string id)
         {
+            if (!_isAdmin)
+                return RedirectToAction("MyRequests", "PayslipRequest");
+
             // Ensure a payslip record exists, then show the printable view
             await _apiService.PostAsync<dynamic>($"payroll/payslip/{id}?userId={_userId}", new { });
 
             var data = await _apiService.GetAsync<PayrollDto>($"payroll/payslip/{id}");
-
-            // An employee may only view/print their own payslip - never
-            // another employee's, even by guessing/incrementing an id.
-            if (!_isAdmin && (data == null || data.EmployeeId != _employeeId))
-                return Forbid();
 
             ViewBag.IsAdmin = _isAdmin;
             return View(data);
