@@ -12,15 +12,27 @@ using static Domain.Enums.EnumExtensions;
 
 namespace Infrastructure.Data
 {
-    public static class DbSeeder
+    public class DbSeeder
     {
         public static async Task SeedAsync(ApplicationDbContext context)
         {
             if (context == null) return;
 
-            // Apply Pending Migrations
+            //context.Database.EnsureCreated();
+
+
+            if (context == null)
+                return;
+
+            // Database accessible?
+            if (!await context.Database.CanConnectAsync())
+            {
+                throw new Exception(
+                    "Cannot connect to SQL Server. Please verify the connection string and ensure the database already exists.");
+            }
+
+            // Apply pending migrations only.
             //await context.Database.MigrateAsync();
-            context.Database.EnsureCreated();
 
             // =========================
             // 1. COUNTRY
