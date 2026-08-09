@@ -26,10 +26,17 @@ namespace Application.Services.Permissions
                     .OrderBy(x => x.Module).ThenBy(x => x.DisplayOrder)
                     .ToListAsync();
 
+                // GroupBy-then-First (not a straight ToDictionaryAsync on
+                // Code) because AppFeatures.Code isn't guaranteed unique in
+                // the data today - a duplicate Code (e.g. "TAX_DECLARATION")
+                // used to throw "An item with the same key has already been
+                // added." here. First-wins per Code is fine for a display
+                // name lookup.
                 var featureNames = await _context.AppFeatures
                     .AsNoTracking()
                     .Where(x => !x.IsDeleted)
-                    .Select(x => new { x.Code, x.Name })
+                    .GroupBy(x => x.Code)
+                    .Select(g => new { Code = g.Key, Name = g.First().Name })
                     .ToDictionaryAsync(x => x.Code, x => x.Name);
 
                 var roleCounts = await _context.RolePermissions

@@ -1,0 +1,103 @@
+@model AdvanceSubmitDto
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"] = "New Advance Request";
+    bool isAdmin = ViewBag.EmployeeList != null;
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="bi bi-wallet2 position-left"></i>
+            New Advance Request
+        </h5>
+        <div class="heading-elements">
+            <a asp-action="Index" class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="Create" method="post">
+
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <div class="row">
+
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="EmployeeId"></label>
+                        @if (isAdmin)
+                        {
+                            <select asp-for="EmployeeId" asp-items="ViewBag.EmployeeList as SelectList" class="form-control">
+                                <option value="">-- Select Employee --</option>
+                            </select>
+                        }
+                        else
+                        {
+                            <input asp-for="EmployeeId" class="form-control" readonly />
+                        }
+                        <span asp-validation-for="EmployeeId" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="AdvanceTypeId"></label>
+                        <select asp-for="AdvanceTypeId" asp-items="ViewBag.AdvanceTypeList as SelectList" class="form-control">
+                            <option value="">-- Select Advance Type --</option>
+                        </select>
+                        <span asp-validation-for="AdvanceTypeId" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="RequestedAmount"></label>
+                        <input asp-for="RequestedAmount" class="form-control" />
+                        <span asp-validation-for="RequestedAmount" class="text-danger"></span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="row">
+
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="InstallmentCount"></label>
+                        <input asp-for="InstallmentCount" class="form-control" />
+                        <span asp-validation-for="InstallmentCount" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="col-md-8">
+                    <div class="form-group">
+                        <label asp-for="Purpose"></label>
+                        <input asp-for="Purpose" class="form-control" />
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="text-right" style="margin-top:20px;">
+                <button type="submit" class="btn btn-primary">
+                    <i class="icon-checkmark3"></i>
+                    Submit Request
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

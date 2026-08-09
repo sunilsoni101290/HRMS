@@ -6,15 +6,16 @@
     var devices = Model ?? new List<BiometricDeviceHealthDto>();
     var onlineCount = devices.Count(x => x.IsOnline);
     var offlineCount = devices.Count(x => x.IsActive && !x.IsOnline);
+    var disabledCount = devices.Count(x => !x.IsActive);
     var pendingTotal = devices.Sum(x => x.PendingPunchCount);
 }
 
-<div class="panel panel-flat">
+<div class="panel panel-flat biometric-health-panel">
 
     <div class="panel-heading">
 
         <h5 class="panel-title">
-            <i class="icon-meter position-left"></i>
+            <i class="bi bi-speedometer2 position-left"></i>
             Biometric Device Health
         </h5>
 
@@ -29,114 +30,249 @@
 
     <div class="panel-body">
 
-        <p class="text-muted">
+        <div class="alert alert-info info-note">
+            <i class="icon-info22 position-left"></i>
             A device counts as <strong>Online</strong> when it's Active and has synced
             (via the BiometricAgent pushing to /api/BiometricSync/ingest, or a manual Sync Now)
             within the last 15 minutes. <strong>Pending</strong> punches are raw logs received
-            but not yet turned into Attendance records - a growing pending count with no recent
+            but not yet turned into Attendance records — a growing pending count with no recent
             sync usually means AttendanceProcessorService hasn't run, or the punch's biometric
             code has no EmployeeBiometricMapping.
-        </p>
+        </div>
 
         <div class="row">
 
-            <div class="col-md-4">
-                <div class="panel bg-success-400">
-                    <div class="panel-body text-center">
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card stat-success">
+                    <div class="stat-icon"><i class="icon-checkmark-circle"></i></div>
+                    <div class="stat-body">
                         <h3 class="no-margin">@onlineCount</h3>
                         <span>Online</span>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-4">
-                <div class="panel bg-danger-400">
-                    <div class="panel-body text-center">
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card stat-danger">
+                    <div class="stat-icon"><i class="icon-cancel-circle2"></i></div>
+                    <div class="stat-body">
                         <h3 class="no-margin">@offlineCount</h3>
                         <span>Offline / Not Synced</span>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-4">
-                <div class="panel bg-warning-400">
-                    <div class="panel-body text-center">
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card stat-warning">
+                    <div class="stat-icon"><i class="icon-watch2"></i></div>
+                    <div class="stat-body">
                         <h3 class="no-margin">@pendingTotal</h3>
                         <span>Pending Punches (all devices)</span>
                     </div>
                 </div>
             </div>
 
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card stat-default">
+                    <div class="stat-icon"><i class="icon-blocked"></i></div>
+                    <div class="stat-body">
+                        <h3 class="no-margin">@disabledCount</h3>
+                        <span>Disabled</span>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
-        <table class="table table-hover">
+        <div class="row filter-row">
 
-            <thead>
-                <tr>
-                    <th>Status</th>
-                    <th>Device Name</th>
-                    <th>Code</th>
-                    <th>IP Address</th>
-                    <th>Last Sync</th>
-                    <th>Total Punches</th>
-                    <th>Pending</th>
-                </tr>
-            </thead>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <div class="input-group">
+                        <span class="input-group-addon"><i class="icon-search4"></i></span>
+                        <input type="text" id="searchInput" class="form-control" placeholder="Search by device name, code or IP..." />
+                    </div>
+                </div>
+            </div>
 
-            <tbody>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <select id="StatusFilter" class="form-control select-search">
+                        <option value="">All Statuses</option>
+                        <option value="online">Online</option>
+                        <option value="offline">Offline</option>
+                        <option value="disabled">Disabled</option>
+                    </select>
+                </div>
+            </div>
 
-                @foreach (var item in devices)
-                {
+        </div>
+
+        <div class="table-responsive">
+
+            <table class="table table-hover table-striped datatable-basic">
+
+                <thead>
                     <tr>
-                        <td>
-                            @if (!item.IsActive)
-                            {
-                                <span class="label label-default">Disabled</span>
-                            }
-                            else if (item.IsOnline)
-                            {
-                                <span class="label label-success">Online</span>
-                            }
-                            else
-                            {
-                                <span class="label label-danger">Offline</span>
-                            }
-                        </td>
-                        <td>
-                            <a asp-action="Details" asp-route-id="@item.DeviceId">@item.DeviceName</a>
-                        </td>
-                        <td>@item.DeviceCode</td>
-                        <td>@item.IPAddress</td>
-                        <td>
-                            @(item.LastSyncDate.HasValue
-                                ? item.LastSyncDate.Value.ToString("g")
-                                : "Never")
-                        </td>
-                        <td>@item.TotalPunchCount</td>
-                        <td>
-                            @if (item.PendingPunchCount > 0)
-                            {
-                                <span class="label label-warning">@item.PendingPunchCount</span>
-                            }
-                            else
-                            {
-                                <span>0</span>
-                            }
-                        </td>
+                        <th width="110" class="text-center">Status</th>
+                        <th>Device Name</th>
+                        <th>Code</th>
+                        <th>IP Address</th>
+                        <th>Last Sync</th>
+                        <th width="120" class="text-right">Total Punches</th>
+                        <th width="110" class="text-right">Pending</th>
                     </tr>
-                }
+                </thead>
 
-                @if (!devices.Any())
-                {
-                    <tr>
-                        <td colspan="7" class="text-center text-muted">No biometric devices configured yet.</td>
-                    </tr>
-                }
+                <tbody id="healthTable">
 
-            </tbody>
+                    @foreach (var item in devices)
+                    {
+                        var status = !item.IsActive ? "disabled" : (item.IsOnline ? "online" : "offline");
 
-        </table>
+                        <tr data-status="@status">
+                            <td class="text-center">
+                                @if (!item.IsActive)
+                                {
+                                    <span class="label label-default">Disabled</span>
+                                }
+                                else if (item.IsOnline)
+                                {
+                                    <span class="label label-success">Online</span>
+                                }
+                                else
+                                {
+                                    <span class="label label-danger">Offline</span>
+                                }
+                            </td>
+                            <td>
+                                <a asp-action="Details" asp-route-id="@item.DeviceId" class="text-semibold">
+                                    <i class="bi bi-fingerprint text-primary position-left"></i>
+                                    @item.DeviceName
+                                </a>
+                            </td>
+                            <td>@item.DeviceCode</td>
+                            <td>@item.IPAddress</td>
+                            <td>
+                                @(item.LastSyncDate.HasValue
+                                    ? item.LastSyncDate.Value.ToString("g")
+                                    : "Never")
+                            </td>
+                            <td class="text-right">@item.TotalPunchCount</td>
+                            <td class="text-right">
+                                @if (item.PendingPunchCount > 0)
+                                {
+                                    <span class="label label-warning">@item.PendingPunchCount</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">0</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+
+                    @if (!devices.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">No biometric devices configured yet.</td>
+                        </tr>
+                    }
+
+                </tbody>
+
+            </table>
+
+        </div>
 
     </div>
 
 </div>
+
+@section Scripts {
+
+    <script>
+
+        $(document).ready(function () {
+
+            if ($.fn.chosen) {
+                $(".select-search").chosen({ width: "100%", search_contains: true });
+            }
+
+            if ($.fn.DataTable) {
+                $('.datatable-basic').DataTable({
+                    autoWidth: false,
+                    paging: true,
+                    ordering: true,
+                    searching: false,
+                    pageLength: 10,
+                    lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                    language: { search: "_INPUT_", searchPlaceholder: "Search..." }
+                });
+            }
+
+            function applyFilters() {
+                var term = ($("#searchInput").val() || "").toLowerCase();
+                var status = $("#StatusFilter").val();
+
+                $("#healthTable > tr").each(function () {
+                    var row = $(this);
+                    var matchesTerm = term === "" || row.text().toLowerCase().indexOf(term) > -1;
+                    var matchesStatus = status === "" || row.data("status") === status;
+                    row.toggle(matchesTerm && matchesStatus);
+                });
+            }
+
+            $("#searchInput").on("keyup", applyFilters);
+            $("#StatusFilter").on("change", applyFilters);
+
+        });
+
+    </script>
+
+    <style>
+
+        .biometric-health-panel .info-note { font-size: 12.5px; }
+
+        .biometric-health-panel .stat-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px 18px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+
+        .biometric-health-panel .stat-icon {
+            font-size: 24px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,.18);
+            flex-shrink: 0;
+        }
+
+        .stat-success { background: linear-gradient(135deg,#3ecf8e,#1f9d63); }
+        .stat-danger { background: linear-gradient(135deg,#ff6b6b,#e64545); }
+        .stat-warning { background: linear-gradient(135deg,#ffb648,#e8942c); }
+        .stat-default { background: linear-gradient(135deg,#9aa5b1,#6b7684); }
+
+        .filter-row { margin: 4px 0 16px; }
+
+        .table > thead > tr > th {
+            background: #fafafa;
+            font-size: 12.5px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .3px;
+        }
+
+        .chosen-container { width: 100% !important; }
+
+    </style>
+
+}

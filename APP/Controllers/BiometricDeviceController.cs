@@ -26,7 +26,35 @@ namespace APP.Controllers
         public async Task<IActionResult> Index()
         {
             var data = await _apiService
-                .GetAsync<List<BiometricDeviceDto>>($"BiometricDevice");
+                .GetAsync<List<BiometricDeviceDto>>($"BiometricDevice")
+                ?? new List<BiometricDeviceDto>();
+
+            // Company / Branch names for the filter dropdowns and for
+            // rendering readable labels in the table (the list only
+            // carries Ids from the API).
+            var companies = await _apiService
+                .GetAsync<List<DropdownDto>>("dropdown/company")
+                ?? new List<DropdownDto>();
+
+            ViewBag.CompanyList = new SelectList(companies, "Value", "Text");
+            ViewBag.CompanyNames = companies.ToDictionary(x => x.Value, x => x.Text);
+
+            var branchNames = new Dictionary<string, string>();
+
+            foreach (var companyId in data
+                .Select(x => x.CompanyId)
+                .Where(x => !string.IsNullOrEmpty(x))
+                .Distinct())
+            {
+                var branches = await _apiService
+                    .GetAsync<List<DropdownDto>>($"dropdown/branch/{companyId}")
+                    ?? new List<DropdownDto>();
+
+                foreach (var branch in branches)
+                    branchNames[branch.Value] = branch.Text;
+            }
+
+            ViewBag.BranchNames = branchNames;
 
             return View(data);
         }
@@ -76,7 +104,7 @@ namespace APP.Controllers
                     ex.Message);
             }
 
-            await LoadDropdowns();
+            await LoadDropdowns(model.CompanyId, model.BranchId);
 
             return View(model);
         }
@@ -90,7 +118,7 @@ namespace APP.Controllers
             if (data == null)
                 return NotFound();
 
-            await LoadDropdowns(data.CompanyId);
+            await LoadDropdowns(data.CompanyId, data.BranchId);
 
             return View("Create", data);
         }
@@ -99,7 +127,10 @@ namespace APP.Controllers
         public async Task<ActionResult> Edit(BiometricDeviceDto model)
         {
             if (!ModelState.IsValid)
-                return View(model);
+            {
+                await LoadDropdowns(model.CompanyId, model.BranchId);
+                return View("Create", model);
+            }
 
             try
             {
@@ -107,8 +138,6 @@ namespace APP.Controllers
                 model.CreatedBy = _userId;
                 model.ModifiedBy = _userId;
                 model.ModifiedOn = DateTime.UtcNow;
-
-                await LoadDropdowns(model.CompanyId);
 
                 var response =
                     await _apiService.PutAsync<BiometricDeviceDto, ApiResponse<BiometricDeviceDto>>
@@ -135,7 +164,9 @@ namespace APP.Controllers
                     ex.Message);
             }
 
-            return View(model);
+            await LoadDropdowns(model.CompanyId, model.BranchId);
+
+            return View("Create", model);
         }
 
         [HttpGet]
@@ -144,6 +175,29 @@ namespace APP.Controllers
             var data = await _apiService.GetAsync<BiometricDeviceDto>(
                 $"BiometricDevice/{id}"
             );
+
+            if (data == null)
+                return NotFound();
+
+            if (!string.IsNullOrEmpty(data.CompanyId))
+            {
+                var companies = await _apiService
+                    .GetAsync<List<DropdownDto>>("dropdown/company")
+                    ?? new List<DropdownDto>();
+
+                ViewBag.CompanyName = companies
+                    .FirstOrDefault(x => x.Value == data.CompanyId)?.Text;
+
+                if (!string.IsNullOrEmpty(data.BranchId))
+                {
+                    var branches = await _apiService
+                        .GetAsync<List<DropdownDto>>($"dropdown/branch/{data.CompanyId}")
+                        ?? new List<DropdownDto>();
+
+                    ViewBag.BranchName = branches
+                        .FirstOrDefault(x => x.Value == data.BranchId)?.Text;
+                }
+            }
 
             return View(data);
         }
@@ -211,20 +265,57 @@ namespace APP.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        /// <summary>
+        /// Non-JS fallback / direct link. Prefer TestConnectionAjax from the UI -
+        /// it keeps the user on the page instead of round-tripping to Index.
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> TestConnection(string id)
         {
-            var data = await _apiService.GetAsync<bool>(
-                $"BiometricDevice/test/{id}"
-            );
-
-            if (data)
+            try
             {
-                AlertHelper.Success(TempData, "Test Connection success.");
-                return RedirectToAction(nameof(Index));
+                var success = await _apiService.GetAsync<bool>(
+                    $"BiometricDevice/test/{id}"
+                );
+
+                if (success)
+                    AlertHelper.Success(TempData, "Test connection succeeded.");
+                else
+                    AlertHelper.Error(TempData, "Test connection failed. The device did not respond.");
+            }
+            catch (Exception ex)
+            {
+                AlertHelper.Error(TempData, $"Test connection failed: {ex.Message}");
             }
 
-            return View(data);
+            return RedirectToAction(nameof(Index));
+        }
+
+        /// <summary>
+        /// AJAX endpoint used by the Index/Details "Test Connection" buttons so the
+        /// result can be shown inline (spinner + badge) without a full page reload.
+        /// </summary>
+        [HttpPost]
+        public async Task<JsonResult> TestConnectionAjax(string id)
+        {
+            try
+            {
+                var success = await _apiService.GetAsync<bool>(
+                    $"BiometricDevice/test/{id}"
+                );
+
+                return Json(new
+                {
+                    success,
+                    message = success
+                        ? "Connection successful."
+                        : "Connection failed. The device did not respond."
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
         }
 
         [HttpGet]
@@ -246,7 +337,7 @@ namespace APP.Controllers
 
         #region LoadDropdowns
 
-        private async Task LoadDropdowns(string? companyId = null)
+        private async Task LoadDropdowns(string? companyId = null, string? branchId = null)
         {
             // Company
             var companies = await _apiService
@@ -255,7 +346,8 @@ namespace APP.Controllers
             ViewBag.CompanyList = new SelectList(
                 companies,
                 "Value",
-                "Text"
+                "Text",
+                companyId
             );
 
             // Branch
@@ -271,7 +363,8 @@ namespace APP.Controllers
             ViewBag.BranchList = new SelectList(
                 branches,
                 "Value",
-                "Text"
+                "Text",
+                branchId
             );
         }
 

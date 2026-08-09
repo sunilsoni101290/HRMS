@@ -24,9 +24,6 @@ namespace API.Controllers
 
         // TenantId/UserId are read from the JWT claims exactly like
         // ProbationConfirmationController.
-        private string? TenantId => User.FindFirst("TenantId")?.Value;
-        private string? ActingUserId => User.FindFirst("UserId")?.Value;
-
         // POST api/employeefeedback
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateUpdateEmployeeFeedbackDto dto)
@@ -36,7 +33,7 @@ namespace API.Controllers
 
             try
             {
-                var result = await _employeeFeedbackService.CreateAsync(dto, TenantId, ActingUserId);
+                var result = await _employeeFeedbackService.CreateAsync(dto, dto.TenantId, dto.ActingUserId);
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)
@@ -58,7 +55,7 @@ namespace API.Controllers
 
             try
             {
-                var result = await _employeeFeedbackService.UpdateAsync(id, dto, TenantId, ActingUserId);
+                var result = await _employeeFeedbackService.UpdateAsync(id, dto, dto.TenantId, dto.ActingUserId);
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)
@@ -73,11 +70,11 @@ namespace API.Controllers
 
         // DELETE api/employeefeedback/{id}
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(string id)
+        public async Task<IActionResult> Delete(string id,string tenantId,string actingUserId)
         {
             try
             {
-                await _employeeFeedbackService.DeleteAsync(id, TenantId, ActingUserId);
+                await _employeeFeedbackService.DeleteAsync(id, tenantId, actingUserId);
                 return Ok(new { Message = "Feedback record deleted." });
             }
             catch (UnauthorizedAccessException ex)
@@ -92,11 +89,11 @@ namespace API.Controllers
 
         // GET api/employeefeedback/{id}
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(string id)
+        public async Task<IActionResult> GetById(string id, string tenantId, string actingUserId)
         {
             try
             {
-                var result = await _employeeFeedbackService.GetByIdAsync(id, TenantId, ActingUserId);
+                var result = await _employeeFeedbackService.GetByIdAsync(id, tenantId, actingUserId);
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)
@@ -114,11 +111,11 @@ namespace API.Controllers
         // both use this same endpoint; the returned rows differ per caller
         // via the service's per-record visibility filter.
         [HttpGet("employee/{employeeId}")]
-        public async Task<IActionResult> GetForEmployee(string employeeId)
+        public async Task<IActionResult> GetForEmployee(string employeeId, string tenantId, string actingUserId)
         {
             try
             {
-                var result = await _employeeFeedbackService.GetForEmployeeAsync(employeeId, TenantId, ActingUserId);
+                var result = await _employeeFeedbackService.GetForEmployeeAsync(employeeId, tenantId, actingUserId);
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)
@@ -133,9 +130,9 @@ namespace API.Controllers
 
         // GET api/employeefeedback/given-by-me
         [HttpGet("given-by-me")]
-        public async Task<IActionResult> GetGivenByMe()
+        public async Task<IActionResult> GetGivenByMe(string tenantId, string actingUserId)
         {
-            var result = await _employeeFeedbackService.GetGivenByMeAsync(TenantId, ActingUserId);
+            var result = await _employeeFeedbackService.GetGivenByMeAsync(tenantId, actingUserId);
             return Ok(result);
         }
     }

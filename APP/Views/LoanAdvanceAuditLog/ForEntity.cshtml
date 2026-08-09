@@ -1,0 +1,66 @@
+@model List<LoanAdvanceAuditLogDto>
+
+@{
+    ViewData["Title"] = "Audit Trail";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="bi bi-journal-text position-left"></i>
+            Audit Trail - @ViewBag.EntityType #@ViewBag.EntityId
+        </h5>
+        <div class="heading-elements">
+            <a asp-action="Index" class="btn btn-default">
+                <i class="icon-arrow-left8 position-left"></i>
+                All Activity
+            </a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+
+        @if (Model != null && Model.Any())
+        {
+            <ul class="media-list">
+                @foreach (var item in Model)
+                {
+                    var badgeClass = item.Action switch
+                    {
+                        "Create" => "bg-teal",
+                        "Delete" => "bg-danger",
+                        _ => "bg-info"
+                    };
+
+                    <li class="media">
+                        <div class="media-body">
+                            <div class="media-title">
+                                <span class="label @badgeClass">@item.Action</span>
+                                <span class="text-semibold">@(item.PerformedByName ?? item.PerformedBy)</span>
+                                <span class="text-muted"> - @item.PerformedOn.ToString("dd-MMM-yyyy HH:mm")</span>
+                            </div>
+
+                            <div class="row" style="margin-top:8px;">
+                                <div class="col-md-6">
+                                    <label class="text-semibold text-muted">Old Values</label>
+                                    <pre class="small">@(item.OldValuesJson ?? "(none - new record)")</pre>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="text-semibold text-muted">New Values</label>
+                                    <pre class="small">@(item.NewValuesJson ?? "(none - deleted)")</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p class="text-center text-muted" style="padding:30px;">No audit activity recorded for this record yet.</p>
+        }
+
+    </div>
+
+</div>

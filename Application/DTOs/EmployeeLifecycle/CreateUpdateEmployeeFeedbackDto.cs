@@ -24,5 +24,8 @@ namespace Application.DTOs.EmployeeLifecycle
         public string? Comments { get; set; }
 
         public bool IsVisibleToEmployee { get; set; } = true;
+        public string? TenantId { get; set; }
+        public string? ActingUserId { get; set; }
+
     }
 }

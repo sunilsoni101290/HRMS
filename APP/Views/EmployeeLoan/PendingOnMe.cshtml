@@ -1,0 +1,73 @@
+@model IEnumerable<EmployeeLoanListDto>
+
+@{
+    ViewData["Title"] = "Loans Pending On Me";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-clock position-left"></i>
+            Loan Requests Awaiting My Approval
+        </h5>
+        <div class="heading-elements">
+            <a asp-action="Index" class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back to All Loans
+            </a>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+
+        <table class="table table-bordered table-striped">
+
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Loan Type</th>
+                    <th>Requested</th>
+                    <th>Level</th>
+                    <th>Submitted</th>
+                    <th width="120"></th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.EmployeeName <span class="text-muted">(@item.EmployeeCode)</span></td>
+                            <td>@item.LoanTypeName</td>
+                            <td>@item.RequestedAmount.ToString("N0")</td>
+                            <td>@item.CurrentApprovalLevel</td>
+                            <td>@item.CreatedOn.ToString("dd-MMM-yyyy")</td>
+                            <td>
+                                <a asp-action="Details" asp-route-id="@item.Id" class="btn bg-primary btn-icon btn-sm" title="Review">
+                                    <i class="icon-eye"></i> Review
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center text-muted" style="padding:30px;">
+                            <i class="icon-checkmark-circle" style="font-size:32px;"></i><br />
+                            Nothing awaiting your approval right now.
+                        </td>
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>

@@ -1,0 +1,74 @@
+@model EmployeeLoanDto
+@{
+    Layout = null;
+    // Phase 13 - "PDF" output via the browser's own Print / Save-as-PDF,
+    // per the project decision to not add a new (and, for QuestPDF,
+    // license-encumbered) server-side PDF dependency when this codebase
+    // doesn't use one anywhere else yet. This view is intentionally
+    // self-contained (Layout = null) - no sidebar/navbar chrome to print.
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Loan Sanction Letter - @Model.EmployeeName</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; color: #222; margin: 40px; font-size: 14px; }
+        .letterhead { text-align: center; border-bottom: 2px solid #2196F3; padding-bottom: 12px; margin-bottom: 24px; }
+        .letterhead h2 { margin: 0; color: #2196F3; }
+        .letterhead small { color: #777; }
+        .meta { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        table.info { width: 100%; border-collapse: collapse; margin: 16px 0; }
+        table.info td { padding: 6px 10px; border: 1px solid #ddd; }
+        table.info td.label { background: #f5f5f5; font-weight: 600; width: 35%; }
+        .signature { margin-top: 60px; display: flex; justify-content: space-between; }
+        .signature div { text-align: center; width: 200px; border-top: 1px solid #333; padding-top: 6px; }
+        .no-print { margin-bottom: 20px; }
+        @@media print { .no-print { display: none; } body { margin: 15mm; } }
+    </style>
+</head>
+<body>
+
+    <div class="no-print">
+        <button onclick="window.print()">Print / Save as PDF</button>
+        <button onclick="window.close()">Close</button>
+    </div>
+
+    <div class="letterhead">
+        <h2>Loan Sanction Letter</h2>
+        <small>Generated on @DateTime.UtcNow.ToString("dd-MMM-yyyy")</small>
+    </div>
+
+    <p>
+        This letter confirms that <strong>@Model.EmployeeName</strong> (Employee Code: @Model.EmployeeCode),
+        @(Model.DepartmentName != null ? $"of the {Model.DepartmentName} department, " : "")
+        has been sanctioned a <strong>@Model.LoanTypeName</strong> under the following terms:
+    </p>
+
+    <table class="info">
+        <tr><td class="label">Loan Reference</td><td>@Model.Id</td></tr>
+        <tr><td class="label">Requested Amount</td><td>@Model.RequestedAmount.ToString("N2")</td></tr>
+        <tr><td class="label">Sanctioned (Approved) Amount</td><td>@(Model.ApprovedAmount?.ToString("N2") ?? "Pending Approval")</td></tr>
+        <tr><td class="label">Tenure</td><td>@Model.TenureMonths months</td></tr>
+        <tr><td class="label">Interest Rate</td><td>@Model.InterestRatePercent.ToString("N2")% per annum (@Model.InterestMethodName)</td></tr>
+        <tr><td class="label">Status</td><td>@Model.StatusName</td></tr>
+        @if (Model.DisbursedOn.HasValue)
+        {
+            <tr><td class="label">Disbursed Amount</td><td>@Model.DisbursedAmount?.ToString("N2")</td></tr>
+            <tr><td class="label">Disbursed On</td><td>@Model.DisbursedOn.Value.ToString("dd-MMM-yyyy")</td></tr>
+        }
+    </table>
+
+    <p>
+        The sanctioned amount, once disbursed, will be recovered through monthly payroll deductions as per the
+        EMI schedule communicated separately (see Statement). This sanction is subject to the organization's Loan
+        Policy in effect at the time of approval and may be revised only through a formal re-approval.
+    </p>
+
+    <div class="signature">
+        <div>Employee Signature</div>
+        <div>Authorized Signatory (HR / Finance)</div>
+    </div>
+
+</body>
+</html>

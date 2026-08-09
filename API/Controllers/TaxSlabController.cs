@@ -1,5 +1,6 @@
 using Application.DTOs.Taxation;
 using Application.Interfaces.Taxation;
+using Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -22,16 +23,13 @@ namespace API.Controllers
             _taxSlabService = taxSlabService;
         }
 
-        private string? TenantId => User.FindFirst("TenantId")?.Value;
-        private string? ActingUserId => User.FindFirst("UserId")?.Value;
-
         // GET api/taxslab?financialYearId=&regime=
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] string? financialYearId, [FromQuery] int? regime)
+        public async Task<IActionResult> GetAll([FromQuery] string? financialYearId, [FromQuery] int? regime,string tenantId,string actingUserId)
         {
             try
             {
-                var result = await _taxSlabService.GetAllAsync(TenantId, financialYearId, regime, ActingUserId);
+                var result = await _taxSlabService.GetAllAsync(tenantId, financialYearId, regime, actingUserId);
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)
@@ -41,11 +39,11 @@ namespace API.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(string id)
+        public async Task<IActionResult> GetById(string id, string tenantId, string actingUserId)
         {
             try
             {
-                var result = await _taxSlabService.GetByIdAsync(id, TenantId, ActingUserId);
+                var result = await _taxSlabService.GetByIdAsync(id, tenantId, actingUserId);
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)
@@ -66,7 +64,7 @@ namespace API.Controllers
 
             try
             {
-                var result = await _taxSlabService.CreateAsync(dto, TenantId, ActingUserId);
+                var result = await _taxSlabService.CreateAsync(dto, dto.TenantId, dto.ActingUserId);
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)
@@ -87,7 +85,7 @@ namespace API.Controllers
 
             try
             {
-                var result = await _taxSlabService.UpdateAsync(id, dto, TenantId, ActingUserId);
+                var result = await _taxSlabService.UpdateAsync(id, dto, dto.TenantId, dto.ActingUserId);
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)
@@ -101,11 +99,18 @@ namespace API.Controllers
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(string id)
+        public async Task<IActionResult> Delete(
+        string id,
+        string tenantId,
+        string actingUserId)
         {
             try
             {
-                var result = await _taxSlabService.DeleteAsync(id, TenantId, ActingUserId);
+                var result = await _taxSlabService.DeleteAsync(
+                    id,
+                    tenantId,
+                    actingUserId);
+
                 return Ok(new { Success = result });
             }
             catch (UnauthorizedAccessException ex)

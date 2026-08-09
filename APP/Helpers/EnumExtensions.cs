@@ -763,6 +763,82 @@ namespace APP.Helpers
             Attendance = 5,
             Other = 6
         }
+
+        // ================= LOAN & ADVANCE (Phase 11) =================
+        // Mirror Domain.Enums.EnumExtensions' equivalents exactly (see
+        // Domain/Enums/EnumExtensions.cs) so the int values sent to/
+        // received from the API line up on both sides.
+        public enum LoanStatus
+        {
+            Draft = 1,
+            Submitted = 2,
+            PendingApproval = 3,
+            Approved = 4,
+            Rejected = 5,
+            Disbursed = 6,
+            Active = 7,
+            PreClosureRequested = 8,
+            SettlementPending = 9,
+            Closed = 10,
+            Foreclosed = 11,
+            Cancelled = 12
+        }
+
+        public enum AdvanceStatus
+        {
+            Draft = 1,
+            Submitted = 2,
+            PendingApproval = 3,
+            Approved = 4,
+            Rejected = 5,
+            Disbursed = 6,
+            Recovered = 7,
+            Settled = 8,
+            Cancelled = 9
+        }
+
+        public enum LoanInterestMethod
+        {
+            Reducing = 1,
+            Flat = 2
+        }
+
+        public enum LoanApprovalDecision
+        {
+            Approved = 1,
+            Rejected = 2
+        }
+
+        public enum LoanDisbursementMode
+        {
+            BankTransfer = 1,
+            Cheque = 2,
+            PayrollCredit = 3
+        }
+
+        public enum LoanInstallmentStatus
+        {
+            Pending = 1,
+            Recovered = 2,
+            Skipped = 3,
+            Waived = 4,
+            Cancelled = 5
+        }
+
+        public enum LoanClosureReason
+        {
+            FullyRecovered = 1,
+            PreClosed = 2,
+            SettledOnExit = 3,
+            WrittenOff = 4
+        }
+
+        public enum LoanApproverType
+        {
+            ReportingManager = 1,
+            SpecificRole = 2,
+            SpecificUser = 3
+        }
     }
 
     public static class EnumHelper

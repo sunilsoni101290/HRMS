@@ -1,0 +1,100 @@
+@model EmployeeLoanDto
+@{
+    Layout = null;
+    // Phase 13 - print-friendly "PDF" statement, see SanctionLetter.cshtml's
+    // remarks for why this is a browser-print view rather than a
+    // server-generated .pdf file.
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Loan Statement - @Model.EmployeeName</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; color: #222; margin: 40px; font-size: 13px; }
+        .letterhead { text-align: center; border-bottom: 2px solid #2196F3; padding-bottom: 12px; margin-bottom: 24px; }
+        .letterhead h2 { margin: 0; color: #2196F3; }
+        .letterhead small { color: #777; }
+        table.info { width: 100%; border-collapse: collapse; margin: 16px 0; }
+        table.info td { padding: 5px 8px; border: 1px solid #ddd; }
+        table.info td.label { background: #f5f5f5; font-weight: 600; width: 30%; }
+        table.grid { width: 100%; border-collapse: collapse; margin: 12px 0 24px; }
+        table.grid th, table.grid td { border: 1px solid #ccc; padding: 5px 8px; text-align: right; }
+        table.grid th { background: #2196F3; color: #fff; text-align: center; }
+        table.grid td:first-child, table.grid th:first-child { text-align: center; }
+        h4 { margin-top: 24px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+        .no-print { margin-bottom: 20px; }
+        @@media print { .no-print { display: none; } body { margin: 12mm; } h4 { page-break-after: avoid; } tr { page-break-inside: avoid; } }
+    </style>
+</head>
+<body>
+
+    <div class="no-print">
+        <button onclick="window.print()">Print / Save as PDF</button>
+        <button onclick="window.close()">Close</button>
+    </div>
+
+    <div class="letterhead">
+        <h2>Loan Statement</h2>
+        <small>Generated on @DateTime.UtcNow.ToString("dd-MMM-yyyy")</small>
+    </div>
+
+    <table class="info">
+        <tr><td class="label">Employee</td><td>@Model.EmployeeName (@Model.EmployeeCode)</td></tr>
+        <tr><td class="label">Loan Reference</td><td>@Model.Id</td></tr>
+        <tr><td class="label">Loan Type</td><td>@Model.LoanTypeName</td></tr>
+        <tr><td class="label">Principal / Approved</td><td>@Model.ApprovedAmount?.ToString("N2")</td></tr>
+        <tr><td class="label">Outstanding Principal</td><td>@Model.OutstandingPrincipal.ToString("N2")</td></tr>
+        <tr><td class="label">Status</td><td>@Model.StatusName</td></tr>
+    </table>
+
+    @if (Model.EmiSchedule.Any())
+    {
+        <h4>EMI Schedule</h4>
+        <table class="grid">
+            <thead>
+                <tr><th>#</th><th>Due Date</th><th>Opening Bal.</th><th>Principal</th><th>Interest</th><th>EMI</th><th>Closing Bal.</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var emi in Model.EmiSchedule.OrderBy(x => x.InstallmentNumber))
+                {
+                    <tr>
+                        <td>@emi.InstallmentNumber</td>
+                        <td>@emi.DueDate.ToString("dd-MMM-yyyy")</td>
+                        <td>@emi.OpeningBalance.ToString("N2")</td>
+                        <td>@emi.PrincipalComponent.ToString("N2")</td>
+                        <td>@emi.InterestComponent.ToString("N2")</td>
+                        <td>@emi.EmiAmount.ToString("N2")</td>
+                        <td>@emi.ClosingBalance.ToString("N2")</td>
+                        <td>@emi.StatusName</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    @if (Model.PaymentHistory.Any())
+    {
+        <h4>Payment History</h4>
+        <table class="grid">
+            <thead>
+                <tr><th>Date</th><th>Source</th><th>Amount</th><th>Principal</th><th>Interest</th><th>Reference</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model.PaymentHistory)
+                {
+                    <tr>
+                        <td>@p.PaymentDate.ToString("dd-MMM-yyyy")</td>
+                        <td>@p.PaymentSourceName</td>
+                        <td>@p.AmountPaid.ToString("N2")</td>
+                        <td>@p.PrincipalPaid.ToString("N2")</td>
+                        <td>@p.InterestPaid.ToString("N2")</td>
+                        <td>@(p.ReceiptReference ?? "-")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+</body>
+</html>

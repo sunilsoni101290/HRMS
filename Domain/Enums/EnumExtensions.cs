@@ -879,6 +879,139 @@ namespace Domain.Enums
             Attendance = 5,
             Other = 6
         }
+
+        // =====================================================
+        // LOAN & ADVANCE MODULE
+        // =====================================================
+        // See Domain/Entities/EmployeeLoan.cs / EmployeeAdvance.cs and
+        // Application/Services/LoanAdvance/*. Loans use a CONFIGURABLE
+        // N-LEVEL Maker-Checker workflow (unlike the single-level
+        // WfhRequestStatus-style modules, or the fixed-shape
+        // ProbationConfirmationStatus PendingChecker/Approved/Rejected
+        // pattern): the number and identity of approval levels is resolved
+        // per-request from LoanPolicy/LoanPolicyApprovalLevel at submit
+        // time (see LoanPolicyApprovalLevel below), so the status enum
+        // needs its own generic "PendingApproval" state rather than one
+        // fixed PendingChecker state. CurrentApprovalLevel on
+        // EmployeeLoan/EmployeeAdvance tracks which level is next; the
+        // Maker != Checker invariant is still enforced per level exactly
+        // like ProbationConfirmationService does (see
+        // EmployeeLoanService.ApproveAsync/RejectAsync).
+        public enum LoanStatus
+        {
+            Draft = 1,
+            Submitted = 2,
+            PendingApproval = 3,
+            Approved = 4,
+            Rejected = 5,
+            Disbursed = 6,
+            Active = 7,
+            PreClosureRequested = 8,
+            SettlementPending = 9,
+            Closed = 10,
+            Foreclosed = 11,
+            Cancelled = 12
+        }
+
+        // Same shape as LoanStatus minus the interest-bearing-only states
+        // (PreClosureRequested/Foreclosed - advances are not amortized) -
+        // kept as its own enum per this codebase's per-module enum
+        // convention (see WfhRequestStatus/OnDutyRequestStatus above).
+        public enum AdvanceStatus
+        {
+            Draft = 1,
+            Submitted = 2,
+            PendingApproval = 3,
+            Approved = 4,
+            Rejected = 5,
+            Disbursed = 6,
+            Recovered = 7,
+            Settled = 8,
+            Cancelled = 9
+        }
+
+        // LoanType.InterestMethod / LoanPolicy override - drives which
+        // amortization algorithm ILoanCalculationService uses to build the
+        // LoanEmiSchedule (see Phase 8 business logic). Reducing is the
+        // system default; Flat is an explicit per-Loan-Type opt-in.
+        public enum InterestMethod
+        {
+            Reducing = 1,
+            Flat = 2
+        }
+
+        // Decision recorded on a single LoanApprovalHistory/
+        // AdvanceApprovalHistory row (one row per level acted on).
+        public enum ApprovalDecision
+        {
+            Approved = 1,
+            Rejected = 2
+        }
+
+        public enum DisbursementMode
+        {
+            BankTransfer = 1,
+            Cheque = 2,
+            PayrollCredit = 3
+        }
+
+        // Where a LoanPaymentHistory/AdvancePaymentHistory row's money came
+        // from - PayrollDeduction is written automatically by the payroll
+        // recovery hook (see Phase 8 §8.4), ManualReceipt is a Finance-entered
+        // out-of-band payment, PreClosure is the lump-sum on full pre-closure/
+        // settlement.
+        public enum PaymentSource
+        {
+            PayrollDeduction = 1,
+            ManualReceipt = 2,
+            PreClosure = 3
+        }
+
+        // A single LoanEmiSchedule/AdvanceInstallment row's recovery state.
+        // Skipped (not Recovered with a zero amount) is used when a payroll
+        // cycle's net pay was insufficient to deduct - see
+        // PayrollLoanRecoveryService - so the shortfall is visible and
+        // auditable rather than silently rolling forward.
+        public enum InstallmentStatus
+        {
+            Pending = 1,
+            Recovered = 2,
+            Skipped = 3,
+            Waived = 4,
+            Cancelled = 5
+        }
+
+        public enum LoanClosureReason
+        {
+            FullyRecovered = 1,
+            PreClosed = 2,
+            SettledOnExit = 3,
+            WrittenOff = 4
+        }
+
+        // Discriminator for the shared/polymorphic LoanAdvanceAttachment
+        // table - one attachment table serves both EmployeeLoan and
+        // EmployeeAdvance requests (see Domain/Entities/LoanAdvanceAttachment.cs)
+        // rather than duplicating an attachment table per module, since
+        // attachments are a genuinely cross-cutting, low-cardinality-per-row
+        // concern (same reasoning as the shared LoanAdvanceAuditLog).
+        public enum LoanAttachmentEntityType
+        {
+            Loan = 1,
+            Advance = 2
+        }
+
+        // Who LoanPolicyApprovalLevel.ApproverType resolves to at submit
+        // time - ReportingManager reads Employee.ReportingManagerId,
+        // SpecificRole picks any user holding ApproverRoleId (scoped to the
+        // request's Company/Branch), SpecificUser is a fixed named approver
+        // (e.g. a designated Finance Head).
+        public enum ApproverType
+        {
+            ReportingManager = 1,
+            SpecificRole = 2,
+            SpecificUser = 3
+        }
     }
 
     public static class EnumHelper

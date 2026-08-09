@@ -41,6 +41,7 @@ namespace Application.DTOs.Taxation
         public string? VerifierRemarks { get; set; }
 
         public string? TenantId { get; set; }
+        public string? ActingUserId { get; set; }
         public DateTime CreatedOn { get; set; }
         public string? CreatedBy { get; set; }
     }
@@ -52,6 +53,8 @@ namespace Application.DTOs.Taxation
     {
         [Required]
         public string EmployeeId { get; set; }
+        public string TenantId { get; set; }
+        public string ActingUserId { get; set; }
 
         [Required(ErrorMessage = "Financial Year is required")]
         public string FinancialYearId { get; set; }
@@ -91,5 +94,7 @@ namespace Application.DTOs.Taxation
     {
         [MaxLength(1000)]
         public string? VerifierRemarks { get; set; }
+        public string? TenantId { get; set; }
+        public string? ActingUserId { get; set; }
     }
 }

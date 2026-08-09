@@ -53,7 +53,7 @@ namespace Domain.Entities
 
         public int DisplayOrder { get; set; }
         public ICollection<RolePermission> RolePermissions { get; set; }
-        public override string GetSequencePrefix() => "ROL";
+        public override string GetSequencePrefix() => "P";
     }
 
     public class RolePermission : BaseEntity

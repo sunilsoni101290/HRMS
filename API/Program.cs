@@ -1,6 +1,7 @@
 using API.BackgroundServices;
 using API.Middleware;
 using Application.DTOs.Attendances;
+using FluentValidation;
 using Application.Interfaces;
 using Application.Interfaces.Attendances;
 using Application.Interfaces.Auth;
@@ -36,6 +37,7 @@ var builder = WebApplication.CreateBuilder(args);
 // DATABASE
 // ======================================================
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
+{
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("ERPConnection"),
         sqlOptions =>
@@ -46,7 +48,14 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 errorNumbersToAdd: null);
 
             sqlOptions.CommandTimeout(120);
-        }));
+        });
+
+    // Phase 16 - automatic Loan & Advance audit trail; one interceptor
+    // instance per DbContextOptions build (= per request scope), so its
+    // between-hooks state is never shared across concurrent requests. See
+    // Infrastructure/Interceptors/LoanAdvanceAuditInterceptor.cs.
+    options.AddInterceptors(new Infrastructure.Interceptors.LoanAdvanceAuditInterceptor());
+});
 
 /*
  // ======================================================
@@ -77,11 +86,21 @@ builder.Services.AddCors(options =>
 // ======================================================
 // CONTROLLERS
 // ======================================================
-builder.Services.AddControllers()
+builder.Services.AddControllers(options =>
+    {
+        // Phase 9 (Validation) - global FluentValidation pass, additive
+        // for every controller (see API/Filters/FluentValidationActionFilter.cs).
+        options.Filters.Add<API.Filters.FluentValidationActionFilter>();
+    })
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.PropertyNamingPolicy = null;
     });
+
+// Phase 9 - scans the Application assembly for every AbstractValidator<T>
+// (Application/Validators/LoanAdvance/*.cs) and registers each as
+// IValidator<T> so FluentValidationActionFilter can resolve them.
+builder.Services.AddValidatorsFromAssemblyContaining<Application.Validators.LoanAdvance.LoanSubmitDtoValidator>();
 
 // ======================================================
 // JWT AUTHENTICATION
@@ -240,6 +259,27 @@ builder.Services.AddScoped<Application.Interfaces.Roles.IRoleService, Applicatio
 builder.Services.AddScoped<Application.Interfaces.Permissions.IPermissionService, Application.Services.Permissions.PermissionService>();
 builder.Services.AddScoped<Application.Interfaces.LoginHistory.ILoginHistoryService, Application.Services.LoginHistory.LoginHistoryService>();
 
+// ===================== Loan & Advance (Phase 6) =====================
+// Generic Repository/UnitOfWork - scoped to this module only, see
+// Infrastructure/Interfaces/IRepository.cs for why the rest of the app's
+// services keep injecting ApplicationDbContext directly instead.
+builder.Services.AddScoped<Infrastructure.Interfaces.IUnitOfWork, Infrastructure.Repositories.UnitOfWork>();
+
+builder.Services.AddScoped<Application.Interfaces.LoanAdvance.ILoanTypeService, Application.Services.LoanAdvance.LoanTypeService>();
+builder.Services.AddScoped<Application.Interfaces.LoanAdvance.IAdvanceTypeService, Application.Services.LoanAdvance.AdvanceTypeService>();
+builder.Services.AddScoped<Application.Interfaces.LoanAdvance.ILoanPolicyService, Application.Services.LoanAdvance.LoanPolicyService>();
+builder.Services.AddScoped<Application.Interfaces.LoanAdvance.ILoanCalculationService, Application.Services.LoanAdvance.LoanCalculationService>();
+builder.Services.AddScoped<Application.Interfaces.LoanAdvance.IEmployeeLoanService, Application.Services.LoanAdvance.EmployeeLoanService>();
+builder.Services.AddScoped<Application.Interfaces.LoanAdvance.IEmployeeAdvanceService, Application.Services.LoanAdvance.EmployeeAdvanceService>();
+builder.Services.AddScoped<Application.Interfaces.LoanAdvance.ILoanAdvanceAttachmentService, Application.Services.LoanAdvance.LoanAdvanceAttachmentService>();
+builder.Services.AddScoped<Application.Interfaces.LoanAdvance.ILoanAdvanceAuditLogService, Application.Services.LoanAdvance.LoanAdvanceAuditLogService>();
+// Phase 8 - payroll recovery batch engine; PayrollBusinessService.GenerateAsync
+// (registered above) depends on this, so it must be registered too.
+builder.Services.AddScoped<Application.Interfaces.LoanAdvance.IPayrollLoanRecoveryService, Application.Services.LoanAdvance.PayrollLoanRecoveryService>();
+// Phase 14 - read-only dashboard/report aggregation; depends on
+// IEmployeeLoanService/IEmployeeAdvanceService for PendingOnMe resolution.
+builder.Services.AddScoped<Application.Interfaces.LoanAdvance.ILoanReportService, Application.Services.LoanAdvance.LoanReportService>();
+
 
 builder.Services.AddHttpClient();
 
@@ -264,6 +304,11 @@ builder.Services.AddHostedService<LeaveAccrualService>();
 // credits the balance itself. See
 // API/BackgroundServices/CompOffDetectionService.cs.
 builder.Services.AddHostedService<CompOffDetectionService>();
+
+// Phase 15 - Loan & Advance reminders: stale pending-approval nudges plus
+// upcoming/overdue EMI and installment reminders - see
+// API/BackgroundServices/LoanAdvanceReminderService.cs.
+builder.Services.AddHostedService<API.BackgroundServices.LoanAdvanceReminderService>();
 
 // ======================================================
 // SWAGGER

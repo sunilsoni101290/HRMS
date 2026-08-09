@@ -1,10 +1,12 @@
 using Application.DTOs.Payroll;
+using Application.Interfaces.LoanAdvance;
 using Application.Interfaces.Payroll;
 using Domain.Entities;
 using Domain.Helper;
 using Infrastructure;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System.Globalization;
 using static Domain.Enums.EnumExtensions;
 
@@ -13,6 +15,13 @@ namespace Application.Services.PayrollService
     public class PayrollBusinessService : IPayrollBusinessService
     {
         private readonly ApplicationDbContext _context;
+
+        // Phase 8 (Loan & Advance module) - runs AFTER each payroll is
+        // persisted, see the call site inside GenerateAsync below. Kept as
+        // a plain Application-layer dependency (not a circular reference -
+        // both interfaces live in the same Application assembly).
+        private readonly IPayrollLoanRecoveryService _loanRecoveryService;
+        private readonly ILogger<PayrollBusinessService> _logger;
 
         // Statuses that count towards "present" for proration
         private static readonly AttendanceStatus[] PresentStatuses =
@@ -32,9 +41,11 @@ namespace Application.Services.PayrollService
             AttendanceStatus.MissPunch
         };
 
-        public PayrollBusinessService(ApplicationDbContext context)
+        public PayrollBusinessService(ApplicationDbContext context, IPayrollLoanRecoveryService loanRecoveryService, ILogger<PayrollBusinessService> logger)
         {
             _context = context;
+            _loanRecoveryService = loanRecoveryService;
+            _logger = logger;
         }
 
         #region Get All
@@ -247,6 +258,11 @@ namespace Application.Services.PayrollService
                 return result;
             }
 
+            // Collected so the Loan & Advance payroll-recovery hook below
+            // can run against real, already-persisted Payroll.Id values -
+            // see the SaveChangesAsync + recovery loop after this foreach.
+            var generatedPayrolls = new List<Payroll>();
+
             foreach (var employeeId in employeeIds)
             {
                 var employee = await _context.Employees
@@ -389,10 +405,35 @@ namespace Application.Services.PayrollService
                 payroll.NetSalary = totalEarnings - totalDeductions;
 
                 await _context.Payrolls.AddAsync(payroll);
+                generatedPayrolls.Add(payroll);
                 result.Generated++;
             }
 
             await _context.SaveChangesAsync();
+
+            // Loan & Advance payroll recovery (Phase 8) - runs per employee
+            // AFTER payrolls are committed, so LoanEmiSchedule/
+            // AdvanceInstallment rows can reference a real Payroll.Id. Each
+            // employee's recovery is its own try/catch: a failure here must
+            // never undo or block payroll generation itself, and one
+            // employee's failure must never stop another's - see
+            // IPayrollLoanRecoveryService for the idempotent, re-runnable
+            // design (safe to call again if this step needs a retry).
+            foreach (var payroll in generatedPayrolls)
+            {
+                try
+                {
+                    var recovery = await _loanRecoveryService.RecoverForPayrollAsync(payroll.Id, dto.TenantId, dto.CreatedBy);
+
+                    if (recovery.TotalRecovered > 0 || recovery.InstallmentsSkipped > 0)
+                        result.Messages.AddRange(recovery.Messages);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Loan/Advance payroll recovery failed for Payroll {PayrollId} (Employee {EmployeeId}).", payroll.Id, payroll.EmployeeId);
+                    result.Messages.Add($"{payroll.EmployeeId}: loan/advance recovery could not be processed automatically - it can be re-run manually.");
+                }
+            }
 
             result.Messages.Insert(0, $"Generated {result.Generated} payroll(s), skipped {result.Skipped}.");
             return result;

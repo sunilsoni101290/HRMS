@@ -21,14 +21,11 @@ namespace API.Controllers
             _taxDeclarationService = taxDeclarationService;
         }
 
-        private string? TenantId => User.FindFirst("TenantId")?.Value;
-        private string? ActingUserId => User.FindFirst("UserId")?.Value;
-
         // GET api/taxdeclaration/my?financialYearId=
         [HttpGet("my")]
-        public async Task<IActionResult> GetMy([FromQuery] string financialYearId)
+        public async Task<IActionResult> GetMy([FromQuery] string financialYearId, string tenantId, string actingUserId)
         {
-            var result = await _taxDeclarationService.GetMyDeclarationAsync(financialYearId, TenantId, ActingUserId);
+            var result = await _taxDeclarationService.GetMyDeclarationAsync(financialYearId, tenantId, actingUserId);
             return Ok(result);
         }
 
@@ -41,7 +38,7 @@ namespace API.Controllers
 
             try
             {
-                var result = await _taxDeclarationService.CreateOrUpdateAsync(dto, TenantId, ActingUserId);
+                var result = await _taxDeclarationService.CreateOrUpdateAsync(dto, dto.TenantId, dto.ActingUserId);
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)
@@ -55,12 +52,12 @@ namespace API.Controllers
         }
 
         // PUT api/taxdeclaration/{id}/submit
-        [HttpPut("{id}/submit")]
-        public async Task<IActionResult> Submit(string id)
+        [HttpPut("submit")]
+        public async Task<IActionResult> Submit(string id, string tenantId, string actingUserId)
         {
             try
             {
-                var result = await _taxDeclarationService.SubmitAsync(id, TenantId, ActingUserId);
+                var result = await _taxDeclarationService.SubmitAsync(id, tenantId, actingUserId);
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)
@@ -74,11 +71,11 @@ namespace API.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(string id)
+        public async Task<IActionResult> GetById(string id,string tenantId,string actingUserId)
         {
             try
             {
-                var result = await _taxDeclarationService.GetByIdAsync(id, TenantId, ActingUserId);
+                var result = await _taxDeclarationService.GetByIdAsync(id, tenantId, actingUserId);
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)
@@ -93,11 +90,12 @@ namespace API.Controllers
 
         // GET api/taxdeclaration?financialYearId=&status=&departmentId=&search= - HR view.
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] string? financialYearId, [FromQuery] string? status, [FromQuery] string? departmentId, [FromQuery] string? search)
+        public async Task<IActionResult> GetAll([FromQuery] string? financialYearId, [FromQuery] string? status,
+            [FromQuery] string? departmentId, [FromQuery] string? search, string tenantId, string actingUserId)
         {
             try
             {
-                var result = await _taxDeclarationService.GetAllAsync(TenantId, financialYearId, status, departmentId, search, ActingUserId);
+                var result = await _taxDeclarationService.GetAllAsync(tenantId, financialYearId, status, departmentId, search, actingUserId);
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)
@@ -112,7 +110,7 @@ namespace API.Controllers
         {
             try
             {
-                var result = await _taxDeclarationService.VerifyAsync(id, dto, TenantId, ActingUserId);
+                var result = await _taxDeclarationService.VerifyAsync(id, dto, dto.TenantId, dto.ActingUserId);
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)
@@ -131,7 +129,7 @@ namespace API.Controllers
         {
             try
             {
-                var result = await _taxDeclarationService.RejectAsync(id, dto, TenantId, ActingUserId);
+                var result = await _taxDeclarationService.RejectAsync(id, dto, dto.TenantId, dto.ActingUserId);
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)

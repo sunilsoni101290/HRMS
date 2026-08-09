@@ -589,5 +589,65 @@ namespace Domain.Helper
         public const string FORM_16 = "FORM_16";
         public const string FORM_16_CONTROLLER = "Form16";
         public const string FORM_16_ACTION = ACTION_INDEX;
+
+        // =====================================================
+        // LOAN & ADVANCE MANAGEMENT
+        // =====================================================
+        // New top-level module (sibling of TAXATION_MANAGEMENT/
+        // PROBATION_CONFIRMATION_MANAGEMENT above). Masters (LOAN_TYPE/
+        // ADVANCE_TYPE/LOAN_POLICY) are HR/Admin-only CRUD. EMPLOYEE_LOAN/
+        // EMPLOYEE_ADVANCE are dual-audience like TAX_DECLARATION: every
+        // Employee needs Create/View on their OWN request (self-service
+        // submission), while HR/Finance additionally hold View/Approve
+        // tenant-wide for the Maker-Checker workflow - see
+        // EmployeeLoanService/EmployeeAdvanceService's actingUserId !=
+        // MakerId invariant (same shape as ProbationConfirmationService,
+        // but resolved against a configurable N-level matrix instead of a
+        // single fixed checker - see Domain/Entities/LoanPolicyApprovalLevel.cs).
+        public const string LOAN_ADVANCE_MANAGEMENT = "LOAN_ADVANCE_MANAGEMENT";
+
+        public const string LOAN_TYPE = "LOAN_TYPE";
+        public const string LOAN_TYPE_CONTROLLER = "LoanType";
+        public const string LOAN_TYPE_ACTION = ACTION_INDEX;
+
+        public const string ADVANCE_TYPE = "ADVANCE_TYPE";
+        public const string ADVANCE_TYPE_CONTROLLER = "AdvanceType";
+        public const string ADVANCE_TYPE_ACTION = ACTION_INDEX;
+
+        public const string LOAN_POLICY = "LOAN_POLICY";
+        public const string LOAN_POLICY_CONTROLLER = "LoanPolicy";
+        public const string LOAN_POLICY_ACTION = ACTION_INDEX;
+
+        // MAKER: the Employee themselves (self-service Create on their own
+        // request) OR HR holding Create permission on their behalf.
+        // CHECKER: whoever the request's resolved LoanPolicyApprovalLevel
+        // for the CURRENT level identifies (Reporting Manager / a specific
+        // Role's holder / a specific User) - see
+        // EmployeeLoanService.ResolveCurrentLevelApprovers.
+        public const string EMPLOYEE_LOAN = "EMPLOYEE_LOAN";
+        public const string EMPLOYEE_LOAN_CONTROLLER = "EmployeeLoan";
+        public const string EMPLOYEE_LOAN_ACTION = ACTION_INDEX;
+
+        // Disbursement/Pre-Closure/Settlement are Finance-only actions on
+        // an already-Approved EmployeeLoan - gated by Approve permission
+        // on this SAME feature (no separate feature constant), consistent
+        // with PAYROLL_PAYSLIP_REQUEST's "Approve on this feature is what
+        // makes someone Finance" convention above.
+        public const string EMPLOYEE_ADVANCE = "EMPLOYEE_ADVANCE";
+        public const string EMPLOYEE_ADVANCE_CONTROLLER = "EmployeeAdvance";
+        public const string EMPLOYEE_ADVANCE_ACTION = ACTION_INDEX;
+
+        public const string LOAN_ADVANCE_DASHBOARD = "LOAN_ADVANCE_DASHBOARD";
+        public const string LOAN_ADVANCE_DASHBOARD_CONTROLLER = "LoanAdvanceDashboard";
+        public const string LOAN_ADVANCE_DASHBOARD_ACTION = ACTION_INDEX;
+
+        public const string LOAN_ADVANCE_REPORT = "LOAN_ADVANCE_REPORT";
+        public const string LOAN_ADVANCE_REPORT_CONTROLLER = "LoanAdvanceReport";
+        public const string LOAN_ADVANCE_REPORT_ACTION = ACTION_INDEX;
+
+        // Read-only, Auditor/Admin-gated - see Domain/Entities/LoanAdvanceAuditLog.cs.
+        public const string LOAN_ADVANCE_AUDIT_LOG = "LOAN_ADVANCE_AUDIT_LOG";
+        public const string LOAN_ADVANCE_AUDIT_LOG_CONTROLLER = "LoanAdvanceAuditLog";
+        public const string LOAN_ADVANCE_AUDIT_LOG_ACTION = ACTION_INDEX;
     }
 }

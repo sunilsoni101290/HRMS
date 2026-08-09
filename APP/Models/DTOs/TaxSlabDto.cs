@@ -37,7 +37,8 @@ namespace APP.Models.DTOs
         [Display(Name = "Rate (%)")]
         public decimal RatePercent { get; set; }
 
-        public string? TenantId { get; set; }
+        public string TenantId { get; set; }
+        public string ActingUserId { get; set; }
         public DateTime CreatedOn { get; set; }
         public string? CreatedBy { get; set; }
     }
