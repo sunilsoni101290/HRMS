@@ -1,0 +1,169 @@
+@model LoanSubmitDto
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"] = "New Loan Request";
+    bool isAdmin = ViewBag.EmployeeList != null;
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="bi bi-cash-stack position-left"></i>
+            New Loan Request
+        </h5>
+        <div class="heading-elements">
+            <a asp-action="Index" class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="Create" method="post" id="loanForm">
+
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <div class="row">
+
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="EmployeeId"></label>
+                        @if (isAdmin)
+                        {
+                            <select asp-for="EmployeeId" asp-items="ViewBag.EmployeeList as SelectList" class="form-control" id="employeeSelect">
+                                <option value="">-- Select Employee --</option>
+                            </select>
+                        }
+                        else
+                        {
+                            <input asp-for="EmployeeId" class="form-control" readonly />
+                        }
+                        <span asp-validation-for="EmployeeId" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="LoanTypeId"></label>
+                        <select asp-for="LoanTypeId" asp-items="ViewBag.LoanTypeList as SelectList" class="form-control" id="loanTypeSelect">
+                            <option value="">-- Select Loan Type --</option>
+                        </select>
+                        <span asp-validation-for="LoanTypeId" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="RequestedAmount"></label>
+                        <input asp-for="RequestedAmount" class="form-control" id="amountInput" />
+                        <span asp-validation-for="RequestedAmount" class="text-danger"></span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="row">
+
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="TenureMonths"></label>
+                        <input asp-for="TenureMonths" class="form-control" id="tenureInput" />
+                        <span asp-validation-for="TenureMonths" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="col-md-8">
+                    <div class="form-group">
+                        <label asp-for="Purpose"></label>
+                        <input asp-for="Purpose" class="form-control" />
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="text-right" style="margin-bottom:15px;">
+                <button type="button" id="checkBtn" class="btn btn-default">
+                    <i class="icon-calculator position-left"></i>
+                    Check Eligibility &amp; EMI
+                </button>
+            </div>
+
+            <div id="eligibilityBox" style="display:none;"></div>
+            <div id="emiBox" style="display:none;"></div>
+
+            <div class="text-right" style="margin-top:20px;">
+                <button type="submit" class="btn btn-primary">
+                    <i class="icon-checkmark3"></i>
+                    Submit Request
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        var antiForgeryToken = $('input[name="__RequestVerificationToken"]').val();
+
+        function getFormValues() {
+            return {
+                employeeId: $('#employeeSelect').length ? $('#employeeSelect').val() : $('#@Html.IdFor(m => m.EmployeeId)').val(),
+                loanTypeId: $('#loanTypeSelect').val(),
+                amount: parseFloat($('#amountInput').val()) || 0,
+                tenureMonths: parseInt($('#tenureInput').val()) || 0
+            };
+        }
+
+        $('#checkBtn').on('click', function () {
+            var v = getFormValues();
+
+            if (!v.employeeId || !v.loanTypeId || !v.amount || !v.tenureMonths) {
+                swal({ title: 'Missing Information', text: 'Please fill Employee, Loan Type, Amount and Tenure first.', type: 'warning' });
+                return;
+            }
+
+            $.get('/EmployeeLoan/CheckEligibility', v, function (elig) {
+                var box = $('#eligibilityBox').show();
+                var html = '<div class="alert ' + (elig.isEligible ? 'alert-success' : 'alert-danger') + '">';
+                html += '<strong>' + (elig.isEligible ? 'Eligible' : 'Not Eligible') + '</strong>';
+                if (!elig.isEligible) html += '<br/>' + (elig.reasonIfNotEligible || '');
+                html += '<div class="row" style="margin-top:10px;">';
+                html += '<div class="col-md-3"><small class="text-muted">Max Eligible Amount</small><br/><strong>' + (elig.maxEligibleAmount || 0).toLocaleString() + '</strong></div>';
+                html += '<div class="col-md-3"><small class="text-muted">Monthly Net Salary</small><br/><strong>' + (elig.monthlyNetSalary || 0).toLocaleString() + '</strong></div>';
+                html += '<div class="col-md-3"><small class="text-muted">Existing Monthly Deductions</small><br/><strong>' + (elig.existingMonthlyDeductions || 0).toLocaleString() + '</strong></div>';
+                html += '<div class="col-md-3"><small class="text-muted">Max Additional EMI</small><br/><strong>' + (elig.maxAdditionalMonthlyDeduction || 0).toLocaleString() + '</strong></div>';
+                html += '</div></div>';
+                box.html(html);
+            });
+
+            $.ajax({
+                url: '/EmployeeLoan/PreviewEmi',
+                type: 'POST',
+                contentType: 'application/json',
+                headers: { 'RequestVerificationToken': antiForgeryToken },
+                data: JSON.stringify({ loanTypeId: v.loanTypeId, amount: v.amount, tenureMonths: v.tenureMonths }),
+                success: function (emi) {
+                    var box = $('#emiBox').show();
+                    if (emi.error) { box.html('<div class="alert alert-warning">' + emi.error + '</div>'); return; }
+
+                    var html = '<div class="alert alert-info">';
+                    html += '<div class="row">';
+                    html += '<div class="col-md-4"><small class="text-muted">Monthly EMI</small><br/><strong>' + (emi.monthlyEmi || 0).toLocaleString() + '</strong></div>';
+                    html += '<div class="col-md-4"><small class="text-muted">Total Interest</small><br/><strong>' + (emi.totalInterest || 0).toLocaleString() + '</strong></div>';
+                    html += '<div class="col-md-4"><small class="text-muted">Total Payable</small><br/><strong>' + (emi.totalPayable || 0).toLocaleString() + '</strong></div>';
+                    html += '</div></div>';
+                    box.html(html);
+                }
+            });
+        });
+    </script>
+}

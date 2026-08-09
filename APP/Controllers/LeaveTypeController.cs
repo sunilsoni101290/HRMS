@@ -27,17 +27,30 @@ namespace APP.Controllers
 
         #region Index
 
+        [HttpGet]
         public async Task<IActionResult> Index()
         {
             try
             {
-                var leaveTypes = await _apiService.GetAsync<List<LeaveTypeDto>>("LeaveType");
+                var url =
+                    $"LeaveType" +
+                    $"?tenantId={Uri.EscapeDataString(_tenantId ?? string.Empty)}" +
+                    $"&actingUserId={Uri.EscapeDataString(_userId ?? string.Empty)}";
+
+                var leaveTypes =
+                    await _apiService.GetAsync<List<LeaveTypeDto>>(url)
+                    ?? new List<LeaveTypeDto>();
 
                 return View(leaveTypes);
             }
+            catch (UnauthorizedAccessException ex) when (ex.Message.StartsWith("Access Denied"))
+            {
+                TempData["GlobalError"] = GetErrorMessage(ex.Message);
+                return RedirectToAction("Index", "Dashboard");
+            }
             catch (Exception ex)
             {
-                TempData["Error"] = ex.Message;
+                TempData["GlobalError"] = GetErrorMessage(ex.Message);
                 return View(new List<LeaveTypeDto>());
             }
         }
@@ -46,18 +59,40 @@ namespace APP.Controllers
 
         #region Details
 
+        [HttpGet]
         public async Task<IActionResult> Details(string id)
         {
             if (string.IsNullOrEmpty(id))
                 return NotFound();
 
-            var leaveType = await _apiService.GetAsync<LeaveTypeDto>(
-                $"LeaveType/{id}");
+            try
+            {
+                var url =
+                    $"LeaveType/{Uri.EscapeDataString(id)}" +
+                    $"?tenantId={Uri.EscapeDataString(_tenantId ?? string.Empty)}" +
+                    $"&actingUserId={Uri.EscapeDataString(_userId ?? string.Empty)}";
 
-            if (leaveType == null)
+                var leaveType = await _apiService.GetAsync<LeaveTypeDto>(url);
+
+                if (leaveType == null)
+                    return NotFound();
+
+                return View(leaveType);
+            }
+            catch (UnauthorizedAccessException ex) when (ex.Message.StartsWith("Access Denied"))
+            {
+                TempData["GlobalError"] = GetErrorMessage(ex.Message);
+                return RedirectToAction(nameof(Index));
+            }
+            catch (KeyNotFoundException)
+            {
                 return NotFound();
-
-            return View(leaveType);
+            }
+            catch (Exception ex)
+            {
+                TempData["GlobalError"] = GetErrorMessage(ex.Message);
+                return RedirectToAction(nameof(Index));
+            }
         }
 
         #endregion
@@ -67,7 +102,7 @@ namespace APP.Controllers
         [HttpGet]
         public IActionResult Create()
         {
-            return View(new LeaveTypeDto());
+            return View(new LeaveTypeDto() { TenantId=_tenantId,ActingUserId=_userId });
         }
 
         [HttpPost]
@@ -119,6 +154,9 @@ namespace APP.Controllers
             var leaveType = await _apiService.GetAsync<LeaveTypeDto>(
                 $"LeaveType/{id}");
 
+            leaveType.TenantId= _tenantId;
+            leaveType.ActingUserId= _userId;
+
             if (leaveType == null)
                 return NotFound();
 
@@ -161,6 +199,7 @@ namespace APP.Controllers
         #region Delete
 
         [HttpPost]
+        [HttpPost]
         public async Task<IActionResult> Delete(string id)
         {
             if (string.IsNullOrEmpty(id))
@@ -172,16 +211,39 @@ namespace APP.Controllers
                 });
             }
 
-            var result = await _apiService.DeleteAsync(
-                $"LeaveType/{id}");
-
-            return Json(new
+            try
             {
-                success = result,
-                message = result
-                    ? "Leave Type deleted successfully."
-                    : "Unable to delete Leave Type."
-            });
+                var url =
+                    $"LeaveType/{Uri.EscapeDataString(id)}" +
+                    $"?tenantId={Uri.EscapeDataString(_tenantId ?? string.Empty)}" +
+                    $"&actingUserId={Uri.EscapeDataString(_userId ?? string.Empty)}";
+
+                var result = await _apiService.DeleteAsync(url);
+
+                return Json(new
+                {
+                    success = result,
+                    message = result
+                        ? "Leave Type deleted successfully."
+                        : "Unable to delete Leave Type."
+                });
+            }
+            catch (UnauthorizedAccessException ex) when (ex.Message.StartsWith("Access Denied"))
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = GetErrorMessage(ex.Message)
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = GetErrorMessage(ex.Message)
+                });
+            }
         }
 
         #endregion

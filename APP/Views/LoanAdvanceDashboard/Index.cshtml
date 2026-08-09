@@ -1,0 +1,157 @@
+@model LoanAdvanceDashboardDto
+
+@{
+    ViewData["Title"] = "Loan & Advance Dashboard";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="bi bi-speedometer2 position-left"></i>
+            Loan &amp; Advance Dashboard
+        </h5>
+        <div class="heading-elements">
+            <a asp-controller="LoanAdvanceReport" asp-action="Index" class="btn btn-default">
+                <i class="icon-stats-bars2 position-left"></i> Reports
+            </a>
+            <a asp-controller="EmployeeLoan" asp-action="Create" class="btn bg-primary">
+                <i class="icon-plus22"></i> New Loan
+            </a>
+            <a asp-controller="EmployeeAdvance" asp-action="Create" class="btn bg-teal">
+                <i class="icon-plus22"></i> New Advance
+            </a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+
+        <div class="row">
+
+            <div class="col-md-3 col-sm-6">
+                <div class="panel panel-flat bg-primary-400 text-white" style="padding:20px;">
+                    <h3 class="no-margin">@Model.PendingApprovalCount</h3>
+                    <span>Pending Approvals (Loans + Advances)</span>
+                </div>
+            </div>
+
+            <div class="col-md-3 col-sm-6">
+                <div class="panel panel-flat bg-warning-400 text-white" style="padding:20px;">
+                    <h3 class="no-margin">@Model.PendingOnMeCount</h3>
+                    <span>Pending On Me</span>
+                </div>
+            </div>
+
+            <div class="col-md-3 col-sm-6">
+                <div class="panel panel-flat bg-danger-400 text-white" style="padding:20px;">
+                    <h3 class="no-margin">@Model.OverdueInstallmentCount</h3>
+                    <span>Overdue Installments</span>
+                </div>
+            </div>
+
+            <div class="col-md-3 col-sm-6">
+                <div class="panel panel-flat bg-teal-400 text-white" style="padding:20px;">
+                    <h3 class="no-margin">@Model.ThisMonthRecoveredAmount.ToString("N0")</h3>
+                    <span>Recovered This Month</span>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="row">
+
+            <div class="col-md-3 col-sm-6">
+                <div class="panel panel-flat" style="padding:20px;">
+                    <label class="text-semibold text-muted">Total Loan Disbursed</label>
+                    <h3 class="text-primary">@Model.TotalLoanDisbursed.ToString("N2")</h3>
+                </div>
+            </div>
+
+            <div class="col-md-3 col-sm-6">
+                <div class="panel panel-flat" style="padding:20px;">
+                    <label class="text-semibold text-muted">Total Loan Outstanding</label>
+                    <h3 class="text-primary">@Model.TotalLoanOutstanding.ToString("N2")</h3>
+                </div>
+            </div>
+
+            <div class="col-md-3 col-sm-6">
+                <div class="panel panel-flat" style="padding:20px;">
+                    <label class="text-semibold text-muted">Total Advance Disbursed</label>
+                    <h3 class="text-teal">@Model.TotalAdvanceDisbursed.ToString("N2")</h3>
+                </div>
+            </div>
+
+            <div class="col-md-3 col-sm-6">
+                <div class="panel panel-flat" style="padding:20px;">
+                    <label class="text-semibold text-muted">Total Advance Outstanding</label>
+                    <h3 class="text-teal">@Model.TotalAdvanceOutstanding.ToString("N2")</h3>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="row">
+
+            <div class="col-md-6">
+                <fieldset>
+                    <legend class="text-semibold">Recent Loan Requests</legend>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-condensed">
+                            <thead><tr><th>Employee</th><th>Amount</th><th>Status</th></tr></thead>
+                            <tbody>
+                                @if (Model.RecentLoans.Any())
+                                {
+                                    foreach (var l in Model.RecentLoans)
+                                    {
+                                        <tr>
+                                            <td><a asp-controller="EmployeeLoan" asp-action="Details" asp-route-id="@l.Id">@l.EmployeeName</a></td>
+                                            <td>@l.RequestedAmount.ToString("N0")</td>
+                                            <td><span class="label bg-info">@l.StatusName</span></td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr><td colspan="3" class="text-center text-muted">No recent loan requests.</td></tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <a asp-controller="EmployeeLoan" asp-action="Index" class="btn btn-default btn-sm">View All Loans</a>
+                </fieldset>
+            </div>
+
+            <div class="col-md-6">
+                <fieldset>
+                    <legend class="text-semibold">Recent Advance Requests</legend>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-condensed">
+                            <thead><tr><th>Employee</th><th>Amount</th><th>Status</th></tr></thead>
+                            <tbody>
+                                @if (Model.RecentAdvances.Any())
+                                {
+                                    foreach (var a in Model.RecentAdvances)
+                                    {
+                                        <tr>
+                                            <td><a asp-controller="EmployeeAdvance" asp-action="Details" asp-route-id="@a.Id">@a.EmployeeName</a></td>
+                                            <td>@a.RequestedAmount.ToString("N0")</td>
+                                            <td><span class="label bg-info">@a.StatusName</span></td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr><td colspan="3" class="text-center text-muted">No recent advance requests.</td></tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <a asp-controller="EmployeeAdvance" asp-action="Index" class="btn btn-default btn-sm">View All Advances</a>
+                </fieldset>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

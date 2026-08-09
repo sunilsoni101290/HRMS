@@ -62,6 +62,7 @@ namespace APP.Models.DTOs
         public bool IsRestrictedHolidayType { get; set; } = false;
 
         public string? TenantId { get; set; }
+        public string? ActingUserId { get; set; }
 
         public string CreatedBy { get; set; }
 

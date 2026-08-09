@@ -12,15 +12,27 @@ using static Domain.Enums.EnumExtensions;
 
 namespace Infrastructure.Data
 {
-    public static class DbSeeder
+    public class DbSeeder
     {
         public static async Task SeedAsync(ApplicationDbContext context)
         {
             if (context == null) return;
 
-            // Apply Pending Migrations
+            //context.Database.EnsureCreated();
+
+
+            if (context == null)
+                return;
+
+            // Database accessible?
+            if (!await context.Database.CanConnectAsync())
+            {
+                throw new Exception(
+                    "Cannot connect to SQL Server. Please verify the connection string and ensure the database already exists.");
+            }
+
+            // Apply pending migrations only.
             //await context.Database.MigrateAsync();
-            context.Database.EnsureCreated();
 
             // =========================
             // 1. COUNTRY
@@ -1791,10 +1803,10 @@ namespace Infrastructure.Data
             // Employee needs Create/View on their OWN declaration in
             // addition to the HR Manager's full View/Create/Approve grant
             // below - see the dual RolePermission grant blocks.
-            Def("Tax Declaration", AppFeatureConstants.TAX_DECLARATION,
-                AppFeatureConstants.TAX_DECLARATION_CONTROLLER, AppFeatureConstants.TAX_DECLARATION_ACTION,
-                AppFeatureConstants.TAXATION_MANAGEMENT, "bi bi-file-earmark-text", AppFeatureType.Transaction, 128,
-                canAdd: true, canApprove: true);
+            //Def("Tax Declaration", AppFeatureConstants.TAX_DECLARATION,
+            //    AppFeatureConstants.TAX_DECLARATION_CONTROLLER, AppFeatureConstants.TAX_DECLARATION_ACTION,
+            //    AppFeatureConstants.TAXATION_MANAGEMENT, "bi bi-file-earmark-text", AppFeatureType.Transaction, 128,
+            //    canAdd: true, canApprove: true);
 
             // Tax Computation - HR/Payroll-only (View only; the actual
             // compute-trigger action is gated by TAX_DECLARATION's Approve
@@ -1962,6 +1974,65 @@ namespace Infrastructure.Data
                 78,
                 canPrint: true,
                 canExport: true);
+
+            // ---------------- LOAN & ADVANCE (Phase 10) ----------------
+            // New top-level module (sibling of Taxation/Communication
+            // above) - see AppFeatureConstants.LOAN_ADVANCE_MANAGEMENT.
+            // Masters (Loan Type/Advance Type/Loan Policy) are HR/Admin-
+            // only CRUD, same shape as Tax Slabs above. Employee Loan /
+            // Employee Advance are dual-audience like Tax Declaration -
+            // every Employee needs Create/View on their OWN request
+            // (self-service submission via the EmployeeLoanController/
+            // EmployeeAdvanceController "self or HR" authorization check),
+            // while HR Manager additionally holds View/Create/Approve
+            // tenant-wide for the Maker-Checker workflow - see the dual
+            // RolePermission grant blocks further down in this method.
+            Def("Loan & Advance", AppFeatureConstants.LOAN_ADVANCE_MANAGEMENT, "", "",
+                null, "bi bi-cash-coin", AppFeatureType.Transaction, 140);
+
+            Def("Loan Types", AppFeatureConstants.LOAN_TYPE,
+                AppFeatureConstants.LOAN_TYPE_CONTROLLER, AppFeatureConstants.LOAN_TYPE_ACTION,
+                AppFeatureConstants.LOAN_ADVANCE_MANAGEMENT, "bi bi-tags-fill", AppFeatureType.Master, 141,
+                canAdd: true, canEdit: true, canDelete: true);
+
+            Def("Advance Types", AppFeatureConstants.ADVANCE_TYPE,
+                AppFeatureConstants.ADVANCE_TYPE_CONTROLLER, AppFeatureConstants.ADVANCE_TYPE_ACTION,
+                AppFeatureConstants.LOAN_ADVANCE_MANAGEMENT, "bi bi-tag-fill", AppFeatureType.Master, 142,
+                canAdd: true, canEdit: true, canDelete: true);
+
+            Def("Loan Policies", AppFeatureConstants.LOAN_POLICY,
+                AppFeatureConstants.LOAN_POLICY_CONTROLLER, AppFeatureConstants.LOAN_POLICY_ACTION,
+                AppFeatureConstants.LOAN_ADVANCE_MANAGEMENT, "bi bi-journal-check", AppFeatureType.Master, 143,
+                canAdd: true, canEdit: true, canDelete: true);
+
+            // Disbursement/Pre-Closure/Settlement are Finance-only actions
+            // on an already-Approved EmployeeLoan - gated by Approve
+            // permission on this SAME feature (no separate feature
+            // constant), consistent with the EMPLOYEE_ADVANCE comment in
+            // AppFeatureConstants.cs.
+            Def("Employee Loans", AppFeatureConstants.EMPLOYEE_LOAN,
+                AppFeatureConstants.EMPLOYEE_LOAN_CONTROLLER, AppFeatureConstants.EMPLOYEE_LOAN_ACTION,
+                AppFeatureConstants.LOAN_ADVANCE_MANAGEMENT, "bi bi-cash-stack", AppFeatureType.Transaction, 144,
+                canAdd: true, canApprove: true);
+
+            Def("Employee Advances", AppFeatureConstants.EMPLOYEE_ADVANCE,
+                AppFeatureConstants.EMPLOYEE_ADVANCE_CONTROLLER, AppFeatureConstants.EMPLOYEE_ADVANCE_ACTION,
+                AppFeatureConstants.LOAN_ADVANCE_MANAGEMENT, "bi bi-wallet2", AppFeatureType.Transaction, 145,
+                canAdd: true, canApprove: true);
+
+            Def("Loan & Advance Dashboard", AppFeatureConstants.LOAN_ADVANCE_DASHBOARD,
+                AppFeatureConstants.LOAN_ADVANCE_DASHBOARD_CONTROLLER, AppFeatureConstants.LOAN_ADVANCE_DASHBOARD_ACTION,
+                AppFeatureConstants.LOAN_ADVANCE_MANAGEMENT, "bi bi-speedometer2", AppFeatureType.Dashboard, 146);
+
+            Def("Loan & Advance Reports", AppFeatureConstants.LOAN_ADVANCE_REPORT,
+                AppFeatureConstants.LOAN_ADVANCE_REPORT_CONTROLLER, AppFeatureConstants.LOAN_ADVANCE_REPORT_ACTION,
+                AppFeatureConstants.LOAN_ADVANCE_MANAGEMENT, "bi bi-file-earmark-bar-graph", AppFeatureType.Report, 147,
+                canExport: true, canPrint: true);
+
+            // Read-only, Auditor/Admin-gated - see Domain/Entities/LoanAdvanceAuditLog.cs.
+            Def("Loan & Advance Audit Log", AppFeatureConstants.LOAN_ADVANCE_AUDIT_LOG,
+                AppFeatureConstants.LOAN_ADVANCE_AUDIT_LOG_CONTROLLER, AppFeatureConstants.LOAN_ADVANCE_AUDIT_LOG_ACTION,
+                AppFeatureConstants.LOAN_ADVANCE_MANAGEMENT, "bi bi-shield-lock-fill", AppFeatureType.Report, 148);
 
 
             // ---------------- RECONCILE (upsert by Code) ----------------
@@ -3077,6 +3148,246 @@ namespace Infrastructure.Data
                 if (taxDeclarationEmployeeNewLinks.Count > 0)
                 {
                     await context.RolePermissions.AddRangeAsync(taxDeclarationEmployeeNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            // ==================================================================
+            // LOAN & ADVANCE (Phase 10) - see the Def() block above for the
+            // feature tree and AppFeatureConstants.cs for the FeatureId
+            // constants. Super Admin / System Configurator already received
+            // every permission from the fullAccessRoles loop above.
+            // ==================================================================
+
+            // Masters (Loan Type / Advance Type / Loan Policy) - HR Manager
+            // only, full CRUD, same shape as Tax Slabs above.
+            if (hrManagerRole != null)
+            {
+                var loanAdvanceMasterFeatureIds = new[]
+                {
+                    AppFeatureConstants.LOAN_TYPE,
+                    AppFeatureConstants.ADVANCE_TYPE,
+                    AppFeatureConstants.LOAN_POLICY
+                };
+
+                var loanAdvanceMasterPermissionIds = await context.Permissions
+                    .Where(p => loanAdvanceMasterFeatureIds.Contains(p.FeatureId))
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == hrManagerRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var loanAdvanceMasterNewLinks = loanAdvanceMasterPermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = hrManagerRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (loanAdvanceMasterNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(loanAdvanceMasterNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            // Employee Loan - dual-audience like Tax Declaration above: HR
+            // Manager gets full View/Create/Approve (so HR can act on an
+            // employee's behalf AND check the Maker-Checker matrix), every
+            // Employee additionally gets View/Create on their OWN request -
+            // EmployeeLoanService's EnsureSelfOrHrAsync/actingUserId !=
+            // MakerId checks (not a RolePermission grant) are what stop an
+            // Employee from submitting on someone else's behalf or
+            // approving their own request.
+            if (hrManagerRole != null)
+            {
+                var employeeLoanPermissionIds = await context.Permissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.EMPLOYEE_LOAN)
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == hrManagerRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var employeeLoanNewLinks = employeeLoanPermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = hrManagerRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (employeeLoanNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(employeeLoanNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            if (employeeRole != null)
+            {
+                var employeeLoanSelfServicePermissionIds = await context.Permissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.EMPLOYEE_LOAN
+                             && (p.Action == Actions.View || p.Action == Actions.Create))
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == employeeRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var employeeLoanEmployeeNewLinks = employeeLoanSelfServicePermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = employeeRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (employeeLoanEmployeeNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(employeeLoanEmployeeNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            // Employee Advance - identical dual-audience shape to Employee
+            // Loan above, see EmployeeAdvanceService's EnsureSelfOrHrAsync/
+            // EnsureCheckerIsNotMaker checks.
+            if (hrManagerRole != null)
+            {
+                var employeeAdvancePermissionIds = await context.Permissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.EMPLOYEE_ADVANCE)
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == hrManagerRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var employeeAdvanceNewLinks = employeeAdvancePermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = hrManagerRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (employeeAdvanceNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(employeeAdvanceNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            if (employeeRole != null)
+            {
+                var employeeAdvanceSelfServicePermissionIds = await context.Permissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.EMPLOYEE_ADVANCE
+                             && (p.Action == Actions.View || p.Action == Actions.Create))
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == employeeRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var employeeAdvanceEmployeeNewLinks = employeeAdvanceSelfServicePermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = employeeRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (employeeAdvanceEmployeeNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(employeeAdvanceEmployeeNewLinks);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            // Dashboard / Reports / Audit Log - HR Manager only (View, plus
+            // Export/Print where the feature grants them). No dedicated
+            // "Auditor" role exists in this codebase yet (see
+            // AppFeatureConstants.LOAN_ADVANCE_AUDIT_LOG's remarks) - Super
+            // Admin / System Configurator already cover that gap via the
+            // fullAccessRoles loop above.
+            if (hrManagerRole != null)
+            {
+                var loanAdvanceReportingFeatureIds = new[]
+                {
+                    AppFeatureConstants.LOAN_ADVANCE_DASHBOARD,
+                    AppFeatureConstants.LOAN_ADVANCE_REPORT,
+                    AppFeatureConstants.LOAN_ADVANCE_AUDIT_LOG
+                };
+
+                var loanAdvanceReportingPermissionIds = await context.Permissions
+                    .Where(p => loanAdvanceReportingFeatureIds.Contains(p.FeatureId))
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var alreadyLinked = (await context.RolePermissions
+                        .Where(rp => rp.RoleId == hrManagerRole.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                var loanAdvanceReportingNewLinks = loanAdvanceReportingPermissionIds
+                    .Where(pid => !alreadyLinked.Contains(pid))
+                    .Select(pid => new RolePermission
+                    {
+                        Id = IDManager.GetNewId(new RolePermission()),
+                        RoleId = hrManagerRole.Id,
+                        PermissionId = pid,
+                        IsAllowed = true,
+                        CreatedBy = "System",
+                        CreatedOn = DateTime.UtcNow
+                    })
+                    .ToList();
+
+                if (loanAdvanceReportingNewLinks.Count > 0)
+                {
+                    await context.RolePermissions.AddRangeAsync(loanAdvanceReportingNewLinks);
                     await context.SaveChangesAsync();
                 }
             }

@@ -1,233 +1,502 @@
-﻿@model IEnumerable<BiometricDeviceDto>
+@model IEnumerable<BiometricDeviceDto>
 
 @{
     ViewData["Title"] = "Biometric Devices";
+
+    var devices = Model ?? new List<BiometricDeviceDto>();
+    var totalCount = devices.Count();
+    var activeCount = devices.Count(x => x.IsActive);
+    var inactiveCount = totalCount - activeCount;
+    var neverSyncedCount = devices.Count(x => !x.LastSyncDate.HasValue);
+
+    var companyNames = ViewBag.CompanyNames as Dictionary<string, string> ?? new();
+    var branchNames = ViewBag.BranchNames as Dictionary<string, string> ?? new();
 }
 
-<div class="panel panel-flat">
+<div class="panel panel-flat biometric-panel">
+
+    <!-- Page Header -->
 
     <div class="panel-heading">
 
         <h5 class="panel-title">
-            <i class="icon-fingerprint position-left"></i>
+            <i class="bi bi-fingerprint position-left"></i>
             Biometric Device Management
         </h5>
+
         <div class="heading-elements">
 
             <a asp-action="Health"
-               class="btn bg-info btn-sm">
-                <i class="icon-meter position-left"></i>
+               class="btn btn-default btn-icon-text"
+               data-popup="tooltip"
+               title="View health &amp; sync status of every device">
+                <i class="bi bi-speedometer2 position-left"></i>
                 Device Health
             </a>
 
             <a asp-action="SyncAll"
-               class="btn bg-warning btn-sm"
+               class="btn bg-warning btn-icon-text"
                onclick="return confirm('Sync all active devices now?');">
                 <i class="icon-sync position-left"></i>
                 Sync All Devices
             </a>
 
             <a asp-action="Create"
-               class="btn bg-primary btn-sm">
+               class="btn bg-primary btn-icon-text">
                 <i class="icon-plus22 position-left"></i>
                 Add Device
             </a>
+
         </div>
+
     </div>
 
-    <!-- Summary -->
+    <!-- Summary Cards -->
 
-    <div class="panel-body">
+    <div class="panel-body summary-cards">
 
         <div class="row">
 
-            <div class="col-md-3">
-
-                <div class="panel bg-primary-400">
-                    <div class="panel-body text-center">
-                        <h3 class="no-margin">@Model.Count()</h3>
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card stat-primary">
+                    <div class="stat-icon"><i class="bi bi-fingerprint"></i></div>
+                    <div class="stat-body">
+                        <h3 class="no-margin">@totalCount</h3>
                         <span>Total Devices</span>
                     </div>
                 </div>
-
             </div>
 
-            <div class="col-md-3">
-
-                <div class="panel bg-success-400">
-                    <div class="panel-body text-center">
-                        <h3 class="no-margin">
-                            @Model.Count(x => x.IsActive)
-                        </h3>
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card stat-success">
+                    <div class="stat-icon"><i class="icon-checkmark-circle"></i></div>
+                    <div class="stat-body">
+                        <h3 class="no-margin">@activeCount</h3>
                         <span>Active Devices</span>
                     </div>
                 </div>
-
             </div>
 
-            <div class="col-md-3">
-
-                <div class="panel bg-danger-400">
-                    <div class="panel-body text-center">
-                        <h3 class="no-margin">
-                            @Model.Count(x => !x.IsActive)
-                        </h3>
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card stat-danger">
+                    <div class="stat-icon"><i class="icon-cancel-circle2"></i></div>
+                    <div class="stat-body">
+                        <h3 class="no-margin">@inactiveCount</h3>
                         <span>Inactive Devices</span>
                     </div>
                 </div>
-
             </div>
 
-            <div class="col-md-3">
-
-                <div class="panel bg-info-400">
-                    <div class="panel-body text-center">
-                        <h3 class="no-margin">24x7</h3>
-                        <span>Monitoring</span>
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card stat-info">
+                    <div class="stat-icon"><i class="icon-watch2"></i></div>
+                    <div class="stat-body">
+                        <h3 class="no-margin">@neverSyncedCount</h3>
+                        <span>Never Synced</span>
                     </div>
                 </div>
+            </div>
 
+        </div>
+
+        <!-- Filters -->
+
+        <div class="row filter-row">
+
+            <div class="col-md-4 col-sm-6">
+                <div class="form-group">
+                    <label class="filter-label">Search</label>
+                    <div class="input-group">
+                        <span class="input-group-addon"><i class="icon-search4"></i></span>
+                        <input type="text"
+                               id="searchInput"
+                               class="form-control"
+                               placeholder="Search by name, code, IP or username..." />
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3 col-sm-6">
+                <div class="form-group">
+                    <label class="filter-label">Company</label>
+                    <select id="CompanyFilter" class="form-control select-search" asp-items="ViewBag.CompanyList">
+                        <option value="">All Companies</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="col-md-3 col-sm-6">
+                <div class="form-group">
+                    <label class="filter-label">Status</label>
+                    <select id="StatusFilter" class="form-control select-search">
+                        <option value="">All Statuses</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="col-md-2 col-sm-6">
+                <div class="form-group">
+                    <label class="filter-label">&nbsp;</label>
+                    <button type="button" id="clearFilters" class="btn btn-default btn-block">
+                        <i class="icon-cross2 position-left"></i>
+                        Clear
+                    </button>
+                </div>
             </div>
 
         </div>
 
     </div>
 
-    <!-- Device List -->
+    <!-- Device Table -->
 
-    <table class="table datatable-scroll-y table-hover">
+    <div class="table-responsive">
 
-        <thead>
+        <table class="table table-hover table-striped datatable-basic">
 
-            <tr>
-
-                <th>Device Name</th>
-                <th>Code</th>
-                <th>IP Address</th>
-                <th>Port</th>
-                <th>API URL</th>
-                <th>Username</th>
-                <th>Status</th>
-                <th class="text-center">Actions</th>
-
-            </tr>
-
-        </thead>
-
-        <tbody>
-
-            @foreach (var item in Model)
-            {
+            <thead>
                 <tr>
+                    <th width="60">#</th>
+                    <th>Device</th>
+                    <th>Company / Branch</th>
+                    <th>Network</th>
+                    <th>Username</th>
+                    <th>Last Sync</th>
+                    <th width="100" class="text-center">Status</th>
+                    <th width="190" class="text-center">Actions</th>
+                </tr>
+            </thead>
 
-                    <td>
+            <tbody id="deviceTable">
+                @{
+                    int sr = 1;
+                }
 
-                        <div class="text-semibold">
-                            @item.DeviceName
-                        </div>
+                @foreach (var item in devices)
+                {
+                    var companyName = item.CompanyId != null && companyNames.ContainsKey(item.CompanyId)
+                        ? companyNames[item.CompanyId]
+                        : null;
 
-                    </td>
+                    var branchName = item.BranchId != null && branchNames.ContainsKey(item.BranchId)
+                        ? branchNames[item.BranchId]
+                        : null;
 
-                    <td>
-                        @item.DeviceCode
-                    </td>
+                    <tr data-status="@(item.IsActive ? "active" : "inactive")"
+                        data-company="@companyName">
 
-                    <td>
-                        @item.IPAddress
-                    </td>
+                        <td>@sr</td>
 
-                    <td>
-                        @item.Port
-                    </td>
+                        <td>
+                            <div class="text-semibold">
+                                <i class="bi bi-fingerprint text-primary position-left"></i>
+                                @item.DeviceName
+                            </div>
+                            <small class="text-muted">Code: @item.DeviceCode</small>
+                        </td>
 
-                    <td>
+                        <td>
+                            @if (companyName != null)
+                            {
+                                <span class="label bg-primary-400">@companyName</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                            <br />
+                            @if (branchName != null)
+                            {
+                                <small class="text-muted">@branchName</small>
+                            }
+                        </td>
 
-                        <span title="@item.ApiUrl">
+                        <td>
+                            <div>@item.IPAddress<span class="text-muted">:@item.Port</span></div>
+                            @if (!string.IsNullOrEmpty(item.ApiUrl))
+                            {
+                                <small class="text-muted" title="@item.ApiUrl">
+                                    @(item.ApiUrl.Length > 36 ? item.ApiUrl.Substring(0, 36) + "…" : item.ApiUrl)
+                                </small>
+                            }
+                        </td>
 
-                            @(item.ApiUrl?.Length > 40
-                                ? item.ApiUrl.Substring(0, 40) + "..."
-                                : item.ApiUrl)
+                        <td>@item.Username</td>
 
-                        </span>
+                        <td>
+                            @if (item.LastSyncDate.HasValue)
+                            {
+                                <span>@item.LastSyncDate.Value.ToString("g")</span>
+                            }
+                            else
+                            {
+                                <span class="label label-default">Never</span>
+                            }
+                        </td>
 
-                    </td>
+                        <td class="text-center">
+                            @if (item.IsActive)
+                            {
+                                <span class="label label-success">Active</span>
+                            }
+                            else
+                            {
+                                <span class="label label-danger">Inactive</span>
+                            }
+                        </td>
 
-                    <td>
-                        @item.Username
-                    </td>
+                        <td class="text-center">
 
-                    <td>
+                            <div class="btn-group">
 
-                        @if (item.IsActive)
-                        {
-                            <span class="label label-success">
-                                Active
-                            </span>
-                        }
-                        else
-                        {
-                            <span class="label label-danger">
-                                Inactive
-                            </span>
-                        }
-
-                    </td>
-
-                    <td class="text-center">
-
-                        <ul class="icons-list">
-
-                            <li>
                                 <a asp-action="Details"
                                    asp-route-id="@item.Id"
+                                   class="btn btn-default btn-icon"
+                                   data-popup="tooltip"
                                    title="View">
                                     <i class="icon-eye"></i>
                                 </a>
-                            </li>
 
-                            <li>
                                 <a asp-action="Edit"
                                    asp-route-id="@item.Id"
+                                   class="btn btn-primary btn-icon"
+                                   data-popup="tooltip"
                                    title="Edit">
                                     <i class="icon-pencil7"></i>
                                 </a>
-                            </li>
 
-                            <li>
-                                <a asp-action="Delete"
-                                   asp-route-id="@item.Id"
-                                   title="Delete"
-                                   onclick="return confirm('Are you sure you want to delete this device? Any BiometricAgent still using its Device Key will start failing.');">
-                                    <i class="icon-trash"></i>
-                                </a>
-                            </li>
-
-                            <li>
-                                <a asp-action="TestConnection"
-                                   asp-route-id="@item.Id"
-                                   title="Test Connection">
+                                <button type="button"
+                                        class="btn bg-success btn-icon test-connection-btn"
+                                        data-id="@item.Id"
+                                        data-popup="tooltip"
+                                        title="Test Connection">
                                     <i class="icon-connection"></i>
-                                </a>
-                            </li>
+                                </button>
 
-                            <li>
                                 <a asp-action="SyncNow"
                                    asp-route-id="@item.Id"
+                                   class="btn bg-warning btn-icon"
+                                   data-popup="tooltip"
                                    title="Sync Now"
                                    onclick="return confirm('Pull and process punches from this device now?');">
                                     <i class="icon-sync"></i>
                                 </a>
-                            </li>
 
-                        </ul>
+                                <a asp-action="Delete"
+                                   asp-route-id="@item.Id"
+                                   class="btn btn-danger btn-icon"
+                                   data-popup="tooltip"
+                                   title="Delete"
+                                   onclick="return confirm('Are you sure you want to delete this device? Any BiometricAgent still using its Device Key will start failing.');">
+                                    <i class="icon-trash"></i>
+                                </a>
 
-                    </td>
+                            </div>
 
-                </tr>
-            }
+                        </td>
 
-        </tbody>
+                    </tr>
 
-    </table>
+                    sr++;
+                }
+
+                @if (!devices.Any())
+                {
+                    <tr>
+                        <td colspan="8" class="text-center text-muted">
+                            No biometric devices configured yet. Click <strong>Add Device</strong> to create one.
+                        </td>
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
 
 </div>
+
+@section Scripts {
+
+    <script>
+
+        $(document).ready(function () {
+
+            // -----------------------------
+            // Tooltips
+            // -----------------------------
+
+            $('[data-popup="tooltip"]').tooltip();
+
+            // -----------------------------
+            // Chosen selects
+            // -----------------------------
+
+            if ($.fn.chosen) {
+                $(".select-search").chosen({ width: "100%", search_contains: true });
+            }
+
+            // -----------------------------
+            // DataTable
+            // -----------------------------
+
+            var table = null;
+
+            if ($.fn.DataTable) {
+                table = $('.datatable-basic').DataTable({
+                    autoWidth: false,
+                    paging: true,
+                    ordering: true,
+                    searching: false,
+                    pageLength: 10,
+                    lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                    columnDefs: [{ orderable: false, targets: [0, 7] }],
+                    language: { search: "_INPUT_", searchPlaceholder: "Search..." }
+                });
+            }
+
+            // -----------------------------
+            // Search + Filters (client-side)
+            // -----------------------------
+
+            function applyFilters() {
+
+                var term = ($("#searchInput").val() || "").toLowerCase();
+                var company = $("#CompanyFilter option:selected").text().toLowerCase();
+                var status = $("#StatusFilter").val();
+
+                $("#deviceTable > tr").each(function () {
+
+                    var row = $(this);
+                    var rowText = row.text().toLowerCase();
+
+                    var matchesTerm = term === "" || rowText.indexOf(term) > -1;
+                    var matchesCompany = company === "" || company === "all companies" ||
+                        (row.data("company") || "").toString().toLowerCase() === company;
+                    var matchesStatus = status === "" || row.data("status") === status;
+
+                    row.toggle(matchesTerm && matchesCompany && matchesStatus);
+                });
+            }
+
+            $("#searchInput").on("keyup", applyFilters);
+            $("#CompanyFilter, #StatusFilter").on("change", applyFilters);
+
+            $("#clearFilters").on("click", function () {
+                $("#searchInput").val("");
+                $("#CompanyFilter, #StatusFilter").val("").trigger("chosen:updated").trigger("change");
+                applyFilters();
+            });
+
+            // -----------------------------
+            // Test Connection (AJAX)
+            // -----------------------------
+
+            $(document).on("click", ".test-connection-btn", function () {
+
+                var btn = $(this);
+                var id = btn.data("id");
+                var originalIcon = btn.html();
+
+                btn.prop("disabled", true).html('<i class="icon-spinner2 spinner"></i>');
+
+                $.ajax({
+                    url: '@Url.Action("TestConnectionAjax")',
+                    type: "POST",
+                    data: { id: id },
+                    success: function (response) {
+                        if (typeof swal === "function") {
+                            swal({
+                                title: response.success ? "Connection Successful" : "Connection Failed",
+                                text: response.message,
+                                type: response.success ? "success" : "error"
+                            });
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function () {
+                        alert("Unable to test connection. Please try again.");
+                    },
+                    complete: function () {
+                        btn.prop("disabled", false).html(originalIcon);
+                    }
+                });
+
+            });
+
+        });
+
+    </script>
+
+    <style>
+
+        .biometric-panel .panel-heading { padding: 18px 20px; }
+        .biometric-panel .panel-title { font-weight: 600; }
+        .biometric-panel .heading-elements .btn { margin-left: 6px; }
+
+        .summary-cards .stat-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px 18px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+
+        .summary-cards .stat-icon {
+            font-size: 26px;
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,.18);
+            flex-shrink: 0;
+        }
+
+        .summary-cards .stat-body h3 { font-size: 24px; font-weight: 700; }
+        .summary-cards .stat-body span { font-size: 12.5px; opacity: .9; }
+
+        .stat-primary { background: linear-gradient(135deg,#4e9cff,#2b6fd9); }
+        .stat-success { background: linear-gradient(135deg,#3ecf8e,#1f9d63); }
+        .stat-danger { background: linear-gradient(135deg,#ff6b6b,#e64545); }
+        .stat-info { background: linear-gradient(135deg,#5bc8f5,#2196cf); }
+
+        .filter-row { margin-top: 4px; }
+        .filter-label { font-size: 11.5px; font-weight: 600; text-transform: uppercase; color: #7a869a; margin-bottom: 4px; }
+
+        .table > thead > tr > th {
+            background: #fafafa;
+            font-size: 12.5px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .3px;
+            vertical-align: middle;
+        }
+
+        .table > tbody > tr > td { vertical-align: middle; font-size: 13px; }
+
+        .btn-icon { width: 34px; height: 34px; padding: 8px; }
+
+        .label { font-size: 11px; padding: 4px 8px; }
+
+        .text-semibold { font-weight: 600; }
+
+        .chosen-container { width: 100% !important; }
+
+        .spinner { animation: biometric-spin 0.8s linear infinite; display: inline-block; }
+        @@keyframes biometric-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        @@media (max-width: 767px) {
+            .biometric-panel .heading-elements .btn { margin: 4px 4px 0 0; }
+        }
+
+    </style>
+
+}

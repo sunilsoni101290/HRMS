@@ -1,0 +1,148 @@
+@model IEnumerable<EmployeeLoanListDto>
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"] = "Employee Loans";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="bi bi-cash-stack position-left"></i>
+            Employee Loans
+        </h5>
+
+        <div class="heading-elements">
+            <a asp-action="Export" asp-route-status="@ViewBag.Status" class="btn btn-default">
+                <i class="icon-file-excel position-left"></i>
+                Export
+            </a>
+            <a asp-action="PendingOnMe" class="btn btn-default">
+                <i class="icon-clock position-left"></i>
+                Pending On Me
+            </a>
+            <a asp-action="Create" class="btn bg-primary">
+                <i class="icon-plus22"></i>
+                New Loan Request
+            </a>
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="Index" method="get" class="row">
+            <div class="col-md-4">
+                <select name="status" class="form-control">
+                    <option value="">-- All Statuses --</option>
+                    @if (ViewBag.StatusList is List<SelectListItem> statusList)
+                    {
+                        foreach (var item in statusList)
+                        {
+                            <option value="@item.Text" selected="@(item.Text == (string)ViewBag.Status)">@item.Text</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-default">
+                    <i class="icon-search4"></i>
+                    Filter
+                </button>
+            </div>
+        </form>
+
+    </div>
+
+    <div class="table-responsive">
+
+        <table class="table table-bordered table-striped datatable-basic">
+
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Loan Type</th>
+                    <th>Requested</th>
+                    <th>Approved</th>
+                    <th>Outstanding</th>
+                    <th>Level</th>
+                    <th>Status</th>
+                    <th>Submitted</th>
+                    <th width="80"></th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.EmployeeName <span class="text-muted">(@item.EmployeeCode)</span></td>
+                            <td>@item.LoanTypeName</td>
+                            <td>@item.RequestedAmount.ToString("N0")</td>
+                            <td>@(item.ApprovedAmount.HasValue ? item.ApprovedAmount.Value.ToString("N0") : "-")</td>
+                            <td>@item.OutstandingPrincipal.ToString("N0")</td>
+                            <td>@item.CurrentApprovalLevel</td>
+                            <td><span class="label bg-info">@item.StatusName</span></td>
+                            <td>@item.CreatedOn.ToString("dd-MMM-yyyy")</td>
+                            <td>
+                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-default btn-icon" title="View">
+                                    <i class="icon-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="9" class="text-center text-muted" style="padding:30px;">
+                            <i class="bi bi-cash-stack" style="font-size:32px;"></i><br />
+                            No loan requests found.
+                        </td>
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+<script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+<script src="~/global_assets/js/plugins/tables/datatables/datatables.min.js"></script>
+
+@section Scripts {
+    <script>
+        @if (TempData["Success"] != null)
+        {
+            <text>swal({ title: 'Success', text: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(TempData["Success"]?.ToString() ?? string.Empty)), type: 'success', confirmButtonColor: '#66BB6A' });</text>
+        }
+        @if (TempData["GlobalError"] != null)
+        {
+            <text>swal({ title: 'Error', text: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(TempData["GlobalError"]?.ToString() ?? string.Empty)), type: 'error', confirmButtonColor: '#EF5350' });</text>
+        }
+
+        // Phase 12 - client-side search/sort/pagination over the (server-filtered by status) grid.
+        if ($.fn.DataTable) {
+            $(".datatable-basic").DataTable({
+                autoWidth: false,
+                paging: true,
+                ordering: true,
+                info: true,
+                searching: true,
+                pageLength: 10,
+                lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                order: [[7, 'desc']],
+                columnDefs: [{ orderable: false, searchable: false, targets: -1 }],
+                language: { search: "_INPUT_", searchPlaceholder: "Search Loans..." }
+            });
+        }
+    </script>
+}

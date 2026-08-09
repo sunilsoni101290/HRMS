@@ -15,10 +15,13 @@ namespace APP.Controllers
     public class TaxComputationController : Controller
     {
         private readonly IApiService _apiService;
-
+        private string _tenantId;
+        private string _userId;
         public TaxComputationController(IApiService apiService)
         {
             _apiService = apiService;
+            _tenantId = SessionHelper.GetActiveTenantId;
+            _userId = SessionHelper.GetActiveUserId;
         }
 
         [HttpGet]
@@ -43,6 +46,8 @@ namespace APP.Controllers
             var url =
                 $"taxcomputation/all?financialYearId={Uri.EscapeDataString(financialYearId)}" +
                 $"&departmentId={Uri.EscapeDataString(departmentId ?? string.Empty)}" +
+                $"&tenantId={Uri.EscapeDataString(_tenantId ?? string.Empty)}" +
+                $"&actingUserId={Uri.EscapeDataString(_userId ?? string.Empty)}" +
                 $"&search={Uri.EscapeDataString(search ?? string.Empty)}";
 
             try
@@ -64,8 +69,12 @@ namespace APP.Controllers
             try
             {
                 var result = await _apiService.PostAsync<EmployeeTaxComputationDto>(
-                    $"taxcomputation/compute?employeeId={Uri.EscapeDataString(employeeId)}&financialYearId={Uri.EscapeDataString(financialYearId)}",
-                    new { });
+                $"taxcomputation/compute?" +
+                $"employeeId={Uri.EscapeDataString(employeeId)}" +
+                $"&financialYearId={Uri.EscapeDataString(financialYearId)}" +
+                $"&tenantId={Uri.EscapeDataString(_tenantId)}" +
+                $"&actingUserId={Uri.EscapeDataString(_userId)}",
+                new { });
 
                 TempData[result != null ? "Success" : "GlobalError"] = result != null
                     ? "Tax computed successfully."

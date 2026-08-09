@@ -1,0 +1,171 @@
+@model List<LoanAdvanceAuditLogDto>
+
+@{
+    ViewData["Title"] = "Loan & Advance Audit Log";
+    var entityTypes = new[] { "EmployeeLoan", "EmployeeAdvance", "LoanType", "AdvanceType", "LoanPolicy", "LoanPolicyApprovalLevel", "LoanEmiSchedule", "AdvanceInstallment", "LoanPaymentHistory", "AdvancePaymentHistory", "LoanApprovalHistory", "AdvanceApprovalHistory", "LoanAdvanceAttachment" };
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="bi bi-journal-text position-left"></i>
+            Loan &amp; Advance Audit Log
+        </h5>
+        <div class="heading-elements">
+            <a asp-controller="LoanAdvanceDashboard" asp-action="Index" class="btn btn-default">
+                <i class="icon-arrow-left8 position-left"></i>
+                Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+        <p class="text-muted">
+            Every create/update/delete across the Loan &amp; Advance module is captured automatically (see
+            <code>LoanAdvanceAuditInterceptor</code>) - this is a read-only, immutable feed of the most recent 200 entries.
+        </p>
+
+        <form asp-action="Index" method="get" class="row">
+            <div class="col-md-4">
+                <select name="entityType" class="form-control">
+                    <option value="">-- All Entity Types --</option>
+                    @foreach (var type in entityTypes)
+                    {
+                        <option value="@type" selected="@(type == (string)ViewBag.EntityType)">@type</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-default">
+                    <i class="icon-search4"></i>
+                    Filter
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="table-responsive">
+
+        <table class="table table-bordered table-striped datatable-basic">
+
+            <thead>
+                <tr>
+                    <th>When</th>
+                    <th>Entity Type</th>
+                    <th>Entity Id</th>
+                    <th>Action</th>
+                    <th>Performed By</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.PerformedOn.ToString("dd-MMM-yyyy HH:mm")</td>
+                            <td><span class="label bg-slate-400">@item.EntityType</span></td>
+                            <td>@item.EntityId</td>
+                            <td>
+                                @{
+                                    var badgeClass = item.Action switch
+                                    {
+                                        "Create" => "bg-teal",
+                                        "Delete" => "bg-danger",
+                                        _ => "bg-info"
+                                    };
+                                }
+                                <span class="label @badgeClass">@item.Action</span>
+                            </td>
+                            <td>@(item.PerformedByName ?? item.PerformedBy)</td>
+                            <td>
+                                <button type="button" class="btn btn-default btn-xs view-diff-btn"
+                                        data-old="@(item.OldValuesJson ?? "(none - new record)")"
+                                        data-new="@(item.NewValuesJson ?? "(none - deleted)")"
+                                        data-entity="@item.EntityType #@item.EntityId - @item.Action">
+                                    View
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center text-muted" style="padding:30px;">
+                            No audit activity recorded yet.
+                        </td>
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+<!-- Single reused modal - populated on demand, avoids injecting extra
+     <tr> rows into the table (which would break DataTables' row
+     counting/pagination). -->
+<div class="modal fade" id="auditDiffModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title" id="auditDiffModalTitle">Audit Detail</h6>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="text-semibold text-muted">Old Values</label>
+                        <pre class="small" id="auditDiffOld"></pre>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-semibold text-muted">New Values</label>
+                        <pre class="small" id="auditDiffNew"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="~/global_assets/js/plugins/tables/datatables/datatables.min.js"></script>
+
+@section Scripts {
+    <script>
+        function prettyJson(raw) {
+            try { return JSON.stringify(JSON.parse(raw), null, 2); }
+            catch (e) { return raw; }
+        }
+
+        $(document).on("click", ".view-diff-btn", function () {
+            $("#auditDiffModalTitle").text($(this).data("entity"));
+            $("#auditDiffOld").text(prettyJson($(this).data("old")));
+            $("#auditDiffNew").text(prettyJson($(this).data("new")));
+
+            $("#auditDiffModal").modal("show");
+        });
+
+        if ($.fn.DataTable) {
+            $(".datatable-basic").DataTable({
+                autoWidth: false,
+                paging: true,
+                ordering: true,
+                info: true,
+                searching: true,
+                pageLength: 25,
+                lengthMenu: [[25, 50, 100, 200], [25, 50, 100, 200]],
+                order: [[0, 'desc']],
+                columnDefs: [{ orderable: false, searchable: false, targets: -1 }],
+                language: { search: "_INPUT_", searchPlaceholder: "Search Audit Log..." }
+            });
+        }
+    </script>
+}

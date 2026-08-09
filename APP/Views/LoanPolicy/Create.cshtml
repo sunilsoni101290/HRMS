@@ -1,0 +1,330 @@
+@model LoanPolicyDto
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    var isNewVersion = ViewBag.IsNewVersion == true;
+    ViewData["Title"] = isNewVersion ? "Edit Loan Policy (new version)" : "New Loan Policy";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="bi bi-journal-check position-left"></i>
+            @ViewData["Title"]
+        </h5>
+        <div class="heading-elements">
+            <a asp-action="Index" class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+        </div>
+    </div>
+
+    @if (isNewVersion)
+    {
+        <div class="alert alert-info m-15">
+            <i class="icon-info22 position-left"></i>
+            Saving this form creates a <strong>new version</strong> of this policy (v@(Model.VersionNumber + 1)) - the current version
+            is closed out, not overwritten. Existing loans already submitted keep the policy version they were approved under.
+        </div>
+    }
+
+    <div class="panel-body">
+
+        <form asp-action="@(isNewVersion ? "Edit" : "Create")" asp-route-id="@Model.Id" method="post" id="policyForm">
+
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <div class="row">
+
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="LoanTypeId"></label>
+                        <select asp-for="LoanTypeId" asp-items="ViewBag.LoanTypeList as SelectList" class="form-control">
+                            <option value="">-- Select Loan Type --</option>
+                        </select>
+                        <span asp-validation-for="LoanTypeId" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="CompanyId"></label>
+                        <select asp-for="CompanyId" asp-items="ViewBag.CompanyList as SelectList" class="form-control" id="companySelect">
+                            <option value="">-- All Companies --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label asp-for="BranchId"></label>
+                        <select asp-for="BranchId" asp-items="ViewBag.BranchList as SelectList" class="form-control" id="branchSelect">
+                            <option value="">-- All Branches --</option>
+                        </select>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="row">
+
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="MinAmount"></label>
+                        <input asp-for="MinAmount" class="form-control" />
+                        <span asp-validation-for="MinAmount" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="MaxAmount"></label>
+                        <input asp-for="MaxAmount" class="form-control" />
+                        <span asp-validation-for="MaxAmount" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="MinTenureMonths"></label>
+                        <input asp-for="MinTenureMonths" class="form-control" />
+                        <span asp-validation-for="MinTenureMonths" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="MaxTenureMonths"></label>
+                        <input asp-for="MaxTenureMonths" class="form-control" />
+                        <span asp-validation-for="MaxTenureMonths" class="text-danger"></span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="row">
+
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="InterestRatePercent"></label>
+                        <input asp-for="InterestRatePercent" class="form-control" placeholder="Leave blank to use Loan Type default" />
+                        <span asp-validation-for="InterestRatePercent" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="MinServiceMonthsRequired"></label>
+                        <input asp-for="MinServiceMonthsRequired" class="form-control" />
+                        <span asp-validation-for="MinServiceMonthsRequired" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="MaxActiveLoans"></label>
+                        <input asp-for="MaxActiveLoans" class="form-control" />
+                        <span asp-validation-for="MaxActiveLoans" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="PreClosurePenaltyPercent"></label>
+                        <input asp-for="PreClosurePenaltyPercent" class="form-control" />
+                        <span asp-validation-for="PreClosurePenaltyPercent" class="text-danger"></span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="row">
+
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="MaxDeductionPercentOfNetSalary"></label>
+                        <input asp-for="MaxDeductionPercentOfNetSalary" class="form-control" />
+                        <span asp-validation-for="MaxDeductionPercentOfNetSalary" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="EligibilitySalaryMultiplier"></label>
+                        <input asp-for="EligibilitySalaryMultiplier" class="form-control" />
+                        <span asp-validation-for="EligibilitySalaryMultiplier" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="EffectiveFrom"></label>
+                        <input asp-for="EffectiveFrom" type="date" class="form-control" />
+                        <span asp-validation-for="EffectiveFrom" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="EffectiveTo"></label>
+                        <input asp-for="EffectiveTo" type="date" class="form-control" />
+                    </div>
+                </div>
+
+            </div>
+
+            <hr />
+
+            <h6 class="text-semibold">
+                <i class="icon-stack2 position-left"></i>
+                Approval Matrix
+                <span class="text-muted" style="font-weight:normal;">- levels are checked in order 1, 2, 3...</span>
+            </h6>
+
+            <table class="table table-bordered" id="levelsTable">
+                <thead>
+                    <tr>
+                        <th style="width:80px;">Level #</th>
+                        <th>Approver Type</th>
+                        <th>Role (if Specific Role)</th>
+                        <th>User Id (if Specific User)</th>
+                        <th>Min Amount Threshold</th>
+                        <th style="width:50px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < Model.ApprovalLevels.Count; i++)
+                    {
+                        <tr class="level-row">
+                            <td><input type="number" name="ApprovalLevels[@i].LevelNumber" value="@Model.ApprovalLevels[i].LevelNumber" class="form-control" /></td>
+                            <td>
+                                <select name="ApprovalLevels[@i].ApproverType" class="form-control">
+                                    @if (ViewBag.ApproverTypeList is List<SelectListItem> atList)
+                                    {
+                                        foreach (var item in atList)
+                                        {
+                                            <option value="@item.Value" selected="@(item.Value == Model.ApprovalLevels[i].ApproverType.ToString())">@item.Text</option>
+                                        }
+                                    }
+                                </select>
+                            </td>
+                            <td>
+                                <select name="ApprovalLevels[@i].ApproverRoleId" class="form-control">
+                                    <option value="">-- Select Role --</option>
+                                    @if (ViewBag.RoleList is SelectList rList)
+                                    {
+                                        foreach (SelectListItem item in rList)
+                                        {
+                                            <option value="@item.Value" selected="@(item.Value == Model.ApprovalLevels[i].ApproverRoleId)">@item.Text</option>
+                                        }
+                                    }
+                                </select>
+                            </td>
+                            <td><input type="text" name="ApprovalLevels[@i].ApproverUserId" value="@Model.ApprovalLevels[i].ApproverUserId" class="form-control" placeholder="User Id" /></td>
+                            <td><input type="number" step="0.01" name="ApprovalLevels[@i].MinAmountThreshold" value="@Model.ApprovalLevels[i].MinAmountThreshold" class="form-control" /></td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-default btn-icon remove-level"><i class="icon-cross2"></i></button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <button type="button" id="addLevel" class="btn btn-default btn-sm">
+                <i class="icon-plus22 position-left"></i>
+                Add Level
+            </button>
+
+            <input type="hidden" asp-for="Id" />
+            <input type="hidden" asp-for="VersionNumber" />
+
+            <div class="text-right" style="margin-top:20px;">
+                <button type="submit" class="btn btn-primary">
+                    <i class="icon-checkmark3"></i>
+                    Save
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        var approverTypeOptions = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(ViewBag.ApproverTypeList));
+        var roleOptions = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(
+            (ViewBag.RoleList as SelectList)?.Select(i => new { i.Value, i.Text }) ?? Enumerable.Empty<object>()));
+
+        function buildApproverTypeSelect(name) {
+            var html = '<select name="' + name + '" class="form-control">';
+            approverTypeOptions.forEach(function (o) { html += '<option value="' + o.Value + '">' + o.Text + '</option>'; });
+            html += '</select>';
+            return html;
+        }
+
+        function buildRoleSelect(name) {
+            var html = '<select name="' + name + '" class="form-control"><option value="">-- Select Role --</option>';
+            roleOptions.forEach(function (o) { html += '<option value="' + o.Value + '">' + o.Text + '</option>'; });
+            html += '</select>';
+            return html;
+        }
+
+        document.getElementById('addLevel').addEventListener('click', function () {
+            var idx = document.querySelectorAll('#levelsTable tbody tr').length;
+            var row = document.createElement('tr');
+            row.className = 'level-row';
+            row.innerHTML =
+                '<td><input type="number" name="ApprovalLevels[' + idx + '].LevelNumber" value="' + (idx + 1) + '" class="form-control" /></td>' +
+                '<td>' + buildApproverTypeSelect('ApprovalLevels[' + idx + '].ApproverType') + '</td>' +
+                '<td>' + buildRoleSelect('ApprovalLevels[' + idx + '].ApproverRoleId') + '</td>' +
+                '<td><input type="text" name="ApprovalLevels[' + idx + '].ApproverUserId" class="form-control" placeholder="User Id" /></td>' +
+                '<td><input type="number" step="0.01" name="ApprovalLevels[' + idx + '].MinAmountThreshold" value="0" class="form-control" /></td>' +
+                '<td class="text-center"><button type="button" class="btn btn-default btn-icon remove-level"><i class="icon-cross2"></i></button></td>';
+            document.querySelector('#levelsTable tbody').appendChild(row);
+        });
+
+        document.getElementById('levelsTable').addEventListener('click', function (e) {
+            var btn = e.target.closest('.remove-level');
+            if (!btn) return;
+
+            var rows = document.querySelectorAll('#levelsTable tbody tr');
+            if (rows.length <= 1) {
+                alert('At least one approval level is required.');
+                return;
+            }
+
+            btn.closest('tr').remove();
+
+            // Re-index remaining rows so ApprovalLevels[i] stays contiguous.
+            document.querySelectorAll('#levelsTable tbody tr').forEach(function (row, i) {
+                row.querySelectorAll('[name]').forEach(function (el) {
+                    el.name = el.name.replace(/ApprovalLevels\[\d+\]/, 'ApprovalLevels[' + i + ']');
+                });
+            });
+        });
+
+        // Company change -> reload Branch dropdown via the dropdown API.
+        document.getElementById('companySelect').addEventListener('change', function () {
+            var companyId = this.value;
+            var branchSelect = document.getElementById('branchSelect');
+            branchSelect.innerHTML = '<option value="">-- All Branches --</option>';
+            if (!companyId) return;
+
+            fetch('/LoanPolicy/GetBranches?companyId=' + encodeURIComponent(companyId))
+                .then(function (r) { return r.ok ? r.json() : []; })
+                .then(function (list) {
+                    (list || []).forEach(function (o) {
+                        var opt = document.createElement('option');
+                        opt.value = o.value; opt.text = o.text;
+                        branchSelect.appendChild(opt);
+                    });
+                });
+        });
+    </script>
+}

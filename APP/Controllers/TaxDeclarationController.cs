@@ -21,12 +21,14 @@ namespace APP.Controllers
     {
         private readonly IApiService _apiService;
         private readonly string? _userId;
+        private readonly string? _tenantId;
         private readonly string? _employeeId;
 
         public TaxDeclarationController(IApiService apiService)
         {
             _apiService = apiService;
             _userId = SessionHelper.GetActiveUserId;
+            _tenantId = SessionHelper.GetActiveTenantId;
             _employeeId = SessionHelper.GetActiveEmployeeId;
         }
 
@@ -48,6 +50,8 @@ namespace APP.Controllers
                 $"taxdeclaration?financialYearId={Uri.EscapeDataString(financialYearId ?? string.Empty)}" +
                 $"&status={Uri.EscapeDataString(status ?? string.Empty)}" +
                 $"&departmentId={Uri.EscapeDataString(departmentId ?? string.Empty)}" +
+                $"&tenantId={Uri.EscapeDataString(_tenantId ?? string.Empty)}" +
+                $"&actingUserId={Uri.EscapeDataString(_userId ?? string.Empty)}" +
                 $"&search={Uri.EscapeDataString(search ?? string.Empty)}";
 
             try
@@ -95,8 +99,12 @@ namespace APP.Controllers
             await BindFinancialYearDropdown(financialYearId);
             ViewBag.RegimeList = EnumHelper.GetEnumList<TaxRegime>();
 
-            var existing = await _apiService.GetAsync<TaxDeclarationDto>(
-                $"taxdeclaration/my?financialYearId={Uri.EscapeDataString(financialYearId ?? string.Empty)}");
+            var url =
+                $"taxdeclaration/my?financialYearId={Uri.EscapeDataString(financialYearId ?? string.Empty)}" +
+                $"&tenantId={Uri.EscapeDataString(_tenantId ?? string.Empty)}" +
+                $"&actingUserId={Uri.EscapeDataString(_userId ?? string.Empty)}";
+
+            var existing = await _apiService.GetAsync<TaxDeclarationDto>(url);
 
             var model = existing != null
                 ? new CreateTaxDeclarationDto
@@ -113,7 +121,7 @@ namespace APP.Controllers
                     IsMetroCity = existing.IsMetroCity,
                     LandlordPAN = existing.LandlordPAN
                 }
-                : new CreateTaxDeclarationDto { FinancialYearId = financialYearId, EmployeeId = _employeeId ?? string.Empty };
+                : new CreateTaxDeclarationDto { FinancialYearId = financialYearId,TenantId=_tenantId,ActingUserId=_userId,CreatedBy=_userId, EmployeeId = _employeeId ?? string.Empty };
 
             return View(model);
         }
@@ -136,16 +144,16 @@ namespace APP.Controllers
                 if (result == null)
                 {
                     TempData["GlobalError"] = "Unable to save Tax Declaration.";
-                    return RedirectToAction(nameof(CreateOrEdit), new { financialYearId = model.FinancialYearId });
+                    return RedirectToAction(nameof(CreateOrEdit), new { financialYearId = model.FinancialYearId, TenantId = _tenantId, ActingUserId = _userId, CreatedBy = _userId });
                 }
 
                 TempData["Success"] = "Tax Declaration saved as Draft.";
-                return RedirectToAction(nameof(MyDeclaration), new { financialYearId = model.FinancialYearId });
+                return RedirectToAction(nameof(MyDeclaration), new { financialYearId = model.FinancialYearId, TenantId = _tenantId, ActingUserId = _userId, CreatedBy = _userId });
             }
             catch (ApiException ex)
             {
                 TempData["GlobalError"] = GetErrorMessage(ex.ResponseContent);
-                return RedirectToAction(nameof(CreateOrEdit), new { financialYearId = model.FinancialYearId });
+                return RedirectToAction(nameof(CreateOrEdit), new { financialYearId = model.FinancialYearId, TenantId = _tenantId, ActingUserId = _userId, CreatedBy = _userId });
             }
         }
 
@@ -155,20 +163,39 @@ namespace APP.Controllers
         {
             try
             {
-                var result = await _apiService.PutAsync<TaxDeclarationDto>($"taxdeclaration/{id}/submit", new { });
+                var url =
+                    $"taxdeclaration/submit?id={Uri.EscapeDataString(id ?? string.Empty)}" +
+                    $"&tenantId={Uri.EscapeDataString(_tenantId ?? string.Empty)}" +
+                    $"&actingUserId={Uri.EscapeDataString(_userId ?? string.Empty)}";
 
-                TempData[result != null ? "Success" : "GlobalError"] = result != null
-                    ? "Tax Declaration submitted for HR verification."
-                    : "Unable to submit this Tax Declaration.";
+                var result = await _apiService.PutAsync<TaxDeclarationDto>(
+                    url,
+                    new { }      // Empty request body
+                );
+
+                if (result != null)
+                {
+                    TempData["Success"] = "Tax Declaration submitted successfully.";
+                }
+                else
+                {
+                    TempData["Error"] = "Unable to submit Tax Declaration.";
+                }
             }
             catch (ApiException ex)
             {
                 TempData["GlobalError"] = GetErrorMessage(ex.ResponseContent);
             }
+            catch (Exception ex)
+            {
+                TempData["GlobalError"] = ex.Message;
+            }
 
-            return RedirectToAction(nameof(MyDeclaration), new { financialYearId });
+            return RedirectToAction(nameof(MyDeclaration), new
+            {
+                financialYearId = financialYearId
+            });
         }
-
         #endregion
 
         #region Details / HR Workflow
@@ -176,7 +203,12 @@ namespace APP.Controllers
         [HttpGet]
         public async Task<IActionResult> Details(string id)
         {
-            var data = await _apiService.GetAsync<TaxDeclarationDto>($"taxdeclaration/{id}");
+            var url =
+                    $"taxdeclaration?id={Uri.EscapeDataString(id ?? string.Empty)}" +
+                    $"&tenantId={Uri.EscapeDataString(_tenantId ?? string.Empty)}" +
+                    $"&actingUserId={Uri.EscapeDataString(_userId ?? string.Empty)}";
+
+            var data = await _apiService.GetAsync<TaxDeclarationDto>(url);
 
             if (data == null)
                 return NotFound();
@@ -194,7 +226,7 @@ namespace APP.Controllers
             {
                 var result = await _apiService.PutAsync<TaxDeclarationDto>(
                     $"taxdeclaration/{id}/verify",
-                    new TaxDeclarationVerifyActionDto { VerifierRemarks = remarks });
+                    new TaxDeclarationVerifyActionDto { VerifierRemarks = remarks,TenantId=_tenantId,ActingUserId=_userId });
 
                 TempData[result != null ? "Success" : "GlobalError"] = result != null
                     ? "Tax Declaration verified successfully."
@@ -216,7 +248,7 @@ namespace APP.Controllers
             {
                 var result = await _apiService.PutAsync<TaxDeclarationDto>(
                     $"taxdeclaration/{id}/reject",
-                    new TaxDeclarationVerifyActionDto { VerifierRemarks = remarks });
+                    new TaxDeclarationVerifyActionDto { VerifierRemarks = remarks, TenantId = _tenantId, ActingUserId = _userId });
 
                 TempData[result != null ? "Success" : "GlobalError"] = result != null
                     ? "Tax Declaration rejected."

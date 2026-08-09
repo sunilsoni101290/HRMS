@@ -2,6 +2,7 @@ using APP.Attributes;
 using APP.Helpers;
 using APP.Models.DTOs;
 using APP.Services.Interfaces;
+using DocumentFormat.OpenXml.Office2010.Excel;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using static APP.Helpers.EnumExtensions;
@@ -15,10 +16,13 @@ namespace APP.Controllers
     public class TaxSlabController : Controller
     {
         private readonly IApiService _apiService;
-
+        private string _tenantId;
+        private string _userId;
         public TaxSlabController(IApiService apiService)
         {
             _apiService = apiService;
+            _tenantId = SessionHelper.GetActiveTenantId;
+            _userId = SessionHelper.GetActiveUserId;
         }
 
         [HttpGet]
@@ -30,8 +34,14 @@ namespace APP.Controllers
             await BindFinancialYearDropdown(financialYearId);
             ViewBag.RegimeList = EnumHelper.GetEnumList<TaxRegime>();
 
-            var url = $"taxslab?financialYearId={Uri.EscapeDataString(financialYearId ?? string.Empty)}" +
-                      (regime.HasValue ? $"&regime={regime.Value}" : string.Empty);
+            //var url = $"taxslab?financialYearId={Uri.EscapeDataString(financialYearId ?? string.Empty)}" +
+            //          (regime.HasValue ? $"&regime={regime.Value}" : string.Empty);
+
+            var url =
+            $"taxslab?financialYearId={Uri.EscapeDataString(financialYearId ?? string.Empty)}" +
+            (regime.HasValue ? $"&regime={regime.Value}" : string.Empty) +
+            $"&tenantId={Uri.EscapeDataString(_tenantId ?? string.Empty)}" +
+            $"&actingUserId={Uri.EscapeDataString(_userId ?? string.Empty)}";
 
             try
             {
@@ -49,7 +59,7 @@ namespace APP.Controllers
         public async Task<IActionResult> Create()
         {
             await LoadFormViewDataAsync();
-            return View(new TaxSlabDto());
+            return View(new TaxSlabDto() { ActingUserId=_userId,TenantId=_tenantId});
         }
 
         [HttpPost]
@@ -84,6 +94,9 @@ namespace APP.Controllers
         public async Task<IActionResult> Edit(string id)
         {
             var data = await _apiService.GetAsync<TaxSlabDto>($"taxslab/{id}");
+
+            data.TenantId= _tenantId;
+            data.ActingUserId= _userId;
 
             if (data == null)
                 return NotFound();
@@ -122,22 +135,59 @@ namespace APP.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Delete(string id)
+        public async Task<IActionResult> Delete(string id, string financialYearId)
         {
             try
             {
-                var result = await _apiService.DeleteAsync($"taxslab/{id}");
-                TempData[result ? "Success" : "GlobalError"] = result
-                    ? "Tax Slab deleted successfully."
-                    : "Unable to delete Tax Slab.";
+                var url =
+                    $"taxslab/{Uri.EscapeDataString(id ?? string.Empty)}" +
+                    $"?tenantId={Uri.EscapeDataString(_tenantId ?? string.Empty)}" +
+                    $"&actingUserId={Uri.EscapeDataString(_userId ?? string.Empty)}";
+
+                var result = await _apiService.DeleteAsync(url);
+
+                if (result)
+                {
+                    TempData["Success"] = "Tax Slab deleted successfully.";
+                }
+                else
+                {
+                    TempData["Error"] = "Unable to delete Tax Slab.";
+                }
             }
             catch (ApiException ex)
             {
                 TempData["GlobalError"] = GetErrorMessage(ex.ResponseContent);
             }
+            catch (Exception ex)
+            {
+                TempData["GlobalError"] = ex.Message;
+            }
 
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Index), new
+            {
+                financialYearId
+            });
         }
+
+        //[HttpPost]
+        //[ValidateAntiForgeryToken]
+        //public async Task<IActionResult> Delete(string id)
+        //{
+        //    try
+        //    {
+        //        var result = await _apiService.DeleteAsync($"taxslab/{id}");
+        //        TempData[result ? "Success" : "GlobalError"] = result
+        //            ? "Tax Slab deleted successfully."
+        //            : "Unable to delete Tax Slab.";
+        //    }
+        //    catch (ApiException ex)
+        //    {
+        //        TempData["GlobalError"] = GetErrorMessage(ex.ResponseContent);
+        //    }
+
+        //    return RedirectToAction(nameof(Index));
+        //}
 
         private async Task LoadFormViewDataAsync()
         {

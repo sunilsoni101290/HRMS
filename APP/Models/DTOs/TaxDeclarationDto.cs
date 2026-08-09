@@ -90,6 +90,9 @@ namespace APP.Models.DTOs
         [MaxLength(1000)]
         [Display(Name = "Landlord PAN")]
         public string? LandlordPAN { get; set; }
+        public string? TenantId { get; set; }
+        public string? ActingUserId { get; set; }
+        public string? CreatedBy { get; set; }
     }
 
     // Mirrors Application.DTOs.Taxation.TaxDeclarationVerifyActionDto
@@ -98,5 +101,8 @@ namespace APP.Models.DTOs
     {
         [MaxLength(1000)]
         public string? VerifierRemarks { get; set; }
+        public string? TenantId { get; set; }
+        public string? ActingUserId { get; set; }
+        public string? CreatedBy { get; set; }
     }
 }

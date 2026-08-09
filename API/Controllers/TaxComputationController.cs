@@ -20,16 +20,14 @@ namespace API.Controllers
             _taxComputationService = taxComputationService;
         }
 
-        private string? TenantId => User.FindFirst("TenantId")?.Value;
-        private string? ActingUserId => User.FindFirst("UserId")?.Value;
 
         // POST api/taxcomputation/compute?employeeId=&financialYearId= - runs/re-runs the calculation.
         [HttpPost("compute")]
-        public async Task<IActionResult> Compute([FromQuery] string employeeId, [FromQuery] string financialYearId)
+        public async Task<IActionResult> Compute([FromQuery] string employeeId, [FromQuery] string financialYearId, string tenantId, string actingUserId)
         {
             try
             {
-                var result = await _taxComputationService.ComputeAsync(employeeId, financialYearId, TenantId, ActingUserId);
+                var result = await _taxComputationService.ComputeAsync(employeeId, financialYearId, tenantId, actingUserId);
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)
@@ -44,11 +42,11 @@ namespace API.Controllers
 
         // GET api/taxcomputation?employeeId=&financialYearId=
         [HttpGet]
-        public async Task<IActionResult> Get([FromQuery] string employeeId, [FromQuery] string financialYearId)
+        public async Task<IActionResult> Get([FromQuery] string employeeId, [FromQuery] string financialYearId, string tenantId, string actingUserId)
         {
             try
             {
-                var result = await _taxComputationService.GetAsync(employeeId, financialYearId, TenantId, ActingUserId);
+                var result = await _taxComputationService.GetAsync(employeeId, financialYearId, tenantId, actingUserId);
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)
@@ -59,11 +57,12 @@ namespace API.Controllers
 
         // GET api/taxcomputation/all?financialYearId=&departmentId=&search=
         [HttpGet("all")]
-        public async Task<IActionResult> GetAll([FromQuery] string financialYearId, [FromQuery] string? departmentId, [FromQuery] string? search)
+        public async Task<IActionResult> GetAll([FromQuery] string financialYearId, [FromQuery] string? departmentId, 
+            [FromQuery] string? search, string tenantId, string actingUserId)
         {
             try
             {
-                var result = await _taxComputationService.GetAllAsync(TenantId, financialYearId, departmentId, search, ActingUserId);
+                var result = await _taxComputationService.GetAllAsync(tenantId, financialYearId, departmentId, search, actingUserId);
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)

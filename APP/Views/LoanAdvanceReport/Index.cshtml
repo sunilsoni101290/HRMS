@@ -1,0 +1,226 @@
+@model List<OutstandingBalanceReportRowDto>
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"] = "Loan & Advance Reports";
+    var payments = ViewBag.PaymentHistory as List<LoanAdvancePaymentReportRowDto> ?? new List<LoanAdvancePaymentReportRowDto>();
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="bi bi-cash-coin position-left"></i>
+            Outstanding Balance Report
+        </h5>
+        <div class="heading-elements">
+            <a asp-action="ExportOutstandingBalance" asp-route-departmentId="@ViewBag.DepartmentId" class="btn btn-default">
+                <i class="icon-file-excel position-left"></i>
+                Export
+            </a>
+            <a asp-controller="LoanAdvanceDashboard" asp-action="Index" class="btn btn-default">
+                <i class="icon-arrow-left8 position-left"></i>
+                Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="Index" method="get" class="row">
+            <div class="col-md-4">
+                <select name="departmentId" class="form-control">
+                    <option value="">-- All Departments --</option>
+                    @if (ViewBag.DepartmentList is SelectList deptList)
+                    {
+                        foreach (var item in deptList)
+                        {
+                            <option value="@item.Value" selected="@(item.Value == (string)ViewBag.DepartmentId)">@item.Text</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input type="date" name="fromDate" class="form-control" value="@(((DateTime)ViewBag.FromDate).ToString("yyyy-MM-dd"))" />
+            </div>
+            <div class="col-md-3">
+                <input type="date" name="toDate" class="form-control" value="@(((DateTime)ViewBag.ToDate).ToString("yyyy-MM-dd"))" />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-default">
+                    <i class="icon-search4"></i>
+                    Filter
+                </button>
+            </div>
+        </form>
+
+    </div>
+
+    <div class="table-responsive">
+
+        <table class="table table-bordered table-striped datatable-basic">
+
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Department</th>
+                    <th>Active Loans</th>
+                    <th>Loan Outstanding</th>
+                    <th>Active Advances</th>
+                    <th>Advance Outstanding</th>
+                    <th>Next Due Date</th>
+                    <th>Next Due Amount</th>
+                    <th>Max Days Past Due</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.EmployeeName <span class="text-muted">(@item.EmployeeCode)</span></td>
+                            <td>@item.DepartmentName</td>
+                            <td>@item.ActiveLoanCount</td>
+                            <td>@item.TotalLoanOutstanding.ToString("N0")</td>
+                            <td>@item.ActiveAdvanceCount</td>
+                            <td>@item.TotalAdvanceOutstanding.ToString("N0")</td>
+                            <td>@(item.NextDueDate.HasValue ? item.NextDueDate.Value.ToString("dd-MMM-yyyy") : "-")</td>
+                            <td>@(item.NextDueAmount.HasValue ? item.NextDueAmount.Value.ToString("N0") : "-")</td>
+                            <td>
+                                @if (item.MaxDaysPastDue > 0)
+                                {
+                                    <span class="label bg-danger">@item.MaxDaysPastDue days</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="9" class="text-center text-muted" style="padding:30px;">
+                            No outstanding loan or advance balances found.
+                        </td>
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="bi bi-receipt position-left"></i>
+            Payment History Report
+        </h5>
+        <div class="heading-elements">
+            <a asp-action="ExportPaymentHistory" asp-route-fromDate="@(((DateTime)ViewBag.FromDate).ToString("yyyy-MM-dd"))" asp-route-toDate="@(((DateTime)ViewBag.ToDate).ToString("yyyy-MM-dd"))" class="btn btn-default">
+                <i class="icon-file-excel position-left"></i>
+                Export
+            </a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+        <p class="text-muted no-margin">
+            Showing payments from <strong>@(((DateTime)ViewBag.FromDate).ToString("dd-MMM-yyyy"))</strong>
+            to <strong>@(((DateTime)ViewBag.ToDate).ToString("dd-MMM-yyyy"))</strong> - use the filter above to change the range.
+        </p>
+    </div>
+
+    <div class="table-responsive">
+
+        <table class="table table-bordered table-striped datatable-basic-payments">
+
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Employee</th>
+                    <th>Loan/Advance Type</th>
+                    <th>Source</th>
+                    <th>Amount Paid</th>
+                    <th>Payment Date</th>
+                    <th>Payroll Id</th>
+                    <th>Receipt Reference</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @if (payments.Any())
+                {
+                    foreach (var item in payments)
+                    {
+                        <tr>
+                            <td><span class="label @(item.EntityType == "Loan" ? "bg-primary" : "bg-teal")">@item.EntityType</span></td>
+                            <td>@item.EmployeeName <span class="text-muted">(@item.EmployeeCode)</span></td>
+                            <td>@item.TypeName</td>
+                            <td>@item.PaymentSourceName</td>
+                            <td>@item.AmountPaid.ToString("N0")</td>
+                            <td>@item.PaymentDate.ToString("dd-MMM-yyyy")</td>
+                            <td>@item.PayrollId</td>
+                            <td>@item.ReceiptReference</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" class="text-center text-muted" style="padding:30px;">
+                            No payments recorded in this date range.
+                        </td>
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+<script src="~/global_assets/js/plugins/tables/datatables/datatables.min.js"></script>
+
+@section Scripts {
+    <script>
+        if ($.fn.DataTable) {
+            $(".datatable-basic").DataTable({
+                autoWidth: false,
+                paging: true,
+                ordering: true,
+                info: true,
+                searching: true,
+                pageLength: 10,
+                lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                order: [[3, 'desc']],
+                language: { search: "_INPUT_", searchPlaceholder: "Search Outstanding Balances..." }
+            });
+
+            $(".datatable-basic-payments").DataTable({
+                autoWidth: false,
+                paging: true,
+                ordering: true,
+                info: true,
+                searching: true,
+                pageLength: 10,
+                lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                order: [[5, 'desc']],
+                language: { search: "_INPUT_", searchPlaceholder: "Search Payments..." }
+            });
+        }
+    </script>
+}

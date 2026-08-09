@@ -225,6 +225,36 @@ namespace Infrastructure
 
         #endregion
 
+        #region 💰 LOAN & ADVANCE
+        // Masters - see Domain/Entities/LoanType.cs / AdvanceType.cs.
+        public DbSet<LoanType> LoanTypes { get; set; }
+        public DbSet<AdvanceType> AdvanceTypes { get; set; }
+
+        // Policy (versioned) + its configurable N-level approval matrix -
+        // see Domain/Entities/LoanPolicy.cs / LoanPolicyApprovalLevel.cs.
+        public DbSet<LoanPolicy> LoanPolicies { get; set; }
+        public DbSet<LoanPolicyApprovalLevel> LoanPolicyApprovalLevels { get; set; }
+
+        // Loan request/account (Maker-Checker, N-level) + its EMI schedule
+        // and payment ledger - see Domain/Entities/EmployeeLoan.cs.
+        public DbSet<EmployeeLoan> EmployeeLoans { get; set; }
+        public DbSet<LoanApprovalHistory> LoanApprovalHistories { get; set; }
+        public DbSet<LoanEmiSchedule> LoanEmiSchedules { get; set; }
+        public DbSet<LoanPaymentHistory> LoanPaymentHistories { get; set; }
+
+        // Advance request/account - near-mirror of EmployeeLoan, no
+        // interest amortization - see Domain/Entities/EmployeeAdvance.cs.
+        public DbSet<EmployeeAdvance> EmployeeAdvances { get; set; }
+        public DbSet<AdvanceApprovalHistory> AdvanceApprovalHistories { get; set; }
+        public DbSet<AdvanceInstallment> AdvanceInstallments { get; set; }
+        public DbSet<AdvancePaymentHistory> AdvancePaymentHistories { get; set; }
+
+        // Shared/polymorphic - see Domain/Entities/LoanAdvanceAttachment.cs
+        // / LoanAdvanceAuditLog.cs.
+        public DbSet<LoanAdvanceAttachment> LoanAdvanceAttachments { get; set; }
+        public DbSet<LoanAdvanceAuditLog> LoanAdvanceAuditLogs { get; set; }
+        #endregion
+
         #region 🔥 MODEL CONFIGURATION
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -857,6 +887,163 @@ namespace Infrastructure
 
                 entity.HasIndex(x => new { x.EventId, x.EmployeeId })
                     .IsUnique();
+            });
+
+            // =====================================================
+            // 💰 LOAN & ADVANCE
+            // =====================================================
+            // Filtered unique indexes match Phase 4 SQL script's
+            // UX_LoanTypes_Tenant_Code / UX_AdvanceTypes_Tenant_Code -
+            // scoped by IsDeleted so a soft-deleted Code can be reused.
+            modelBuilder.Entity<LoanType>(entity =>
+            {
+                entity.HasIndex(e => new { e.TenantId, e.Code })
+                    .IsUnique()
+                    .HasFilter("[IsDeleted] = 0")
+                    .HasDatabaseName("UX_LoanTypes_Tenant_Code");
+            });
+
+            modelBuilder.Entity<AdvanceType>(entity =>
+            {
+                entity.HasIndex(e => new { e.TenantId, e.Code })
+                    .IsUnique()
+                    .HasFilter("[IsDeleted] = 0")
+                    .HasDatabaseName("UX_AdvanceTypes_Tenant_Code");
+            });
+
+            modelBuilder.Entity<LoanPolicyApprovalLevel>(entity =>
+            {
+                entity.HasIndex(e => new { e.LoanPolicyId, e.LevelNumber })
+                    .IsUnique()
+                    .HasDatabaseName("UX_LoanPolicyApprovalLevels");
+            });
+
+            modelBuilder.Entity<EmployeeLoan>(entity =>
+            {
+                entity.HasIndex(e => new { e.EmployeeId, e.Status })
+                    .HasDatabaseName("IX_EmployeeLoans_Employee_Status");
+            });
+
+            modelBuilder.Entity<LoanEmiSchedule>(entity =>
+            {
+                entity.HasIndex(e => new { e.EmployeeLoanId, e.InstallmentNumber })
+                    .IsUnique()
+                    .HasDatabaseName("UX_LoanEmiSchedules");
+
+                entity.HasIndex(e => new { e.Status, e.DueDate })
+                    .HasDatabaseName("IX_LoanEmiSchedules_DueTracking");
+            });
+
+            modelBuilder.Entity<EmployeeAdvance>(entity =>
+            {
+                entity.HasIndex(e => new { e.EmployeeId, e.Status })
+                    .HasDatabaseName("IX_EmployeeAdvances_Employee_Status");
+            });
+
+            modelBuilder.Entity<AdvanceInstallment>(entity =>
+            {
+                entity.HasIndex(e => new { e.EmployeeAdvanceId, e.InstallmentNumber })
+                    .IsUnique()
+                    .HasDatabaseName("UX_AdvanceInstallments");
+
+                entity.HasIndex(e => new { e.Status, e.DueDate })
+                    .HasDatabaseName("IX_AdvanceInstallments_DueTracking");
+            });
+
+            modelBuilder.Entity<LoanAdvanceAttachment>(entity =>
+            {
+                entity.HasIndex(e => new { e.EntityType, e.EntityId })
+                    .HasDatabaseName("IX_LoanAdvanceAttachments_Entity");
+            });
+
+            modelBuilder.Entity<LoanAdvanceAuditLog>(entity =>
+            {
+                entity.HasIndex(e => new { e.EntityType, e.EntityId, e.PerformedOn })
+                    .HasDatabaseName("IX_LoanAdvanceAuditLogs_Entity");
+
+                entity.Property(e => e.OldValuesJson).HasColumnType("nvarchar(max)");
+                entity.Property(e => e.NewValuesJson).HasColumnType("nvarchar(max)");
+            });
+
+            // =====================================================
+            // PHASE 18 - PERFORMANCE: additional indexes discovered once
+            // real query patterns existed (Phase 14 reports, Phase 15
+            // reminders, Phase 16 audit) - the original Phase 3/4 indexes
+            // above covered per-employee lookups (EmployeeId+Status) but not
+            // the tenant-wide aggregate scans GetDashboardAsync/
+            // GetOutstandingBalanceReportAsync run, nor the payment-history
+            // date-range filter, nor the reminder sweep's per-day dedup
+            // check against Notifications.
+            // =====================================================
+            modelBuilder.Entity<EmployeeLoan>(entity =>
+            {
+                // Dashboard/report aggregates filter by TenantId first, then
+                // Status - EmployeeId+Status (above) doesn't help those scans.
+                entity.HasIndex(e => new { e.TenantId, e.Status })
+                    .HasDatabaseName("IX_EmployeeLoans_Tenant_Status");
+
+                // Was specified in the original Phase 4 SQL design script
+                // (docs/LoanAdvanceModule/04-SQL-Scripts.sql) but never made
+                // it into this Fluent config - added here on Phase 18 review.
+                entity.HasIndex(e => new { e.TenantId, e.CompanyId, e.BranchId })
+                    .HasDatabaseName("IX_EmployeeLoans_Tenant_Company_Branch");
+            });
+
+            modelBuilder.Entity<EmployeeAdvance>(entity =>
+            {
+                entity.HasIndex(e => new { e.TenantId, e.Status })
+                    .HasDatabaseName("IX_EmployeeAdvances_Tenant_Status");
+
+                entity.HasIndex(e => new { e.TenantId, e.CompanyId, e.BranchId })
+                    .HasDatabaseName("IX_EmployeeAdvances_Tenant_Company_Branch");
+            });
+
+            modelBuilder.Entity<LoanPaymentHistory>(entity =>
+            {
+                // Per-loan statement view (EmployeeLoanId, PaymentDate) was
+                // in the original Phase 4 script but missing here; the
+                // standalone PaymentDate index is new for Phase 14's
+                // tenant-wide GetPaymentHistoryReportAsync date-range scan,
+                // which never filters by EmployeeLoanId so the composite
+                // above wouldn't help it.
+                entity.HasIndex(e => new { e.EmployeeLoanId, e.PaymentDate })
+                    .HasDatabaseName("IX_LoanPaymentHistories_Loan_Date");
+
+                entity.HasIndex(e => e.PaymentDate)
+                    .HasDatabaseName("IX_LoanPaymentHistories_PaymentDate");
+            });
+
+            modelBuilder.Entity<AdvancePaymentHistory>(entity =>
+            {
+                entity.HasIndex(e => new { e.EmployeeAdvanceId, e.PaymentDate })
+                    .HasDatabaseName("IX_AdvancePaymentHistories_Advance_Date");
+
+                entity.HasIndex(e => e.PaymentDate)
+                    .HasDatabaseName("IX_AdvancePaymentHistories_PaymentDate");
+            });
+
+            modelBuilder.Entity<LoanApprovalHistory>(entity =>
+            {
+                // Composite FK+LevelNumber index from the Phase 4 script -
+                // EF only auto-indexes the bare FK column, not this composite.
+                entity.HasIndex(e => new { e.EmployeeLoanId, e.LevelNumber })
+                    .HasDatabaseName("IX_LoanApprovalHistories_Loan");
+            });
+
+            modelBuilder.Entity<AdvanceApprovalHistory>(entity =>
+            {
+                entity.HasIndex(e => new { e.EmployeeAdvanceId, e.LevelNumber })
+                    .HasDatabaseName("IX_AdvanceApprovalHistories_Advance");
+            });
+
+            modelBuilder.Entity<Notification>(entity =>
+            {
+                // LoanAdvanceReminderService.AlreadyNotifiedTodayAsync
+                // (Phase 15) filters "ReferenceId IN (...) AND CreatedOn >=
+                // todayStart" on every sweep - without this, that becomes a
+                // full table scan of a table that grows every single day.
+                entity.HasIndex(e => new { e.ReferenceId, e.CreatedOn })
+                    .HasDatabaseName("IX_Notifications_Reference_CreatedOn");
             });
 
             // =====================================================

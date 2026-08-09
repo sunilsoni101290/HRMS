@@ -1,0 +1,327 @@
+@model EmployeeAdvanceDto
+@using APP.Helpers
+
+@{
+    ViewData["Title"] = "Advance Details";
+
+    var currentUserId = APP.Helpers.SessionHelper.GetActiveUserId;
+
+    bool canActOn = Model.Status == (int)EnumExtensions.AdvanceStatus.PendingApproval
+                    && !string.IsNullOrEmpty(currentUserId) && Model.MakerId != currentUserId;
+
+    bool canDisburse = Model.Status == (int)EnumExtensions.AdvanceStatus.Approved;
+    bool canSettle = Model.Status == (int)EnumExtensions.AdvanceStatus.Disbursed;
+
+    string statusClass = Model.Status switch
+    {
+        (int)EnumExtensions.AdvanceStatus.PendingApproval => "bg-warning",
+        (int)EnumExtensions.AdvanceStatus.Approved => "bg-info",
+        (int)EnumExtensions.AdvanceStatus.Disbursed => "bg-primary",
+        (int)EnumExtensions.AdvanceStatus.Recovered or (int)EnumExtensions.AdvanceStatus.Settled => "bg-success",
+        (int)EnumExtensions.AdvanceStatus.Rejected or (int)EnumExtensions.AdvanceStatus.Cancelled => "bg-danger",
+        _ => "bg-grey"
+    };
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="bi bi-wallet2 position-left"></i>
+            Advance Details
+        </h5>
+        <div class="heading-elements">
+            <a asp-controller="LoanAdvanceAuditLog" asp-action="ForEntity" asp-route-entityType="EmployeeAdvance" asp-route-entityId="@Model.Id" class="btn btn-default">
+                <i class="icon-history position-left"></i>
+                Audit Trail
+            </a>
+            <a asp-action="Index" class="btn btn-default">
+                <i class="icon-arrow-left13"></i>
+                Back
+            </a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+
+        <div class="alert alert-light">
+            <strong>Status :</strong>
+            <span class="label @statusClass">@Model.StatusName</span>
+        </div>
+
+        <fieldset>
+            <legend class="text-semibold"><i class="icon-user position-left"></i> Employee</legend>
+            <div class="row">
+                <div class="col-md-3"><label class="text-semibold text-muted">Employee</label><h6>@Model.EmployeeName (@Model.EmployeeCode)</h6></div>
+                <div class="col-md-3"><label class="text-semibold text-muted">Department</label><h6>@(Model.DepartmentName ?? "-")</h6></div>
+                <div class="col-md-3"><label class="text-semibold text-muted">Designation</label><h6>@(Model.DesignationName ?? "-")</h6></div>
+                <div class="col-md-3"><label class="text-semibold text-muted">Advance Type</label><h6>@Model.AdvanceTypeName</h6></div>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend class="text-semibold"><i class="icon-cash position-left"></i> Advance Terms</legend>
+            <div class="row">
+                <div class="col-md-3"><label class="text-semibold text-muted">Requested Amount</label><h6>@Model.RequestedAmount.ToString("N2")</h6></div>
+                <div class="col-md-3"><label class="text-semibold text-muted">Approved Amount</label><h6>@(Model.ApprovedAmount?.ToString("N2") ?? "-")</h6></div>
+                <div class="col-md-3"><label class="text-semibold text-muted">Installments</label><h6>@Model.InstallmentCount</h6></div>
+                <div class="col-md-3"><label class="text-semibold text-muted">Outstanding</label><h6>@Model.OutstandingAmount.ToString("N2")</h6></div>
+            </div>
+            @if (!string.IsNullOrEmpty(Model.Purpose))
+            {
+                <div class="row"><div class="col-md-12"><label class="text-semibold text-muted">Purpose</label><div class="well">@Model.Purpose</div></div></div>
+            }
+        </fieldset>
+
+        @if (Model.DisbursedOn.HasValue)
+        {
+            <fieldset>
+                <legend class="text-semibold"><i class="icon-coin-dollar position-left"></i> Disbursement</legend>
+                <div class="row">
+                    <div class="col-md-3"><label class="text-semibold text-muted">Disbursed Amount</label><h6>@Model.DisbursedAmount?.ToString("N2")</h6></div>
+                    <div class="col-md-3"><label class="text-semibold text-muted">Disbursed On</label><h6>@Model.DisbursedOn.Value.ToString("dd-MMM-yyyy")</h6></div>
+                    <div class="col-md-3"><label class="text-semibold text-muted">Total Paid</label><h6>@Model.TotalPaid.ToString("N2")</h6></div>
+                    <div class="col-md-3"><label class="text-semibold text-muted">Next Due</label><h6>@(Model.NextDueDate.HasValue ? Model.NextDueDate.Value.ToString("dd-MMM-yyyy") + " - " + Model.NextDueAmount?.ToString("N2") : "-")</h6></div>
+                </div>
+            </fieldset>
+        }
+
+        @if (Model.Installments.Any())
+        {
+            <fieldset>
+                <legend class="text-semibold"><i class="icon-list position-left"></i> Installment Schedule</legend>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-condensed">
+                        <thead><tr><th>#</th><th>Due Date</th><th>Amount</th><th>Status</th></tr></thead>
+                        <tbody>
+                            @foreach (var i in Model.Installments.OrderBy(x => x.InstallmentNumber))
+                            {
+                                <tr>
+                                    <td>@i.InstallmentNumber</td>
+                                    <td>@i.DueDate.ToString("dd-MMM-yyyy")</td>
+                                    <td>@i.InstallmentAmount.ToString("N2")</td>
+                                    <td><span class="label bg-grey-400">@i.StatusName</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </fieldset>
+        }
+
+        @if (Model.PaymentHistory.Any())
+        {
+            <fieldset>
+                <legend class="text-semibold"><i class="icon-receipt position-left"></i> Payment History</legend>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-condensed">
+                        <thead><tr><th>Date</th><th>Source</th><th>Amount</th><th>Reference</th></tr></thead>
+                        <tbody>
+                            @foreach (var p in Model.PaymentHistory)
+                            {
+                                <tr>
+                                    <td>@p.PaymentDate.ToString("dd-MMM-yyyy")</td>
+                                    <td>@p.PaymentSourceName</td>
+                                    <td>@p.AmountPaid.ToString("N2")</td>
+                                    <td>@(p.ReceiptReference ?? "-")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </fieldset>
+        }
+
+        @if (Model.ApprovalHistory.Any())
+        {
+            <fieldset>
+                <legend class="text-semibold"><i class="icon-clock position-left"></i> Approval History</legend>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-condensed">
+                        <thead><tr><th>Checker</th><th>Decision</th><th>Remarks</th><th>Date</th></tr></thead>
+                        <tbody>
+                            @foreach (var h in Model.ApprovalHistory)
+                            {
+                                <tr>
+                                    <td>@h.CheckerName</td>
+                                    <td><span class="label @(h.Decision == 1 ? "bg-success" : "bg-danger")">@h.DecisionName</span></td>
+                                    <td>@h.Remarks</td>
+                                    <td>@h.ActionOn.ToString("dd-MMM-yyyy HH:mm")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </fieldset>
+        }
+
+        <hr />
+
+        <div class="text-right">
+
+            @if (canActOn)
+            {
+                <button type="button" class="btn btn-danger btnReject"><i class="icon-cross2"></i> Reject</button>
+                <button type="button" class="btn btn-success btnApprove"><i class="icon-checkmark4"></i> Approve</button>
+            }
+
+            @if (canDisburse)
+            {
+                <button type="button" class="btn bg-blue" data-toggle="modal" data-target="#disburseModal"><i class="icon-coin-dollar"></i> Disburse</button>
+            }
+
+            @if (canSettle)
+            {
+                <button type="button" class="btn bg-teal" data-toggle="modal" data-target="#settleModal"><i class="icon-checkmark3"></i> Settle</button>
+            }
+
+        </div>
+
+    </div>
+
+</div>
+
+@if (canActOn)
+{
+    <div class="modal fade" id="rejectModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Reject Advance Request</h5></div>
+                <form asp-action="Reject" method="post">
+                    <div class="modal-body">
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <label>Remarks (required)</label>
+                        <textarea class="form-control" name="remarks" required></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-danger">Reject</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="approveModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Approve Advance Request</h5></div>
+                <form asp-action="Approve" method="post">
+                    <div class="modal-body">
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <div class="form-group">
+                            <label>Approved Amount (leave blank to approve as requested: @Model.RequestedAmount.ToString("N2"))</label>
+                            <input type="number" step="0.01" name="approvedAmount" class="form-control" />
+                        </div>
+                        <div class="form-group">
+                            <label>Remarks</label>
+                            <textarea class="form-control" name="remarks"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-success">Approve</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+@if (canDisburse)
+{
+    <div class="modal fade" id="disburseModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Disburse Advance</h5></div>
+                <form asp-action="Disburse" method="post">
+                    <div class="modal-body">
+                        <input type="hidden" name="EmployeeAdvanceId" value="@Model.Id" />
+                        <div class="form-group">
+                            <label>Disbursed Amount</label>
+                            <input type="number" step="0.01" name="DisbursedAmount" value="@(Model.ApprovedAmount ?? Model.RequestedAmount)" class="form-control" required />
+                        </div>
+                        <div class="form-group">
+                            <label>Disbursed On</label>
+                            <input type="date" name="DisbursedOn" value="@DateTime.UtcNow.ToString("yyyy-MM-dd")" class="form-control" required />
+                        </div>
+                        <div class="form-group">
+                            <label>Disbursement Mode</label>
+                            <select name="DisbursementMode" class="form-control">
+                                <option value="1">Bank Transfer</option>
+                                <option value="2">Cheque</option>
+                                <option value="3">Payroll Credit</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Reference</label>
+                            <input type="text" name="DisbursementReference" class="form-control" />
+                        </div>
+                        <div class="form-group">
+                            <label>First Installment Due Date</label>
+                            <input type="date" name="FirstInstallmentDueDate" value="@DateTime.UtcNow.AddMonths(1).ToString("yyyy-MM-dd")" class="form-control" required />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        <button type="submit" class="btn bg-blue">Disburse</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+@if (canSettle)
+{
+    <div class="modal fade" id="settleModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Settle Advance</h5></div>
+                <form asp-action="Settle" method="post">
+                    <div class="modal-body">
+                        <input type="hidden" name="EmployeeAdvanceId" value="@Model.Id" />
+                        <div class="form-group">
+                            <label>Amount Paid</label>
+                            <input type="number" step="0.01" name="AmountPaid" value="@Model.OutstandingAmount" class="form-control" required />
+                        </div>
+                        <div class="form-group">
+                            <label>Payment Date</label>
+                            <input type="date" name="PaymentDate" value="@DateTime.UtcNow.ToString("yyyy-MM-dd")" class="form-control" required />
+                        </div>
+                        <div class="form-group">
+                            <label>Receipt Reference</label>
+                            <input type="text" name="ReceiptReference" class="form-control" />
+                        </div>
+                        <div class="form-group">
+                            <label>Remarks</label>
+                            <textarea class="form-control" name="Remarks"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        <button type="submit" class="btn bg-teal">Settle</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+<script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+
+@section Scripts {
+    <script>
+        @if (TempData["Success"] != null)
+        {
+            <text>swal({ title: 'Success', text: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(TempData["Success"]?.ToString() ?? string.Empty)), type: 'success', confirmButtonColor: '#66BB6A' });</text>
+        }
+        @if (TempData["GlobalError"] != null)
+        {
+            <text>swal({ title: 'Error', text: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(TempData["GlobalError"]?.ToString() ?? string.Empty)), type: 'error', confirmButtonColor: '#EF5350' });</text>
+        }
+
+        $(document).on('click', '.btnReject', function () { $('#rejectModal').modal('show'); });
+        $(document).on('click', '.btnApprove', function () { $('#approveModal').modal('show'); });
+    </script>
+}

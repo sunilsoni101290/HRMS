@@ -1,0 +1,168 @@
+@model IEnumerable<LoanTypeDto>
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"] = "Loan Types";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="bi bi-tags-fill position-left"></i>
+            Loan Types
+        </h5>
+
+        <div class="heading-elements">
+            <a asp-action="Export" class="btn btn-default">
+                <i class="icon-file-excel position-left"></i>
+                Export
+            </a>
+            <a asp-action="Import" class="btn btn-default">
+                <i class="icon-upload3 position-left"></i>
+                Import
+            </a>
+            <a asp-action="Create" class="btn bg-primary">
+                <i class="icon-plus22"></i>
+                New Loan Type
+            </a>
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <form asp-action="Index" method="get" class="row">
+            <div class="col-md-3">
+                <label class="checkbox-inline">
+                    <input type="checkbox" name="includeInactive" value="true" @(ViewBag.IncludeInactive ? "checked" : "") />
+                    Include Inactive
+                </label>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-default">
+                    <i class="icon-search4"></i>
+                    Filter
+                </button>
+            </div>
+        </form>
+
+    </div>
+
+    <div class="table-responsive">
+
+        <table class="table table-bordered table-striped datatable-basic">
+
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Interest Method</th>
+                    <th>Default Rate</th>
+                    <th>Max Tenure</th>
+                    <th>Active Loans</th>
+                    <th>Status</th>
+                    <th width="120">Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.Code</td>
+                            <td>@item.Name</td>
+                            <td>@item.InterestMethodName</td>
+                            <td>@item.DefaultInterestRatePercent.ToString("N2")%</td>
+                            <td>@item.MaxTenureMonths mo.</td>
+                            <td>@item.ActiveLoanCount</td>
+                            <td>
+                                @if (item.IsActive)
+                                {
+                                    <span class="badge bg-success">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Inactive</span>
+                                }
+                            </td>
+                            <td style="padding: 10px 15px;">
+                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-default btn-icon" title="Edit">
+                                    <i class="icon-pencil7"></i>
+                                </a>
+                                @if (item.ActiveLoanCount == 0)
+                                {
+                                    <form asp-action="Delete" asp-route-id="@item.Id" method="post" style="display:inline;"
+                                          onsubmit="return confirm('Delete this Loan Type?');">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-default btn-icon" title="Delete">
+                                            <i class="icon-trash"></i>
+                                        </button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" class="text-center text-muted" style="padding:30px;">
+                            <i class="bi bi-tags-fill" style="font-size:32px;"></i><br />
+                            No Loan Types configured yet.
+                        </td>
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+<script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+<script src="~/global_assets/js/plugins/tables/datatables/datatables.min.js"></script>
+
+@section Scripts {
+
+    <script>
+
+        @if (TempData["Success"] != null)
+        {
+            <text>
+                swal({ title: 'Success', text: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(TempData["Success"]?.ToString() ?? string.Empty)), type: 'success', confirmButtonColor: '#66BB6A' });
+            </text>
+        }
+
+        @if (TempData["GlobalError"] != null)
+        {
+            <text>
+                swal({ title: 'Error', text: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(TempData["GlobalError"]?.ToString() ?? string.Empty)), type: 'error', confirmButtonColor: '#EF5350' });
+            </text>
+        }
+
+        // Phase 12 - client-side search/sort/pagination over the (server-filtered) grid.
+        if ($.fn.DataTable) {
+            $(".datatable-basic").DataTable({
+                autoWidth: false,
+                paging: true,
+                ordering: true,
+                info: true,
+                searching: true,
+                pageLength: 10,
+                lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                order: [[1, 'asc']],
+                columnDefs: [{ orderable: false, searchable: false, targets: -1 }],
+                language: { search: "_INPUT_", searchPlaceholder: "Search Loan Types..." }
+            });
+        }
+
+    </script>
+
+}
