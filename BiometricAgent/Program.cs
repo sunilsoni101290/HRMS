@@ -14,9 +14,6 @@ builder.Services.AddWindowsService(options =>
 builder.Services.Configure<AgentOptions>(
     builder.Configuration.GetSection(AgentOptions.SectionName));
 
-builder.Services.AddSingleton(sp =>
-    sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AgentOptions>>().Value);
-
 builder.Services.AddHttpClient<ApiClient>();
 builder.Services.AddSingleton<OfflineQueue>();
 builder.Services.AddSingleton<SyncState>();

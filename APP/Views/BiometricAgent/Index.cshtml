@@ -1,0 +1,209 @@
+@model IEnumerable<BiometricAgentDto>
+
+@{
+    ViewData["Title"] = "Biometric Agents";
+
+    var agents = Model ?? new List<BiometricAgentDto>();
+    var totalCount = agents.Count();
+    var onlineCount = agents.Count(x => x.IsOnline);
+    var offlineCount = totalCount - onlineCount;
+}
+
+<div class="panel panel-flat biometric-panel">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-server position-left"></i>
+            Biometric Agent Management
+        </h5>
+
+        <div class="heading-elements">
+            <a asp-action="Create" class="btn bg-primary btn-icon-text">
+                <i class="icon-plus22 position-left"></i>
+                Add Agent
+            </a>
+        </div>
+
+    </div>
+
+    <div class="panel-body summary-cards">
+
+        <div class="row">
+
+            <div class="col-md-4 col-sm-6">
+                <div class="stat-card stat-primary">
+                    <div class="stat-icon"><i class="icon-server"></i></div>
+                    <div class="stat-body">
+                        <h3 class="no-margin">@totalCount</h3>
+                        <span>Total Agents</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 col-sm-6">
+                <div class="stat-card stat-success">
+                    <div class="stat-icon"><i class="icon-checkmark-circle"></i></div>
+                    <div class="stat-body">
+                        <h3 class="no-margin">@onlineCount</h3>
+                        <span>Online (heartbeat &lt; 15 min)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 col-sm-6">
+                <div class="stat-card stat-danger">
+                    <div class="stat-icon"><i class="icon-cancel-circle2"></i></div>
+                    <div class="stat-body">
+                        <h3 class="no-margin">@offlineCount</h3>
+                        <span>Offline</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="table-responsive">
+
+        <table class="table table-hover table-striped datatable-basic">
+
+            <thead>
+                <tr>
+                    <th width="60">#</th>
+                    <th>Agent</th>
+                    <th>Machine</th>
+                    <th>Version</th>
+                    <th>Devices</th>
+                    <th>Last Heartbeat</th>
+                    <th width="100" class="text-center">Status</th>
+                    <th width="150" class="text-center">Actions</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @{
+                    int sr = 1;
+                }
+
+                @foreach (var item in agents)
+                {
+                    <tr>
+                        <td>@sr</td>
+
+                        <td>
+                            <div class="text-semibold">
+                                <i class="icon-server text-primary position-left"></i>
+                                @item.AgentName
+                            </div>
+                            <small class="text-muted">Code: @item.AgentCode</small>
+                        </td>
+
+                        <td>@(string.IsNullOrEmpty(item.MachineName) ? "—" : item.MachineName)</td>
+
+                        <td>@(string.IsNullOrEmpty(item.AgentVersion) ? "—" : item.AgentVersion)</td>
+
+                        <td>
+                            <span class="label bg-primary-400">@item.DeviceCount</span>
+                        </td>
+
+                        <td>
+                            @if (item.LastHeartbeat.HasValue)
+                            {
+                                <span>@item.LastHeartbeat.Value.ToString("g")</span>
+                            }
+                            else
+                            {
+                                <span class="label label-default">Never</span>
+                            }
+                        </td>
+
+                        <td class="text-center">
+                            @if (item.IsOnline)
+                            {
+                                <span class="label label-success" data-popup="tooltip" title="Heartbeat received within the last 15 minutes.">Online</span>
+                            }
+                            else
+                            {
+                                <span class="label label-danger" data-popup="tooltip" title="No heartbeat within the last 15 minutes.">Offline</span>
+                            }
+                            @if (!item.IsActive)
+                            {
+                                <br />
+                                <small class="text-muted">(Disabled)</small>
+                            }
+                        </td>
+
+                        <td class="text-center">
+                            <div class="btn-group">
+
+                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-default btn-icon" title="View">
+                                    <i class="icon-eye"></i>
+                                </a>
+
+                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary btn-icon" title="Edit">
+                                    <i class="icon-pencil7"></i>
+                                </a>
+
+                                <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-danger btn-icon" title="Delete"
+                                   onclick="return confirm('Delete this agent? It must have no devices assigned.');">
+                                    <i class="icon-trash"></i>
+                                </a>
+
+                            </div>
+                        </td>
+
+                    </tr>
+
+                    sr++;
+                }
+
+                @if (!agents.Any())
+                {
+                    <tr>
+                        <td colspan="8" class="text-center text-muted">
+                            No biometric agents configured yet. Click <strong>Add Agent</strong> to create one.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('[data-popup="tooltip"]').tooltip();
+
+            if ($.fn.DataTable) {
+                $('.datatable-basic').DataTable({
+                    autoWidth: false,
+                    paging: true,
+                    ordering: true,
+                    searching: true,
+                    pageLength: 10,
+                    lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                    columnDefs: [{ orderable: false, targets: [0, 7] }]
+                });
+            }
+        });
+    </script>
+
+    <style>
+        .biometric-panel .panel-heading { padding: 18px 20px; }
+        .biometric-panel .panel-title { font-weight: 600; }
+        .summary-cards .stat-card { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-radius: 6px; margin-bottom: 20px; color: #fff; }
+        .summary-cards .stat-icon { font-size: 26px; width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,.18); flex-shrink: 0; }
+        .summary-cards .stat-body h3 { font-size: 24px; font-weight: 700; }
+        .summary-cards .stat-body span { font-size: 12.5px; opacity: .9; }
+        .stat-primary { background: linear-gradient(135deg,#4e9cff,#2b6fd9); }
+        .stat-success { background: linear-gradient(135deg,#3ecf8e,#1f9d63); }
+        .stat-danger { background: linear-gradient(135deg,#ff6b6b,#e64545); }
+        .btn-icon { width: 34px; height: 34px; padding: 8px; }
+    </style>
+}

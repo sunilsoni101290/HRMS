@@ -172,6 +172,7 @@ builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
 builder.Services.AddScoped<IBiometricDeviceService, BiometricDeviceService>();
 builder.Services.AddScoped<IBiometricSyncService,BiometricSyncService>();
+builder.Services.AddScoped<IBiometricAgentService, BiometricAgentService>();
 builder.Services.AddScoped<IAttendanceProcessorService,AttendanceProcessorService>();
 builder.Services.AddScoped<IEmployeeBiometricMappingService, EmployeeBiometricMappingService>();
 builder.Services.AddScoped<ILeaveTypeService, LeaveTypeService>();

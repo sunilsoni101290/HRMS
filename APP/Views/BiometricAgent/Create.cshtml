@@ -1,0 +1,175 @@
+@model BiometricAgentDto
+
+@{
+    var isEdit = !string.IsNullOrEmpty(Model?.Id);
+    ViewData["Title"] = isEdit ? "Edit Biometric Agent" : "Create Biometric Agent";
+}
+
+<div class="panel panel-flat biometric-form-panel">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-server position-left"></i>
+            @(isEdit ? "Edit Biometric Agent" : "Create Biometric Agent")
+        </h5>
+        <div class="heading-elements">
+            <span class="text-muted">A Windows Service instance that polls one or more biometric devices</span>
+        </div>
+    </div>
+
+    <div class="panel-body">
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="alert alert-danger alert-dismissible">
+                <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+                <ul class="no-margin">
+                    @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                    {
+                        <li>@error.ErrorMessage</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <form asp-action="@(isEdit ? "Edit" : "Create")" method="post" id="agentForm" novalidate>
+
+            <input asp-for="Id" type="hidden" />
+            <input asp-for="TenantId" type="hidden" />
+
+            <fieldset>
+
+                <legend class="text-semibold">
+                    <i class="icon-server position-left"></i>
+                    Agent Information
+                </legend>
+
+                <div class="row">
+
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="AgentName"></label>
+                            <input asp-for="AgentName" class="form-control" placeholder="e.g. Branch 1 Attendance Agent" />
+                            <span asp-validation-for="AgentName" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="AgentCode"></label>
+                            @if (isEdit)
+                            {
+                                <input asp-for="AgentCode" class="form-control" placeholder="e.g. AGENT-BRANCH1-01" readonly="readonly" />
+                            }
+                            else
+                            {
+                                <input asp-for="AgentCode" class="form-control" placeholder="e.g. AGENT-BRANCH1-01" />
+                            }
+                            <span asp-validation-for="AgentCode" class="text-danger"></span>
+                            @if (isEdit)
+                            {
+                                <p class="text-muted font-size-sm">AgentCode cannot be changed once devices/config reference it.</p>
+                            }
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="row">
+
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="display-block">Status</label>
+                            <div class="checkbox checkbox-switchery">
+                                <label>
+                                    <input asp-for="IsActive" type="checkbox" class="switchery" data-color="#3ecf8e" />
+                                    Active Agent
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            @if (isEdit)
+            {
+                <fieldset>
+                    <legend class="text-semibold">
+                        <i class="icon-info22 position-left"></i>
+                        Reported by the Windows Service
+                    </legend>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Machine Name:</strong> @(Model.MachineName ?? "—")</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Agent Version:</strong> @(Model.AgentVersion ?? "—")</p>
+                        </div>
+                    </div>
+                </fieldset>
+            }
+
+            @if (isEdit && !string.IsNullOrEmpty(Model.AgentKey))
+            {
+                <fieldset>
+                    <legend class="text-semibold">
+                        <i class="icon-key position-left"></i>
+                        Agent Key
+                    </legend>
+                    <p class="text-muted font-size-sm">
+                        Used by the BiometricAgent Windows Service to authenticate register/heartbeat/devices calls.
+                        This value is not editable here - see the Details page.
+                    </p>
+                    <code>@Model.AgentKey</code>
+                </fieldset>
+            }
+
+            <div class="text-right form-actions">
+                <a asp-action="Index" class="btn btn-default">
+                    <i class="icon-arrow-left13 position-left"></i>
+                    Back
+                </a>
+                <button type="submit" class="btn bg-primary" id="submitBtn">
+                    <i class="icon-checkmark3 position-left"></i>
+                    @(isEdit ? "Update" : "Save")
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            if (typeof Switchery !== "undefined") {
+                document.querySelectorAll(".switchery").forEach(function (el) {
+                    if (!el.dataset.switcheryInit) {
+                        new Switchery(el, { color: "#3ecf8e" });
+                        el.dataset.switcheryInit = "1";
+                    }
+                });
+            }
+
+            $("#agentForm").on("submit", function () {
+                $("#submitBtn").prop("disabled", true).html('<i class="icon-spinner2 spinner position-left"></i> Saving...');
+            });
+        });
+    </script>
+
+    <style>
+        .biometric-form-panel fieldset { border: 1px solid #e5e9f0; border-radius: 6px; padding: 18px 20px 6px; margin-bottom: 22px; background: #fcfdfe; }
+        .biometric-form-panel legend { width: auto; border: none; font-size: 14px; padding: 0 8px; margin-left: -8px; }
+        .biometric-form-panel .form-actions { border-top: 1px solid #eef1f5; padding-top: 16px; }
+        .spinner { animation: biometric-agent-spin 0.8s linear infinite; display: inline-block; }
+        @@keyframes biometric-agent-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    </style>
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

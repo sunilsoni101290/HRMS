@@ -1,0 +1,150 @@
+@model BiometricAgentDto
+
+@{
+    ViewData["Title"] = "Biometric Agent Details";
+    var devices = ViewBag.AssignedDevices as List<BiometricDeviceDto> ?? new List<BiometricDeviceDto>();
+}
+
+<div class="panel panel-flat biometric-details-panel">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-server position-left"></i>
+            @Model.AgentName
+            <small class="text-muted">(@Model.AgentCode)</small>
+        </h5>
+        <div class="heading-elements">
+            @if (Model.IsOnline)
+            {
+                <span class="label label-success">Online</span>
+            }
+            else
+            {
+                <span class="label label-danger">Offline</span>
+            }
+            @if (!Model.IsActive)
+            {
+                <span class="label label-default">Disabled</span>
+            }
+        </div>
+    </div>
+
+    <div class="panel-body">
+
+        <div class="panel panel-bordered detail-card">
+            <div class="panel-heading">
+                <h6 class="panel-title"><i class="icon-server position-left"></i> Agent Information</h6>
+            </div>
+            <table class="table table-striped">
+                <tbody>
+                    <tr><th width="220">Agent Name</th><td>@Model.AgentName</td></tr>
+                    <tr><th>Agent Code</th><td>@Model.AgentCode</td></tr>
+                    <tr><th>Machine Name</th><td>@(Model.MachineName ?? "—")</td></tr>
+                    <tr><th>Agent Version</th><td>@(Model.AgentVersion ?? "—")</td></tr>
+                    <tr>
+                        <th>Last Heartbeat</th>
+                        <td>@(Model.LastHeartbeat.HasValue ? Model.LastHeartbeat.Value.ToString("g") : "Never")</td>
+                    </tr>
+                    <tr>
+                        <th>
+                            Agent Key
+                            <div class="text-muted font-size-sm">Used by the Windows Service to authenticate to the API.</div>
+                        </th>
+                        <td>
+                            @if (!string.IsNullOrEmpty(Model.AgentKey))
+                            {
+                                <div class="device-key-row">
+                                    <code id="agentKey">@Model.AgentKey</code>
+                                    <button type="button" class="btn btn-default btn-xs copy-key-btn" title="Copy to clipboard">
+                                        <i class="icon-copy3"></i>
+                                    </button>
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Not set.</span>
+                            }
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="panel panel-bordered detail-card">
+            <div class="panel-heading">
+                <h6 class="panel-title"><i class="bi bi-fingerprint position-left"></i> Assigned Devices (@devices.Count)</h6>
+            </div>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Device</th>
+                        <th>IP : Port</th>
+                        <th>Status</th>
+                        <th>Last Sync</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var d in devices)
+                    {
+                        <tr>
+                            <td>@d.DeviceName <small class="text-muted">(@d.DeviceCode)</small></td>
+                            <td>@d.IPAddress:@d.Port</td>
+                            <td>
+                                @if (d.IsOnline)
+                                {
+                                    <span class="label label-success">Connected</span>
+                                }
+                                else
+                                {
+                                    <span class="label label-danger">Disconnected</span>
+                                }
+                            </td>
+                            <td>@(d.LastSyncDate.HasValue ? d.LastSyncDate.Value.ToString("g") : "Never")</td>
+                        </tr>
+                    }
+                    @if (!devices.Any())
+                    {
+                        <tr><td colspan="4" class="text-center text-muted">No devices assigned to this agent yet.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="text-right form-actions">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn bg-primary">
+                <i class="icon-pencil7 position-left"></i>
+                Edit
+            </a>
+            <a asp-action="Index" class="btn btn-default">
+                <i class="icon-arrow-left13 position-left"></i>
+                Back
+            </a>
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $(".copy-key-btn").on("click", function () {
+                var text = $("#agentKey").text().trim();
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(text).then(function () {
+                        if (typeof swal === "function") {
+                            swal({ title: "Copied", text: "Agent key copied to clipboard.", type: "success", timer: 1200, showConfirmButton: false });
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+    <style>
+        .detail-card { margin-bottom: 20px; }
+        .detail-card .table th { width: 40%; color: #66707e; font-weight: 600; }
+        .device-key-row { display: flex; align-items: center; gap: 8px; }
+        .device-key-row code { word-break: break-all; }
+        .form-actions { border-top: 1px solid #eef1f5; padding-top: 16px; }
+    </style>
+}

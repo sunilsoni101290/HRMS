@@ -5,8 +5,8 @@
 
     var devices = Model ?? new List<BiometricDeviceDto>();
     var totalCount = devices.Count();
-    var activeCount = devices.Count(x => x.IsActive);
-    var inactiveCount = totalCount - activeCount;
+    var connectedCount = devices.Count(x => x.IsOnline);
+    var disconnectedCount = totalCount - connectedCount;
     var neverSyncedCount = devices.Count(x => !x.LastSyncDate.HasValue);
 
     var companyNames = ViewBag.CompanyNames as Dictionary<string, string> ?? new();
@@ -71,8 +71,8 @@
                 <div class="stat-card stat-success">
                     <div class="stat-icon"><i class="icon-checkmark-circle"></i></div>
                     <div class="stat-body">
-                        <h3 class="no-margin">@activeCount</h3>
-                        <span>Active Devices</span>
+                        <h3 class="no-margin">@connectedCount</h3>
+                        <span>Connected Devices</span>
                     </div>
                 </div>
             </div>
@@ -81,8 +81,8 @@
                 <div class="stat-card stat-danger">
                     <div class="stat-icon"><i class="icon-cancel-circle2"></i></div>
                     <div class="stat-body">
-                        <h3 class="no-margin">@inactiveCount</h3>
-                        <span>Inactive Devices</span>
+                        <h3 class="no-margin">@disconnectedCount</h3>
+                        <span>Disconnected Devices</span>
                     </div>
                 </div>
             </div>
@@ -130,8 +130,8 @@
                     <label class="filter-label">Status</label>
                     <select id="StatusFilter" class="form-control select-search">
                         <option value="">All Statuses</option>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
+                        <option value="connected">Connected</option>
+                        <option value="disconnected">Disconnected</option>
                     </select>
                 </div>
             </div>
@@ -161,8 +161,9 @@
                     <th width="60">#</th>
                     <th>Device</th>
                     <th>Company / Branch</th>
+                    <th>Agent</th>
                     <th>Network</th>
-                    <th>Username</th>
+                    <th>Last Seen</th>
                     <th>Last Sync</th>
                     <th width="100" class="text-center">Status</th>
                     <th width="190" class="text-center">Actions</th>
@@ -184,7 +185,7 @@
                         ? branchNames[item.BranchId]
                         : null;
 
-                    <tr data-status="@(item.IsActive ? "active" : "inactive")"
+                    <tr data-status="@(item.IsOnline ? "connected" : "disconnected")"
                         data-company="@companyName">
 
                         <td>@sr</td>
@@ -214,16 +215,33 @@
                         </td>
 
                         <td>
-                            <div>@item.IPAddress<span class="text-muted">:@item.Port</span></div>
-                            @if (!string.IsNullOrEmpty(item.ApiUrl))
+                            @if (!string.IsNullOrEmpty(item.AgentId))
                             {
-                                <small class="text-muted" title="@item.ApiUrl">
-                                    @(item.ApiUrl.Length > 36 ? item.ApiUrl.Substring(0, 36) + "…" : item.ApiUrl)
-                                </small>
+                                <a asp-controller="BiometricAgent" asp-action="Details" asp-route-id="@item.AgentId">
+                                    @(item.AgentName ?? "View agent")
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="label label-warning" data-popup="tooltip" title="No agent assigned - this device will never be polled.">Unassigned</span>
                             }
                         </td>
 
-                        <td>@item.Username</td>
+                        <td>
+                            <div>@item.IPAddress<span class="text-muted">:@item.Port</span></div>
+                            <small class="text-muted">@item.DeviceType / @item.CommunicationType</small>
+                        </td>
+
+                        <td>
+                            @if (item.LastSeen.HasValue)
+                            {
+                                <span>@item.LastSeen.Value.ToString("g")</span>
+                            }
+                            else
+                            {
+                                <span class="label label-default">Never</span>
+                            }
+                        </td>
 
                         <td>
                             @if (item.LastSyncDate.HasValue)
@@ -237,13 +255,18 @@
                         </td>
 
                         <td class="text-center">
-                            @if (item.IsActive)
+                            @if (item.IsOnline)
                             {
-                                <span class="label label-success">Active</span>
+                                <span class="label label-success" data-popup="tooltip" title="Agent synced within the last 15 minutes.">Connected</span>
                             }
                             else
                             {
-                                <span class="label label-danger">Inactive</span>
+                                <span class="label label-danger" data-popup="tooltip" title="No agent sync within the last 15 minutes.">Disconnected</span>
+                            }
+                            @if (!item.IsActive)
+                            {
+                                <br />
+                                <small class="text-muted">(Disabled)</small>
                             }
                         </td>
 
@@ -305,7 +328,7 @@
                 @if (!devices.Any())
                 {
                     <tr>
-                        <td colspan="8" class="text-center text-muted">
+                        <td colspan="9" class="text-center text-muted">
                             No biometric devices configured yet. Click <strong>Add Device</strong> to create one.
                         </td>
                     </tr>
@@ -353,7 +376,7 @@
                     searching: false,
                     pageLength: 10,
                     lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
-                    columnDefs: [{ orderable: false, targets: [0, 7] }],
+                    columnDefs: [{ orderable: false, targets: [0, 8] }],
                     language: { search: "_INPUT_", searchPlaceholder: "Search..." }
                 });
             }
@@ -408,6 +431,19 @@
                     type: "POST",
                     data: { id: id },
                     success: function (response) {
+
+                        // Reflect the fresh result in this row's Status
+                        // badge immediately, without a full page reload.
+                        var row = btn.closest("tr");
+                        var statusCell = row.find("td.text-center").first();
+
+                        statusCell.find(".label").first()
+                            .removeClass("label-success label-danger")
+                            .addClass(response.success ? "label-success" : "label-danger")
+                            .text(response.success ? "Connected" : "Disconnected");
+
+                        row.attr("data-status", response.success ? "connected" : "disconnected");
+
                         if (typeof swal === "function") {
                             swal({
                                 title: response.success ? "Connection Successful" : "Connection Failed",
