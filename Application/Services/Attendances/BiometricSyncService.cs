@@ -64,13 +64,17 @@ namespace Application.Services.Attendances
                     _db.BiometricAttendanceLogs.Add(
                         new BiometricAttendanceLog
                         {
+                            Id = IDManager.GetNewId(new BiometricAttendanceLog()),
+                            TenantId = device.TenantId,
                             DeviceId = item.DeviceId,
                             EmployeeCode =
                                 item.BiometricEmployeeCode,
                             PunchTime =
                                 item.PunchTime,
                             PunchType = item.PunchType,
-                            IsProcessed = false
+                            IsProcessed = false,
+                            CreatedOn = DateTime.UtcNow,
+                            CreatedBy = "BiometricSync"
                         });
                 }
             }
@@ -147,13 +151,45 @@ namespace Application.Services.Attendances
                 return result;
             }
 
+            // Defense in depth: if the request identifies the pushing agent,
+            // confirm this device is actually assigned to it. Legacy/older
+            // agents that don't send AgentCode are still accepted on
+            // DeviceKey alone (see PunchIngestRequestDto.AgentCode).
+            BiometricAgent? agent = null;
+
+            if (!string.IsNullOrWhiteSpace(request.AgentCode))
+            {
+                agent = await _db.BiometricAgents.FirstOrDefaultAsync(a =>
+                    a.AgentCode == request.AgentCode && a.TenantId == device.TenantId);
+
+                if (agent == null || !agent.IsActive)
+                {
+                    result.Success = false;
+                    result.Message = "Unknown or inactive agent.";
+                    return result;
+                }
+
+                if (string.IsNullOrEmpty(device.AgentId) || device.AgentId != agent.Id)
+                {
+                    result.Success = false;
+                    result.Message = "This device is not assigned to the requesting agent.";
+                    return result;
+                }
+            }
+
             foreach (var item in request.Punches ?? new List<PunchItemDto>())
             {
                 if (string.IsNullOrWhiteSpace(item.EmployeeCode))
                     continue;
 
-                bool exists = await _db.BiometricAttendanceLogs
-                    .AnyAsync(x =>
+                // Prefer the device's own transaction id for idempotency when
+                // supplied - it survives even if two genuine punches land in
+                // the same second. Falls back to (Device, Employee, PunchTime).
+                bool exists = !string.IsNullOrWhiteSpace(item.DeviceTransactionId)
+                    ? await _db.BiometricAttendanceLogs.AnyAsync(x =>
+                        x.DeviceId == device.Id &&
+                        x.DeviceTransactionId == item.DeviceTransactionId)
+                    : await _db.BiometricAttendanceLogs.AnyAsync(x =>
                         x.DeviceId == device.Id &&
                         x.EmployeeCode == item.EmployeeCode &&
                         x.PunchTime == item.PunchTime);
@@ -168,10 +204,12 @@ namespace Application.Services.Attendances
                     new BiometricAttendanceLog
                     {
                         Id = IDManager.GetNewId(new BiometricAttendanceLog()),
+                        TenantId = device.TenantId,
                         DeviceId = device.Id,
                         EmployeeCode = item.EmployeeCode,
                         PunchTime = item.PunchTime,
                         PunchType = item.PunchType,
+                        DeviceTransactionId = item.DeviceTransactionId,
                         IsProcessed = false,
                         CreatedOn = DateTime.UtcNow,
                         CreatedBy = "BiometricAgent"
@@ -181,8 +219,27 @@ namespace Application.Services.Attendances
             }
 
             device.LastSyncDate = DateTime.UtcNow;
+            device.LastSeen = DateTime.UtcNow;
 
-            await _db.SaveChangesAsync();
+            if (agent != null)
+                agent.LastHeartbeat = DateTime.UtcNow;
+
+            try
+            {
+                await _db.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                // The unique indexes on BiometricAttendanceLogs are the final
+                // backstop against a race between two concurrent ingest calls
+                // for the same device (e.g. agent retry overlapping with a
+                // manual Sync Now) slipping past the AnyAsync checks above.
+                result.Success = false;
+                result.Message = "One or more punches were rejected as duplicates by the database.";
+                result.DuplicateCount += result.InsertedCount;
+                result.InsertedCount = 0;
+                return result;
+            }
 
             result.Success = true;
             result.Message = "Punches ingested.";

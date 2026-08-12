@@ -5,12 +5,11 @@
 @{
     ViewBag.Title = "Dashboard";
 
-    string greeting = DateTime.Now.Hour switch
-    {
-        < 12 => "Good Morning",
-        < 17 => "Good Afternoon",
-        _ => "Good Evening"
-    };
+    var currentHour = DateTime.Now.Hour;
+    string greeting;
+    if (currentHour < 12) { greeting = "Good Morning"; }
+    else if (currentHour < 17) { greeting = "Good Afternoon"; }
+    else { greeting = "Good Evening"; }
 
     var fullName = SessionHelper.GetActiveFullName;
 }

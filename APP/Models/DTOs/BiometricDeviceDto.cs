@@ -57,11 +57,21 @@ namespace APP.Models.DTOs
         [Display(Name = "Active")]
         public bool IsActive { get; set; }
 
+        /// <summary>
+        /// Real connectivity signal (recent sync from the on-site agent),
+        /// as opposed to IsActive which is just the admin on/off toggle.
+        /// </summary>
+        [Display(Name = "Connected")]
+        public bool IsOnline { get; set; }
+
         [Display(Name = "Serial Number")]
         public string? SerialNumber { get; set; }
 
         [Display(Name = "Last Sync")]
         public DateTime? LastSyncDate { get; set; }
+
+        [Display(Name = "Last Seen")]
+        public DateTime? LastSeen { get; set; }
 
         /// <summary>
         /// Auto-generated secret the BiometricAgent uses to authenticate
@@ -69,6 +79,19 @@ namespace APP.Models.DTOs
         /// </summary>
         [Display(Name = "Device Key")]
         public string? DeviceKey { get; set; }
+
+        [Display(Name = "Device Type")]
+        public string DeviceType { get; set; } = "Essl";
+
+        [Display(Name = "Communication Type")]
+        public string CommunicationType { get; set; } = "TCP/IP";
+
+        [Display(Name = "Biometric Agent")]
+        public string? AgentId { get; set; }
+
+        /// <summary>Convenience field for list/detail screens - not persisted.</summary>
+        [Display(Name = "Agent")]
+        public string? AgentName { get; set; }
 
         public string CreatedBy { get; set; }
         public DateTime? ModifiedOn { get; set; }

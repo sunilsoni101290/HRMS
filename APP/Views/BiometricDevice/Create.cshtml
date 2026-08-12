@@ -174,6 +174,43 @@
 
                 </div>
 
+                <div class="row">
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="DeviceType"></label>
+                            <select asp-for="DeviceType" class="form-control select-search">
+                                <option value="Essl">Essl</option>
+                                <option value="Mock">Mock (testing)</option>
+                            </select>
+                            <p class="text-muted font-size-sm">Selects the driver the agent uses. See DeviceDriverFactory for adding new device brands (e.g. ZKTeco).</p>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="CommunicationType"></label>
+                            <select asp-for="CommunicationType" class="form-control select-search">
+                                <option value="TCP/IP">TCP/IP</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="AgentId"></label>
+                            <select asp-for="AgentId" asp-items="ViewBag.AgentList" class="form-control select-search">
+                                <option value="">-- Not assigned --</option>
+                            </select>
+                            <p class="text-muted font-size-sm">
+                                The BiometricAgent Windows Service that will poll this device.
+                                <a asp-controller="BiometricAgent" asp-action="Create" target="_blank">Add a new agent</a>
+                            </p>
+                        </div>
+                    </div>
+
+                </div>
+
             </fieldset>
 
             <!-- Authentication -->

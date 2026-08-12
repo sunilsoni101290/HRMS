@@ -17,13 +17,17 @@
         </h5>
 
         <div class="heading-elements">
-            @if (Model.IsActive)
+            @if (Model.IsOnline)
             {
-                <span class="label label-success">Active</span>
+                <span class="label label-success">Connected</span>
             }
             else
             {
-                <span class="label label-danger">Inactive</span>
+                <span class="label label-danger">Disconnected</span>
+            }
+            @if (!Model.IsActive)
+            {
+                <span class="label label-default">Disabled</span>
             }
         </div>
 
@@ -70,7 +74,7 @@
                     <div class="stat-icon"><i class="icon-checkmark-circle"></i></div>
                     <div class="stat-body">
                         <h5 class="no-margin">@(Model.IsActive ? "Enabled" : "Disabled")</h5>
-                        <span>Status</span>
+                        <span>Admin Setting</span>
                     </div>
                 </div>
             </div>
@@ -115,15 +119,19 @@
                                 <td>@Model.Port</td>
                             </tr>
                             <tr>
+                                <th>Device Type / Comm.</th>
+                                <td>@Model.DeviceType / @Model.CommunicationType</td>
+                            </tr>
+                            <tr>
                                 <th>Status</th>
-                                <td>
-                                    @if (Model.IsActive)
+                                <td id="deviceStatusCell">
+                                    @if (Model.IsOnline)
                                     {
-                                        <span class="label label-success">Active</span>
+                                        <span class="label label-success">Connected</span>
                                     }
                                     else
                                     {
-                                        <span class="label label-danger">Inactive</span>
+                                        <span class="label label-danger">Disconnected</span>
                                     }
                                 </td>
                             </tr>
@@ -158,8 +166,27 @@
                                 <td>@(branchName ?? "—")</td>
                             </tr>
                             <tr>
-                                <th>Username</th>
-                                <td>@Model.Username</td>
+                                <th>Biometric Agent</th>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(Model.AgentId))
+                                    {
+                                        <a asp-controller="BiometricAgent" asp-action="Details" asp-route-id="@Model.AgentId">
+                                            @(Model.AgentName ?? "View agent")
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="label label-warning">Unassigned</span>
+                                    }
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Last Seen</th>
+                                <td>
+                                    @(Model.LastSeen.HasValue
+                                        ? Model.LastSeen.Value.ToString("g")
+                                        : "Never")
+                                </td>
                             </tr>
                             <tr>
                                 <th>Last Sync</th>
@@ -313,6 +340,18 @@
                                 ' position-left"></i>' + response.message
                             )
                             .show();
+
+                        // Reflect the fresh result in the header/table Status
+                        // badges immediately, without a full page reload.
+                        $(".heading-elements .label-success, .heading-elements .label-danger").first()
+                            .removeClass("label-success label-danger")
+                            .addClass(response.success ? "label-success" : "label-danger")
+                            .text(response.success ? "Connected" : "Disconnected");
+
+                        $("#deviceStatusCell .label")
+                            .removeClass("label-success label-danger")
+                            .addClass(response.success ? "label-success" : "label-danger")
+                            .text(response.success ? "Connected" : "Disconnected");
                     },
                     error: function () {
                         resultBox

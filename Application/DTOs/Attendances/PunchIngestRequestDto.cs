@@ -18,6 +18,14 @@ namespace Application.DTOs.Attendances
         [System.ComponentModel.DataAnnotations.Required]
         public string DeviceKey { get; set; }
 
+        /// <summary>
+        /// Optional - identifies which agent is pushing, so the server can
+        /// confirm the device is actually assigned to this agent (defense in
+        /// depth on top of the DeviceKey check). Older/legacy agents that
+        /// don't send it are still accepted via DeviceKey alone.
+        /// </summary>
+        public string? AgentCode { get; set; }
+
         public List<PunchItemDto> Punches { get; set; } = new();
     }
 
@@ -29,6 +37,9 @@ namespace Application.DTOs.Attendances
         public DateTime PunchTime { get; set; }
 
         public PunchType PunchType { get; set; }
+
+        /// <summary>The device's own unique transaction/log id for this punch, if the driver exposes one. See BiometricAttendanceLog.DeviceTransactionId.</summary>
+        public string? DeviceTransactionId { get; set; }
     }
 
     public class PunchIngestResultDto

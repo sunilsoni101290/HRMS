@@ -15,5 +15,14 @@ namespace Application.Interfaces.Attendances
         Task<bool> TestConnectionAsync(string id);
 
         Task<List<BiometricDeviceHealthDto>> GetHealthSummaryAsync();
+
+        /// <summary>Single-device status snapshot for GET /api/BiometricDevice/{id}/status.</summary>
+        Task<BiometricDeviceStatusDto?> GetStatusAsync(string id);
+
+        /// <summary>
+        /// Active devices assigned to the given agent, scoped to the
+        /// tenant the agent belongs to. Used by GET /api/BiometricAgent/devices.
+        /// </summary>
+        Task<List<BiometricDeviceDto>> GetByAgentAsync(string agentId, string tenantId);
     }
 }

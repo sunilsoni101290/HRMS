@@ -56,6 +56,15 @@ namespace APP.Controllers
 
             ViewBag.BranchNames = branchNames;
 
+            // Agent names for the "Agent" column - the device list only
+            // carries AgentId/AgentName is already flattened by the API, but
+            // keep a lookup too in case AgentName ever comes back empty.
+            var agents = await _apiService
+                .GetAsync<List<BiometricAgentDto>>("BiometricAgent")
+                ?? new List<BiometricAgentDto>();
+
+            ViewBag.AgentNames = agents.ToDictionary(x => x.Id!, x => x.AgentName);
+
             return View(data);
         }
 
@@ -213,7 +222,7 @@ namespace APP.Controllers
         {
             try
             {
-                await _apiService.PostAsync<object>($"BiometricSync/sync/{id}", new { });
+                await _apiService.PostAsync<object>($"BiometricDevice/{id}/sync", new { });
 
                 AlertHelper.Success(TempData, "Device synced and attendance processed.");
             }
@@ -274,14 +283,13 @@ namespace APP.Controllers
         {
             try
             {
-                var success = await _apiService.GetAsync<bool>(
-                    $"BiometricDevice/test/{id}"
-                );
+                var response = await _apiService.PostAsync<object, ApiResponse<bool>>(
+                    $"BiometricDevice/{id}/test-connection", new { });
 
-                if (success)
-                    AlertHelper.Success(TempData, "Test connection succeeded.");
+                if (response.Success)
+                    AlertHelper.Success(TempData, response.Message);
                 else
-                    AlertHelper.Error(TempData, "Test connection failed. The device did not respond.");
+                    AlertHelper.Error(TempData, response.Message);
             }
             catch (Exception ex)
             {
@@ -294,27 +302,40 @@ namespace APP.Controllers
         /// <summary>
         /// AJAX endpoint used by the Index/Details "Test Connection" buttons so the
         /// result can be shown inline (spinner + badge) without a full page reload.
+        /// Calls POST /api/BiometricDevice/{id}/test-connection.
         /// </summary>
         [HttpPost]
         public async Task<JsonResult> TestConnectionAjax(string id)
         {
             try
             {
-                var success = await _apiService.GetAsync<bool>(
-                    $"BiometricDevice/test/{id}"
-                );
+                var response = await _apiService.PostAsync<object, ApiResponse<bool>>(
+                    $"BiometricDevice/{id}/test-connection", new { });
 
                 return Json(new
                 {
-                    success,
-                    message = success
-                        ? "Connection successful."
-                        : "Connection failed. The device did not respond."
+                    success = response.Success,
+                    message = response.Message
                 });
             }
             catch (Exception ex)
             {
                 return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>Connection/last-seen/last-sync/agent-liveness snapshot, calling GET /api/BiometricDevice/{id}/status.</summary>
+        [HttpGet]
+        public async Task<JsonResult> StatusAjax(string id)
+        {
+            try
+            {
+                var status = await _apiService.GetAsync<BiometricDeviceStatusDto>($"BiometricDevice/{id}/status");
+                return Json(status);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
             }
         }
 
@@ -365,6 +386,17 @@ namespace APP.Controllers
                 "Value",
                 "Text",
                 branchId
+            );
+
+            // Biometric Agent
+            var agents = await _apiService
+                .GetAsync<List<BiometricAgentDto>>("BiometricAgent")
+                ?? new List<BiometricAgentDto>();
+
+            ViewBag.AgentList = new SelectList(
+                agents.Where(a => a.IsActive),
+                "Id",
+                "AgentName"
             );
         }
 

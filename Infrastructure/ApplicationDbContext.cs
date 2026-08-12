@@ -74,6 +74,7 @@ namespace Infrastructure
         public DbSet<BiometricDevice> BiometricDevices { get; set; }
         public DbSet<BiometricAttendanceLog> BiometricAttendanceLogs { get; set; }
         public DbSet<EmployeeBiometricMapping> EmployeeBiometricMappings { get; set; }
+        public DbSet<BiometricAgent> BiometricAgents { get; set; }
         public DbSet<AttendanceRegularization> AttendanceRegularizations { get; set; }
         public DbSet<AttendanceRegularizationApprovalHistory> AttendanceRegularizationApprovalHistories { get; set; }
 
@@ -1044,6 +1045,55 @@ namespace Infrastructure
                 // full table scan of a table that grows every single day.
                 entity.HasIndex(e => new { e.ReferenceId, e.CreatedOn })
                     .HasDatabaseName("IX_Notifications_Reference_CreatedOn");
+            });
+
+            // =====================================================
+            // 🖐️ BIOMETRIC DEVICE + AGENT INTEGRATION
+            // =====================================================
+            modelBuilder.Entity<BiometricAgent>(entity =>
+            {
+                // AgentCode is only guaranteed unique within a tenant (two
+                // different clients could both pick "AGENT-01").
+                entity.HasIndex(e => new { e.TenantId, e.AgentCode })
+                    .IsUnique()
+                    .HasDatabaseName("IX_BiometricAgents_Tenant_AgentCode");
+            });
+
+            modelBuilder.Entity<BiometricDevice>(entity =>
+            {
+                entity.HasIndex(e => new { e.TenantId, e.DeviceCode })
+                    .IsUnique()
+                    .HasDatabaseName("IX_BiometricDevices_Tenant_DeviceCode");
+
+                // A device is optionally assigned to one agent; deleting an
+                // agent must not silently delete its devices (see the global
+                // DeleteBehavior.Restrict fix below) - the admin has to
+                // reassign/unassign devices first.
+                entity.HasOne(d => d.Agent)
+                    .WithMany(a => a.Devices)
+                    .HasForeignKey(d => d.AgentId)
+                    .IsRequired(false);
+            });
+
+            modelBuilder.Entity<BiometricAttendanceLog>(entity =>
+            {
+                // Primary idempotency guard: the same device can never report
+                // the same employee punching at the same instant twice. This
+                // is the DB-level backstop behind the application-level
+                // duplicate check in BiometricSyncService.IngestPunchesAsync
+                // (belt-and-braces - a unique index survives races between
+                // concurrent ingest calls that the app-level check alone does not).
+                entity.HasIndex(e => new { e.TenantId, e.DeviceId, e.EmployeeCode, e.PunchTime })
+                    .IsUnique()
+                    .HasDatabaseName("IX_BiometricAttendanceLogs_Tenant_Device_Employee_PunchTime");
+
+                // Stronger idempotency guard when the device supplies its own
+                // transaction id - filtered so it only applies to rows that
+                // actually have one (older/other drivers may leave it null).
+                entity.HasIndex(e => new { e.DeviceId, e.DeviceTransactionId })
+                    .IsUnique()
+                    .HasFilter("[DeviceTransactionId] IS NOT NULL")
+                    .HasDatabaseName("IX_BiometricAttendanceLogs_Device_TransactionId");
             });
 
             // =====================================================
