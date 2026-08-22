@@ -4,6 +4,7 @@
     ViewData["Title"] = "Biometric Device Details";
     var companyName = ViewBag.CompanyName as string;
     var branchName = ViewBag.BranchName as string;
+    var agentCode = ViewBag.AgentCode as string;
 }
 
 <div class="panel panel-flat biometric-details-panel">
@@ -166,21 +167,6 @@
                                 <td>@(branchName ?? "—")</td>
                             </tr>
                             <tr>
-                                <th>Biometric Agent</th>
-                                <td>
-                                    @if (!string.IsNullOrEmpty(Model.AgentId))
-                                    {
-                                        <a asp-controller="BiometricAgent" asp-action="Details" asp-route-id="@Model.AgentId">
-                                            @(Model.AgentName ?? "View agent")
-                                        </a>
-                                    }
-                                    else
-                                    {
-                                        <span class="label label-warning">Unassigned</span>
-                                    }
-                                </td>
-                            </tr>
-                            <tr>
                                 <th>Last Seen</th>
                                 <td>
                                     @(Model.LastSeen.HasValue
@@ -202,6 +188,60 @@
                 </div>
 
             </div>
+
+        </div>
+
+        <!-- Biometric Agent -->
+        <!--
+            Explicit device -> agent relationship, kept visually separate from
+            "Device Information" so it's obvious this device does not talk to
+            the ERP/HRMS directly: it communicates through this named
+            BiometricAgent Windows Service, which in turn talks to the ESSL SDK.
+        -->
+
+        <div class="panel panel-bordered detail-card biometric-agent-card">
+
+            <div class="panel-heading">
+                <h6 class="panel-title">
+                    <i class="icon-cog4 position-left"></i>
+                    Biometric Agent
+                </h6>
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.AgentId))
+            {
+                <table class="table table-bordered">
+                    <tbody>
+                        <tr>
+                            <th width="250">Agent</th>
+                            <td>
+                                <a asp-controller="BiometricAgent" asp-action="Details" asp-route-id="@Model.AgentId">
+                                    @(Model.AgentName ?? "View agent")
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Agent Code</th>
+                            <td>@(string.IsNullOrEmpty(agentCode) ? "—" : agentCode)</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="text-muted font-size-sm biometric-agent-note">
+                    This device communicates through the <strong>@(Model.AgentName ?? "assigned")</strong> agent -
+                    the on-site Windows Service that connects to the ESSL device over its own network and
+                    relays punches/test results back to this HRMS ERP. This server never talks to the device
+                    directly.
+                </p>
+            }
+            else
+            {
+                <div class="alert alert-warning no-margin">
+                    <i class="icon-warning2 position-left"></i>
+                    No biometric agent is assigned to this device - it will never be polled and
+                    <strong>Test Connection</strong> will fail immediately. Assign one on the
+                    <a asp-action="Edit" asp-route-id="@Model.Id">Edit</a> page.
+                </div>
+            }
 
         </div>
 
@@ -309,11 +349,121 @@
 
 @section Scripts {
 
+    @if (TempData["Success"] != null)
+    {
+        <script>
+            $(function () {
+                swal({
+                    title: "Success",
+                    text: @Html.Raw(Json.Serialize(TempData["Success"])),
+                    type: "success"
+                });
+            });
+        </script>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <script>
+            $(function () {
+                swal({
+                    title: "Error",
+                    text: @Html.Raw(Json.Serialize(TempData["Error"])),
+                    type: "error"
+                });
+            });
+        </script>
+    }
+
     <script>
 
         $(document).ready(function () {
 
             $('[data-popup="tooltip"]').tooltip();
+
+            var deviceCode = @Html.Raw(Json.Serialize(Model.DeviceCode));
+            var agentName = @Html.Raw(Json.Serialize(string.IsNullOrEmpty(Model.AgentName) ? "the assigned" : Model.AgentName));
+
+            // Real Test Connection is async under the hood (HRMS -> API ->
+            // BiometricAgent -> ESSL SDK -> device) - the agent only polls
+            // the API, it can't be called synchronously. So: kick off the
+            // request, then poll TestConnectionStatusAjax every few seconds
+            // until it completes or we give up waiting.
+            function showResult(resultBox, success, html) {
+                resultBox
+                    .removeClass("alert-success alert-danger alert-info")
+                    .addClass(success === null ? "alert-info" : (success ? "alert-success" : "alert-danger"))
+                    .html(html)
+                    .show();
+            }
+
+            function applyStatusBadge(success) {
+                var text = success ? "Connected" : "Disconnected";
+
+                $(".heading-elements .label-success, .heading-elements .label-danger").first()
+                    .removeClass("label-success label-danger")
+                    .addClass(success ? "label-success" : "label-danger")
+                    .text(text);
+
+                $("#deviceStatusCell .label")
+                    .removeClass("label-success label-danger")
+                    .addClass(success ? "label-success" : "label-danger")
+                    .text(text);
+            }
+
+            function stageMessage(response) {
+                // Distinct, specific copy per failure stage rather than a
+                // single vague "Connection failed." - matches what each
+                // Stage from BiometricDeviceService/BiometricAgent means.
+                if (response.success) {
+                    return "&#10003; Connection successful<br/>ESSL device " + deviceCode + " is responding through the " + agentName + " agent." +
+                        (response.deviceInfo ? "<br/><small>" + response.deviceInfo + "</small>" : "");
+                }
+
+                switch (response.stage) {
+                    case "AgentInactive":
+                        return "&#10007; Connection failed<br/>The assigned biometric agent is inactive.";
+                    case "AgentUnavailable":
+                        return "&#10007; Connection failed<br/>The " + agentName + " biometric agent is unavailable.";
+                    case "DeviceUnreachable":
+                        return "&#10007; Connection failed<br/>The " + agentName + " biometric agent could not reach ESSL device " + deviceCode + ".";
+                    case "SdkConnectionFailed":
+                        return "&#10007; Connection failed<br/>The ESSL device could not be initialized or did not respond.";
+                    default:
+                        return "&#10007; Connection failed<br/>" + (response.message || "The device did not respond.");
+                }
+            }
+
+            function pollStatus(id, requestId, resultBox, btn, originalHtml, attemptsLeft) {
+                if (attemptsLeft <= 0) {
+                    showResult(resultBox, false, "&#10007; Connection failed.<br/>The biometric agent did not respond in time. Confirm the Windows Service is running.");
+                    applyStatusBadge(false);
+                    btn.prop("disabled", false).html(originalHtml);
+                    return;
+                }
+
+                $.ajax({
+                    url: '@Url.Action("TestConnectionStatusAjax")',
+                    type: "GET",
+                    data: { id: id, requestId: requestId },
+                    success: function (response) {
+                        if (!response.complete) {
+                            setTimeout(function () {
+                                pollStatus(id, requestId, resultBox, btn, originalHtml, attemptsLeft - 1);
+                            }, 3000);
+                            return;
+                        }
+
+                        showResult(resultBox, response.success, stageMessage(response));
+                        applyStatusBadge(response.success);
+                        btn.prop("disabled", false).html(originalHtml);
+                    },
+                    error: function () {
+                        showResult(resultBox, false, "&#10007; Connection failed.<br/>Unable to check the test connection status. Please try again.");
+                        btn.prop("disabled", false).html(originalHtml);
+                    }
+                });
+            }
 
             $("#testConnectionBtn").on("click", function () {
 
@@ -325,42 +475,27 @@
                 btn.prop("disabled", true)
                     .html('<i class="icon-spinner2 spinner position-left"></i> Testing...');
 
-                resultBox.hide();
+                showResult(resultBox, null, '<i class="icon-spinner2 spinner position-left"></i>Testing connection... (waiting for the biometric agent - this can take up to a minute)');
 
                 $.ajax({
                     url: '@Url.Action("TestConnectionAjax")',
                     type: "POST",
                     data: { id: id },
                     success: function (response) {
-                        resultBox
-                            .removeClass("alert-success alert-danger")
-                            .addClass(response.success ? "alert-success" : "alert-danger")
-                            .html(
-                                '<i class="icon-' + (response.success ? "checkmark-circle" : "cancel-circle2") +
-                                ' position-left"></i>' + response.message
-                            )
-                            .show();
+                        if (response.complete) {
+                            // Pre-flight failure (inactive device, no agent
+                            // assigned, agent offline, ...) - nothing to poll for.
+                            showResult(resultBox, false, "&#10007; Connection failed.<br/>" + response.message);
+                            btn.prop("disabled", false).html(originalHtml);
+                            return;
+                        }
 
-                        // Reflect the fresh result in the header/table Status
-                        // badges immediately, without a full page reload.
-                        $(".heading-elements .label-success, .heading-elements .label-danger").first()
-                            .removeClass("label-success label-danger")
-                            .addClass(response.success ? "label-success" : "label-danger")
-                            .text(response.success ? "Connected" : "Disconnected");
-
-                        $("#deviceStatusCell .label")
-                            .removeClass("label-success label-danger")
-                            .addClass(response.success ? "label-success" : "label-danger")
-                            .text(response.success ? "Connected" : "Disconnected");
+                        // ~30 attempts * 3s = up to 90s, matching the API's
+                        // own TestRequestTimeout.
+                        pollStatus(id, response.requestId, resultBox, btn, originalHtml, 30);
                     },
                     error: function () {
-                        resultBox
-                            .removeClass("alert-success")
-                            .addClass("alert-danger")
-                            .html('<i class="icon-cancel-circle2 position-left"></i>Unable to test connection. Please try again.')
-                            .show();
-                    },
-                    complete: function () {
+                        showResult(resultBox, false, "&#10007; Connection failed.<br/>Unable to test connection. Please try again.");
                         btn.prop("disabled", false).html(originalHtml);
                     }
                 });
@@ -414,6 +549,8 @@
 
         .detail-card { margin-bottom: 20px; }
         .detail-card .table th { width: 40%; color: #66707e; font-weight: 600; }
+
+        .biometric-agent-card .biometric-agent-note { padding: 0 18px 16px; margin-bottom: 0; }
 
         .device-key-row { display: flex; align-items: center; gap: 8px; }
         .device-key-row code { word-break: break-all; }

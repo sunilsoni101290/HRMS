@@ -47,6 +47,9 @@ namespace Application.DTOs.Attendances
         /// <summary>"TCP/IP" today; reserved for future Serial/USB drivers.</summary>
         public string CommunicationType { get; set; } = "TCP/IP";
 
+        /// <summary>Device SDK comm password (ZK-family "CommKey"). 0 = none set. Sent to the agent so it can call SetCommPassword before Connect_Net when needed.</summary>
+        public int CommKey { get; set; }
+
         /// <summary>The BiometricAgent this device is assigned to. Null = not yet assigned to any agent.</summary>
         public string? AgentId { get; set; }
 

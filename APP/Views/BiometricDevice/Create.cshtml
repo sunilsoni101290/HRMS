@@ -153,6 +153,10 @@
                             <label asp-for="IPAddress"></label>
                             <input asp-for="IPAddress" class="form-control" placeholder="192.168.1.100" />
                             <span asp-validation-for="IPAddress" class="text-danger"></span>
+                            <p class="text-muted font-size-sm">
+                                The device's LAN IP - only reachable by the on-site
+                                <strong>Biometric Agent</strong>, never called directly by this server.
+                            </p>
                         </div>
                     </div>
 
@@ -161,6 +165,7 @@
                             <label asp-for="Port"></label>
                             <input asp-for="Port" type="number" min="1" max="65535" class="form-control" />
                             <span asp-validation-for="Port" class="text-danger"></span>
+                            <p class="text-muted font-size-sm">ESSL/ZKTeco TCP/IP SDK port (typically 4370) - not an HTTP port.</p>
                         </div>
                     </div>
 
@@ -169,6 +174,13 @@
                             <label asp-for="ApiUrl"></label>
                             <input asp-for="ApiUrl" class="form-control" placeholder="https://api.device.com" />
                             <span asp-validation-for="ApiUrl" class="text-danger"></span>
+                            <p class="text-muted font-size-sm">
+                                Optional - only for devices/models that also expose their own HTTP(S) API.
+                                <strong>Do not</strong> put the IP Address/Port above here (e.g.
+                                <code>https://192.168.1.201:4370</code>) - port 4370 is the ESSL SDK's TCP
+                                protocol, not HTTPS, and "Test Connection" never uses this field for the
+                                ESSL device driver.
+                            </p>
                         </div>
                     </div>
 
@@ -206,6 +218,19 @@
                                 The BiometricAgent Windows Service that will poll this device.
                                 <a asp-controller="BiometricAgent" asp-action="Create" target="_blank">Add a new agent</a>
                             </p>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="row">
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="CommKey"></label>
+                            <input asp-for="CommKey" type="number" min="0" class="form-control" placeholder="0" />
+                            <span asp-validation-for="CommKey" class="text-danger"></span>
+                            <p class="text-muted font-size-sm">The device's own SDK comm password, if one was set on it (0 = none). Not the same as Username/Password below.</p>
                         </div>
                     </div>
 

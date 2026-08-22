@@ -1,4 +1,5 @@
-﻿using Application.Common.Responses;
+﻿using Application.Common.Exceptions;
+using Application.Common.Responses;
 using Application.DTOs.Attendances;
 using Application.Interfaces.Attendances;
 using Microsoft.AspNetCore.Authorization;
@@ -122,36 +123,119 @@ namespace API.Controllers
                 await _service.DeleteAsync(id));
         }
 
-        [HttpGet("test/{id}")]
-        public async Task<IActionResult>Test(string id)
-        {
-            return Ok(
-                await _service
-                .TestConnectionAsync(id));
-        }
-
         [HttpGet("health")]
         public async Task<IActionResult> Health()
         {
             return Ok(await _service.GetHealthSummaryAsync());
         }
 
+        [HttpGet("dashboard-summary")]
+        public async Task<IActionResult> DashboardSummary()
+        {
+            return Ok(await _service.GetDashboardSummaryAsync());
+        }
+
+        [HttpGet("sync-logs")]
+        public async Task<IActionResult> SyncLogs([FromQuery] string? deviceId, [FromQuery] int take = 50)
+        {
+            return Ok(await _syncService.GetRecentSyncLogsAsync(deviceId, take));
+        }
+
         /// <summary>
-        /// Spec-shaped alias of GET test/{id} (POST /api/BiometricDevice/{id}/test-connection).
-        /// Kept alongside the legacy GET test/{id} route - both call the same
-        /// service method, so there is no duplicated business logic.
+        /// Kicks off a REAL Test Connection (Device -> assigned BiometricAgent
+        /// -> ESSL SDK -> device, not just an LastSyncDate/heartbeat check -
+        /// see BiometricDeviceService.RequestTestConnectionAsync). Returns
+        /// immediately with Status = Pending; poll GET
+        /// {id}/test-connection/{requestId} for the outcome once the agent
+        /// picks it up on its next cycle.
+        ///
+        /// Distinct failure scenarios are mapped to distinct HTTP codes/
+        /// messages rather than a single generic "Connection failed" bool,
+        /// per this endpoint's requirements: device not found -> 404,
+        /// device inactive / no agent assigned / agent offline -> 400 with a
+        /// specific message, anything unexpected -> 500 with a safe generic
+        /// message (the real exception is logged server-side only, never
+        /// returned to the caller).
         /// </summary>
         [HttpPost("{id}/test-connection")]
-        public async Task<IActionResult> TestConnection(string id)
+        public async Task<IActionResult> TestConnection(string id, [FromQuery] string tenantId, [FromQuery] string requestedBy)
         {
-            var success = await _service.TestConnectionAsync(id);
-
-            return Ok(new ApiResponse<bool>
+            try
             {
-                Success = success,
-                Message = success ? "Connection successful." : "Connection failed. The device did not respond.",
-                Data = success
-            });
+                var result = await _service.RequestTestConnectionAsync(id, tenantId, requestedBy);
+
+                return Ok(new ApiResponse<DeviceTestConnectionResultDto>
+                {
+                    Success = true,
+                    Message = "Test connection requested - the assigned agent will attempt the device connection on its next poll cycle.",
+                    Data = result
+                });
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+            catch (BadRequestException ex)
+            {
+                // Device inactive / misconfigured / no agent / agent offline -
+                // an expected business outcome, not a server error - still
+                // HTTP 200-class "business failure" per the spec (400 here
+                // is fine too since these are genuinely bad requests, but the
+                // message is always the specific, safe one from the service).
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error requesting test connection for device {Id}.", id);
+
+                return StatusCode(500, new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "An internal error occurred while testing the device connection."
+                });
+            }
+        }
+
+        /// <summary>Polled by the UI after POST {id}/test-connection until Data.IsComplete is true.</summary>
+        [HttpGet("{id}/test-connection/{requestId}")]
+        public async Task<IActionResult> TestConnectionStatus(string id, string requestId, [FromQuery] string tenantId)
+        {
+            try
+            {
+                var result = await _service.GetTestConnectionResultAsync(requestId, tenantId);
+
+                if (result == null)
+                    return NotFound(new ApiResponse<object>
+                    {
+                        Success = false,
+                        Message = "Test connection request not found."
+                    });
+
+                return Ok(new ApiResponse<DeviceTestConnectionResultDto>
+                {
+                    Success = true,
+                    Message = "OK",
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error polling test connection {RequestId} for device {Id}.", requestId, id);
+
+                return StatusCode(500, new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "An internal error occurred while checking the test connection status."
+                });
+            }
         }
 
         /// <summary>

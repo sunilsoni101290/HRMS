@@ -130,6 +130,58 @@ namespace API.Controllers
             return Ok(devices);
         }
 
+        /// <summary>
+        /// Pending Test Connection requests routed to this agent - polled
+        /// every cycle alongside /devices (see BiometricAgent.Worker). The
+        /// agent attempts each one via IDeviceDriver.ConnectAsync/
+        /// TryGetDeviceInfoAsync/DisconnectAsync and reports back via
+        /// POST test-result.
+        /// </summary>
+        [HttpGet("pending-test-requests")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetPendingTestRequests(
+            [FromHeader(Name = "X-Agent-Code")] string agentCode,
+            [FromHeader(Name = "X-Agent-Key")] string agentKey)
+        {
+            var tenantId = _tenantService.GetTenantId();
+
+            var agent = await _agentService.ValidateAsync(agentCode, agentKey, tenantId);
+
+            if (agent == null)
+                return Unauthorized(new { Success = false, Message = "Unknown or inactive agent, or invalid agent key." });
+
+            var requests = await _agentService.GetPendingTestRequestsAsync(agent.Id, tenantId);
+
+            return Ok(requests);
+        }
+
+        /// <summary>
+        /// The agent's report after actually attempting the ESSL SDK
+        /// connection for one Test Connection request. Never trust/forward
+        /// dto.Message verbatim without the agent having already sanitized
+        /// it (see BiometricAgent.Worker) - this endpoint does not attempt
+        /// to strip exception details, it only truncates length.
+        /// </summary>
+        [HttpPost("test-result")]
+        [AllowAnonymous]
+        public async Task<IActionResult> SubmitTestResult([FromBody] AgentTestResultSubmitDto request)
+        {
+            var tenantId = _tenantService.GetTenantId();
+
+            var agent = await _agentService.ValidateAsync(request?.AgentCode, request?.AgentKey, tenantId);
+
+            if (agent == null)
+                return Unauthorized(new { Success = false, Message = "Unknown or inactive agent, or invalid agent key." });
+
+            var ok = await _agentService.SubmitTestResultAsync(request, tenantId);
+
+            // false here means the request id was unknown or already
+            // resolved (e.g. the API-side timeout beat this result in) -
+            // not a credential problem, so still 200: there is nothing
+            // useful for the agent to retry.
+            return Ok(new { Success = ok, Message = ok ? "Recorded." : "Request not found or already completed." });
+        }
+
         // ==================================================================
         // ADMIN-FACING (JWT [Authorize], called from MVC) - CRUD for the
         // BiometricAgent master record, matching BiometricDeviceController's shape.

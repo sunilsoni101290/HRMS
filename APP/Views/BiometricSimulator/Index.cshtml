@@ -1,0 +1,420 @@
+@{
+    ViewData["Title"] = "Biometric Simulator";
+}
+
+<div class="alert alert-warning">
+    <i class="icon-warning2 position-left"></i>
+    <strong>Development tool.</strong> Every action below pushes real punches
+    through the same ingest pipeline a physical eSSL device's on-site
+    BiometricAgent uses (duplicate protection, employee mapping, attendance
+    processing all included) - it is not a separate/fake attendance path.
+    This page only exists in the Development environment.
+</div>
+
+<div class="row">
+
+    <!-- Punch Builder -->
+
+    <div class="col-md-7">
+
+        <div class="panel panel-flat">
+
+            <div class="panel-heading">
+                <h5 class="panel-title"><i class="icon-fingerprint position-left"></i> Simulate a Punch</h5>
+            </div>
+
+            <div class="panel-body">
+
+                <div class="row">
+
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Employee</label>
+                            <select id="EmployeeId" class="form-control select-search" asp-items="ViewBag.EmployeeList">
+                                <option value="">-- Select Employee --</option>
+                            </select>
+                            <p class="text-muted font-size-sm">Only employees with a Biometric Mapping are listed.</p>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Device</label>
+                            <select id="DeviceId" class="form-control select-search" asp-items="ViewBag.DeviceList">
+                                <option value="">-- Select Device --</option>
+                            </select>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="row">
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Attendance Date</label>
+                            <input type="date" id="PunchDate" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Attendance Time</label>
+                            <input type="time" id="PunchTime" class="form-control" value="09:00" />
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Punch Type</label>
+                            <select id="PunchType" class="form-control">
+                                <option value="1">IN</option>
+                                <option value="2">OUT</option>
+                                <option value="3">BREAK IN</option>
+                                <option value="4">BREAK OUT</option>
+                            </select>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="row">
+
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Verify Mode</label>
+                            <select id="VerifyMode" class="form-control">
+                                <option value="Fingerprint">Fingerprint</option>
+                                <option value="Face">Face</option>
+                                <option value="Card">Card</option>
+                                <option value="Password">Password</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="checkbox" style="margin-top: 28px;">
+                            <label>
+                                <input type="checkbox" id="SendTwice" />
+                                Send this punch twice (test duplicate protection)
+                            </label>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="text-right">
+                    <button type="button" id="btnSimulatePunch" class="btn bg-success">
+                        <i class="icon-fingerprint position-left"></i> Simulate Punch
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Full Day -->
+
+        <div class="panel panel-flat">
+
+            <div class="panel-heading">
+                <h5 class="panel-title"><i class="icon-calendar3 position-left"></i> Generate Full Day</h5>
+            </div>
+
+            <div class="panel-body">
+
+                <div class="row">
+
+                    <div class="col-md-3">
+                        <label>In</label>
+                        <input type="time" id="FdIn" class="form-control" value="09:00" />
+                    </div>
+                    <div class="col-md-3">
+                        <label>Break Out</label>
+                        <input type="time" id="FdBreakOut" class="form-control" value="13:00" />
+                    </div>
+                    <div class="col-md-3">
+                        <label>Break In</label>
+                        <input type="time" id="FdBreakIn" class="form-control" value="14:00" />
+                    </div>
+                    <div class="col-md-3">
+                        <label>Out</label>
+                        <input type="time" id="FdOut" class="form-control" value="18:00" />
+                    </div>
+
+                </div>
+
+                <div class="text-right" style="margin-top: 14px;">
+                    <button type="button" id="btnFullDay" class="btn bg-primary">
+                        <i class="icon-calendar3 position-left"></i> Generate Full Day
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Predefined Scenarios -->
+
+        <div class="panel panel-flat">
+
+            <div class="panel-heading">
+                <h5 class="panel-title"><i class="icon-list-numbered position-left"></i> Test Scenarios</h5>
+            </div>
+
+            <div class="panel-body">
+
+                <div class="scenario-grid">
+                    <button type="button" class="btn btn-default scenario-btn" data-scenario="Normal">1. Normal (09:00 - 18:00)</button>
+                    <button type="button" class="btn btn-default scenario-btn" data-scenario="Late">2. Late (09:30 - 18:00)</button>
+                    <button type="button" class="btn btn-default scenario-btn" data-scenario="MultiplePunches">3. Multiple Punches</button>
+                    <button type="button" class="btn btn-default scenario-btn" data-scenario="MissingOut">4. Missing OUT</button>
+                    <button type="button" class="btn btn-default scenario-btn" data-scenario="Duplicate">5. Duplicate Punch</button>
+                    <button type="button" class="btn btn-default scenario-btn" data-scenario="NightShift">6. Night Shift (22:00 - 06:00)</button>
+                    <button type="button" class="btn btn-default scenario-btn" data-scenario="Overtime">7. Overtime (09:00 - 20:00)</button>
+                    <button type="button" class="btn btn-default scenario-btn" data-scenario="Holiday">8. Holiday Punch</button>
+                    <button type="button" class="btn btn-default scenario-btn" data-scenario="WeeklyOff">9. Weekly Off Punch</button>
+                    <button type="button" class="btn btn-default scenario-btn" data-scenario="Leave">10. Leave Day Punch</button>
+                </div>
+
+                <p class="text-muted font-size-sm" style="margin-top: 10px;">
+                    Scenarios 8-10 punch a normal day on the selected date - pick a date
+                    that is already a Holiday / Weekly Off / an approved Leave day for this
+                    employee so the real attendance engine has something to classify.
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Failure Simulation + Result -->
+
+    <div class="col-md-5">
+
+        <div class="panel panel-flat">
+
+            <div class="panel-heading">
+                <h5 class="panel-title"><i class="icon-warning2 position-left"></i> Failure Scenarios</h5>
+            </div>
+
+            <div class="panel-body">
+
+                <p class="text-muted font-size-sm">
+                    These call the real ingest endpoint with a deliberately broken
+                    condition and show you the real rejection message - nothing is faked.
+                </p>
+
+                <button type="button" id="btnApiFailure" class="btn btn-default btn-block">
+                    <i class="icon-cross2 position-left"></i> Simulate API Failure (wrong Device Key)
+                </button>
+
+                <button type="button" id="btnDeviceOffline" class="btn btn-default btn-block">
+                    <i class="icon-plug2 position-left"></i> Simulate Device Offline
+                </button>
+
+                <hr />
+
+                <p class="text-muted font-size-sm">
+                    Removes raw punches (and any attendance derived from them) for the
+                    selected Device, optionally scoped to the selected Employee.
+                </p>
+
+                <button type="button" id="btnClearData" class="btn bg-danger btn-block">
+                    <i class="icon-trash position-left"></i> Clear Test Data
+                </button>
+
+            </div>
+
+        </div>
+
+        <div class="panel panel-flat">
+
+            <div class="panel-heading">
+                <h5 class="panel-title"><i class="icon-history position-left"></i> Last Result</h5>
+            </div>
+
+            <div class="panel-body">
+                <div id="resultBox" class="alert alert-info">
+                    Run an action to see the pipeline's real response here.
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts {
+
+    <script>
+
+        $(document).ready(function () {
+
+            if ($.fn.chosen) {
+                $(".select-search").chosen({ width: "100%", search_contains: true });
+            }
+
+            function showResult(success, message, extra) {
+                var box = $("#resultBox");
+
+                box.removeClass("alert-info alert-success alert-danger")
+                    .addClass(success ? "alert-success" : "alert-danger")
+                    .html(
+                        (success ? "&#10003; " : "&#10007; ") + message +
+                        (extra ? "<br/><small>" + extra + "</small>" : "")
+                    );
+
+                if (typeof swal === "function") {
+                    swal({ title: success ? "Success" : "Failed", text: message, type: success ? "success" : "error" });
+                }
+            }
+
+            function required() {
+                var employeeId = $("#EmployeeId").val();
+                var deviceId = $("#DeviceId").val();
+
+                if (!employeeId || !deviceId) {
+                    showResult(false, "Select an Employee and a Device first.");
+                    return null;
+                }
+
+                return { employeeId: employeeId, deviceId: deviceId };
+            }
+
+            function postJson(url, data, done) {
+                $.ajax({
+                    url: url,
+                    type: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify(data),
+                    success: function (response) {
+                        done(response);
+                    },
+                    error: function () {
+                        showResult(false, "Unable to reach the ERP API.");
+                    }
+                });
+            }
+
+            function extraFrom(response) {
+                return "Received " + (response.receivedCount || 0) +
+                    ", Inserted " + (response.insertedCount || 0) +
+                    ", Duplicates " + (response.duplicateCount || 0);
+            }
+
+            $("#btnSimulatePunch").on("click", function () {
+                var basics = required();
+                if (!basics) return;
+
+                var date = $("#PunchDate").val();
+                var time = $("#PunchTime").val();
+
+                var model = {
+                    employeeId: basics.employeeId,
+                    deviceId: basics.deviceId,
+                    punchDateTime: date + "T" + time + ":00",
+                    punchType: parseInt($("#PunchType").val(), 10),
+                    verifyMode: $("#VerifyMode").val(),
+                    sendTwice: $("#SendTwice").is(":checked")
+                };
+
+                postJson('@Url.Action("SimulatePunch")', model, function (r) {
+                    showResult(r.success, r.message, extraFrom(r));
+                });
+            });
+
+            $("#btnFullDay").on("click", function () {
+                var basics = required();
+                if (!basics) return;
+
+                var model = {
+                    employeeId: basics.employeeId,
+                    deviceId: basics.deviceId,
+                    date: $("#PunchDate").val(),
+                    inTime: $("#FdIn").val(),
+                    breakOutTime: $("#FdBreakOut").val(),
+                    breakInTime: $("#FdBreakIn").val(),
+                    outTime: $("#FdOut").val()
+                };
+
+                postJson('@Url.Action("GenerateFullDay")', model, function (r) {
+                    showResult(r.success, r.message, extraFrom(r));
+                });
+            });
+
+            $(".scenario-btn").on("click", function () {
+                var basics = required();
+                if (!basics) return;
+
+                var model = {
+                    employeeId: basics.employeeId,
+                    deviceId: basics.deviceId,
+                    date: $("#PunchDate").val(),
+                    scenarioCode: $(this).data("scenario")
+                };
+
+                postJson('@Url.Action("RunScenario")', model, function (r) {
+                    showResult(r.success, r.message, extraFrom(r));
+                });
+            });
+
+            $("#btnApiFailure").on("click", function () {
+                var deviceId = $("#DeviceId").val();
+
+                if (!deviceId) {
+                    showResult(false, "Select a Device first.");
+                    return;
+                }
+
+                $.post('@Url.Action("SimulateApiFailure")', { deviceId: deviceId }, function (r) {
+                    showResult(r.success, r.message, extraFrom(r));
+                });
+            });
+
+            $("#btnDeviceOffline").on("click", function () {
+                var deviceId = $("#DeviceId").val();
+
+                if (!deviceId) {
+                    showResult(false, "Select a Device first.");
+                    return;
+                }
+
+                $.post('@Url.Action("SimulateDeviceOffline")', { deviceId: deviceId }, function (r) {
+                    showResult(r.success, r.message, extraFrom(r));
+                });
+            });
+
+            $("#btnClearData").on("click", function () {
+                var deviceId = $("#DeviceId").val();
+
+                if (!deviceId) {
+                    showResult(false, "Select a Device first.");
+                    return;
+                }
+
+                if (!confirm("Clear all test punches/attendance for this device" + ($("#EmployeeId").val() ? " and employee" : "") + "?"))
+                    return;
+
+                postJson('@Url.Action("ClearTestData")', {
+                    deviceId: deviceId,
+                    employeeId: $("#EmployeeId").val() || null
+                }, function (r) {
+                    showResult(r.success, r.message);
+                });
+            });
+
+        });
+
+    </script>
+
+    <style>
+        .scenario-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .scenario-grid .btn { text-align: left; }
+        .btn-block { margin-bottom: 10px; }
+    </style>
+
+}

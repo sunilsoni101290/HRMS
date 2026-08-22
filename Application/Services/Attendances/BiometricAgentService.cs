@@ -6,6 +6,7 @@ using Infrastructure.Data;
 using Infrastructure.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using static Domain.Enums.EnumExtensions;
 
 namespace Application.Services.Attendances
 {
@@ -39,6 +40,9 @@ namespace Application.Services.Attendances
                         TenantId = a.TenantId,
                         AgentCode = a.AgentCode,
                         AgentName = a.AgentName,
+                        BranchId = a.BranchId,
+                        BranchName = a.Branch != null ? a.Branch.Name : null,
+                        Description = a.Description,
                         MachineName = a.MachineName,
                         AgentVersion = a.AgentVersion,
                         IsActive = a.IsActive,
@@ -72,6 +76,9 @@ namespace Application.Services.Attendances
                         TenantId = a.TenantId,
                         AgentCode = a.AgentCode,
                         AgentName = a.AgentName,
+                        BranchId = a.BranchId,
+                        BranchName = a.Branch != null ? a.Branch.Name : null,
+                        Description = a.Description,
                         MachineName = a.MachineName,
                         AgentVersion = a.AgentVersion,
                         IsActive = a.IsActive,
@@ -99,6 +106,8 @@ namespace Application.Services.Attendances
                 TenantId = dto.TenantId,
                 AgentCode = dto.AgentCode,
                 AgentName = dto.AgentName,
+                BranchId = string.IsNullOrWhiteSpace(dto.BranchId) ? null : dto.BranchId,
+                Description = dto.Description,
                 MachineName = dto.MachineName,
                 AgentVersion = dto.AgentVersion,
                 // Auto-generate the agent auth secret if the caller didn't supply one -
@@ -136,6 +145,8 @@ namespace Application.Services.Attendances
                     return false;
 
                 entity.AgentName = dto.AgentName;
+                entity.BranchId = string.IsNullOrWhiteSpace(dto.BranchId) ? null : dto.BranchId;
+                entity.Description = dto.Description;
                 // Only rotate the key when a new one is explicitly supplied,
                 // so a plain "save" from the edit screen doesn't invalidate
                 // the running Windows Service's credentials.
@@ -278,6 +289,108 @@ namespace Application.Services.Attendances
                 _logger.LogWarning(
                     "BiometricAgent {AgentCode} reported an error on its last cycle: {Error} (queued: {Queued})",
                     agent.AgentCode, request.LastError, request.QueuedRecordCount);
+            }
+
+            return true;
+        }
+
+        /// <summary>GET /api/BiometricAgent/pending-test-requests - polled by the Worker alongside GetAssignedDevicesAsync each cycle.</summary>
+        public async Task<List<AgentTestRequestDto>> GetPendingTestRequestsAsync(string agentId, string tenantId)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(agentId))
+                    return new List<AgentTestRequestDto>();
+
+                return await _db.BiometricDeviceTestRequests
+                    .Where(r =>
+                        r.AgentId == agentId &&
+                        r.Status == TestConnectionStatus.Pending &&
+                        (string.IsNullOrEmpty(tenantId) || r.TenantId == tenantId))
+                    .OrderBy(r => r.RequestedOn)
+                    .Select(r => new AgentTestRequestDto
+                    {
+                        RequestId = r.Id,
+                        DeviceId = r.DeviceId,
+                        DeviceCode = r.Device.DeviceCode,
+                        DeviceKey = r.Device.DeviceKey,
+                        DeviceType = r.Device.DeviceType,
+                        IPAddress = r.Device.IPAddress,
+                        Port = r.Device.Port,
+                        CommunicationType = r.Device.CommunicationType,
+                        CommKey = r.Device.CommKey
+                    })
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load pending test requests for agent {AgentId}.", agentId);
+                return new List<AgentTestRequestDto>();
+            }
+        }
+
+        /// <summary>POST /api/BiometricAgent/test-result - the agent's report after actually attempting the ESSL SDK connection.</summary>
+        public async Task<bool> SubmitTestResultAsync(AgentTestResultSubmitDto dto, string tenantId)
+        {
+            if (dto == null || string.IsNullOrWhiteSpace(dto.RequestId))
+                return false;
+
+            var agent = await ValidateAsync(dto.AgentCode, dto.AgentKey, tenantId);
+            if (agent == null)
+                return false;
+
+            var request = await _db.BiometricDeviceTestRequests
+                .Include(r => r.Device)
+                .FirstOrDefaultAsync(r =>
+                    r.Id == dto.RequestId &&
+                    r.AgentId == agent.Id &&
+                    (string.IsNullOrEmpty(tenantId) || r.TenantId == tenantId));
+
+            if (request == null)
+            {
+                _logger.LogWarning(
+                    "Test result submitted for unknown/foreign request {RequestId} by agent {AgentCode}.",
+                    dto.RequestId, dto.AgentCode);
+                return false;
+            }
+
+            // Already completed (e.g. the API-side timeout already fired
+            // while this result was in flight) - first result wins, don't
+            // overwrite it with a possibly-stale second one.
+            if (request.Status != TestConnectionStatus.Pending)
+            {
+                _logger.LogInformation(
+                    "Ignored test result for request {RequestId} - already {Status}.",
+                    request.Id, request.Status);
+                return false;
+            }
+
+            request.Status = dto.Success ? TestConnectionStatus.Success : TestConnectionStatus.Failed;
+            request.Stage = dto.Stage;
+            // Defense in depth: the agent should already be sending a safe,
+            // pre-composed message, never a raw exception - truncate hard in
+            // case a future agent build regresses on that.
+            request.Message = string.IsNullOrWhiteSpace(dto.Message)
+                ? null
+                : dto.Message.Length > 500 ? dto.Message[..500] : dto.Message;
+            request.DeviceInfo = string.IsNullOrWhiteSpace(dto.DeviceInfo)
+                ? null
+                : dto.DeviceInfo.Length > 200 ? dto.DeviceInfo[..200] : dto.DeviceInfo;
+            request.CompletedOn = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+
+            if (dto.Success)
+            {
+                _logger.LogInformation(
+                    "Test connection successful. DeviceCode: {DeviceCode}, Agent: {AgentCode}, RequestId: {RequestId}, DeviceInfo: {DeviceInfo}",
+                    request.Device?.DeviceCode, agent.AgentCode, request.Id, request.DeviceInfo);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "Test connection failed. DeviceCode: {DeviceCode}, Agent: {AgentCode}, RequestId: {RequestId}, Stage: {Stage}, Error: {Message}",
+                    request.Device?.DeviceCode, agent.AgentCode, request.Id, request.Stage, request.Message);
             }
 
             return true;

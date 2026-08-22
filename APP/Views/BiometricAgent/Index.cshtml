@@ -73,6 +73,7 @@
                 <tr>
                     <th width="60">#</th>
                     <th>Agent</th>
+                    <th>Branch</th>
                     <th>Machine</th>
                     <th>Version</th>
                     <th>Devices</th>
@@ -99,6 +100,8 @@
                             </div>
                             <small class="text-muted">Code: @item.AgentCode</small>
                         </td>
+
+                        <td>@(string.IsNullOrEmpty(item.BranchName) ? "—" : item.BranchName)</td>
 
                         <td>@(string.IsNullOrEmpty(item.MachineName) ? "—" : item.MachineName)</td>
 
@@ -162,7 +165,7 @@
                 @if (!agents.Any())
                 {
                     <tr>
-                        <td colspan="8" class="text-center text-muted">
+                        <td colspan="9" class="text-center text-muted">
                             No biometric agents configured yet. Click <strong>Add Agent</strong> to create one.
                         </td>
                     </tr>
@@ -188,7 +191,7 @@
                     searching: true,
                     pageLength: 10,
                     lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
-                    columnDefs: [{ orderable: false, targets: [0, 7] }]
+                    columnDefs: [{ orderable: false, targets: [0, 8] }]
                 });
             }
         });

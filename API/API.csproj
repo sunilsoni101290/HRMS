@@ -17,8 +17,32 @@
     <PackageReference Include="BCrypt.Net-Next" Version="4.1.0" />
     <PackageReference Include="FluentValidation" Version="12.1.1" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+    <!--
+      Removed the old "Microsoft.AspNetCore.Mvc.Core" 2.3.10 package that
+      used to be here. API already uses Microsoft.NET.Sdk.Web, which pulls
+      in the full, correct ASP.NET Core shared framework (including MVC)
+      automatically - that stale pre-3.0 NuGet package was one of three
+      (alongside the ones in Domain.csproj / Application.csproj /
+      Infrastructure.csproj) whose conflicting assemblies were throwing
+      "ReflectionTypeLoadException: Unable to load one or more of the
+      requested types" out of app.MapControllers() at startup.
+    -->
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.0" />
+    <!--
+      Removed "Microsoft.AspNetCore.OpenApi" 9.0.0 - this is Microsoft's own
+      *separate* built-in OpenAPI generator (AddOpenApi()/MapOpenApi()),
+      never actually called anywhere in Program.cs (only Swashbuckle's
+      AddSwaggerGen/UseSwagger/UseSwaggerUI are used). For .NET 9 it depends
+      on Microsoft.OpenApi ~1.x, which conflicts with the Microsoft.OpenApi
+      2.4.1 that Swashbuckle.AspNetCore 10.x requires (10.x rewrote its
+      model around OpenApi 2.x's JsonNode-based schema, removing types like
+      IOpenApiAny that 1.x has). Having both pulled Microsoft.OpenApi 2.4.1
+      into the graph while Microsoft.AspNetCore.OpenApi.dll's compiled
+      metadata still expected the old 1.x IOpenApiAny type - that's exactly
+      what "ReflectionTypeLoadException: Unable to load one or more of the
+      requested types" / "Could not load type
+      'Microsoft.OpenApi.Any.IOpenApiAny'" was.
+    -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

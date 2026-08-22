@@ -43,16 +43,14 @@ namespace APP.Models.DTOs
         [Display(Name = "API URL")]
         public string ApiUrl { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "{0} is required.")]
         [StringLength(100)]
         [Display(Name = "Username")]
-        public string Username { get; set; } = string.Empty;
+        public string? Username { get; set; }
 
-        [Required(ErrorMessage = "{0} is required.")]
         [StringLength(100)]
         [Display(Name = "Password")]
         [DataType(DataType.Password)]
-        public string Password { get; set; } = string.Empty;
+        public string? Password { get; set; }
 
         [Display(Name = "Active")]
         public bool IsActive { get; set; }
@@ -66,6 +64,10 @@ namespace APP.Models.DTOs
 
         [Display(Name = "Serial Number")]
         public string? SerialNumber { get; set; }
+
+        [Display(Name = "Comm Key")]
+        [Range(0, int.MaxValue, ErrorMessage = "{0} must be zero or a positive number.")]
+        public int CommKey { get; set; }
 
         [Display(Name = "Last Sync")]
         public DateTime? LastSyncDate { get; set; }

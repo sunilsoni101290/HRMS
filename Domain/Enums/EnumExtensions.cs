@@ -61,6 +61,25 @@ namespace Domain.Enums
             BreakOut = 4
         }
 
+        /// <summary>
+        /// Lifecycle of a single BiometricDeviceTestRequest - a point-in-time
+        /// "please actually connect to the device right now" command, since
+        /// the BiometricAgent is outbound-poll-only (see Worker.cs) and the
+        /// API cannot reach the device or agent directly. Pending = created,
+        /// waiting for the assigned agent's next poll cycle to pick it up.
+        /// Success/Failed = the agent tried and reported back. TimedOut =
+        /// no agent picked it up within the expected window (agent offline
+        /// or not polling) - set by the API when the UI's status poll
+        /// notices the request is stale, not by the agent itself.
+        /// </summary>
+        public enum TestConnectionStatus
+        {
+            Pending = 1,
+            Success = 2,
+            Failed = 3,
+            TimedOut = 4
+        }
+
         public enum LeaveStatus
         {
             Pending = 1,

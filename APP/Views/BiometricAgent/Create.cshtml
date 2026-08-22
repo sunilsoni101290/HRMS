@@ -79,6 +79,16 @@
 
                     <div class="col-md-6">
                         <div class="form-group">
+                            <label asp-for="BranchId"></label>
+                            <select asp-for="BranchId" asp-items="ViewBag.BranchList" class="form-control select-search">
+                                <option value="">-- Not assigned --</option>
+                            </select>
+                            <p class="text-muted font-size-sm">Which branch this agent's machine physically sits at - informational only, shown alongside its assigned devices.</p>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-group">
                             <label class="display-block">Status</label>
                             <div class="checkbox checkbox-switchery">
                                 <label>
@@ -86,6 +96,18 @@
                                     Active Agent
                                 </label>
                             </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="row">
+
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label asp-for="Description"></label>
+                            <textarea asp-for="Description" class="form-control" rows="2" placeholder="Optional notes (e.g. machine location, contact person)"></textarea>
+                            <span asp-validation-for="Description" class="text-danger"></span>
                         </div>
                     </div>
 
@@ -146,6 +168,10 @@
 @section Scripts {
     <script>
         $(document).ready(function () {
+            if ($.fn.chosen) {
+                $(".select-search").chosen({ width: "100%", search_contains: true, allow_single_deselect: true });
+            }
+
             if (typeof Switchery !== "undefined") {
                 document.querySelectorAll(".switchery").forEach(function (el) {
                     if (!el.dataset.switcheryInit) {

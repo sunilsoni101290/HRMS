@@ -24,6 +24,14 @@ namespace Application.DTOs.Attendances
         /// </summary>
         public string? AgentKey { get; set; }
 
+        /// <summary>The branch this agent's machine physically sits at - informational only.</summary>
+        public string? BranchId { get; set; }
+
+        /// <summary>Convenience field for list/detail screens - not persisted.</summary>
+        public string? BranchName { get; set; }
+
+        public string? Description { get; set; }
+
         public string? MachineName { get; set; }
 
         public string? AgentVersion { get; set; }

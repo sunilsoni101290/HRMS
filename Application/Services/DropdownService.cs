@@ -215,6 +215,35 @@ namespace Application.Services
             }
         }
 
+        /// <summary>
+        /// All branches across every company for the tenant, "Company - Branch"
+        /// labelled same as GetBranchDropdownAsync. Needed for screens that
+        /// don't have a Company selection to cascade from - e.g. the
+        /// Biometric Agent master, which only records which branch its
+        /// machine sits at, not a company.
+        /// </summary>
+        public async Task<List<DropdownDto>> GetAllBranchesDropdownAsync(string? tenantId)
+        {
+            try
+            {
+                return await _context.Branches
+                    .Include(x => x.Company)
+                    .AsNoTracking()
+                    .Where(x => string.IsNullOrEmpty(tenantId) || x.TenantId == tenantId)
+                    .OrderBy(x => x.Company.Name).ThenBy(x => x.Name)
+                    .Select(x => new DropdownDto
+                    {
+                        Value = x.Id,
+                        Text = x.Company.Name + " - " + x.Name
+                    })
+                    .ToListAsync();
+            }
+            catch (Exception)
+            {
+                return new List<DropdownDto>();
+            }
+        }
+
         public async Task<List<DropdownDto>> GetParentDepartmentDropdownAsync(string tenantId,string? departmentId = null)
         {
             try

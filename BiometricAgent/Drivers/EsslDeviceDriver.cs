@@ -108,6 +108,49 @@ namespace BiometricAgent.Drivers
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Strong verification beyond "Connect_Net returned true": asks the
+        /// device for its serial number, a real protocol round-trip that
+        /// proves the device is actually responding, not just that a TCP
+        /// socket opened. Standard ZK-family signature:
+        /// bool GetSerialNumber(int MachineNumber, out string SerialNumber).
+        /// Late-bound COM handles the `out string` via the array element
+        /// being written back in place, same as SSR_GetGeneralLogData above.
+        /// </summary>
+        public Task<string?> TryGetDeviceInfoAsync(CancellationToken ct)
+        {
+            if (_device == null || _deviceType == null)
+                return Task.FromResult<string?>(null);
+
+            try
+            {
+                var args = new object[] { MachineNumber, "" };
+
+                var ok = (bool)_deviceType.InvokeMember(
+                    "GetSerialNumber",
+                    BindingFlags.InvokeMethod,
+                    null,
+                    _device,
+                    args)!;
+
+                if (!ok)
+                    return Task.FromResult<string?>(null);
+
+                var serial = Convert.ToString(args[1]);
+
+                return Task.FromResult<string?>(string.IsNullOrWhiteSpace(serial) ? null : $"Serial: {serial}");
+            }
+            catch (Exception ex)
+            {
+                // Best-effort only - some firmware/SDK builds don't expose
+                // this call. Never treat a probe failure as a connection
+                // failure; ConnectAsync already proved SDK-level
+                // communication with the device.
+                _logger.LogDebug(ex, "Device info probe (GetSerialNumber) unavailable or failed - continuing without it.");
+                return Task.FromResult<string?>(null);
+            }
+        }
+
         public Task<List<PunchRecord>> GetNewPunchesAsync(DateTime since, CancellationToken ct)
         {
             var results = new List<PunchRecord>();

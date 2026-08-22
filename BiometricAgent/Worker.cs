@@ -122,7 +122,14 @@ namespace BiometricAgent
                 }
             }
 
-            // 3. Refresh the assigned device list from the API. On failure,
+            // 3. Process any pending Test Connection requests FIRST, before
+            //    the regular device sync below - a user waiting on the
+            //    "Test Connection" button shouldn't sit behind a slow punch
+            //    sync cycle. Independent of device sync succeeding/failing;
+            //    one never blocks the other.
+            await ProcessPendingTestRequestsAsync(ct);
+
+            // 4. Refresh the assigned device list from the API. On failure,
             //    keep using the last known list so a transient API blip
             //    doesn't stop already-configured devices from being polled.
             var devices = await _apiClient.GetAssignedDevicesAsync(ct);
@@ -147,7 +154,7 @@ namespace BiometricAgent
                 return;
             }
 
-            // 4. Process every assigned device independently - one device's
+            // 5. Process every assigned device independently - one device's
             //    failure (unreachable, driver error, etc.) must never stop
             //    the others from being polled.
             foreach (var device in _knownDevices)
@@ -168,6 +175,150 @@ namespace BiometricAgent
                 }
             }
         }
+
+        /// <summary>
+        /// Executes every Pending Test Connection request routed to this
+        /// agent: Connect -> (best-effort) probe -> Disconnect, exactly the
+        /// same driver lifecycle as ProcessDeviceAsync's punch read, but
+        /// deliberately NOT sharing a connection with it - a Test Connection
+        /// is a standalone, non-destructive round trip that must never read/
+        /// delete attendance logs or touch device configuration. One
+        /// request's failure never stops the others from being attempted.
+        /// </summary>
+        private async Task ProcessPendingTestRequestsAsync(CancellationToken ct)
+        {
+            var requests = await _apiClient.GetPendingTestRequestsAsync(ct);
+
+            if (requests == null || requests.Count == 0)
+                return;
+
+            _logger.LogInformation("{Count} pending test connection request(s) to process.", requests.Count);
+
+            foreach (var request in requests)
+            {
+                ct.ThrowIfCancellationRequested();
+
+                try
+                {
+                    await ProcessTestRequestAsync(request, ct);
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    // Defense in depth - ProcessTestRequestAsync already
+                    // catches driver exceptions itself and reports a safe
+                    // failure result, so reaching here means something
+                    // unexpected (e.g. the result POST itself threw). Log
+                    // only; never let one bad request stop the others or
+                    // crash the cycle.
+                    _logger.LogError(ex, "Unhandled error processing test connection request {RequestId} for device {DeviceCode} - continuing with remaining requests.",
+                        request.RequestId, request.DeviceCode);
+                }
+            }
+        }
+
+        private async Task ProcessTestRequestAsync(AgentTestRequest request, CancellationToken ct)
+        {
+            _logger.LogInformation(
+                "Agent attempting ESSL connection. DeviceCode: {DeviceCode}, DeviceType: {DeviceType}, IP: {Ip}, Port: {Port}, RequestId: {RequestId}",
+                request.DeviceCode, request.DeviceType, request.IPAddress, request.Port, request.RequestId);
+
+            var driverOptions = new DeviceOptions
+            {
+                Id = request.DeviceId,
+                DriverType = request.DeviceType,
+                DeviceCode = request.DeviceCode,
+                DeviceKey = request.DeviceKey,
+                IPAddress = request.IPAddress,
+                Port = request.Port,
+                CommKey = request.CommKey
+            };
+
+            AgentTestResultSubmission result;
+
+            try
+            {
+                using var driver = DeviceDriverFactory.Create(driverOptions, _loggerFactory);
+
+                var connected = await driver.ConnectAsync(ct);
+
+                if (!connected)
+                {
+                    // Connect_Net returned false with no exception - the SDK
+                    // handshake itself was rejected/timed out. Worth calling
+                    // out separately from a raw socket failure (caught
+                    // below) since this app's known-good network case
+                    // (TCP reachable, SDK still fails) points at the device/
+                    // firmware/comm-password layer, not the wire.
+                    _logger.LogWarning(
+                        "Test connection failed. DeviceCode: {DeviceCode}, IP: {Ip}, Port: {Port}, Stage: SDK Connection",
+                        request.DeviceCode, request.IPAddress, request.Port);
+
+                    result = BuildResult(request, success: false, stage: "SdkConnectionFailed",
+                        message: "The ESSL device could not be initialized or did not respond.");
+                }
+                else
+                {
+                    _logger.LogInformation("ESSL connection successful. DeviceCode: {DeviceCode}", request.DeviceCode);
+
+                    string? deviceInfo = null;
+
+                    try
+                    {
+                        deviceInfo = await driver.TryGetDeviceInfoAsync(ct);
+                    }
+                    finally
+                    {
+                        await driver.DisconnectAsync();
+                    }
+
+                    _logger.LogInformation("Device communication verified. DeviceCode: {DeviceCode}. Test connection successful.", request.DeviceCode);
+
+                    result = BuildResult(request, success: true, stage: "Success",
+                        message: $"Connection successful. ESSL device {request.DeviceCode} is responding.", deviceInfo: deviceInfo);
+                }
+            }
+            catch (System.Net.Sockets.SocketException ex)
+            {
+                // A real wire-level failure (connection refused/timed out/
+                // host unreachable) - distinct from the device/SDK rejecting
+                // a technically-established connection.
+                _logger.LogError(ex,
+                    "Test connection failed. DeviceCode: {DeviceCode}, IP: {Ip}, Port: {Port}, Stage: TCP Connection, RequestId: {RequestId}",
+                    request.DeviceCode, request.IPAddress, request.Port, request.RequestId);
+
+                result = BuildResult(request, success: false, stage: "DeviceUnreachable",
+                    message: "The biometric agent could not reach the biometric device.");
+            }
+            catch (Exception ex)
+            {
+                // Never forward ex.Message/ex.ToString() verbatim - keep the
+                // stage-specific safe message, log the real exception here
+                // (agent-side log, never sent to the API/UI).
+                _logger.LogError(ex,
+                    "Test connection failed. DeviceCode: {DeviceCode}, IP: {Ip}, Port: {Port}, Stage: SDK Connection, RequestId: {RequestId}",
+                    request.DeviceCode, request.IPAddress, request.Port, request.RequestId);
+
+                result = BuildResult(request, success: false, stage: "SdkConnectionFailed",
+                    message: "The ESSL device could not be initialized or did not respond.");
+            }
+
+            await _apiClient.SubmitTestResultAsync(result, ct);
+        }
+
+        private AgentTestResultSubmission BuildResult(AgentTestRequest request, bool success, string stage, string message, string? deviceInfo = null) => new()
+        {
+            RequestId = request.RequestId,
+            AgentCode = _options.AgentCode,
+            AgentKey = _options.AgentKey,
+            Success = success,
+            Stage = stage,
+            Message = message,
+            DeviceInfo = deviceInfo
+        };
 
         private async Task ProcessDeviceAsync(AgentDeviceInfo device, CancellationToken ct)
         {
@@ -199,7 +350,10 @@ namespace BiometricAgent
                 DeviceCode = device.DeviceCode,
                 DeviceKey = device.DeviceKey,
                 IPAddress = device.IPAddress,
-                Port = device.Port
+                Port = device.Port,
+                // From the ERP-assigned device config - NEVER hard-coded
+                // here. See AgentDeviceInfo/BiometricDeviceService.GetByAgentAsync.
+                CommKey = device.CommKey
             };
 
             using var driver = DeviceDriverFactory.Create(driverOptions, _loggerFactory);

@@ -18,5 +18,8 @@ namespace Application.Interfaces.Attendances
         /// a device sitting on the client's private LAN directly.
         /// </summary>
         Task<PunchIngestResultDto> IngestPunchesAsync(PunchIngestRequestDto request);
+
+        /// <summary>Most recent BiometricSyncLog rows (all devices, or one device when deviceId is supplied) for the Device Health dashboard.</summary>
+        Task<List<BiometricSyncLogDto>> GetRecentSyncLogsAsync(string? deviceId, int take = 50);
     }
 }

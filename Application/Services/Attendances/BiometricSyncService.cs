@@ -32,56 +32,112 @@ namespace Application.Services.Attendances
 
         public async Task<bool>SyncDeviceLogsAsync(string deviceId)
         {
+            var syncLog = new BiometricSyncLog
+            {
+                Id = IDManager.GetNewId(new BiometricSyncLog()),
+                DeviceId = deviceId,
+                SyncType = "Pull",
+                StartTime = DateTime.UtcNow,
+                CreatedOn = DateTime.UtcNow,
+                CreatedBy = "BiometricSync"
+            };
+
             var device =
                 await _db.BiometricDevices
                 .FirstOrDefaultAsync(
                     x => x.Id == deviceId);
 
             if (device == null)
-                return false;
-
-            var logs =
-                await _http.GetFromJsonAsync
-                <List<BiometricAttendanceLogDto>>
-                ($"{device.ApiUrl}/logs");
-
-            if (logs == null)
-                return false;
-
-            foreach (var item in logs)
             {
-                bool exists =
-                    await _db
-                    .BiometricAttendanceLogs
-                    .AnyAsync(x =>
-                        x.EmployeeCode ==
-                        item.BiometricEmployeeCode &&
-                        x.PunchTime ==
-                        item.PunchTime);
-
-                if (!exists)
-                {
-                    _db.BiometricAttendanceLogs.Add(
-                        new BiometricAttendanceLog
-                        {
-                            Id = IDManager.GetNewId(new BiometricAttendanceLog()),
-                            TenantId = device.TenantId,
-                            DeviceId = item.DeviceId,
-                            EmployeeCode =
-                                item.BiometricEmployeeCode,
-                            PunchTime =
-                                item.PunchTime,
-                            PunchType = item.PunchType,
-                            IsProcessed = false,
-                            CreatedOn = DateTime.UtcNow,
-                            CreatedBy = "BiometricSync"
-                        });
-                }
+                await FinishSyncLogAsync(syncLog, tenantId: null, success: false, error: "Device not found.");
+                return false;
             }
 
-            await _db.SaveChangesAsync();
+            syncLog.TenantId = device.TenantId;
 
-            return true;
+            try
+            {
+                var logs =
+                    await _http.GetFromJsonAsync
+                    <List<BiometricAttendanceLogDto>>
+                    ($"{device.ApiUrl}/logs");
+
+                if (logs == null)
+                {
+                    await FinishSyncLogAsync(syncLog, device.TenantId, success: false, error: "Device returned no data.");
+                    return false;
+                }
+
+                syncLog.RecordsFetched = logs.Count;
+
+                foreach (var item in logs)
+                {
+                    bool exists =
+                        await _db
+                        .BiometricAttendanceLogs
+                        .AnyAsync(x =>
+                            x.EmployeeCode ==
+                            item.BiometricEmployeeCode &&
+                            x.PunchTime ==
+                            item.PunchTime);
+
+                    if (!exists)
+                    {
+                        _db.BiometricAttendanceLogs.Add(
+                            new BiometricAttendanceLog
+                            {
+                                Id = IDManager.GetNewId(new BiometricAttendanceLog()),
+                                TenantId = device.TenantId,
+                                DeviceId = item.DeviceId,
+                                EmployeeCode =
+                                    item.BiometricEmployeeCode,
+                                PunchTime =
+                                    item.PunchTime,
+                                PunchType = item.PunchType,
+                                IsProcessed = false,
+                                CreatedOn = DateTime.UtcNow,
+                                CreatedBy = "BiometricSync"
+                            });
+
+                        syncLog.RecordsInserted++;
+                    }
+                    else
+                    {
+                        syncLog.RecordsSkipped++;
+                    }
+                }
+
+                await _db.SaveChangesAsync();
+
+                await FinishSyncLogAsync(syncLog, device.TenantId, success: true, error: null);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                syncLog.RecordsFailed = syncLog.RecordsFetched - syncLog.RecordsInserted - syncLog.RecordsSkipped;
+                await FinishSyncLogAsync(syncLog, device.TenantId, success: false, error: ex.Message);
+                return false;
+            }
+        }
+
+        private async Task FinishSyncLogAsync(BiometricSyncLog syncLog, string? tenantId, bool success, string? error)
+        {
+            syncLog.TenantId = tenantId ?? syncLog.TenantId ?? string.Empty;
+            syncLog.EndTime = DateTime.UtcNow;
+            syncLog.Status = success ? "Success" : "Failed";
+            syncLog.ErrorMessage = string.IsNullOrEmpty(error) ? null : (error.Length > 500 ? error[..500] : error);
+
+            _db.BiometricSyncLogs.Add(syncLog);
+
+            try
+            {
+                await _db.SaveChangesAsync();
+            }
+            catch
+            {
+                // Never let sync-log bookkeeping itself take down a real sync/ingest call.
+            }
         }
 
         public async Task<bool>
@@ -134,10 +190,23 @@ namespace Application.Services.Attendances
                     x.DeviceCode == request.DeviceCode &&
                     (string.IsNullOrEmpty(tenantId) || x.TenantId == tenantId));
 
+            var ingestSyncLog = new BiometricSyncLog
+            {
+                Id = IDManager.GetNewId(new BiometricSyncLog()),
+                DeviceId = device?.Id,
+                TenantId = device?.TenantId ?? tenantId ?? string.Empty,
+                SyncType = "Ingest",
+                StartTime = DateTime.UtcNow,
+                RecordsFetched = result.ReceivedCount,
+                CreatedOn = DateTime.UtcNow,
+                CreatedBy = "BiometricSync"
+            };
+
             if (device == null || !device.IsActive)
             {
                 result.Success = false;
                 result.Message = "Unknown or inactive device.";
+                await FinishSyncLogAsync(ingestSyncLog, device?.TenantId ?? tenantId, success: false, error: result.Message);
                 return result;
             }
 
@@ -148,6 +217,7 @@ namespace Application.Services.Attendances
             {
                 result.Success = false;
                 result.Message = "Invalid device key.";
+                await FinishSyncLogAsync(ingestSyncLog, device.TenantId, success: false, error: result.Message);
                 return result;
             }
 
@@ -166,6 +236,7 @@ namespace Application.Services.Attendances
                 {
                     result.Success = false;
                     result.Message = "Unknown or inactive agent.";
+                    await FinishSyncLogAsync(ingestSyncLog, device.TenantId, success: false, error: result.Message);
                     return result;
                 }
 
@@ -173,8 +244,11 @@ namespace Application.Services.Attendances
                 {
                     result.Success = false;
                     result.Message = "This device is not assigned to the requesting agent.";
+                    await FinishSyncLogAsync(ingestSyncLog, device.TenantId, success: false, error: result.Message);
                     return result;
                 }
+
+                ingestSyncLog.AgentId = agent.Id;
             }
 
             foreach (var item in request.Punches ?? new List<PunchItemDto>())
@@ -210,6 +284,7 @@ namespace Application.Services.Attendances
                         PunchTime = item.PunchTime,
                         PunchType = item.PunchType,
                         DeviceTransactionId = item.DeviceTransactionId,
+                        VerifyMode = item.VerifyMode,
                         IsProcessed = false,
                         CreatedOn = DateTime.UtcNow,
                         CreatedBy = "BiometricAgent"
@@ -217,6 +292,9 @@ namespace Application.Services.Attendances
 
                 result.InsertedCount++;
             }
+
+            ingestSyncLog.RecordsInserted = result.InsertedCount;
+            ingestSyncLog.RecordsSkipped = result.DuplicateCount;
 
             device.LastSyncDate = DateTime.UtcNow;
             device.LastSeen = DateTime.UtcNow;
@@ -238,11 +316,19 @@ namespace Application.Services.Attendances
                 result.Message = "One or more punches were rejected as duplicates by the database.";
                 result.DuplicateCount += result.InsertedCount;
                 result.InsertedCount = 0;
+
+                ingestSyncLog.RecordsInserted = 0;
+                ingestSyncLog.RecordsSkipped = result.DuplicateCount;
+                ingestSyncLog.RecordsFailed = 1;
+                await FinishSyncLogAsync(ingestSyncLog, device.TenantId, success: false, error: result.Message);
+
                 return result;
             }
 
             result.Success = true;
             result.Message = "Punches ingested.";
+
+            await FinishSyncLogAsync(ingestSyncLog, device.TenantId, success: true, error: null);
 
             return result;
         }
@@ -265,6 +351,37 @@ namespace Application.Services.Attendances
                         PunchType = x.PunchType,
                         IsProcessed = x.IsProcessed
                     })
+                .ToListAsync();
+        }
+
+        public async Task<List<BiometricSyncLogDto>> GetRecentSyncLogsAsync(string? deviceId, int take = 50)
+        {
+            var query = _db.BiometricSyncLogs
+                .Include(x => x.Device)
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(deviceId))
+                query = query.Where(x => x.DeviceId == deviceId);
+
+            return await query
+                .OrderByDescending(x => x.StartTime)
+                .Take(take)
+                .Select(x => new BiometricSyncLogDto
+                {
+                    Id = x.Id,
+                    DeviceId = x.DeviceId,
+                    DeviceCode = x.Device != null ? x.Device.DeviceCode : null,
+                    DeviceName = x.Device != null ? x.Device.DeviceName : null,
+                    SyncType = x.SyncType,
+                    StartTime = x.StartTime,
+                    EndTime = x.EndTime,
+                    RecordsFetched = x.RecordsFetched,
+                    RecordsInserted = x.RecordsInserted,
+                    RecordsSkipped = x.RecordsSkipped,
+                    RecordsFailed = x.RecordsFailed,
+                    Status = x.Status,
+                    ErrorMessage = x.ErrorMessage
+                })
                 .ToListAsync();
         }
     }

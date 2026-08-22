@@ -27,5 +27,23 @@ namespace Application.Interfaces.Attendances
         Task<AgentRegisterResponseDto> RegisterAsync(AgentRegisterRequestDto request, string tenantId);
 
         Task<bool> HeartbeatAsync(AgentHeartbeatRequestDto request, string tenantId);
+
+        /// <summary>
+        /// Pending (Status = Pending) BiometricDeviceTestRequests routed to
+        /// this agent - polled every cycle alongside GetAssignedDevicesAsync
+        /// (see BiometricAgent.Worker). Does not flip them to any other
+        /// status; the agent reports the outcome separately via
+        /// SubmitTestResultAsync once it has actually tried the device.
+        /// </summary>
+        Task<List<AgentTestRequestDto>> GetPendingTestRequestsAsync(string agentId, string tenantId);
+
+        /// <summary>
+        /// Records the agent's outcome for one BiometricDeviceTestRequest.
+        /// Idempotent-ish: a request that is no longer Pending (already
+        /// completed, or timed out from the API side) is left alone and this
+        /// returns false, since two different results racing in would be
+        /// ambiguous and the first one to arrive should win.
+        /// </summary>
+        Task<bool> SubmitTestResultAsync(AgentTestResultSubmitDto dto, string tenantId);
     }
 }

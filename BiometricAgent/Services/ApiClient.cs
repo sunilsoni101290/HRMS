@@ -118,6 +118,64 @@ namespace BiometricAgent.Services
         }
 
         // ------------------------------------------------------------
+        // Test Connection (agent picks up + reports back)
+        // ------------------------------------------------------------
+
+        /// <summary>GET /api/BiometricAgent/pending-test-requests - polled every cycle alongside GetAssignedDevicesAsync.</summary>
+        public async Task<List<AgentTestRequest>?> GetPendingTestRequestsAsync(CancellationToken ct)
+        {
+            var response = await SendWithRetryAsync(
+                () => BuildRequest(HttpMethod.Get, "api/BiometricAgent/pending-test-requests"),
+                "get-pending-test-requests",
+                ct);
+
+            if (response == null)
+                return null;
+
+            if (!response.IsSuccessStatusCode)
+            {
+                await LogFailureAsync("get-pending-test-requests", response, ct);
+                return null;
+            }
+
+            try
+            {
+                return await response.Content.ReadFromJsonAsync<List<AgentTestRequest>>(cancellationToken: ct)
+                       ?? new List<AgentTestRequest>();
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(ex, "Could not parse the pending test request list returned by the ERP API.");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// POST /api/BiometricAgent/test-result - reports the outcome of one
+        /// Test Connection attempt. Only retried on transient failures like
+        /// every other call here; if it never gets through, the API-side
+        /// timeout in BiometricDeviceService.GetTestConnectionResultAsync
+        /// eventually reports TimedOut to the user instead of leaving them
+        /// waiting forever.
+        /// </summary>
+        public async Task<bool> SubmitTestResultAsync(AgentTestResultSubmission result, CancellationToken ct)
+        {
+            var response = await SendWithRetryAsync(
+                () => BuildRequest(HttpMethod.Post, "api/BiometricAgent/test-result", result),
+                $"test-result[{result.RequestId}]",
+                ct);
+
+            if (response == null)
+                return false;
+
+            if (response.IsSuccessStatusCode)
+                return true;
+
+            await LogFailureAsync($"test-result[{result.RequestId}]", response, ct);
+            return false;
+        }
+
+        // ------------------------------------------------------------
         // Punch ingest
         // ------------------------------------------------------------
 

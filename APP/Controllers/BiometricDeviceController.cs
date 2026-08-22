@@ -3,6 +3,7 @@ using APP.Helpers;
 using APP.Models.DTOs;
 using APP.Services.Interfaces;
 using Humanizer;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -13,18 +14,22 @@ namespace APP.Controllers
     {
         private readonly IApiService _apiService;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IWebHostEnvironment _env;
         private string _tenantId;
         private string _userId;
-        public BiometricDeviceController(IApiService apiService, IHttpContextAccessor httpContextAccessor)
+        public BiometricDeviceController(IApiService apiService, IHttpContextAccessor httpContextAccessor, IWebHostEnvironment env)
         {
             _apiService = apiService;
             _tenantId = SessionHelper.GetActiveTenantId;
             _userId = SessionHelper.GetActiveUserId;
             _httpContextAccessor = httpContextAccessor;
+            _env = env;
         }
 
         public async Task<IActionResult> Index()
         {
+            ViewBag.IsDevelopment = _env.IsDevelopment();
+
             var data = await _apiService
                 .GetAsync<List<BiometricDeviceDto>>($"BiometricDevice")
                 ?? new List<BiometricDeviceDto>();
@@ -127,6 +132,9 @@ namespace APP.Controllers
             if (data == null)
                 return NotFound();
 
+            data.TenantId = _tenantId;
+            data.CreatedBy = _userId;
+
             await LoadDropdowns(data.CompanyId, data.BranchId);
 
             return View("Create", data);
@@ -135,7 +143,7 @@ namespace APP.Controllers
         [HttpPost]
         public async Task<ActionResult> Edit(BiometricDeviceDto model)
         {
-            if (!ModelState.IsValid)
+            if (model==null && string.IsNullOrEmpty(model.Id))
             {
                 await LoadDropdowns(model.CompanyId, model.BranchId);
                 return View("Create", model);
@@ -208,6 +216,12 @@ namespace APP.Controllers
                 }
             }
 
+            if (!string.IsNullOrEmpty(data.AgentId))
+            {
+                var agent = await _apiService.GetAsync<BiometricAgentDto>($"BiometricAgent/{data.AgentId}");
+                ViewBag.AgentCode = agent?.AgentCode;
+            }
+
             return View(data);
         }
 
@@ -237,7 +251,16 @@ namespace APP.Controllers
         public async Task<IActionResult> Health()
         {
             var data = await _apiService
-                .GetAsync<List<BiometricDeviceHealthDto>>("BiometricDevice/health");
+                .GetAsync<List<BiometricDeviceHealthDto>>("BiometricDevice/health")
+                ?? new List<BiometricDeviceHealthDto>();
+
+            ViewBag.Summary = await _apiService
+                .GetAsync<BiometricDashboardSummaryDto>("BiometricDevice/dashboard-summary")
+                ?? new BiometricDashboardSummaryDto();
+
+            ViewBag.SyncLogs = await _apiService
+                .GetAsync<List<BiometricSyncLogDto>>("BiometricDevice/sync-logs?take=25")
+                ?? new List<BiometricSyncLogDto>();
 
             return View(data);
         }
@@ -275,24 +298,36 @@ namespace APP.Controllers
         }
 
         /// <summary>
-        /// Non-JS fallback / direct link. Prefer TestConnectionAjax from the UI -
-        /// it keeps the user on the page instead of round-tripping to Index.
+        /// Non-JS fallback / direct link. This can only ever kick the test
+        /// off and inform the user - it cannot wait for the result inline,
+        /// because the assigned BiometricAgent is outbound-poll-only (see
+        /// BiometricAgent.Worker) and may take up to its configured
+        /// PollIntervalSeconds (default 60s) to pick the request up. Prefer
+        /// TestConnectionAjax from the UI, which polls for the real outcome.
         /// </summary>
         [HttpGet]
         public async Task<IActionResult> TestConnection(string id)
         {
             try
             {
-                var response = await _apiService.PostAsync<object, ApiResponse<bool>>(
-                    $"BiometricDevice/{id}/test-connection", new { });
+                var response = await _apiService.PostAsync<object, ApiResponse<DeviceTestConnectionResultDto>>(
+                    $"BiometricDevice/{id}/test-connection?tenantId={Uri.EscapeDataString(_tenantId)}&requestedBy={Uri.EscapeDataString(_userId)}",
+                    new { });
 
                 if (response.Success)
-                    AlertHelper.Success(TempData, response.Message);
+                    AlertHelper.Success(TempData, "Test connection requested - the biometric agent will attempt the device connection shortly. Check the device's Status badge in a minute, or use the Details page's Test Connection button for a live result.");
                 else
                     AlertHelper.Error(TempData, response.Message);
             }
+            catch (ApiException ex)
+            {
+                AlertHelper.Error(TempData, $"Test connection failed: {GetErrorMessage(ex.ResponseContent)}");
+            }
             catch (Exception ex)
             {
+                // PostAsync<TRequest,TResponse> always throws ApiException on a
+                // non-success HTTP response (see ApiService.PostAsync) - this
+                // branch only catches genuine transport/deserialization failures.
                 AlertHelper.Error(TempData, $"Test connection failed: {ex.Message}");
             }
 
@@ -300,27 +335,114 @@ namespace APP.Controllers
         }
 
         /// <summary>
-        /// AJAX endpoint used by the Index/Details "Test Connection" buttons so the
-        /// result can be shown inline (spinner + badge) without a full page reload.
-        /// Calls POST /api/BiometricDevice/{id}/test-connection.
+        /// AJAX endpoint used by the Index/Details "Test Connection" buttons.
+        /// Kicks off a REAL device-level test (HRMS -> API -> assigned
+        /// BiometricAgent -> ESSL SDK -> device) and returns immediately
+        /// with the Pending request id; the browser then polls
+        /// TestConnectionStatusAjax until the agent reports back. This
+        /// can't be synchronous end-to-end - the agent has no reverse
+        /// channel, so there is no way to get a same-request answer from it.
         /// </summary>
         [HttpPost]
         public async Task<JsonResult> TestConnectionAjax(string id)
         {
             try
             {
-                var response = await _apiService.PostAsync<object, ApiResponse<bool>>(
-                    $"BiometricDevice/{id}/test-connection", new { });
+                var response = await _apiService.PostAsync<object, ApiResponse<DeviceTestConnectionResultDto>>(
+                    $"BiometricDevice/{id}/test-connection?tenantId={Uri.EscapeDataString(_tenantId)}&requestedBy={Uri.EscapeDataString(_userId)}",
+                    new { });
+
+                if (response == null)
+                    return Json(new { success = false, complete = true, message = "Unable to reach the ERP API." });
+
+                if (!response.Success)
+                    // Pre-flight business failure (device inactive, no agent
+                    // assigned, agent offline, device not found, ...) - the
+                    // API already picked the specific, safe message.
+                    return Json(new { success = false, complete = true, message = response.Message });
 
                 return Json(new
                 {
-                    success = response.Success,
-                    message = response.Message
+                    success = true,
+                    complete = false,
+                    requestId = response.Data?.RequestId,
+                    message = "Test requested - waiting for the biometric agent to respond..."
                 });
+            }
+            catch (ApiException ex)
+            {
+                return Json(new { success = false, complete = true, message = $"Test connection failed: {GetErrorMessage(ex.ResponseContent)}" });
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = ex.Message });
+                return Json(new { success = false, complete = true, message = $"Test connection failed: {ex.Message}" });
+            }
+        }
+
+        /// <summary>Polled by the browser after TestConnectionAjax until the response's `complete` flag is true. Calls GET /api/BiometricDevice/{id}/test-connection/{requestId}.</summary>
+        [HttpGet]
+        public async Task<JsonResult> TestConnectionStatusAjax(string id, string requestId)
+        {
+            try
+            {
+                var response = await _apiService.GetAsync<ApiResponse<DeviceTestConnectionResultDto>>(
+                    $"BiometricDevice/{id}/test-connection/{requestId}?tenantId={Uri.EscapeDataString(_tenantId)}");
+
+                var data = response?.Data;
+
+                if (response == null || !response.Success || data == null)
+                    return Json(new { success = false, complete = true, message = response?.Message ?? "Unable to check the test connection status." });
+
+                return Json(new
+                {
+                    success = data.StatusName == "Success",
+                    complete = data.IsComplete,
+                    stage = data.Stage,
+                    message = data.Message,
+                    deviceInfo = data.DeviceInfo,
+                    deviceCode = data.DeviceCode
+                });
+            }
+            catch (ApiException ex)
+            {
+                return Json(new { success = false, complete = true, message = $"Unable to check the test connection status: {GetErrorMessage(ex.ResponseContent)}" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, complete = true, message = $"Unable to check the test connection status: {ex.Message}" });
+            }
+        }
+
+        // Same shape as ApiService.HandleResponse's error body (ApiResponse<T>
+        // serialized as JSON, occasionally prefixed with plain text like
+        // "Bad Request (400): {...}") - mirrors the GetErrorMessage helper
+        // used across the rest of the APP controllers (e.g. EmployeeBankController).
+        private static string GetErrorMessage(string? raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+                return "The ERP API returned an error.";
+
+            try
+            {
+                var jsonStart = raw.IndexOf('{');
+                var json = jsonStart >= 0 ? raw.Substring(jsonStart) : raw;
+
+                var obj = Newtonsoft.Json.Linq.JObject.Parse(json);
+
+                if (obj["Message"] != null)
+                    return obj["Message"]!.ToString();
+
+                if (obj["message"] != null)
+                    return obj["message"]!.ToString();
+
+                if (obj["Errors"] is Newtonsoft.Json.Linq.JArray errors && errors.Count > 0)
+                    return errors[0]?.ToString() ?? "The ERP API returned an error.";
+
+                return raw;
+            }
+            catch
+            {
+                return raw;
             }
         }
 
