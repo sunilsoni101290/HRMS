@@ -75,6 +75,8 @@ namespace Infrastructure
         public DbSet<BiometricAttendanceLog> BiometricAttendanceLogs { get; set; }
         public DbSet<EmployeeBiometricMapping> EmployeeBiometricMappings { get; set; }
         public DbSet<BiometricAgent> BiometricAgents { get; set; }
+        public DbSet<BiometricDeviceTestRequest> BiometricDeviceTestRequests { get; set; }
+        public DbSet<BiometricSyncLog> BiometricSyncLogs { get; set; }
         public DbSet<AttendanceRegularization> AttendanceRegularizations { get; set; }
         public DbSet<AttendanceRegularizationApprovalHistory> AttendanceRegularizationApprovalHistories { get; set; }
 
@@ -1057,6 +1059,14 @@ namespace Infrastructure
                 entity.HasIndex(e => new { e.TenantId, e.AgentCode })
                     .IsUnique()
                     .HasDatabaseName("IX_BiometricAgents_Tenant_AgentCode");
+
+                // Purely informational (which branch this agent's machine
+                // sits at) - optional, no cascade behavior beyond the
+                // global DeleteBehavior.Restrict fix below.
+                entity.HasOne(e => e.Branch)
+                    .WithMany()
+                    .HasForeignKey(e => e.BranchId)
+                    .IsRequired(false);
             });
 
             modelBuilder.Entity<BiometricDevice>(entity =>
@@ -1073,6 +1083,26 @@ namespace Infrastructure
                     .WithMany(a => a.Devices)
                     .HasForeignKey(d => d.AgentId)
                     .IsRequired(false);
+            });
+
+            modelBuilder.Entity<BiometricDeviceTestRequest>(entity =>
+            {
+                // The agent polls "give me MY pending test requests" every
+                // cycle - this is the hot query, so index exactly what it
+                // filters on (AgentId + Status = Pending).
+                entity.HasIndex(e => new { e.AgentId, e.Status })
+                    .HasDatabaseName("IX_BiometricDeviceTestRequests_Agent_Status");
+
+                // The UI polls "is MY request done yet" by Id (PK, already
+                // indexed) but also lists recent attempts per device for
+                // troubleshooting.
+                entity.HasIndex(e => new { e.DeviceId, e.RequestedOn })
+                    .HasDatabaseName("IX_BiometricDeviceTestRequests_Device_RequestedOn");
+
+                entity.HasOne(e => e.Device)
+                    .WithMany()
+                    .HasForeignKey(e => e.DeviceId)
+                    .IsRequired(true);
             });
 
             modelBuilder.Entity<BiometricAttendanceLog>(entity =>
@@ -1094,6 +1124,17 @@ namespace Infrastructure
                     .IsUnique()
                     .HasFilter("[DeviceTransactionId] IS NOT NULL")
                     .HasDatabaseName("IX_BiometricAttendanceLogs_Device_TransactionId");
+            });
+
+            modelBuilder.Entity<BiometricSyncLog>(entity =>
+            {
+                entity.HasIndex(e => new { e.DeviceId, e.StartTime })
+                    .HasDatabaseName("IX_BiometricSyncLogs_Device_StartTime");
+
+                entity.HasOne(e => e.Device)
+                    .WithMany()
+                    .HasForeignKey(e => e.DeviceId)
+                    .IsRequired(false);
             });
 
             // =====================================================

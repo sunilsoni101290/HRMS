@@ -86,6 +86,17 @@ namespace Domain.Entities
         public string CommunicationType { get; set; } = "TCP/IP";
 
         /// <summary>
+        /// The device's comm password/key (ZK-family "CommKey", set via
+        /// SetCommPassword before Connect_Net if non-zero) - a device-level
+        /// SDK setting, separate from DeviceKey (the agent's own auth secret
+        /// to this API) and from Username/Password (the device's admin
+        /// login). 0 (the default) means no comm password is set on the
+        /// device. Only meaningful for drivers that use it - see
+        /// BiometricAgent.Drivers.EsslDeviceDriver.ConnectAsync.
+        /// </summary>
+        public int CommKey { get; set; } = 0;
+
+        /// <summary>
         /// The BiometricAgent (Windows Service) this device is assigned to.
         /// Null means the device is configured but not yet picked up by any
         /// agent. A device is only ever polled by the agent it is assigned to.
@@ -117,6 +128,15 @@ namespace Domain.Entities
         /// </summary>
         [MaxLength(100)]
         public string? DeviceTransactionId { get; set; }
+
+        /// <summary>
+        /// How the punch was captured on the device - "Fingerprint", "Face",
+        /// "Card", "Password", "Other". Informational/audit only; the
+        /// attendance engine does not currently branch on this. Null for
+        /// legacy rows and for drivers/devices that don't report it.
+        /// </summary>
+        [MaxLength(30)]
+        public string? VerifyMode { get; set; }
 
         public bool IsDuplicate { get; set; }
 
@@ -159,6 +179,19 @@ namespace Domain.Entities
         [MaxLength(100)]
         public string? AgentKey { get; set; }
 
+        /// <summary>
+        /// The branch this agent's machine physically sits at (its LAN is
+        /// what the assigned BiometricDevices' IP addresses belong to).
+        /// Purely organizational/informational for the ERP UI (e.g. "Mumbai
+        /// Branch") - not used for any access-control or routing decision.
+        /// </summary>
+        public string? BranchId { get; set; }
+
+        public virtual Branch Branch { get; set; }
+
+        [MaxLength(500)]
+        public string? Description { get; set; }
+
         public string? MachineName { get; set; }
 
         public string? AgentVersion { get; set; }
@@ -175,6 +208,128 @@ namespace Domain.Entities
 
         public override string GetSequencePrefix()
             => "BAG";
+    }
+
+    /// <summary>
+    /// A single "Test Connection" command/result round-trip for one device.
+    /// Exists because BiometricAgent only ever calls OUT to this API (see
+    /// Worker.cs's poll loop) - there is no reverse channel for the API to
+    /// reach into the agent's process synchronously. So a Test Connection
+    /// request is: (1) HRMS creates a Pending row here, (2) the assigned
+    /// agent picks it up on its next poll of GET
+    /// /api/BiometricAgent/pending-test-requests, actually calls
+    /// IDeviceDriver.ConnectAsync/TryGetDeviceInfoAsync/DisconnectAsync
+    /// against the real device, and (3) posts the outcome back to POST
+    /// /api/BiometricAgent/test-result, which fills in Status/Stage/Message/
+    /// DeviceInfo/CompletedOn here. The UI polls GET
+    /// /api/BiometricDevice/{deviceId}/test-connection/{requestId} until
+    /// Status is no longer Pending (or the API itself marks it TimedOut
+    /// after ~90s with no result).
+    ///
+    /// Deliberately a separate row per attempt (not a handful of columns
+    /// bolted onto BiometricDevice) - a Test Connection result is a
+    /// point-in-time fact, not persistent device state, and keeping history
+    /// here is useful for troubleshooting ("last 5 test attempts failed at
+    /// the SDK Connect stage") without conflating it with
+    /// BiometricDevice.IsActive/IsOnline.
+    /// </summary>
+    public class BiometricDeviceTestRequest : BaseEntity
+    {
+        [Required]
+        public string TenantId { get; set; }
+
+        public virtual Tenant Tenant { get; set; }
+
+        [Required]
+        public string DeviceId { get; set; }
+
+        public virtual BiometricDevice Device { get; set; }
+
+        /// <summary>The agent this request was routed to at creation time - a snapshot, so reassigning the device later doesn't orphan history.</summary>
+        public string? AgentId { get; set; }
+
+        public TestConnectionStatus Status { get; set; } = TestConnectionStatus.Pending;
+
+        /// <summary>
+        /// Where the attempt got to / failed at: "AgentUnavailable",
+        /// "Connecting", "DeviceUnreachable", "SdkConnectionFailed",
+        /// "Success". Drives which user-facing message the UI shows -
+        /// see BiometricDeviceService.RequestTestConnectionAsync and
+        /// BiometricAgentService.SubmitTestResultAsync.
+        /// </summary>
+        [MaxLength(50)]
+        public string? Stage { get; set; }
+
+        /// <summary>
+        /// Safe, pre-composed message (never a raw exception/stack trace -
+        /// both the API and the agent are responsible for sanitizing before
+        /// this is written). Shown to the end user as-is.
+        /// </summary>
+        [MaxLength(500)]
+        public string? Message { get; set; }
+
+        /// <summary>Optional device serial/firmware string from a successful lightweight SDK probe after connect - see IDeviceDriver.TryGetDeviceInfoAsync. Null if unavailable/not supported; that does NOT mean the test failed.</summary>
+        [MaxLength(200)]
+        public string? DeviceInfo { get; set; }
+
+        [Required]
+        public string RequestedBy { get; set; }
+
+        public DateTime RequestedOn { get; set; } = DateTime.UtcNow;
+
+        public DateTime? CompletedOn { get; set; }
+
+        public override string GetSequencePrefix()
+            => "BTR";
+    }
+
+    /// <summary>
+    /// One row per synchronization run against a device - "SyncType" is
+    /// "Ingest" (BiometricAgent/Simulator push via POST
+    /// /api/BiometricSync/ingest), "Pull" (SyncDeviceLogsAsync/SyncAllDevicesAsync,
+    /// the older HTTP-pull path), or "Process" (AttendanceProcessorService's
+    /// batch run, which isn't per-device but is still worth a trail). Powers
+    /// the device dashboard's "Records fetched/inserted/skipped/failed" and
+    /// "Last successful sync" figures without having to infer them from
+    /// BiometricAttendanceLog/BiometricDevice.LastSyncDate after the fact.
+    /// </summary>
+    public class BiometricSyncLog : BaseEntity
+    {
+        [Required]
+        public string TenantId { get; set; }
+
+        public virtual Tenant Tenant { get; set; }
+
+        public string? DeviceId { get; set; }
+
+        public virtual BiometricDevice? Device { get; set; }
+
+        public string? AgentId { get; set; }
+
+        [Required]
+        [MaxLength(30)]
+        public string SyncType { get; set; }
+
+        public DateTime StartTime { get; set; } = DateTime.UtcNow;
+
+        public DateTime? EndTime { get; set; }
+
+        public int RecordsFetched { get; set; }
+
+        public int RecordsInserted { get; set; }
+
+        public int RecordsSkipped { get; set; }
+
+        public int RecordsFailed { get; set; }
+
+        [MaxLength(20)]
+        public string Status { get; set; } = "Success";
+
+        [MaxLength(500)]
+        public string? ErrorMessage { get; set; }
+
+        public override string GetSequencePrefix()
+            => "BSL";
     }
 
     public class EmployeeBiometricMapping : BaseEntity

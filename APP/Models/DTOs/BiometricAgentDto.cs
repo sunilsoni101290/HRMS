@@ -23,6 +23,16 @@ namespace APP.Models.DTOs
         [Display(Name = "Agent Key")]
         public string? AgentKey { get; set; }
 
+        [Display(Name = "Branch")]
+        public string? BranchId { get; set; }
+
+        [Display(Name = "Branch")]
+        public string? BranchName { get; set; }
+
+        [Display(Name = "Description")]
+        [StringLength(500, ErrorMessage = "{0} cannot exceed {1} characters.")]
+        public string? Description { get; set; }
+
         [Display(Name = "Machine Name")]
         public string? MachineName { get; set; }
 

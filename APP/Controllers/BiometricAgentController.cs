@@ -3,6 +3,7 @@ using APP.Helpers;
 using APP.Models.DTOs;
 using APP.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace APP.Controllers
 {
@@ -36,8 +37,9 @@ namespace APP.Controllers
         }
 
         [HttpGet]
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
+            await LoadBranchDropdown();
             return View(new BiometricAgentDto());
         }
 
@@ -68,6 +70,7 @@ namespace APP.Controllers
                 ModelState.AddModelError("", ex.Message);
             }
 
+            await LoadBranchDropdown(model.BranchId);
             return View(model);
         }
 
@@ -79,6 +82,7 @@ namespace APP.Controllers
             if (data == null)
                 return NotFound();
 
+            await LoadBranchDropdown(data.BranchId);
             return View("Create", data);
         }
 
@@ -86,7 +90,10 @@ namespace APP.Controllers
         public async Task<IActionResult> Edit(BiometricAgentDto model)
         {
             if (!ModelState.IsValid)
+            {
+                await LoadBranchDropdown(model.BranchId);
                 return View("Create", model);
+            }
 
             try
             {
@@ -110,7 +117,17 @@ namespace APP.Controllers
                 ModelState.AddModelError("", ex.Message);
             }
 
+            await LoadBranchDropdown(model.BranchId);
             return View("Create", model);
+        }
+
+        private async Task LoadBranchDropdown(string? branchId = null)
+        {
+            var branches = await _apiService
+                .GetAsync<List<DropdownDto>>($"dropdown/branch-all?tenantId={Uri.EscapeDataString(_tenantId)}")
+                ?? new List<DropdownDto>();
+
+            ViewBag.BranchList = new SelectList(branches, "Value", "Text", branchId);
         }
 
         [HttpGet]

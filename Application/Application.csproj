@@ -32,9 +32,20 @@
     <Folder Include="Validators\" />
   </ItemGroup>
 
+  <!--
+    Same reasoning as Infrastructure.csproj: ErrorLogService.cs needs
+    ASP.NET Core routing types, but the old "Microsoft.AspNetCore.Routing"
+    2.3.11 NuGet package is a pre-3.0 package whose assemblies conflict with
+    the real ones loaded from the .NET 9 shared framework at runtime -
+    that's what was causing app.MapControllers() to throw
+    ReflectionTypeLoadException on startup. Use FrameworkReference instead.
+  -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="FluentValidation" Version="12.1.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Routing" Version="2.3.11" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 

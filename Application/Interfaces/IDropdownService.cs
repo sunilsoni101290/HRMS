@@ -12,6 +12,8 @@ namespace Application.Interfaces
         Task<List<DropdownDto>> GetCityDropdownAsync(string stateId);
         Task<List<DropdownDto>> GetCompanyDropdownAsync();
         Task<List<DropdownDto>> GetBranchDropdownAsync(string? companyId);
+        /// <summary>All branches across every company for the tenant - used by screens with no Company selection to cascade from (e.g. the Biometric Agent master).</summary>
+        Task<List<DropdownDto>> GetAllBranchesDropdownAsync(string? tenantId);
         Task<List<DropdownDto>> GetDepartmentDropdownAsync();
         Task<List<DropdownDto>> GetDesignationDropdownAsync();
         Task<List<DropdownDto>> GetDesignationByDeptIdDropdownAsync(string?deptId);

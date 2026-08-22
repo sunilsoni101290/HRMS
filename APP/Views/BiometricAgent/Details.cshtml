@@ -39,6 +39,8 @@
                 <tbody>
                     <tr><th width="220">Agent Name</th><td>@Model.AgentName</td></tr>
                     <tr><th>Agent Code</th><td>@Model.AgentCode</td></tr>
+                    <tr><th>Branch</th><td>@(Model.BranchName ?? "—")</td></tr>
+                    <tr><th>Description</th><td>@(string.IsNullOrEmpty(Model.Description) ? "—" : Model.Description)</td></tr>
                     <tr><th>Machine Name</th><td>@(Model.MachineName ?? "—")</td></tr>
                     <tr><th>Agent Version</th><td>@(Model.AgentVersion ?? "—")</td></tr>
                     <tr>
@@ -87,7 +89,7 @@
                     @foreach (var d in devices)
                     {
                         <tr>
-                            <td>@d.DeviceName <small class="text-muted">(@d.DeviceCode)</small></td>
+                            <td><a asp-controller="BiometricDevice" asp-action="Details" asp-route-id="@d.Id">@d.DeviceName</a> <small class="text-muted">(@d.DeviceCode)</small></td>
                             <td>@d.IPAddress:@d.Port</td>
                             <td>
                                 @if (d.IsOnline)

@@ -31,6 +31,12 @@ namespace BiometricAgent.Drivers
             return Task.CompletedTask;
         }
 
+        public Task<string?> TryGetDeviceInfoAsync(CancellationToken ct)
+        {
+            _logger.LogInformation("[Mock] Pretending to read device serial number.");
+            return Task.FromResult<string?>("MOCK-SERIAL-0001");
+        }
+
         public Task<List<PunchRecord>> GetNewPunchesAsync(DateTime since, CancellationToken ct)
         {
             var punch = new PunchRecord

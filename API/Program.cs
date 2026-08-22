@@ -175,6 +175,7 @@ builder.Services.AddScoped<IBiometricSyncService,BiometricSyncService>();
 builder.Services.AddScoped<IBiometricAgentService, BiometricAgentService>();
 builder.Services.AddScoped<IAttendanceProcessorService,AttendanceProcessorService>();
 builder.Services.AddScoped<IEmployeeBiometricMappingService, EmployeeBiometricMappingService>();
+builder.Services.AddScoped<IBiometricSimulatorService, BiometricSimulatorService>();
 builder.Services.AddScoped<ILeaveTypeService, LeaveTypeService>();
 builder.Services.AddScoped<ILeaveBalanceService, LeaveBalanceService>();
 builder.Services.AddScoped<ILeaveApplicationService, LeaveApplicationService>();

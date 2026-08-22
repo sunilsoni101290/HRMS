@@ -10,9 +10,23 @@
     <Compile Remove="Entities\BankDetail.cs" />
   </ItemGroup>
 
+  <!--
+    Domain is a plain class library and every other project depends on it,
+    so a stale pre-3.0 ASP.NET Core NuGet package here poisons the whole
+    dependency graph. "Microsoft.AspNetCore.Mvc.Core" 2.3.10 (used by
+    Enums/EnumExtensions.cs) predates the ASP.NET Core 3.0 shared-framework
+    model - its assemblies collide with the real ones the .NET 9 runtime
+    loads, which is what was throwing "ReflectionTypeLoadException: Unable
+    to load one or more of the requested types" out of app.MapControllers()
+    at startup. Use FrameworkReference instead, same fix as
+    Application.csproj / Infrastructure.csproj.
+  -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.1.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.3.10" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 

@@ -12,8 +12,23 @@
     <None Remove="Identity\**" />
   </ItemGroup>
 
+  <!--
+    Infrastructure is a plain class library (Microsoft.NET.Sdk), so it
+    doesn't get ASP.NET Core's shared-framework assemblies automatically.
+    DbSeeder.cs needs HttpContext-adjacent types (IHttpContextAccessor etc.)
+    - use a FrameworkReference to the shared framework, NOT the old
+    "Microsoft.AspNetCore.Http.Abstractions" 2.3.9 NuGet package. That
+    package predates ASP.NET Core 3.0's shared-framework model and its
+    assemblies collide with the real (much newer) ones the .NET 9 runtime
+    loads, which is what was throwing
+    "ReflectionTypeLoadException: Unable to load one or more of the
+    requested types" out of app.MapControllers() at startup.
+  -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.9" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
       <PrivateAssets>all</PrivateAssets>

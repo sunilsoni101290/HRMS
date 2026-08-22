@@ -40,6 +40,9 @@ namespace Application.DTOs.Attendances
 
         /// <summary>The device's own unique transaction/log id for this punch, if the driver exposes one. See BiometricAttendanceLog.DeviceTransactionId.</summary>
         public string? DeviceTransactionId { get; set; }
+
+        /// <summary>How the punch was captured - "Fingerprint", "Face", "Card", "Password", "Other". Optional/informational.</summary>
+        public string? VerifyMode { get; set; }
     }
 
     public class PunchIngestResultDto

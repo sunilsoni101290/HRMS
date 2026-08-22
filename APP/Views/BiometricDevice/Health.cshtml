@@ -8,6 +8,9 @@
     var offlineCount = devices.Count(x => x.IsActive && !x.IsOnline);
     var disabledCount = devices.Count(x => !x.IsActive);
     var pendingTotal = devices.Sum(x => x.PendingPunchCount);
+
+    var summary = ViewBag.Summary as BiometricDashboardSummaryDto ?? new BiometricDashboardSummaryDto();
+    var syncLogs = ViewBag.SyncLogs as List<BiometricSyncLogDto> ?? new List<BiometricSyncLogDto>();
 }
 
 <div class="panel panel-flat biometric-health-panel">
@@ -84,6 +87,42 @@
 
         </div>
 
+        <div class="row">
+
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card stat-info">
+                    <div class="stat-icon"><i class="icon-stack2"></i></div>
+                    <div class="stat-body">
+                        <h3 class="no-margin">@summary.TodaysPunchCount</h3>
+                        <span>Today's Punches</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card stat-danger">
+                    <div class="stat-icon"><i class="icon-cross2"></i></div>
+                    <div class="stat-body">
+                        <h3 class="no-margin">@summary.FailedSyncCount24h</h3>
+                        <span>Failed Syncs (24h)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-sm-12">
+                <div class="stat-card stat-success">
+                    <div class="stat-icon"><i class="icon-history"></i></div>
+                    <div class="stat-body">
+                        <h3 class="no-margin">
+                            @(summary.LastSuccessfulSync.HasValue ? summary.LastSuccessfulSync.Value.ToLocalTime().ToString("g") : "Never")
+                        </h3>
+                        <span>Last Successful Sync (any device)</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
         <div class="row filter-row">
 
             <div class="col-md-6">
@@ -121,6 +160,7 @@
                         <th>Last Sync</th>
                         <th width="120" class="text-right">Total Punches</th>
                         <th width="110" class="text-right">Pending</th>
+                        <th width="170" class="text-center">Actions</th>
                     </tr>
                 </thead>
 
@@ -169,13 +209,86 @@
                                     <span class="text-muted">0</span>
                                 }
                             </td>
+                            <td class="text-center">
+                                <a asp-action="Details" asp-route-id="@item.DeviceId" class="btn btn-default btn-xs" data-popup="tooltip" title="Test Connection / View Logs">
+                                    <i class="icon-connection"></i>
+                                </a>
+                                <a asp-action="SyncNow" asp-route-id="@item.DeviceId" class="btn btn-default btn-xs" data-popup="tooltip" title="Sync Now" onclick="return confirm('Sync this device now?');">
+                                    <i class="icon-sync"></i>
+                                </a>
+                                <a asp-action="Edit" asp-route-id="@item.DeviceId" class="btn btn-default btn-xs" data-popup="tooltip" title="@(item.IsActive ? "Disable" : "Enable") this device">
+                                    <i class="@(item.IsActive ? "icon-blocked" : "icon-checkmark3")"></i>
+                                </a>
+                            </td>
                         </tr>
                     }
 
                     @if (!devices.Any())
                     {
                         <tr>
-                            <td colspan="7" class="text-center text-muted">No biometric devices configured yet.</td>
+                            <td colspan="8" class="text-center text-muted">No biometric devices configured yet.</td>
+                        </tr>
+                    }
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <h6 class="text-semibold" style="margin-top: 24px;">
+            <i class="icon-history position-left"></i>
+            Recent Sync Activity
+        </h6>
+
+        <div class="table-responsive">
+
+            <table class="table table-hover table-striped table-condensed">
+
+                <thead>
+                    <tr>
+                        <th width="90" class="text-center">Status</th>
+                        <th>Device</th>
+                        <th width="90">Type</th>
+                        <th>Started</th>
+                        <th width="90" class="text-right">Fetched</th>
+                        <th width="90" class="text-right">Inserted</th>
+                        <th width="90" class="text-right">Skipped</th>
+                        <th width="90" class="text-right">Failed</th>
+                        <th>Error</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    @foreach (var log in syncLogs)
+                    {
+                        <tr>
+                            <td class="text-center">
+                                @if (log.Status == "Success")
+                                {
+                                    <span class="label label-success">OK</span>
+                                }
+                                else
+                                {
+                                    <span class="label label-danger">Failed</span>
+                                }
+                            </td>
+                            <td>@(log.DeviceName ?? log.DeviceCode ?? "—")</td>
+                            <td>@log.SyncType</td>
+                            <td>@log.StartTime.ToLocalTime().ToString("g")</td>
+                            <td class="text-right">@log.RecordsFetched</td>
+                            <td class="text-right">@log.RecordsInserted</td>
+                            <td class="text-right">@log.RecordsSkipped</td>
+                            <td class="text-right">@log.RecordsFailed</td>
+                            <td class="text-muted font-size-sm">@log.ErrorMessage</td>
+                        </tr>
+                    }
+
+                    @if (!syncLogs.Any())
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center text-muted">No synchronization activity yet.</td>
                         </tr>
                     }
 

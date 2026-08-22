@@ -34,6 +34,18 @@
                 Device Health
             </a>
 
+            @if (ViewBag.IsDevelopment == true)
+            {
+                <a asp-controller="BiometricSimulator"
+                   asp-action="Index"
+                   class="btn btn-default btn-icon-text"
+                   data-popup="tooltip"
+                   title="Development only - fire test punches without a physical device">
+                    <i class="icon-fingerprint position-left"></i>
+                    Biometric Simulator
+                </a>
+            }
+
             <a asp-action="SyncAll"
                class="btn bg-warning btn-icon-text"
                onclick="return confirm('Sync all active devices now?');">
@@ -214,7 +226,7 @@
                             }
                         </td>
 
-                        <td>
+                        <td class="agent-cell">
                             @if (!string.IsNullOrEmpty(item.AgentId))
                             {
                                 <a asp-controller="BiometricAgent" asp-action="Details" asp-route-id="@item.AgentId">
@@ -344,6 +356,32 @@
 
 @section Scripts {
 
+    @if (TempData["Success"] != null)
+    {
+        <script>
+            $(function () {
+                swal({
+                    title: "Success",
+                    text: @Html.Raw(Json.Serialize(TempData["Success"])),
+                    type: "success"
+                });
+            });
+        </script>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <script>
+            $(function () {
+                swal({
+                    title: "Error",
+                    text: @Html.Raw(Json.Serialize(TempData["Error"])),
+                    type: "error"
+                });
+            });
+        </script>
+    }
+
     <script>
 
         $(document).ready(function () {
@@ -415,13 +453,93 @@
             });
 
             // -----------------------------
-            // Test Connection (AJAX)
+            // Test Connection (AJAX) - kicks off a REAL device-level test
+            // (HRMS -> API -> BiometricAgent -> ESSL SDK -> device), then
+            // polls for the outcome since the agent is outbound-poll-only
+            // and can take up to ~a minute to pick the request up.
             // -----------------------------
+
+            function biometricStageMessage(deviceCode, agentName, response) {
+                var agentLabel = agentName || "assigned";
+
+                if (response.success) {
+                    return "ESSL device " + deviceCode + " is responding through the " + agentLabel + " agent." +
+                        (response.deviceInfo ? " (" + response.deviceInfo + ")" : "");
+                }
+
+                switch (response.stage) {
+                    case "AgentInactive":
+                        return "The assigned biometric agent is inactive.";
+                    case "AgentUnavailable":
+                        return "The " + agentLabel + " biometric agent is unavailable.";
+                    case "DeviceUnreachable":
+                        return "The " + agentLabel + " biometric agent could not reach ESSL device " + deviceCode + ".";
+                    case "SdkConnectionFailed":
+                        return "The ESSL device could not be initialized or did not respond.";
+                    default:
+                        return response.message || "The device did not respond.";
+                }
+            }
+
+            function biometricPollStatus(id, requestId, row, btn, originalIcon, deviceCode, agentName, attemptsLeft) {
+                if (attemptsLeft <= 0) {
+                    biometricShowTestResult(row, btn, originalIcon, false,
+                        "Connection Failed",
+                        "The biometric agent did not respond in time. Confirm the Windows Service is running.");
+                    return;
+                }
+
+                $.ajax({
+                    url: '@Url.Action("TestConnectionStatusAjax")',
+                    type: "GET",
+                    data: { id: id, requestId: requestId },
+                    success: function (response) {
+                        if (!response.complete) {
+                            setTimeout(function () {
+                                biometricPollStatus(id, requestId, row, btn, originalIcon, deviceCode, agentName, attemptsLeft - 1);
+                            }, 3000);
+                            return;
+                        }
+
+                        biometricShowTestResult(row, btn, originalIcon, response.success,
+                            response.success ? "Connection Successful" : "Connection Failed",
+                            biometricStageMessage(deviceCode, agentName, response));
+                    },
+                    error: function () {
+                        biometricShowTestResult(row, btn, originalIcon, false, "Connection Failed",
+                            "Unable to check the test connection status. Please try again.");
+                    }
+                });
+            }
+
+            function biometricShowTestResult(row, btn, originalIcon, success, title, message) {
+                // Reflect the fresh result in this row's Status badge
+                // immediately, without a full page reload.
+                var statusCell = row.find("td.text-center").first();
+
+                statusCell.find(".label").first()
+                    .removeClass("label-success label-danger")
+                    .addClass(success ? "label-success" : "label-danger")
+                    .text(success ? "Connected" : "Disconnected");
+
+                row.attr("data-status", success ? "connected" : "disconnected");
+
+                if (typeof swal === "function") {
+                    swal({ title: title, text: message, type: success ? "success" : "error" });
+                } else {
+                    alert(title + ": " + message);
+                }
+
+                btn.prop("disabled", false).html(originalIcon);
+            }
 
             $(document).on("click", ".test-connection-btn", function () {
 
                 var btn = $(this);
                 var id = btn.data("id");
+                var row = btn.closest("tr");
+                var deviceCode = row.find("small.text-muted").first().text().replace("Code:", "").trim();
+                var agentName = row.find("td.agent-cell").first().text().trim() || "assigned";
                 var originalIcon = btn.html();
 
                 btn.prop("disabled", true).html('<i class="icon-spinner2 spinner"></i>');
@@ -431,34 +549,18 @@
                     type: "POST",
                     data: { id: id },
                     success: function (response) {
-
-                        // Reflect the fresh result in this row's Status
-                        // badge immediately, without a full page reload.
-                        var row = btn.closest("tr");
-                        var statusCell = row.find("td.text-center").first();
-
-                        statusCell.find(".label").first()
-                            .removeClass("label-success label-danger")
-                            .addClass(response.success ? "label-success" : "label-danger")
-                            .text(response.success ? "Connected" : "Disconnected");
-
-                        row.attr("data-status", response.success ? "connected" : "disconnected");
-
-                        if (typeof swal === "function") {
-                            swal({
-                                title: response.success ? "Connection Successful" : "Connection Failed",
-                                text: response.message,
-                                type: response.success ? "success" : "error"
-                            });
-                        } else {
-                            alert(response.message);
+                        if (response.complete) {
+                            // Pre-flight failure (inactive device, no agent
+                            // assigned, agent offline, ...) - nothing to poll for.
+                            biometricShowTestResult(row, btn, originalIcon, false, "Connection Failed", response.message);
+                            return;
                         }
+
+                        // ~30 attempts * 3s = up to 90s, matching the API's own TestRequestTimeout.
+                        biometricPollStatus(id, response.requestId, row, btn, originalIcon, deviceCode, agentName, 30);
                     },
                     error: function () {
-                        alert("Unable to test connection. Please try again.");
-                    },
-                    complete: function () {
-                        btn.prop("disabled", false).html(originalIcon);
+                        biometricShowTestResult(row, btn, originalIcon, false, "Connection Failed", "Unable to test connection. Please try again.");
                     }
                 });
 

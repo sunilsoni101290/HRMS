@@ -1,4 +1,5 @@
-﻿using Application.DTOs.Attendances;
+﻿using Application.Common.Exceptions;
+using Application.DTOs.Attendances;
 using Domain.Entities;
 using Infrastructure;
 using System;
@@ -8,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Application.Interfaces.Attendances;
 using Infrastructure.Data;
 using Microsoft.Extensions.Logging;
+using static Domain.Enums.EnumExtensions;
 
 
 namespace Application.Services.Attendances
@@ -58,6 +60,7 @@ namespace Application.Services.Attendances
                     DeviceKey = x.DeviceKey,
                     DeviceType = x.DeviceType,
                     CommunicationType = x.CommunicationType,
+                    CommKey = x.CommKey,
                     AgentId = x.AgentId,
                     AgentName = x.Agent != null ? x.Agent.AgentName : null,
                     IsActive = x.IsActive,
@@ -99,6 +102,7 @@ namespace Application.Services.Attendances
                     DeviceKey = x.DeviceKey,
                     DeviceType = x.DeviceType,
                     CommunicationType = x.CommunicationType,
+                    CommKey = x.CommKey,
                     AgentId = x.AgentId,
                     AgentName = x.Agent != null ? x.Agent.AgentName : null,
                     IsActive = x.IsActive,
@@ -145,6 +149,7 @@ namespace Application.Services.Attendances
                 SerialNumber = dto.SerialNumber,
                 DeviceType = string.IsNullOrWhiteSpace(dto.DeviceType) ? "Essl" : dto.DeviceType,
                 CommunicationType = string.IsNullOrWhiteSpace(dto.CommunicationType) ? "TCP/IP" : dto.CommunicationType,
+                CommKey = dto.CommKey,
                 AgentId = string.IsNullOrWhiteSpace(dto.AgentId) ? null : dto.AgentId,
                 // Auto-generate the agent auth secret if the caller didn't supply one.
                 DeviceKey = string.IsNullOrWhiteSpace(dto.DeviceKey)
@@ -210,6 +215,7 @@ namespace Application.Services.Attendances
             entity.SerialNumber = dto.SerialNumber;
             entity.DeviceType = string.IsNullOrWhiteSpace(dto.DeviceType) ? entity.DeviceType : dto.DeviceType;
             entity.CommunicationType = string.IsNullOrWhiteSpace(dto.CommunicationType) ? entity.CommunicationType : dto.CommunicationType;
+            entity.CommKey = dto.CommKey;
             entity.AgentId = string.IsNullOrWhiteSpace(dto.AgentId) ? null : dto.AgentId;
             // Only rotate the key when a new one is explicitly supplied, so a
             // plain "save" from the edit screen doesn't invalidate the agent's key.
@@ -260,45 +266,138 @@ namespace Application.Services.Attendances
         }
 
         /// <summary>
-        /// "Connection" here means: is the on-site BiometricAgent still
-        /// successfully reaching this device and pushing punches to us?
-        ///
-        /// This deliberately does NOT ping/connect to device.IPAddress from
-        /// the API server. That IP is on the client's private LAN, behind
-        /// their router/firewall - the whole reason BiometricAgent exists is
-        /// that the API generally *cannot* reach it directly. A ping from a
-        /// cloud-hosted API would just time out for every device, even
-        /// healthy ones, and report false negatives.
-        ///
-        /// Instead, use the same signal as GetHealthSummaryAsync: whether
-        /// LastSyncDate (updated by BiometricSyncService.IngestPunchesAsync
-        /// each time the agent successfully pushes) is recent. That proves
-        /// the full chain - device, agent, client network, and API - is
-        /// actually working end-to-end, which is a more meaningful test than
-        /// a bare ping could ever be.
+        /// How long the UI keeps polling for a result before this service
+        /// gives up and reports TimedOut. Comfortably longer than the
+        /// agent's default 60s PollIntervalSeconds (see AgentOptions) so a
+        /// normally-operating agent always finishes well within this window;
+        /// exceeding it is itself diagnostic ("agent isn't polling").
         /// </summary>
-        public async Task<bool>
-            TestConnectionAsync(string id)
+        private static readonly TimeSpan TestRequestTimeout = TimeSpan.FromSeconds(90);
+
+        /// <summary>
+        /// Kicks off a REAL Test Connection. This deliberately does NOT
+        /// ping/connect to device.IPAddress from the API server - that IP is
+        /// on the client's private LAN, behind their router/firewall, which
+        /// is the whole reason BiometricAgent exists (the API generally
+        /// *cannot* reach it directly; a ping from a cloud-hosted API would
+        /// just time out for every device, even healthy ones).
+        ///
+        /// Instead this validates what it can synchronously (device exists/
+        /// active, has an assigned agent, that agent is online), then hands
+        /// the actual device-level check off to the assigned BiometricAgent
+        /// via a Pending BiometricDeviceTestRequest row - see
+        /// GetTestConnectionResultAsync for how the caller learns the
+        /// outcome, and BiometricAgent.Worker for how the agent picks it up.
+        /// </summary>
+        public async Task<DeviceTestConnectionResultDto> RequestTestConnectionAsync(string deviceId, string tenantId, string requestedBy)
         {
-            try
+            var device = await _db.BiometricDevices
+                .FirstOrDefaultAsync(x => x.Id == deviceId && (string.IsNullOrEmpty(tenantId) || x.TenantId == tenantId));
+
+            if (device == null)
+                throw new NotFoundException("Device not found.", "DEVICE_NOT_FOUND");
+
+            if (!device.IsActive)
+                throw new BadRequestException("The biometric device is inactive.", "DEVICE_INACTIVE");
+
+            if (string.IsNullOrWhiteSpace(device.IPAddress) || device.Port <= 0)
+                throw new BadRequestException("The device's IP address/port are not configured.", "DEVICE_MISCONFIGURED");
+
+            if (string.IsNullOrWhiteSpace(device.AgentId))
+                throw new BadRequestException("No biometric agent is assigned to this device.", "AGENT_NOT_ASSIGNED");
+
+            var agent = await _db.BiometricAgents.FirstOrDefaultAsync(a => a.Id == device.AgentId);
+
+            // Agent record missing entirely (e.g. deleted out from under an
+            // assigned device) is distinct from "exists but disabled" - both
+            // are still pre-flight, non-retryable failures though, so both
+            // map to the same "unavailable" business outcome.
+            if (agent == null)
+                throw new BadRequestException("The biometric agent is unavailable.", "AGENT_UNAVAILABLE");
+
+            if (!agent.IsActive)
+                throw new BadRequestException("The assigned biometric agent is inactive.", "AGENT_INACTIVE");
+
+            var agentOnlineCutoff = DateTime.UtcNow.Subtract(OnlineWindow);
+            var agentOnline = agent.LastHeartbeat != null && agent.LastHeartbeat >= agentOnlineCutoff;
+
+            if (!agentOnline)
+                throw new BadRequestException(
+                    "The biometric agent is unavailable (no heartbeat in the last 15 minutes). " +
+                    "Confirm the ERP Biometric Agent Windows Service is running on the branch machine.",
+                    "AGENT_UNAVAILABLE");
+
+            var request = new BiometricDeviceTestRequest
             {
-                var device = await _db.BiometricDevices
-                    .FirstOrDefaultAsync(x => x.Id == id);
+                Id = IDManager.GetNewId(new BiometricDeviceTestRequest()),
+                TenantId = device.TenantId,
+                DeviceId = device.Id,
+                AgentId = device.AgentId,
+                Status = TestConnectionStatus.Pending,
+                RequestedBy = requestedBy,
+                RequestedOn = DateTime.UtcNow,
+                CreatedBy = requestedBy,
+                CreatedOn = DateTime.UtcNow
+            };
 
-                if (device == null || !device.IsActive)
-                    return false;
+            _db.BiometricDeviceTestRequests.Add(request);
+            await _db.SaveChangesAsync();
 
-                var onlineCutoff = DateTime.UtcNow.Subtract(OnlineWindow);
+            _logger.LogInformation(
+                "Test connection requested. DeviceId: {DeviceId}, DeviceCode: {DeviceCode}, DeviceType: {DeviceType}, " +
+                "Agent: {AgentName}, IP: {Ip}, Port: {Port}, RequestId: {RequestId}, RequestedBy: {RequestedBy}",
+                device.Id, device.DeviceCode, device.DeviceType, agent.AgentName, device.IPAddress, device.Port, request.Id, requestedBy);
 
-                return device.LastSyncDate != null &&
-                       device.LastSyncDate >= onlineCutoff;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to test connection for biometric device {Id}.", id);
-                return false;
-            }
+            return MapTestResult(request, device.DeviceCode);
         }
+
+        public async Task<DeviceTestConnectionResultDto?> GetTestConnectionResultAsync(string requestId, string tenantId)
+        {
+            var request = await _db.BiometricDeviceTestRequests
+                .Include(r => r.Device)
+                .FirstOrDefaultAsync(r => r.Id == requestId && (string.IsNullOrEmpty(tenantId) || r.TenantId == tenantId));
+
+            if (request == null)
+                return null;
+
+            // Still Pending but past TestRequestTimeout since request was
+            // made -> the assigned agent never picked it up (offline,
+            // service stopped, or polling a different set of devices).
+            // Mark TimedOut here (API-side, on read) rather than requiring
+            // a background sweep - this endpoint is only ever hit while the
+            // UI is actively polling, so it's always checked promptly.
+            if (request.Status == TestConnectionStatus.Pending &&
+                DateTime.UtcNow - request.RequestedOn > TestRequestTimeout)
+            {
+                request.Status = TestConnectionStatus.TimedOut;
+                request.Stage = "AgentUnavailable";
+                request.Message = "The biometric agent did not respond in time. Confirm the Windows Service is running and can reach the ERP API.";
+                request.CompletedOn = DateTime.UtcNow;
+
+                await _db.SaveChangesAsync();
+
+                _logger.LogWarning(
+                    "Test connection timed out waiting for agent. DeviceCode: {DeviceCode}, RequestId: {RequestId}",
+                    request.Device?.DeviceCode, request.Id);
+            }
+
+            return MapTestResult(request, request.Device?.DeviceCode ?? "");
+        }
+
+        private static DeviceTestConnectionResultDto MapTestResult(BiometricDeviceTestRequest request, string deviceCode) => new()
+        {
+            RequestId = request.Id,
+            DeviceId = request.DeviceId,
+            DeviceCode = deviceCode,
+            Status = (int)request.Status,
+            StatusName = request.Status.ToString(),
+            Stage = request.Stage,
+            Message = request.Message,
+            DeviceInfo = request.DeviceInfo,
+            RequestedOn = request.RequestedOn,
+            CompletedOn = request.CompletedOn,
+            IsComplete = request.Status != TestConnectionStatus.Pending
+        };
 
         public async Task<List<BiometricDeviceHealthDto>> GetHealthSummaryAsync()
         {
@@ -332,6 +431,56 @@ namespace Application.Services.Attendances
             {
                 _logger.LogError(ex, "Failed to load biometric device health summary.");
                 return new List<BiometricDeviceHealthDto>();
+            }
+        }
+
+        /// <summary>Aggregate figures for the Device Health dashboard's summary cards - see BiometricDashboardSummaryDto.</summary>
+        public async Task<BiometricDashboardSummaryDto> GetDashboardSummaryAsync()
+        {
+            try
+            {
+                var onlineCutoff = DateTime.UtcNow.AddMinutes(-15);
+                var todayUtc = DateTime.UtcNow.Date;
+                var last24h = DateTime.UtcNow.AddHours(-24);
+
+                var devices = await _db.BiometricDevices
+                    .Select(x => new { x.IsActive, x.LastSyncDate })
+                    .ToListAsync();
+
+                var lastSuccessfulSync = await _db.BiometricSyncLogs
+                    .Where(x => x.Status == "Success")
+                    .OrderByDescending(x => x.StartTime)
+                    .Select(x => (DateTime?)x.StartTime)
+                    .FirstOrDefaultAsync();
+
+                return new BiometricDashboardSummaryDto
+                {
+                    TotalDevices = devices.Count,
+
+                    OnlineDevices = devices.Count(x =>
+                        x.IsActive && x.LastSyncDate != null && x.LastSyncDate >= onlineCutoff),
+
+                    OfflineDevices = devices.Count(x =>
+                        x.IsActive && (x.LastSyncDate == null || x.LastSyncDate < onlineCutoff)),
+
+                    DisabledDevices = devices.Count(x => !x.IsActive),
+
+                    TodaysPunchCount = await _db.BiometricAttendanceLogs
+                        .CountAsync(x => x.PunchTime >= todayUtc && x.PunchTime < todayUtc.AddDays(1)),
+
+                    PendingPunchCount = await _db.BiometricAttendanceLogs
+                        .CountAsync(x => !x.IsProcessed),
+
+                    FailedSyncCount24h = await _db.BiometricSyncLogs
+                        .CountAsync(x => x.Status == "Failed" && x.StartTime >= last24h),
+
+                    LastSuccessfulSync = lastSuccessfulSync
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load biometric dashboard summary.");
+                return new BiometricDashboardSummaryDto();
             }
         }
 
@@ -416,6 +565,7 @@ namespace Application.Services.Attendances
                         DeviceKey = x.DeviceKey,
                         DeviceType = x.DeviceType,
                         CommunicationType = x.CommunicationType,
+                        CommKey = x.CommKey,
                         AgentId = x.AgentId,
                         IsActive = x.IsActive
                     })

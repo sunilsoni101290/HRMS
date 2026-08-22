@@ -90,6 +90,16 @@ namespace API.Controllers
         }
         #endregion
 
+        #region All Branches (no Company filter) - Biometric Agent master etc.
+        [HttpGet("branch-all")]
+        public async Task<IActionResult> GetAllBranchesDropdown([FromQuery] string? tenantId)
+        {
+            var data = await _dropdownService.GetAllBranchesDropdownAsync(tenantId);
+
+            return Ok(data);
+        }
+        #endregion
+
         #region Department Dropdown
         [HttpGet("department")]
         public async Task<IActionResult>GetDepartmentDropdown()
