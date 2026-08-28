@@ -1,0 +1,76 @@
+@model ErrorLogDto
+
+<table class="table table-bordered">
+    <tbody>
+        <tr><th width="200">Date / Time</th><td>@Model.ErrorTime.ToLocalTime().ToString("dd-MMM-yyyy hh:mm:ss tt")</td></tr>
+        <tr><th>Module / Feature</th><td><span class="label label-info">@(Model.ModuleName ?? "—")</span> @Model.FeatureName</td></tr>
+        <tr><th>Controller / Action</th><td>@Model.Controller / @Model.Action</td></tr>
+        <tr><th>Request URL</th><td><code>@Model.Endpoint</code></td></tr>
+        <tr><th>HTTP Method</th><td>@Model.Method</td></tr>
+        <tr><th>User</th><td>@(string.IsNullOrEmpty(Model.UserName) ? "—" : Model.UserName) <span class="text-muted">(@Model.UserId)</span></td></tr>
+        <tr><th>IP Address</th><td>@(Model.IPAddress ?? "—")</td></tr>
+        <tr><th>User Agent</th><td class="text-muted font-size-sm">@(Model.UserAgent ?? "—")</td></tr>
+        <tr><th>Correlation ID</th><td><code>@Model.CorrelationId</code></td></tr>
+        <tr><th>Status</th>
+            <td>
+                @if (Model.IsResolved)
+                {
+                    <span class="label label-success">Resolved</span>
+                    <div class="text-muted font-size-sm">
+                        By @Model.ResolvedBy on @(Model.ResolvedOn?.ToLocalTime().ToString("dd-MMM-yyyy hh:mm tt"))
+                    </div>
+                    @if (!string.IsNullOrEmpty(Model.Remarks))
+                    {
+                        <div><strong>Remark:</strong> @Model.Remarks</div>
+                    }
+                }
+                else
+                {
+                    <span class="label label-danger">Unresolved</span>
+                }
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="panel panel-bordered">
+    <div class="panel-heading"><h6 class="panel-title">Error Message</h6></div>
+    <div class="panel-body">
+        <pre style="white-space: pre-wrap;">@Model.ErrorMessage</pre>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.InnerException) && Model.InnerException != "No Inner Exception")
+{
+    <div class="panel panel-bordered">
+        <div class="panel-heading"><h6 class="panel-title">Inner Exception</h6></div>
+        <div class="panel-body">
+            <pre style="white-space: pre-wrap;">@Model.InnerException</pre>
+        </div>
+    </div>
+}
+
+<div class="panel panel-bordered">
+    <div class="panel-heading"><h6 class="panel-title">Stack Trace</h6></div>
+    <div class="panel-body">
+        <pre style="white-space: pre-wrap; max-height: 300px; overflow-y: auto;">@Model.StackTrace</pre>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.QueryParams))
+{
+    <div class="panel panel-bordered">
+        <div class="panel-heading"><h6 class="panel-title">Query Parameters</h6></div>
+        <div class="panel-body"><code>@Model.QueryParams</code></div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(Model.RequestBody))
+{
+    <div class="panel panel-bordered">
+        <div class="panel-heading"><h6 class="panel-title">Request Body</h6></div>
+        <div class="panel-body">
+            <pre style="white-space: pre-wrap; max-height: 200px; overflow-y: auto;">@Model.RequestBody</pre>
+        </div>
+    </div>
+}

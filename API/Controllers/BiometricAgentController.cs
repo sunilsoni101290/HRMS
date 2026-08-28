@@ -1,6 +1,7 @@
 using Application.Common.Responses;
 using Application.DTOs.Attendances;
 using Application.Interfaces.Attendances;
+using Application.Interfaces.ErrorLog;
 using Infrastructure.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -28,17 +29,20 @@ namespace API.Controllers
         private readonly IBiometricDeviceService _deviceService;
         private readonly ITenantService _tenantService;
         private readonly ILogger<BiometricAgentController> _logger;
+        private readonly IErrorLogService _errorLogService;
 
         public BiometricAgentController(
             IBiometricAgentService agentService,
             IBiometricDeviceService deviceService,
             ITenantService tenantService,
-            ILogger<BiometricAgentController> logger)
+            ILogger<BiometricAgentController> logger,
+            IErrorLogService errorLogService)
         {
             _agentService = agentService;
             _deviceService = deviceService;
             _tenantService = tenantService;
             _logger = logger;
+            _errorLogService = errorLogService;
         }
 
         // ==================================================================
@@ -81,6 +85,25 @@ namespace API.Controllers
 
             if (!ok)
                 return Unauthorized(new { Success = false, Message = "Unknown or inactive agent, or invalid agent key." });
+
+            // The agent self-reports its last poll-cycle failure here
+            // (see AgentHeartbeatRequestDto.LastError / BiometricAgent.
+            // Worker) - device connection failures, SDK/COM registration
+            // issues, timeouts, etc. never throw an exception THIS process
+            // can catch (they happen on the branch machine), so this is the
+            // integration point that gets them into the Error Log
+            // (requirement #9). Never awaited-and-thrown - a logging
+            // failure must not turn a successful heartbeat into a failure.
+            if (!string.IsNullOrWhiteSpace(request.LastError))
+            {
+                await _errorLogService.LogAsync(
+                    new Exception(request.LastError),
+                    module: "Biometric Device Integration",
+                    feature: request.AgentCode,
+                    controller: "BiometricAgent",
+                    action: "Heartbeat",
+                    tenantId: tenantId);
+            }
 
             return Ok(new { Success = true });
         }
@@ -175,6 +198,25 @@ namespace API.Controllers
 
             var ok = await _agentService.SubmitTestResultAsync(request, tenantId);
 
+            // The agent's own report of a failed device probe - device
+            // connection failure, invalid IP/port, SDK/COM registration
+            // issue, timeout, invalid device response (requirement #9's
+            // exact examples) all surface here via request.Stage/Message,
+            // never as a .NET exception in THIS process. Log it regardless
+            // of whether SubmitTestResultAsync itself found the request
+            // (a stale/duplicate result is still useful diagnostic
+            // context), but only when the agent reported a real failure.
+            if (request?.Success == false)
+            {
+                await _errorLogService.LogAsync(
+                    new Exception($"[{request.Stage}] {request.Message}"),
+                    module: "Biometric Device Integration",
+                    feature: request.AgentCode,
+                    controller: "BiometricAgent",
+                    action: "TestConnection",
+                    tenantId: tenantId);
+            }
+
             // false here means the request id was unknown or already
             // resolved (e.g. the API-side timeout beat this result in) -
             // not a credential problem, so still 200: there is nothing
@@ -247,6 +289,36 @@ namespace API.Controllers
         public async Task<IActionResult> Delete(string id)
         {
             return Ok(await _agentService.DeleteAsync(id));
+        }
+
+        /// <summary>
+        /// Rotates the agent's AgentKey and returns it once - backs the
+        /// "Download Agent Config" button on the Details page (MVC), since
+        /// Get/Get(id) never return AgentKey. Any running BiometricAgent
+        /// Windows Service using the old key will start failing register/
+        /// heartbeat until reconfigured with the file this produces.
+        /// </summary>
+        [HttpPost("{id}/regenerate-key")]
+        [Authorize]
+        public async Task<IActionResult> RegenerateKey(string id)
+        {
+            var result = await _agentService.RegenerateKeyAsync(id);
+
+            if (result == null)
+            {
+                return NotFound(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Agent not found."
+                });
+            }
+
+            return Ok(new ApiResponse<BiometricAgentDto>
+            {
+                Success = true,
+                Message = "Agent key regenerated successfully.",
+                Data = result
+            });
         }
     }
 }

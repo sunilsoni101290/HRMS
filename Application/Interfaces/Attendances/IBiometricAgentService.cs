@@ -16,6 +16,19 @@ namespace Application.Interfaces.Attendances
         Task<bool> DeleteAsync(string id);
 
         /// <summary>
+        /// Rotates this agent's AgentKey to a fresh, randomly generated
+        /// value and returns the full DTO with the new key populated -
+        /// the only other place (besides CreateAsync) that ever returns
+        /// AgentKey, since GetAllAsync/GetByIdAsync deliberately omit it.
+        /// Invalidates whatever key any currently-running BiometricAgent
+        /// Windows Service instance is using, so it will start failing
+        /// register/heartbeat until reconfigured with the new key -
+        /// callers (the "Download Agent Config" flow) should warn about
+        /// this before invoking it.
+        /// </summary>
+        Task<BiometricAgentDto?> RegenerateKeyAsync(string id);
+
+        /// <summary>
         /// Validates AgentCode+AgentKey scoped to the given tenant. Returns
         /// null if the agent doesn't exist, is inactive, the key doesn't
         /// match, or it belongs to a different tenant - callers must treat

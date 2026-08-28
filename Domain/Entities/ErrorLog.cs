@@ -26,6 +26,15 @@ namespace Domain.Entities
         public string Action { get; set; }
         public string Method { get; set; }
 
+        // 🔹 Categorization (added for the Error Log management screen -
+        // lets a System Configurator filter/scan by area at a glance
+        // without reading the stack trace, e.g. "Biometric Device
+        // Integration" vs plain "HRMS"). Inferred automatically from
+        // Controller in ErrorLogService.InferModuleAndFeature - never
+        // required from the caller.
+        public string? ModuleName { get; set; }
+        public string? FeatureName { get; set; }
+
         // 🔹 Request Snapshot
         public string RequestBody { get; set; }
         public string QueryParams { get; set; }

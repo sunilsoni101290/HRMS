@@ -96,3 +96,33 @@
     </div>
 
 </div>
+
+@section Scripts {
+
+    @if (TempData["Success"] != null)
+    {
+        <script>
+            $(function () {
+                swal({
+                    title: "Success",
+                    text: @Html.Raw(Json.Serialize(TempData["Success"])),
+                    type: "success"
+                });
+            });
+        </script>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <script>
+            $(function () {
+                swal({
+                    title: "Error",
+                    text: @Html.Raw(Json.Serialize(TempData["Error"])),
+                    type: "error"
+                });
+            });
+        </script>
+    }
+
+}

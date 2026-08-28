@@ -200,6 +200,49 @@ namespace Application.Services.Attendances
             }
         }
 
+        public async Task<BiometricAgentDto?> RegenerateKeyAsync(string id)
+        {
+            try
+            {
+                var entity = await _db.BiometricAgents
+                    .FirstOrDefaultAsync(a => a.Id == id);
+
+                if (entity == null)
+                    return null;
+
+                entity.AgentKey = Guid.NewGuid().ToString("N");
+                entity.ModifiedOn = DateTime.UtcNow;
+
+                await _db.SaveChangesAsync();
+
+                return new BiometricAgentDto
+                {
+                    Id = entity.Id,
+                    TenantId = entity.TenantId,
+                    AgentCode = entity.AgentCode,
+                    AgentName = entity.AgentName,
+                    // The one deliberate exception to GetAllAsync/GetByIdAsync's
+                    // omission of AgentKey - the caller just rotated it and
+                    // needs to hand it to the agent/config file right now.
+                    AgentKey = entity.AgentKey,
+                    BranchId = entity.BranchId,
+                    Description = entity.Description,
+                    MachineName = entity.MachineName,
+                    AgentVersion = entity.AgentVersion,
+                    IsActive = entity.IsActive,
+                    LastHeartbeat = entity.LastHeartbeat,
+                    CreatedBy = entity.CreatedBy,
+                    ModifiedOn = entity.ModifiedOn,
+                    ModifiedBy = entity.ModifiedBy
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to regenerate key for biometric agent {Id}.", id);
+                return null;
+            }
+        }
+
         public async Task<BiometricAgent?> ValidateAsync(string agentCode, string agentKey, string tenantId)
         {
             if (string.IsNullOrWhiteSpace(agentCode) || string.IsNullOrWhiteSpace(agentKey))
