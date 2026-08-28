@@ -1875,6 +1875,17 @@ namespace Infrastructure.Data
                 AppFeatureConstants.SECURITY, "bi bi-diagram-3", AppFeatureType.Security, 25,
                 canAdd: true, canEdit: true, canDelete: true);
 
+            // Centralized Error Log - System Configurator/Super Admin only,
+            // see AppFeatureConstants.ERROR_LOG's remarks. CanEdit backs the
+            // "Resolve" action (updates IsResolved/ResolvedBy/ResolvedOn/
+            // Remarks on an existing record, never creates/deletes one -
+            // same reasoning as other single-step state-change screens in
+            // this codebase using CanEdit rather than CanApprove).
+            Def("Error Log", AppFeatureConstants.ERROR_LOG,
+                AppFeatureConstants.ERROR_LOG_CONTROLLER, AppFeatureConstants.ERROR_LOG_ACTION,
+                AppFeatureConstants.SECURITY, "bi bi-bug-fill", AppFeatureType.Report, 26,
+                canEdit: true);
+
 
             // =====================================================
             // TAXATION
@@ -2162,9 +2173,21 @@ namespace Infrastructure.Data
 
             if (fullAccessRoles.Count > 0)
             {
-                var allPermissionIds = await context.Permissions
-                    .Select(p => p.Id)
+                var allPermissions = await context.Permissions
+                    .Select(p => new { p.Id, p.FeatureId })
                     .ToListAsync();
+
+                var allPermissionIds = allPermissions.Select(p => p.Id).ToList();
+
+                // Error Log is System Configurator ONLY (explicit instruction) -
+                // Super Admin is otherwise auto-granted every permission by
+                // this loop, so it must be carved out here rather than relying
+                // solely on the [Authorize(Roles="System Configurator")]
+                // attribute; this keeps the Permission table itself accurate.
+                var errorLogPermissionIds = allPermissions
+                    .Where(p => p.FeatureId == AppFeatureConstants.ERROR_LOG)
+                    .Select(p => p.Id)
+                    .ToHashSet();
 
                 var newLinks = new List<RolePermission>();
 
@@ -2176,7 +2199,11 @@ namespace Infrastructure.Data
                             .ToListAsync())
                         .ToHashSet();
 
-                    newLinks.AddRange(allPermissionIds
+                    var grantablePermissionIds = role.Code == ConstantHelper.SUPER_ADMIN
+                        ? allPermissionIds.Where(pid => !errorLogPermissionIds.Contains(pid))
+                        : allPermissionIds;
+
+                    newLinks.AddRange(grantablePermissionIds
                         .Where(pid => !linked.Contains(pid))
                         .Select(pid => new RolePermission
                         {

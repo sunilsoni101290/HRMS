@@ -61,6 +61,14 @@ namespace APP.Controllers
 
                 ModelState.AddModelError("", response.Message);
             }
+            catch (ApiException ex)
+            {
+                // PostAsync<TRequest,TResponse> always throws ApiException on
+                // a non-success response (see ApiService.PostAsync) - unwrap
+                // ex.ResponseContent instead of showing the generic
+                // "API Error" message, same pattern as EmployeeBankController.
+                ModelState.AddModelError("", GetErrorMessage(ex.ResponseContent));
+            }
             catch (Exception ex)
             {
                 ModelState.AddModelError("", ex.Message);
@@ -108,7 +116,12 @@ namespace APP.Controllers
             }
             catch (Exception ex)
             {
-                ModelState.AddModelError("", ex.Message);
+                // PutAsync<TRequest,TResponse> (unlike PostAsync) doesn't
+                // wrap a non-success response in ApiException - HandleResponse
+                // throws a plain Exception whose Message is
+                // "Bad Request (400): {json}", so pull the embedded json
+                // back out to get at the real validation/business message.
+                ModelState.AddModelError("", GetErrorMessage(ex.Message));
             }
 
             await LoadDropdowns();
@@ -124,9 +137,13 @@ namespace APP.Controllers
 
                 AlertHelper.Success(TempData, "Mapping removed successfully.");
             }
+            catch (ApiException ex)
+            {
+                AlertHelper.Error(TempData, GetErrorMessage(ex.ResponseContent));
+            }
             catch (Exception ex)
             {
-                AlertHelper.Error(TempData, ex.Message);
+                AlertHelper.Error(TempData, GetErrorMessage(ex.Message));
             }
 
             return RedirectToAction(nameof(Index));
@@ -138,6 +155,39 @@ namespace APP.Controllers
                 .GetAsync<List<DropdownDto>>("dropdown/employee");
 
             ViewBag.EmployeeList = new SelectList(employees, "Value", "Text");
+        }
+
+        // Same shape as ApiService.HandleResponse's error body (ApiResponse<T>
+        // serialized as JSON, occasionally prefixed with plain text like
+        // "Bad Request (400): {...}") - mirrors the GetErrorMessage helper
+        // used across the rest of the APP controllers (e.g. EmployeeBankController).
+        private static string GetErrorMessage(string? raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+                return "The ERP API returned an error.";
+
+            try
+            {
+                var jsonStart = raw.IndexOf('{');
+                var json = jsonStart >= 0 ? raw.Substring(jsonStart) : raw;
+
+                var obj = Newtonsoft.Json.Linq.JObject.Parse(json);
+
+                if (obj["Message"] != null)
+                    return obj["Message"]!.ToString();
+
+                if (obj["message"] != null)
+                    return obj["message"]!.ToString();
+
+                if (obj["Errors"] is Newtonsoft.Json.Linq.JArray errors && errors.Count > 0)
+                    return errors[0]?.ToString() ?? "The ERP API returned an error.";
+
+                return raw;
+            }
+            catch
+            {
+                return raw;
+            }
         }
     }
 }

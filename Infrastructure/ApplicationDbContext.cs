@@ -388,6 +388,17 @@ namespace Infrastructure
                 entity.Property(e => e.Method)
                     .HasMaxLength(10);
 
+                // 🔹 Categorization (System Configurator Error Log screen)
+                entity.Property(e => e.ModuleName)
+                    .HasMaxLength(150);
+
+                entity.Property(e => e.FeatureName)
+                    .HasMaxLength(150);
+
+                entity.HasIndex(e => e.ModuleName);
+                entity.HasIndex(e => e.IsResolved);
+                entity.HasIndex(e => e.ErrorTime);
+
                 // 🔹 Request Snapshot
                 entity.Property(e => e.RequestBody)
                     .HasColumnType("nvarchar(max)");

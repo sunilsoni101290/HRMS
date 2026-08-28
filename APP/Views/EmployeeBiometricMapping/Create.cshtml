@@ -25,6 +25,19 @@
 
     <div class="panel-body">
 
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="alert alert-danger alert-dismissible">
+                <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+                <ul class="no-margin">
+                    @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                    {
+                        <li>@error.ErrorMessage</li>
+                    }
+                </ul>
+            </div>
+        }
+
         <form asp-action="@(string.IsNullOrEmpty(Model?.Id) ? "Create" : "Edit")" method="post">
 
             <input asp-for="Id" type="hidden" />

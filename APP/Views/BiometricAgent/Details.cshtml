@@ -113,6 +113,10 @@
         </div>
 
         <div class="text-right form-actions">
+            <button type="button" id="downloadConfigBtn" class="btn bg-teal" data-id="@Model.Id" data-code="@Model.AgentCode">
+                <i class="icon-download3 position-left"></i>
+                Download Agent Config
+            </button>
             <a asp-action="Edit" asp-route-id="@Model.Id" class="btn bg-primary">
                 <i class="icon-pencil7 position-left"></i>
                 Edit
@@ -139,6 +143,63 @@
                         }
                     });
                 }
+            });
+
+            $("#downloadConfigBtn").on("click", function () {
+                var btn = $(this);
+                var id = btn.data("id");
+
+                swal({
+                    title: "Generate a new Agent Key?",
+                    text: "This rotates the agent's key. Any BiometricAgent Windows Service already running with the old key will stop authenticating until you replace its config with the file this generates. Continue?",
+                    type: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#2196F3",
+                    confirmButtonText: "Yes, generate & download",
+                    cancelButtonText: "Cancel"
+                }, function (confirmed) {
+                    if (!confirmed) return;
+
+                    btn.prop("disabled", true).html('<i class="icon-spinner2 spinner position-left"></i> Generating...');
+
+                    $.ajax({
+                        url: "@Url.Action("DownloadConfig", "BiometricAgent")",
+                        type: "POST",
+                        data: { id: id },
+                        success: function (resp) {
+                            btn.prop("disabled", false).html('<i class="icon-download3 position-left"></i> Download Agent Config');
+
+                            if (!resp.success) {
+                                swal("Error", resp.message || "Unable to generate the config file.", "error");
+                                return;
+                            }
+
+                            var blob = new Blob([resp.content], { type: "application/json" });
+                            var url = window.URL.createObjectURL(blob);
+                            var a = document.createElement("a");
+                            a.href = url;
+                            a.download = resp.fileName;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            window.URL.revokeObjectURL(url);
+
+                            swal({
+                                title: "Config downloaded",
+                                text: "Drop this file next to BiometricAgent.exe as appsettings.json (or appsettings.Production.json), then start/restart the service.",
+                                type: "success"
+                            });
+
+                            // The key just rotated server-side - reload so the
+                            // page reflects it instead of showing the old one.
+                            setTimeout(function () { location.reload(); }, 1500);
+                        },
+                        error: function () {
+                            btn.prop("disabled", false).html('<i class="icon-download3 position-left"></i> Download Agent Config');
+                            swal("Error", "Unable to reach the ERP API.", "error");
+                        }
+                    });
+                });
             });
         });
     </script>

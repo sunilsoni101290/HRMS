@@ -76,6 +76,12 @@ namespace APP.Attributes
             "Designation",
             "EmployeeBiometricMapping",
             "EmployeeShiftMapping",
+            // Centralized Error Log - System Configurator/Admin only (see
+            // SystemConfiguratorOnlyAttribute, applied directly on
+            // ErrorLogController - this entry only stops a plain
+            // self-service employee from reaching it at all, same as every
+            // other admin-only controller in this list).
+            "ErrorLog",
             "FinancialYear",
             "HolidayGroup",
             "InterviewSchedule",

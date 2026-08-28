@@ -98,6 +98,19 @@ namespace Domain.Helper
         public const string APP_FEATURE_CONTROLLER = "AppFeatures";
         public const string APP_FEATURE_ACTION = ACTION_INDEX;
 
+        // Centralized Error Log - System Configurator/Super Admin only (no
+        // dedicated "Auditor" role exists in this codebase, same gap noted
+        // on LOAN_ADVANCE_AUDIT_LOG above; Super Admin/System Configurator
+        // cover it via DbSeeder.ReconcilePermissionsAsync's fullAccessRoles
+        // loop - no HR Manager grant is added for this feature). Populated
+        // automatically by API/Middleware/ExceptionMiddleware for every
+        // unhandled exception, plus explicit IErrorLogService.LogAsync
+        // calls from background/non-HTTP code (BiometricAgent Worker, etc.)
+        // - see Application/Services/ErrorLogs/ErrorLogService.cs.
+        public const string ERROR_LOG = "ERROR_LOG";
+        public const string ERROR_LOG_CONTROLLER = "ErrorLog";
+        public const string ERROR_LOG_ACTION = ACTION_INDEX;
+
         // =====================================================
         // EMPLOYEE MANAGEMENT
         // =====================================================

@@ -4,6 +4,7 @@ using APP.Models.DTOs;
 using APP.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Configuration;
 
 namespace APP.Controllers
 {
@@ -17,12 +18,14 @@ namespace APP.Controllers
     public class BiometricAgentController : Controller
     {
         private readonly IApiService _apiService;
+        private readonly IConfiguration _configuration;
         private string _tenantId;
         private string _userId;
 
-        public BiometricAgentController(IApiService apiService)
+        public BiometricAgentController(IApiService apiService, IConfiguration configuration)
         {
             _apiService = apiService;
+            _configuration = configuration;
             _tenantId = SessionHelper.GetActiveTenantId;
             _userId = SessionHelper.GetActiveUserId;
         }
@@ -89,7 +92,7 @@ namespace APP.Controllers
         [HttpPost]
         public async Task<IActionResult> Edit(BiometricAgentDto model)
         {
-            if (!ModelState.IsValid)
+            if (model==null)
             {
                 await LoadBranchDropdown(model.BranchId);
                 return View("Create", model);
@@ -99,6 +102,7 @@ namespace APP.Controllers
             {
                 model.TenantId = _tenantId;
                 model.ModifiedBy = _userId;
+                model.CreatedBy = _userId;
                 model.ModifiedOn = DateTime.UtcNow;
 
                 var response = await _apiService
@@ -164,6 +168,82 @@ namespace APP.Controllers
             }
 
             return RedirectToAction(nameof(Index));
+        }
+
+        /// <summary>
+        /// Backs the "Download Agent Config" button on Details: rotates the
+        /// agent's key via the API (the only way to get AgentKey back, since
+        /// Get/Get(id) never return it) and returns a ready-to-use
+        /// appsettings.json for the BiometricAgent Windows Service as JSON -
+        /// the Details view turns this into a client-side file download via
+        /// a Blob, so the key never appears in a URL/query string.
+        /// Invalidates any key a currently-running agent instance is using.
+        /// </summary>
+        [HttpPost]
+        public async Task<JsonResult> DownloadConfig(string id)
+        {
+            try
+            {
+                var response = await _apiService
+                    .PostAsync<object, ApiResponse<BiometricAgentDto>>($"BiometricAgent/{id}/regenerate-key", new { });
+
+                if (response?.Data == null)
+                    return Json(new { success = false, message = response?.Message ?? "Unable to reach the ERP API." });
+
+                var agent = response.Data;
+
+                // ApiSettings:BaseUrl is this MVC's own API endpoint, e.g.
+                // "https://localhost:7222/api/" - the agent's ApiBaseUrl
+                // must be the bare host (ApiClient appends "api/..." itself),
+                // and Request.Host would wrongly point at the MVC (7070), not
+                // the API (7222), so read it from config instead.
+                var configuredApiBase = _configuration["ApiSettings:BaseUrl"] ?? "";
+                var apiBaseUrl = configuredApiBase.Replace("/api/", "/").Replace("/api", "/");
+                if (!apiBaseUrl.EndsWith("/"))
+                    apiBaseUrl += "/";
+
+                var configObject = new
+                {
+                    Logging = new
+                    {
+                        LogLevel = new { Default = "Information", Microsoft_Hosting_Lifetime = "Information" }
+                    },
+                    Agent = new
+                    {
+                        TenantId = agent.TenantId,
+                        ApiBaseUrl = apiBaseUrl,
+                        AgentCode = agent.AgentCode,
+                        AgentKey = agent.AgentKey,
+                        PollIntervalSeconds = 60,
+                        HeartbeatIntervalSeconds = 60,
+                        MaxRetryAttempts = 3,
+                        StateFolder = "C:\\ProgramData\\ERP\\BiometricAgent"
+                    }
+                };
+
+                // The "Logging.Microsoft_Hosting_Lifetime" key above must be
+                // "Microsoft.Hosting.Lifetime" in the actual file - C# object
+                // property names can't contain dots, so fix it up in the
+                // serialized JSON string instead of the anonymous type.
+                var json = System.Text.Json.JsonSerializer.Serialize(configObject, new System.Text.Json.JsonSerializerOptions { WriteIndented = true })
+                    .Replace("Microsoft_Hosting_Lifetime", "Microsoft.Hosting.Lifetime");
+
+                return Json(new
+                {
+                    success = true,
+                    fileName = $"appsettings.{agent.AgentCode}.json",
+                    content = json,
+                    agentCode = agent.AgentCode
+                });
+            }
+            catch (ApiException ex)
+            {
+                return Json(new { success = false, message = ex.ResponseContent });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
         }
     }
 }
