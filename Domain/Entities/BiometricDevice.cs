@@ -328,6 +328,22 @@ namespace Domain.Entities
         [MaxLength(500)]
         public string? ErrorMessage { get; set; }
 
+        /// <summary>
+        /// Populated only for SyncType = "EsslDbPull" (the eTimeTrackLite1
+        /// direct-SQL integration - see EsslAttendanceSyncService). Null for
+        /// every other SyncType. FromDate/ToDate record the actual query
+        /// window used (manual/historical runs pass explicit dates;
+        /// automatic runs record the computed incremental window so the
+        /// history screen shows exactly what was scanned, not just when).
+        /// </summary>
+        public DateTime? FromDate { get; set; }
+
+        public DateTime? ToDate { get; set; }
+
+        /// <summary>"System" for the background service, or the acting user's name for a manual/historical sync - same convention as ErrorLog.ResolvedBy.</summary>
+        [MaxLength(100)]
+        public string? TriggeredBy { get; set; }
+
         public override string GetSequencePrefix()
             => "BSL";
     }

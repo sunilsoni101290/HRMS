@@ -1031,6 +1031,51 @@ namespace Domain.Enums
             SpecificRole = 2,
             SpecificUser = 3
         }
+
+        // ==================================================================
+        // Daily Work Entry / Employee Work Tracking module
+        // ==================================================================
+
+        /// <summary>Active/Closed/OnHold for WorkJob (Job/Project master) - deliberately separate from the unrelated recruitment JobStatus enum above.</summary>
+        public enum WorkJobStatus
+        {
+            Active = 1,
+            OnHold = 2,
+            Closed = 3
+        }
+
+        /// <summary>What a JobItem (STR/EQPT/JOB ID) represents under a WorkJob.</summary>
+        public enum JobItemType
+        {
+            Structure = 1,
+            Equipment = 2,
+            Other = 3
+        }
+
+        /// <summary>How a WorkActivity's hours are classified for Direct/Indirect/Idle/Downtime reporting (Excel "Job type and work done" sheet).</summary>
+        public enum WorkCategory
+        {
+            Direct = 1,
+            Indirect = 2,
+            Idle = 3,
+            Downtime = 4
+        }
+
+        /// <summary>Skids Packages activities are scoped to one of these disciplines (Excel: "Skids Packages -> Piping/Equipment/Structural/E&I", dropdown reuses each discipline's own activity list). Null for every JobType other than Skids Packages.</summary>
+        public enum SkidsDiscipline
+        {
+            Piping = 1,
+            Equipment = 2,
+            Structural = 3,
+            EAndI = 4
+        }
+
+        /// <summary>WorkEntryReason.Category - keeps Idle and Downtime reasons in one configurable master while still enforcing they are never mixed (spec section 11/12).</summary>
+        public enum WorkEntryReasonCategory
+        {
+            Idle = 1,
+            Downtime = 2
+        }
     }
 
     public static class EnumHelper

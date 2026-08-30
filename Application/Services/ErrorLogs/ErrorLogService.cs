@@ -1,7 +1,9 @@
+using Application.Common.APP.Helpers;
 using Application.Common.Exceptions;
 using Application.DTOs.Employee;
 using Application.DTOs.ErrorLogs;
 using Application.Interfaces.ErrorLog;
+using Azure.Core;
 using Domain.Entities;
 using Domain.Helper;
 using Infrastructure;
@@ -11,6 +13,8 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Net;
+using System.Net.Sockets;
 using System.Text;
 
 namespace Application.Services.ErrorLogs
@@ -55,6 +59,16 @@ namespace Application.Services.ErrorLogs
 
                 var controller = context.GetRouteValue("controller")?.ToString() ?? "Unknown";
                 var (module, feature) = InferModuleAndFeature(controller);
+
+                // Get Client IP
+                string localIP = Dns.GetHostEntry(Dns.GetHostName())
+                    .AddressList
+                    .FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork)?
+                    .ToString();
+
+
+                var userAgent = context.Request?.Headers["User-Agent"].ToString();
+                var (browser, os, deviceInfo) = UserAgentHelper.Parse(userAgent);
 
                 var log = new ErrorLog
                 {
@@ -104,9 +118,9 @@ namespace Application.Services.ErrorLogs
                     CompanyId = context.User?.FindFirst("CompanyId")?.Value ?? "",
 
                     // 🔹 Client Info
-                    IPAddress = context.Connection?.RemoteIpAddress?.ToString() ?? "",
+                    IPAddress = localIP,
 
-                    UserAgent = context.Request?.Headers["User-Agent"].ToString() ?? "",
+                    UserAgent = browser+"/"+os+"/"+deviceInfo,
 
                     // 🔹 Severity
                     LogLevel = "Error",

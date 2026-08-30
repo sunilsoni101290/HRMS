@@ -57,6 +57,25 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.AddInterceptors(new Infrastructure.Interceptors.LoanAdvanceAuditInterceptor());
 });
 
+// eSSL eTimeTrackLite1 direct-SQL attendance integration - EsslDbContext
+// (Infrastructure/EsslIntegration/EsslDbContext.cs) is a SEPARATE
+// DbContext/connection from ApplicationDbContext (requirement: never fold
+// the vendor's database into the primary HRMS EF Core DbContext), but it is
+// NOT registered with AddDbContext here - since the Settings page made the
+// server/database/credentials editable per-tenant at runtime,
+// EsslAttendanceDataSource now builds a short-lived EsslDbContext instance
+// per call from that tenant's persisted EsslIntegrationSetting row (falling
+// back to EsslDatabase:ConnectionString in appsettings.json only if no row
+// has been saved yet) instead of a single fixed connection string resolved
+// once at app startup. See EsslAttendanceDataSource.BuildConnectionStringAsync.
+//
+// Data Protection (built into the ASP.NET Core shared framework - no new
+// package) is what encrypts the saved eSSL database password at rest; both
+// EsslAttendanceDataSource and EsslAttendanceSyncService create an
+// IDataProtector with the exact same purpose string
+// ("EsslIntegration.DatabasePassword.v1") so Protect/Unprotect round-trip.
+builder.Services.AddDataProtection();
+
 /*
  // ======================================================
 // CORS
@@ -175,6 +194,8 @@ builder.Services.AddScoped<IBiometricSyncService,BiometricSyncService>();
 builder.Services.AddScoped<IBiometricAgentService, BiometricAgentService>();
 builder.Services.AddScoped<IAttendanceProcessorService,AttendanceProcessorService>();
 builder.Services.AddScoped<IEmployeeBiometricMappingService, EmployeeBiometricMappingService>();
+builder.Services.AddScoped<IEsslAttendanceDataSource, EsslAttendanceDataSource>();
+builder.Services.AddScoped<IEsslAttendanceSyncService, EsslAttendanceSyncService>();
 builder.Services.AddScoped<IBiometricSimulatorService, BiometricSimulatorService>();
 builder.Services.AddScoped<ILeaveTypeService, LeaveTypeService>();
 builder.Services.AddScoped<ILeaveBalanceService, LeaveBalanceService>();
@@ -183,6 +204,10 @@ builder.Services.AddScoped<Application.Interfaces.Leaves.IApprovalDelegationServ
 builder.Services.AddScoped<IAttendanceRegularizationService, AttendanceRegularizationService>();
 builder.Services.AddScoped<IAttendancePolicyService, AttendancePolicyService>();
 builder.Services.AddScoped<IWfhRequestService, WfhRequestService>();
+builder.Services.AddScoped<Application.Interfaces.WorkTracking.IWorkTrackingMasterService, Application.Services.WorkTracking.WorkTrackingMasterService>();
+builder.Services.AddScoped<Application.Interfaces.WorkTracking.IDailyWorkEntryService, Application.Services.WorkTracking.DailyWorkEntryService>();
+builder.Services.AddScoped<Application.Interfaces.WorkTracking.IWorkTrackingReportService, Application.Services.WorkTracking.WorkTrackingReportService>();
+builder.Services.AddScoped<Application.Interfaces.WorkTracking.IVpisIntegrationService, Application.Services.WorkTracking.VpisIntegrationService>();
 builder.Services.AddScoped<IOnDutyRequestService, OnDutyRequestService>();
 builder.Services.AddScoped<IShortLeaveRequestService, ShortLeaveRequestService>();
 builder.Services.AddScoped<ICompOffService, CompOffService>();
@@ -311,6 +336,12 @@ builder.Services.AddHostedService<CompOffDetectionService>();
 // upcoming/overdue EMI and installment reminders - see
 // API/BackgroundServices/LoanAdvanceReminderService.cs.
 builder.Services.AddHostedService<API.BackgroundServices.LoanAdvanceReminderService>();
+
+// eSSL eTimeTrackLite1 direct-SQL attendance sync - see
+// API/BackgroundServices/EsslAttendanceSyncBackgroundService.cs. No-ops
+// every cycle unless EsslDatabase:Enabled = true, so it's always safe to
+// leave registered even for a tenant that never configures eSSL.
+builder.Services.AddHostedService<API.BackgroundServices.EsslAttendanceSyncBackgroundService>();
 
 // ======================================================
 // SWAGGER

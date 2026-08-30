@@ -1,0 +1,47 @@
+@model List<EsslUnmappedEmployeeDto>
+
+<p class="text-muted">
+    Biometric employee codes seen in eSSL punches (via the eTimeTrackLite1 direct-SQL sync) with no active
+    <strong>Employee Biometric Mapping</strong> yet. These punches are preserved (never discarded) and will
+    automatically flow into attendance as soon as a mapping is created below.
+</p>
+
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Biometric Employee Code</th>
+                <th>eSSL Employee Name</th>
+                <th class="text-center">Punch Count</th>
+                <th>First Seen</th>
+                <th>Last Seen</th>
+                <th class="text-center">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model != null && Model.Any())
+            {
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td><code>@item.BiometricEmployeeCode</code></td>
+                        <td>@(item.EsslEmployeeName ?? "—")</td>
+                        <td class="text-center">@item.PunchCount</td>
+                        <td>@item.FirstSeen.ToString("dd-MMM-yyyy hh:mm tt")</td>
+                        <td>@item.LastSeen.ToString("dd-MMM-yyyy hh:mm tt")</td>
+                        <td class="text-center">
+                            <a href="@Url.Action("Create", "EmployeeBiometricMapping", new { biometricEmployeeCode = item.BiometricEmployeeCode })"
+                               class="btn btn-xs btn-primary">
+                                <i class="icon-plus2 position-left"></i> Create Mapping
+                            </a>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr><td colspan="6" class="text-center text-muted">No unmapped employees - every eSSL punch is mapped.</td></tr>
+            }
+        </tbody>
+    </table>
+</div>

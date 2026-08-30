@@ -76,6 +76,10 @@ namespace APP.Attributes
             "Designation",
             "EmployeeBiometricMapping",
             "EmployeeShiftMapping",
+            // eSSL eTimeTrackLite1 direct-SQL attendance integration -
+            // admin configuration screen, same gating as the other
+            // Biometric/Attendance admin screens above.
+            "EsslAttendance",
             // Centralized Error Log - System Configurator/Admin only (see
             // SystemConfiguratorOnlyAttribute, applied directly on
             // ErrorLogController - this entry only stops a plain
@@ -118,6 +122,19 @@ namespace APP.Attributes
             // created off an approved Probation Confirmation. See
             // Domain/Helper/AppFeatureConstants.PIP.
             "Pip",
+            // Daily Work Entry module masters (Client/WorkJob/JobType/
+            // WorkActivity/WorkEntryReason/DocumentStatus) and cross-
+            // employee reports (Monthly/Job-wise/Structure-wise/
+            // Utilization) are HR/Admin only - no self-service equivalent.
+            // DailyWorkEntryController itself is deliberately NOT listed
+            // here: Create/MyEntries/Details are self-service, and
+            // PendingApproval/Approve/Reject follow the same
+            // "Reporting Manager may be logged in under the plain
+            // self-service role" convention as LeaveApplication/
+            // AttendanceRegularization above - the API already scopes the
+            // approval queue to the caller's own direct reports.
+            "WorkTrackingMaster",
+            "WorkTrackingReport",
         };
 
         // NOTE: "EmployeeFeedback" is deliberately NOT listed here (neither
