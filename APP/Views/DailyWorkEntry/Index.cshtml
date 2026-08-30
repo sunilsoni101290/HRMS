@@ -1,0 +1,414 @@
+@model APP.Models.DTOs.DailyWorkLogDto
+@{
+    ViewData["Title"] = "Daily Work Entry";
+    var workDate = (DateTime)ViewBag.WorkDate;
+    bool isReadOnly = Model.Status == 1 || Model.Status == 2; // Pending / Approved
+}
+
+<div class="panel panel-flat">
+    <div class="panel-heading">
+        <h5 class="panel-title"><i class="icon-calendar3 position-left"></i> Daily Work Entry</h5>
+        <div class="heading-elements">
+            <a asp-action="MyEntries" class="btn btn-link btn-sm"><i class="icon-list position-left"></i> My Work Entries</a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+
+        <div class="row">
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="workDate">Date</label>
+                    <input type="date" id="workDate" class="form-control" value="@workDate.ToString("yyyy-MM-dd")" max="@DateTime.Today.ToString("yyyy-MM-dd")" @(isReadOnly ? "disabled" : "") />
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label>Employee</label>
+                <p class="form-control-static"><strong>@Model.EmployeeName</strong> (@Model.EmployeeCode)</p>
+            </div>
+            <div class="col-md-3">
+                <label>Department</label>
+                <p class="form-control-static">@Model.DepartmentName</p>
+            </div>
+            <div class="col-md-3">
+                <label>Designation</label>
+                <p class="form-control-static">@Model.DesignationName</p>
+            </div>
+        </div>
+
+        @if (Model.Status == 3 && !string.IsNullOrEmpty(Model.RejectionReason))
+        {
+            <div class="alert alert-danger">
+                <strong>Rejected:</strong> @Model.RejectionReason - please correct and resubmit.
+            </div>
+        }
+
+        @if (isReadOnly)
+        {
+            <div class="alert alert-info">
+                This day's entry is <strong>@Model.StatusName</strong> and is read-only.
+                @if (Model.Status == 1)
+                {
+                    <text>Submitted @Model.SubmittedAt?.ToString("dd-MMM-yyyy hh:mm tt").</text>
+                }
+                else if (Model.Status == 2)
+                {
+                    <text>Approved by @Model.ApprovedByName on @Model.ApprovedAt?.ToString("dd-MMM-yyyy hh:mm tt").</text>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="panel panel-bordered">
+                <div class="panel-heading"><h6 class="panel-title">Add Activity</h6></div>
+                <div class="panel-body">
+                    <form id="lineForm" novalidate>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="lineJobType">Job Type <span class="text-danger">*</span></label>
+                                    <select id="lineJobType" class="form-control select-search"></select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="lineWorkJob">Job Number</label>
+                                    <select id="lineWorkJob" class="form-control select-search">
+                                        <option value="">-- Idle / Downtime (no job) --</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Client</label>
+                                    <p class="form-control-static" id="lineClientName">-</p>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="lineJobItem">Structure/Equipment/Job ID</label>
+                                    <select id="lineJobItem" class="form-control select-search" disabled>
+                                        <option value="">-- Select Job first --</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="lineActivity">Work Activity</label>
+                                    <select id="lineActivity" class="form-control select-search" disabled>
+                                        <option value="">-- Select Job Type first --</option>
+                                    </select>
+                                    <span class="help-block field-error" data-field="lineActivity"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-3" id="lineReasonWrap" style="display:none;">
+                                <div class="form-group">
+                                    <label for="lineReason">Reason <span class="text-danger">*</span></label>
+                                    <select id="lineReason" class="form-control select-search"></select>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label for="lineHours">Activity Hours <span class="text-danger">*</span></label>
+                                    <input type="number" id="lineHours" class="form-control" step="0.25" min="0.25" max="24" />
+                                    <span class="help-block field-error" data-field="lineHours"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="lineRemarks">Remarks</label>
+                                    <input type="text" id="lineRemarks" class="form-control" maxlength="500" placeholder="Optional" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="button" id="addLineBtn" class="btn bg-primary">
+                            <i class="icon-plus3 position-left"></i> Add Activity
+                        </button>
+                    </form>
+                </div>
+            </div>
+        }
+
+        <div class="panel panel-bordered">
+            <div class="panel-heading"><h6 class="panel-title">Activity Summary</h6></div>
+            <div class="panel-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="summaryTable">
+                        <thead>
+                            <tr>
+                                <th>Job</th>
+                                <th>Job Type</th>
+                                <th>Structure/Equipment</th>
+                                <th>Activity</th>
+                                <th>Category</th>
+                                <th>Reason</th>
+                                <th>Hours</th>
+                                <th>Remarks</th>
+                                @if (!isReadOnly)
+                                {
+                                    <th></th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody id="summaryBody">
+                            <tr id="emptyRow">
+                                <td colspan="9" class="text-center text-muted">No activities added yet.</td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th colspan="6" class="text-right">Total</th>
+                                <th id="totalHours">0.00</th>
+                                <th colspan="2"></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        @if (!isReadOnly)
+        {
+            <div class="text-right">
+                <button type="button" class="btn btn-default" id="saveDraftBtn"><i class="icon-file-text2 position-left"></i> Save Draft</button>
+                <button type="button" class="btn bg-success" id="submitBtn"><i class="icon-checkmark3 position-left"></i> Submit</button>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+    <script>
+        var lines = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Lines));
+        var jobTypesCache = [];
+        var activitiesCache = [];
+
+        function populateSelect(sel, items, valueKey, textKey, placeholder) {
+            var $sel = $(sel);
+            $sel.empty();
+            if (placeholder) $sel.append($("<option>").val("").text(placeholder));
+            items.forEach(function (item) {
+                $sel.append($("<option>").val(item[valueKey]).text(item[textKey]));
+            });
+        }
+
+        function loadJobTypes() {
+            $.get("@Url.Action("GetJobTypes")", function (res) {
+                jobTypesCache = res.data || [];
+                populateSelect("#lineJobType", jobTypesCache, "id", "name", "-- Select Job Type --");
+            });
+        }
+
+        function loadJobsDropdown() {
+            $.get("@Url.Action("GetJobsDropdown")", function (res) {
+                populateSelect("#lineWorkJob", res.data || [], "value", "text", "-- Idle / Downtime (no job) --");
+            });
+        }
+
+        $("#lineWorkJob").on("change", function () {
+            var jobId = $(this).val();
+            $("#lineClientName").text("-");
+            $("#lineJobItem").prop("disabled", true).empty().append($("<option>").val("").text("-- Loading... --"));
+
+            if (!jobId) {
+                $("#lineJobItem").empty().append($("<option>").val("").text("-- No job selected --"));
+                return;
+            }
+
+            $.get("@Url.Action("GetJobItems")", { jobId: jobId }, function (res) {
+                populateSelect("#lineJobItem", res.data || [], "id", "code", "-- Select (optional) --");
+                $("#lineJobItem").prop("disabled", false);
+            });
+        });
+
+        $("#lineJobType").on("change", function () {
+            var jobTypeId = $(this).val();
+            $("#lineActivity").prop("disabled", true).empty().append($("<option>").val("").text("-- Loading... --"));
+            $("#lineReasonWrap").hide();
+
+            if (!jobTypeId) {
+                $("#lineActivity").empty().append($("<option>").val("").text("-- Select Job Type first --"));
+                return;
+            }
+
+            $.get("@Url.Action("GetWorkActivities")", { jobTypeId: jobTypeId }, function (res) {
+                activitiesCache = res.data || [];
+                populateSelect("#lineActivity", activitiesCache, "id", "name", "-- Select Activity --");
+                $("#lineActivity").prop("disabled", false);
+            });
+        });
+
+        $("#lineActivity").on("change", function () {
+            var activityId = $(this).val();
+            var activity = activitiesCache.find(function (a) { return a.id === activityId; });
+
+            if (activity && (activity.workCategory === 3 || activity.workCategory === 4)) {
+                // Idle = 3, Downtime = 4
+                $("#lineReasonWrap").show();
+                $.get("@Url.Action("GetWorkEntryReasons")", { category: activity.workCategory === 3 ? 1 : 2 }, function (res) {
+                    populateSelect("#lineReason", res.data || [], "id", "name", "-- Select Reason --");
+                });
+            } else {
+                $("#lineReasonWrap").hide();
+            }
+        });
+
+        function renderSummary() {
+            var $body = $("#summaryBody").empty();
+            var total = 0;
+
+            if (lines.length === 0) {
+                $body.append('<tr id="emptyRow"><td colspan="9" class="text-center text-muted">No activities added yet.</td></tr>');
+            }
+
+            lines.forEach(function (l, idx) {
+                total += parseFloat(l.hours || 0);
+                var removeCell = @(isReadOnly ? "''" : "'<td><button type=\"button\" class=\"btn btn-xs btn-link text-danger removeLineBtn\" data-idx=\"' + idx + '\"><i class=\"icon-trash\"></i></button></td>'");
+                $body.append(
+                    "<tr>" +
+                    "<td>" + (l.jobNumber || (l.jobTypeName ? "-" : "Idle Hours")) + "</td>" +
+                    "<td>" + (l.jobTypeName || "-") + "</td>" +
+                    "<td>" + (l.jobItemCode || "-") + "</td>" +
+                    "<td>" + (l.workActivityName || "-") + "</td>" +
+                    "<td>" + (l.workCategoryName || "-") + "</td>" +
+                    "<td>" + (l.workEntryReasonName || "-") + "</td>" +
+                    "<td>" + parseFloat(l.hours).toFixed(2) + "</td>" +
+                    "<td>" + (l.remarks || "") + "</td>" +
+                    removeCell +
+                    "</tr>"
+                );
+            });
+
+            $("#totalHours").text(total.toFixed(2));
+        }
+
+        $(document).on("click", ".removeLineBtn", function () {
+            var idx = $(this).data("idx");
+            lines.splice(idx, 1);
+            renderSummary();
+        });
+
+        $("#addLineBtn").on("click", function () {
+            $(".field-error").text("");
+
+            var jobTypeId = $("#lineJobType").val();
+            var hours = parseFloat($("#lineHours").val());
+            var activityId = $("#lineActivity").val();
+            var activity = activitiesCache.find(function (a) { return a.id === activityId; });
+
+            var valid = true;
+
+            if (!jobTypeId) { swal("Missing Job Type", "Please select a Job Type.", "warning"); valid = false; }
+
+            if (valid && (!hours || hours <= 0 || hours > 24)) {
+                $(".field-error[data-field='lineHours']").text("Hours must be greater than 0 and no more than 24.");
+                valid = false;
+            }
+
+            if (valid && activity && (activity.workCategory === 3 || activity.workCategory === 4) && !$("#lineReason").val()) {
+                swal("Reason Required", "Please select a reason for Idle/Downtime hours.", "warning");
+                valid = false;
+            }
+
+            if (!valid) return;
+
+            lines.push({
+                workJobId: $("#lineWorkJob").val() || null,
+                jobNumber: $("#lineWorkJob option:selected").text() !== "-- Idle / Downtime (no job) --" ? $("#lineWorkJob option:selected").text() : null,
+                jobTypeId: jobTypeId,
+                jobTypeName: $("#lineJobType option:selected").text(),
+                jobItemId: $("#lineJobItem").val() || null,
+                jobItemCode: $("#lineJobItem option:selected").text() !== "-- Select (optional) --" ? $("#lineJobItem option:selected").text() : null,
+                workActivityId: activityId || null,
+                workActivityName: activity ? activity.name : null,
+                workCategory: activity ? activity.workCategory : null,
+                workCategoryName: activity ? activity.workCategoryName : null,
+                workEntryReasonId: $("#lineReasonWrap").is(":visible") ? $("#lineReason").val() : null,
+                workEntryReasonName: $("#lineReasonWrap").is(":visible") ? $("#lineReason option:selected").text() : null,
+                hours: hours,
+                remarks: $("#lineRemarks").val()
+            });
+
+            renderSummary();
+
+            // Reset the line form for the next entry.
+            $("#lineWorkJob").val("").trigger("change");
+            $("#lineJobType").val("").trigger("change");
+            $("#lineHours").val("");
+            $("#lineRemarks").val("");
+        });
+
+        function buildPayload() {
+            return {
+                WorkDate: $("#workDate").val(),
+                Lines: lines.map(function (l) {
+                    return {
+                        WorkJobId: l.workJobId,
+                        JobTypeId: l.jobTypeId,
+                        JobItemId: l.jobItemId,
+                        WorkActivityId: l.workActivityId,
+                        WorkEntryReasonId: l.workEntryReasonId,
+                        Hours: l.hours,
+                        Remarks: l.remarks
+                    };
+                })
+            };
+        }
+
+        function postJson(url, payload, onSuccess) {
+            $.ajax({
+                url: url, type: "POST", contentType: "application/json",
+                data: JSON.stringify(payload),
+                success: function (res) {
+                    if (res.success) onSuccess(res);
+                    else swal("Error", res.message || "Unable to save.", "error");
+                },
+                error: function () { swal("Error", "Unable to reach the server.", "error"); }
+            });
+        }
+
+        $("#saveDraftBtn").on("click", function () {
+            if (lines.length === 0) { swal("No Activities", "Please add at least one activity.", "warning"); return; }
+            postJson("@Url.Action("SaveDraft")", buildPayload(), function () {
+                swal({ title: "Saved", text: "Draft saved successfully.", type: "success" }, function () { location.reload(); });
+            });
+        });
+
+        $("#submitBtn").on("click", function () {
+            if (lines.length === 0) { swal("No Activities", "Please add at least one activity.", "warning"); return; }
+            swal({
+                title: "Submit for Approval?",
+                text: "Once submitted, this day's entry cannot be edited until your Team Leader reviews it.",
+                type: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#66BB6A",
+                confirmButtonText: "Yes, submit"
+            }, function (confirmed) {
+                if (!confirmed) return;
+                postJson("@Url.Action("Submit")", buildPayload(), function () {
+                    swal({ title: "Submitted", text: "Your daily work has been submitted for approval.", type: "success" }, function () { location.reload(); });
+                });
+            });
+        });
+
+        $("#workDate").on("change", function () {
+            window.location.href = "@Url.Action("Index")?date=" + $(this).val();
+        });
+
+        $(function () {
+            renderSummary();
+            @if (!isReadOnly)
+            {
+                <text>
+                loadJobTypes();
+                loadJobsDropdown();
+                </text>
+            }
+        });
+    </script>
+}

@@ -193,6 +193,14 @@ namespace Domain.Helper
         public const string EMPLOYEE_BIOMETRIC_MAPPING_CONTROLLER = "EmployeeBiometricMapping";
         public const string EMPLOYEE_BIOMETRIC_MAPPING_ACTION = ACTION_INDEX;
 
+        // eSSL eTimeTrackLite1 direct-SQL attendance integration - one admin
+        // screen (Settings / Sync Logs / Unmapped Employees as tabs, not
+        // separate features) under Attendance Management, same grouping as
+        // Biometric Devices above. See EsslAttendanceController (API + APP).
+        public const string ESSL_INTEGRATION = "ESSL_INTEGRATION";
+        public const string ESSL_INTEGRATION_CONTROLLER = "EsslAttendance";
+        public const string ESSL_INTEGRATION_ACTION = ACTION_INDEX;
+
         public const string ATTENDANCE_REGULARIZATION = "ATTENDANCE_REGULARIZATION";
         public const string ATTENDANCE_REGULARIZATION_CONTROLLER = "AttendanceRegularization";
         public const string ATTENDANCE_REGULARIZATION_ACTION = ACTION_INDEX;
@@ -662,5 +670,52 @@ namespace Domain.Helper
         public const string LOAN_ADVANCE_AUDIT_LOG = "LOAN_ADVANCE_AUDIT_LOG";
         public const string LOAN_ADVANCE_AUDIT_LOG_CONTROLLER = "LoanAdvanceAuditLog";
         public const string LOAN_ADVANCE_AUDIT_LOG_ACTION = ACTION_INDEX;
+
+        // ==================================================================
+        // Employee Work Management - Daily Work Entry module (new top-level
+        // HRMS menu group, per user confirmation). Team Leader approval
+        // authorization reuses Employee.ReportingManagerId, same pattern as
+        // WFH_REQUEST/ON_DUTY_REQUEST - "HR/Admin override" here means
+        // holding Approve permission on DAILY_WORK_ENTRY itself, mirroring
+        // IsHrOrAdminForAttendanceAsync's approach for those modules.
+        // ==================================================================
+
+        public const string EMPLOYEE_WORK_MANAGEMENT = "EMPLOYEE_WORK_MANAGEMENT";
+
+        public const string DAILY_WORK_ENTRY = "DAILY_WORK_ENTRY";
+        public const string DAILY_WORK_ENTRY_CONTROLLER = "DailyWorkEntry";
+        public const string DAILY_WORK_ENTRY_ACTION = ACTION_INDEX;
+
+        public const string MY_WORK_ENTRIES = "MY_WORK_ENTRIES";
+        public const string MY_WORK_ENTRIES_CONTROLLER = "DailyWorkEntry";
+        public const string MY_WORK_ENTRIES_ACTION = "MyEntries";
+
+        public const string WORK_ENTRY_APPROVAL = "WORK_ENTRY_APPROVAL";
+        public const string WORK_ENTRY_APPROVAL_CONTROLLER = "DailyWorkEntry";
+        public const string WORK_ENTRY_APPROVAL_ACTION = "PendingApproval";
+
+        // Masters (Job/Client/Job Type/Work Activity/Downtime-Idle Reason/
+        // Document Status) - one admin screen with tabs, same grouping
+        // convention as ESSL_INTEGRATION's Settings/Sync Logs/Unmapped
+        // Employees tabs, rather than 7 separate menu features.
+        public const string WORK_TRACKING_MASTERS = "WORK_TRACKING_MASTERS";
+        public const string WORK_TRACKING_MASTERS_CONTROLLER = "WorkTrackingMaster";
+        public const string WORK_TRACKING_MASTERS_ACTION = ACTION_INDEX;
+
+        public const string EMPLOYEE_WORK_REPORT = "EMPLOYEE_WORK_REPORT";
+        public const string EMPLOYEE_WORK_REPORT_CONTROLLER = "WorkTrackingReport";
+        public const string EMPLOYEE_WORK_REPORT_ACTION = "MonthlyEmployeeReport";
+
+        public const string JOB_WISE_WORK_REPORT = "JOB_WISE_WORK_REPORT";
+        public const string JOB_WISE_WORK_REPORT_CONTROLLER = "WorkTrackingReport";
+        public const string JOB_WISE_WORK_REPORT_ACTION = "JobWiseReport";
+
+        public const string STRUCTURE_WORK_REPORT = "STRUCTURE_WORK_REPORT";
+        public const string STRUCTURE_WORK_REPORT_CONTROLLER = "WorkTrackingReport";
+        public const string STRUCTURE_WORK_REPORT_ACTION = "StructureReport";
+
+        public const string WORK_UTILIZATION_REPORT = "WORK_UTILIZATION_REPORT";
+        public const string WORK_UTILIZATION_REPORT_CONTROLLER = "WorkTrackingReport";
+        public const string WORK_UTILIZATION_REPORT_ACTION = "UtilizationReport";
     }
 }

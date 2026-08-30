@@ -1,0 +1,602 @@
+@model EsslSettingsPageViewModel
+@{
+    ViewData["Title"] = "eSSL SQL Integration";
+    var status = Model.Status;
+    var config = Model.Config;
+}
+
+<div class="panel panel-flat">
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="bi bi-database-fill-gear position-left"></i>
+            eSSL eTimeTrackLite1 Integration
+        </h5>
+        <div class="heading-elements">
+            <span class="text-muted">Direct SQL Server read from eTimeTrackLite1.dbo.DeviceLogs - no eSSL Web API involved</span>
+        </div>
+    </div>
+
+    <div class="panel-body">
+        <ul class="nav nav-tabs">
+            <li class="active"><a href="#tab-settings" data-toggle="tab">Settings</a></li>
+            <li><a href="#tab-synclogs" data-toggle="tab" id="tab-synclogs-link">Sync Logs</a></li>
+            <li><a href="#tab-unmapped" data-toggle="tab" id="tab-unmapped-link">Unmapped Employees</a></li>
+        </ul>
+
+        <div class="tab-content">
+
+            <!-- SETTINGS TAB -->
+            <div class="tab-pane active" id="tab-settings">
+
+                <!-- CARD 1: INTEGRATION STATUS (read-only) -->
+                <div class="panel panel-bordered" style="margin-top:15px;">
+                    <div class="panel-heading">
+                        <h6 class="panel-title"><i class="icon-pulse position-left"></i> Integration Status</h6>
+                    </div>
+                    <div class="panel-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="statusTable">
+                                <tbody>
+                                    <tr>
+                                        <th width="220">Integration Enabled</th>
+                                        <td id="statIntegrationEnabled">
+                                            @if (status.Enabled)
+                                            {
+                                                <span class="label label-success">Enabled</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="label label-default">Disabled</span>
+                                            }
+                                        </td>
+                                        <th width="220">Sync Status</th>
+                                        <td id="statSyncStatus">
+                                            @if (status.IsSyncRunning)
+                                            {
+                                                <span class="label label-warning">Sync in progress...</span>
+                                            }
+                                            else if (status.LastSyncStatus == "Success")
+                                            {
+                                                <span class="label label-success">Last sync: Success</span>
+                                            }
+                                            else if (status.LastSyncStatus == "PartialFailure")
+                                            {
+                                                <span class="label label-warning">Last sync: Partial Failure</span>
+                                            }
+                                            else if (status.LastSyncStatus == "Failed")
+                                            {
+                                                <span class="label label-danger">Last sync: Failed</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="label label-default">Never synced</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th>Last Sync Started</th>
+                                        <td id="statLastStarted">@(status.LastSyncStartedAt?.ToString("dd-MMM-yyyy hh:mm:ss tt") ?? "—")</td>
+                                        <th>Last Sync Completed</th>
+                                        <td id="statLastCompleted">@(status.LastSyncCompletedAt?.ToString("dd-MMM-yyyy hh:mm:ss tt") ?? "—")</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Last Processed Punch</th>
+                                        <td colspan="3" id="statLastProcessed">
+                                            @if (status.LastProcessedDeviceLogId.HasValue)
+                                            {
+                                                @:DeviceLogId @status.LastProcessedDeviceLogId, @status.LastProcessedLogDate?.ToString("dd-MMM-yyyy hh:mm:ss tt")
+                                            }
+                                            else
+                                            {
+                                                @:—
+                                            }
+                                        </td>
+                                    </tr>
+                                    @if (!string.IsNullOrEmpty(status.LastError))
+                                    {
+                                        <tr>
+                                            <th>Last Error</th>
+                                            <td colspan="3" class="text-danger" id="statLastError">@status.LastError</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD 2: DATABASE CONFIGURATION (editable) -->
+                <div class="panel panel-bordered">
+                    <div class="panel-heading">
+                        <h6 class="panel-title"><i class="icon-database position-left"></i> Database Configuration</h6>
+                    </div>
+                    <div class="panel-body">
+
+                        <div id="configValidationSummary" class="alert alert-danger alert-dismissible" style="display:none;">
+                            <button type="button" class="close" data-dismiss="alert">&times;</button>
+                            <span id="configValidationMessage"></span>
+                        </div>
+
+                        <form id="esslConfigForm" novalidate>
+
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="checkbox">
+                                        <label for="IntegrationEnabled">
+                                            <input type="checkbox" id="IntegrationEnabled" name="IntegrationEnabled"
+                                                   @(config.IntegrationEnabled ? "checked" : "") />
+                                            Integration Enabled
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="DatabaseServer">Database Server <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="DatabaseServer" name="DatabaseServer"
+                                               placeholder="e.g. DESKTOP-AAQM99\SQLEXPRESS01"
+                                               value="@config.DatabaseServer" required aria-required="true" />
+                                        <span class="help-block field-error" data-field="DatabaseServer"></span>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="DatabaseName">Database Name <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="DatabaseName" name="DatabaseName"
+                                               placeholder="etimetracklite1"
+                                               value="@config.DatabaseName" required aria-required="true" />
+                                        <span class="help-block field-error" data-field="DatabaseName"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="AuthenticationType">Authentication Type <span class="text-danger">*</span></label>
+                                        <select class="form-control" id="AuthenticationType" name="AuthenticationType">
+                                            <option value="Sql" selected="@(config.AuthenticationType == "Sql")">SQL Server Authentication</option>
+                                            <option value="Windows" selected="@(config.AuthenticationType == "Windows")">Windows Authentication</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="ConnectionTimeout">Connection Timeout (seconds)</label>
+                                        <input type="number" class="form-control" id="ConnectionTimeout" name="ConnectionTimeout"
+                                               min="1" max="300" value="@config.ConnectionTimeout" />
+                                        <span class="help-block field-error" data-field="ConnectionTimeout"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row" id="credentialsRow">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="Username">Username <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="Username" name="Username"
+                                               autocomplete="off"
+                                               value="@config.Username" />
+                                        <span class="help-block field-error" data-field="Username"></span>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="Password">
+                                            Password
+                                            @if (config.HasPasswordConfigured)
+                                            {
+                                                <span class="text-muted">(a password is already saved - leave blank to keep it)</span>
+                                            }
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="password" class="form-control" id="Password" name="Password"
+                                                   autocomplete="new-password"
+                                                   placeholder="@(config.HasPasswordConfigured ? "•••••••• (leave blank to keep)" : "Enter password if changing")" />
+                                            <span class="input-group-btn">
+                                                <button class="btn btn-default" type="button" id="togglePasswordBtn"
+                                                        aria-pressed="false" aria-label="Show password" title="Show password">
+                                                    <i class="icon-eye8" id="togglePasswordIcon"></i>
+                                                </button>
+                                            </span>
+                                        </div>
+                                        <span class="help-block field-error" data-field="Password"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="SyncIntervalMinutes">Sync Interval (minutes)</label>
+                                        <input type="number" class="form-control" id="SyncIntervalMinutes" name="SyncIntervalMinutes"
+                                               min="1" max="1440" value="@config.SyncIntervalMinutes" />
+                                        <span class="help-block field-error" data-field="SyncIntervalMinutes"></span>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="BatchSize">Batch Size (records)</label>
+                                        <input type="number" class="form-control" id="BatchSize" name="BatchSize"
+                                               min="1" max="5000" value="@config.BatchSize" />
+                                        <span class="help-block field-error" data-field="BatchSize"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <button type="button" class="btn btn-default" id="testConnectionBtn">
+                                        <i class="icon-plug2 position-left"></i> Test Connection
+                                    </button>
+                                </div>
+                                <div class="col-sm-6 text-right">
+                                    <button type="button" class="btn btn-link" id="cancelConfigBtn">
+                                        Cancel
+                                    </button>
+                                    <button type="button" class="btn bg-primary" id="saveConfigBtn">
+                                        <i class="icon-checkmark3 position-left"></i> Save Settings
+                                    </button>
+                                </div>
+                            </div>
+
+                        </form>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <button type="button" class="btn bg-primary" id="syncNowBtn">
+                        <i class="icon-sync position-left"></i> Sync Now
+                    </button>
+                </div>
+
+                <div class="panel panel-bordered">
+                    <div class="panel-heading"><h6 class="panel-title">Historical Import</h6></div>
+                    <div class="panel-body">
+                        <p class="text-muted">Import punches for a specific date range (e.g. backfill before this integration was enabled). Uses the same sync engine and duplicate prevention as the automatic sync - safe to re-run.</p>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label for="historyFromDate">From Date</label>
+                                <input type="date" id="historyFromDate" class="form-control" />
+                            </div>
+                            <div class="col-md-3">
+                                <label for="historyToDate">To Date</label>
+                                <input type="date" id="historyToDate" class="form-control" />
+                            </div>
+                            <div class="col-md-3" style="margin-top:25px;">
+                                <button type="button" class="btn btn-primary" id="historicalSyncBtn">
+                                    <i class="icon-history position-left"></i> Import Historical Data
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="syncResultBox" style="display:none;" class="panel panel-bordered">
+                    <div class="panel-heading"><h6 class="panel-title">Last Sync Result</h6></div>
+                    <div class="panel-body" id="syncResultBody"></div>
+                </div>
+            </div>
+
+            <!-- SYNC LOGS TAB -->
+            <div class="tab-pane" id="tab-synclogs">
+                <div id="syncLogsContainer" style="margin-top:15px;">
+                    <div class="text-center text-muted">Loading...</div>
+                </div>
+            </div>
+
+            <!-- UNMAPPED EMPLOYEES TAB -->
+            <div class="tab-pane" id="tab-unmapped">
+                <div id="unmappedContainer" style="margin-top:15px;">
+                    <div class="text-center text-muted">Loading...</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+
+            // ==============================================================
+            // ORIGINAL VALUES - for Cancel (requirement #8: "restore the
+            // currently persisted values, must not save partially edited
+            // values"). Captured once at load; refreshed after a successful
+            // Save so a second Cancel doesn't revert past what was just saved.
+            // ==============================================================
+            var originalValues = captureFormValues();
+
+            function captureFormValues() {
+                return {
+                    IntegrationEnabled: $("#IntegrationEnabled").is(":checked"),
+                    DatabaseServer: $("#DatabaseServer").val(),
+                    DatabaseName: $("#DatabaseName").val(),
+                    AuthenticationType: $("#AuthenticationType").val(),
+                    Username: $("#Username").val(),
+                    ConnectionTimeout: $("#ConnectionTimeout").val(),
+                    SyncIntervalMinutes: $("#SyncIntervalMinutes").val(),
+                    BatchSize: $("#BatchSize").val()
+                };
+            }
+
+            function applyFormValues(v) {
+                $("#IntegrationEnabled").prop("checked", !!v.IntegrationEnabled);
+                $("#DatabaseServer").val(v.DatabaseServer || "");
+                $("#DatabaseName").val(v.DatabaseName || "");
+                $("#AuthenticationType").val(v.AuthenticationType || "Sql");
+                $("#Username").val(v.Username || "");
+                $("#Password").val("");
+                $("#ConnectionTimeout").val(v.ConnectionTimeout || 15);
+                $("#SyncIntervalMinutes").val(v.SyncIntervalMinutes || 5);
+                $("#BatchSize").val(v.BatchSize || 500);
+                toggleAuthFields();
+                clearValidation();
+            }
+
+            // ==============================================================
+            // AUTHENTICATION TYPE TOGGLE (requirement #5)
+            // ==============================================================
+            function toggleAuthFields() {
+                var isSql = $("#AuthenticationType").val() === "Sql";
+                $("#credentialsRow").toggle(isSql);
+                $("#Username").prop("disabled", !isSql);
+                $("#Password").prop("disabled", !isSql);
+            }
+
+            $("#AuthenticationType").on("change", toggleAuthFields);
+            toggleAuthFields();
+
+            // ==============================================================
+            // PASSWORD SHOW/HIDE - keyboard accessible (Enter/Space work via
+            // native <button>; aria-pressed reflects state for screen readers)
+            // ==============================================================
+            $("#togglePasswordBtn").on("click", function () {
+                var input = $("#Password");
+                var showing = input.attr("type") === "text";
+
+                input.attr("type", showing ? "password" : "text");
+                $(this).attr("aria-pressed", (!showing).toString());
+                $(this).attr("aria-label", showing ? "Show password" : "Hide password");
+                $("#togglePasswordIcon").attr("class", showing ? "icon-eye8" : "icon-eye-blocked2");
+            });
+
+            // ==============================================================
+            // CLIENT-SIDE VALIDATION (never the only validation - the API
+            // always re-validates server-side; requirement #16)
+            // ==============================================================
+            function clearValidation() {
+                $("#configValidationSummary").hide();
+                $(".field-error").text("");
+                $(".form-group").removeClass("has-error");
+            }
+
+            function showFieldError(field, message) {
+                $(".field-error[data-field='" + field + "']").text(message);
+                $("#" + field).closest(".form-group").addClass("has-error");
+            }
+
+            function validateForm() {
+                clearValidation();
+                var valid = true;
+
+                if (!$("#DatabaseServer").val().trim()) {
+                    showFieldError("DatabaseServer", "Database server is required.");
+                    valid = false;
+                }
+
+                if (!$("#DatabaseName").val().trim()) {
+                    showFieldError("DatabaseName", "Database name is required.");
+                    valid = false;
+                }
+
+                if ($("#AuthenticationType").val() === "Sql" && !$("#Username").val().trim()) {
+                    showFieldError("Username", "Username is required for SQL Server Authentication.");
+                    valid = false;
+                }
+
+                var timeout = parseInt($("#ConnectionTimeout").val(), 10);
+                if (!timeout || timeout < 1 || timeout > 300) {
+                    showFieldError("ConnectionTimeout", "Connection timeout must be between 1 and 300 seconds.");
+                    valid = false;
+                }
+
+                var interval = parseInt($("#SyncIntervalMinutes").val(), 10);
+                if (!interval || interval < 1 || interval > 1440) {
+                    showFieldError("SyncIntervalMinutes", "Sync interval must be greater than zero.");
+                    valid = false;
+                }
+
+                var batch = parseInt($("#BatchSize").val(), 10);
+                if (!batch || batch < 1 || batch > 5000) {
+                    showFieldError("BatchSize", "Batch size must be greater than zero.");
+                    valid = false;
+                }
+
+                if (!valid) {
+                    $("#configValidationMessage").text("Please correct the highlighted fields.");
+                    $("#configValidationSummary").show();
+                }
+
+                return valid;
+            }
+
+            function buildConfigPayload() {
+                return {
+                    IntegrationEnabled: $("#IntegrationEnabled").is(":checked"),
+                    DatabaseServer: $("#DatabaseServer").val().trim(),
+                    DatabaseName: $("#DatabaseName").val().trim(),
+                    AuthenticationType: $("#AuthenticationType").val(),
+                    // Requirement #5 - never send credential values that
+                    // don't apply to the selected authentication type.
+                    Username: $("#AuthenticationType").val() === "Sql" ? $("#Username").val().trim() : null,
+                    Password: $("#AuthenticationType").val() === "Sql" ? ($("#Password").val() || null) : null,
+                    ConnectionTimeout: parseInt($("#ConnectionTimeout").val(), 10) || 15,
+                    SyncIntervalMinutes: parseInt($("#SyncIntervalMinutes").val(), 10) || 5,
+                    BatchSize: parseInt($("#BatchSize").val(), 10) || 500
+                };
+            }
+
+            // ==============================================================
+            // TEST CONNECTION - reads current form values, never saves,
+            // never starts a sync (requirement #6)
+            // ==============================================================
+            $("#testConnectionBtn").on("click", function () {
+                if (!validateForm()) return;
+
+                var btn = $(this);
+                var original = btn.html();
+                btn.prop("disabled", true).html('<i class="icon-spinner2 spinner position-left"></i> Testing...');
+
+                $.ajax({
+                    url: "@Url.Action("TestConnection")",
+                    type: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify(buildConfigPayload()),
+                    success: function (resp) {
+                        btn.prop("disabled", false).html(original);
+                        if (resp.success) {
+                            swal("Connection Successful", resp.message, "success");
+                        } else {
+                            swal("Connection Failed", resp.message, "error");
+                        }
+                    },
+                    error: function () {
+                        btn.prop("disabled", false).html(original);
+                        swal("Error", "Unable to reach the ERP API.", "error");
+                    }
+                });
+            });
+
+            // ==============================================================
+            // SAVE SETTINGS
+            // ==============================================================
+            $("#saveConfigBtn").on("click", function () {
+                if (!validateForm()) return;
+
+                var btn = $(this);
+                var original = btn.html();
+                btn.prop("disabled", true).html('<i class="icon-spinner2 spinner position-left"></i> Saving...');
+
+                $.ajax({
+                    url: "@Url.Action("SaveConfiguration")",
+                    type: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify(buildConfigPayload()),
+                    success: function (resp) {
+                        btn.prop("disabled", false).html(original);
+
+                        if (resp.success) {
+                            swal({ title: "Success", text: resp.message || "Settings saved successfully.", type: "success" }, function () {
+                                location.reload();
+                            });
+                        } else {
+                            $("#configValidationMessage").text(resp.message || "Unable to save settings.");
+                            $("#configValidationSummary").show();
+                        }
+                    },
+                    error: function () {
+                        btn.prop("disabled", false).html(original);
+                        swal("Error", "Unable to reach the ERP API.", "error");
+                    }
+                });
+            });
+
+            // ==============================================================
+            // CANCEL - restore persisted values, discard edits (requirement #8)
+            // ==============================================================
+            $("#cancelConfigBtn").on("click", function () {
+                applyFormValues(originalValues);
+            });
+
+            // ==============================================================
+            // SYNC NOW / HISTORICAL IMPORT (unchanged core sync behavior)
+            // ==============================================================
+            function runSync(payload, btn, originalHtml) {
+                btn.prop("disabled", true).html('<i class="icon-spinner2 spinner position-left"></i> Syncing...');
+
+                $.ajax({
+                    url: "@Url.Action("SyncNow")",
+                    type: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify(payload),
+                    success: function (resp) {
+                        btn.prop("disabled", false).html(originalHtml);
+
+                        if (resp.success) {
+                            swal({ title: "Sync Complete", text: resp.message, type: "success" });
+
+                            if (resp.data) {
+                                var d = resp.data;
+                                $("#syncResultBody").html(
+                                    "<table class='table table-condensed'>" +
+                                    "<tr><th>Records Found</th><td>" + d.recordsFound + "</td></tr>" +
+                                    "<tr><th>Imported</th><td>" + d.recordsImported + "</td></tr>" +
+                                    "<tr><th>Skipped / Duplicates</th><td>" + d.recordsSkipped + " (" + d.duplicateCount + " duplicates)</td></tr>" +
+                                    "<tr><th>Unknown Employees</th><td>" + d.unknownEmployeeCount + "</td></tr>" +
+                                    "<tr><th>Errors</th><td>" + d.errorCount + "</td></tr>" +
+                                    "<tr><th>Duration</th><td>" + d.durationSeconds + "s</td></tr>" +
+                                    "</table>"
+                                );
+                                $("#syncResultBox").show();
+                            }
+
+                            setTimeout(function () { location.reload(); }, 1500);
+                        } else {
+                            swal("Sync Failed", resp.message || "Unable to sync.", "error");
+                        }
+                    },
+                    error: function () {
+                        btn.prop("disabled", false).html(originalHtml);
+                        swal("Error", "Unable to reach the ERP API.", "error");
+                    }
+                });
+            }
+
+            $("#syncNowBtn").on("click", function () {
+                runSync({}, $(this), '<i class="icon-sync position-left"></i> Sync Now');
+            });
+
+            $("#historicalSyncBtn").on("click", function () {
+                var from = $("#historyFromDate").val();
+                var to = $("#historyToDate").val();
+
+                if (!from || !to) {
+                    swal("Missing Dates", "Please select both From Date and To Date.", "warning");
+                    return;
+                }
+
+                runSync({ FromDate: from, ToDate: to }, $(this), '<i class="icon-history position-left"></i> Import Historical Data');
+            });
+
+            // ==============================================================
+            // SYNC LOGS / UNMAPPED EMPLOYEES TABS (unchanged)
+            // ==============================================================
+            var syncLogsLoaded = false;
+            $("#tab-synclogs-link").on("shown.bs.tab", function () {
+                if (syncLogsLoaded) return;
+                syncLogsLoaded = true;
+                $("#syncLogsContainer").load("@Url.Action("SyncLogs")");
+            });
+
+            var unmappedLoaded = false;
+            $("#tab-unmapped-link").on("shown.bs.tab", function () {
+                if (unmappedLoaded) return;
+                unmappedLoaded = true;
+                $("#unmappedContainer").load("@Url.Action("UnmappedEmployees")");
+            });
+
+        });
+    </script>
+
+    <style>
+        .font-size-sm { font-size: 12px; }
+        .field-error { color: #d9534f; }
+        @@media (max-width: 767px) {
+            #esslConfigForm .col-sm-6 { width: 100%; }
+        }
+    </style>
+}

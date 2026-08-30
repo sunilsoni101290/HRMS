@@ -1,0 +1,150 @@
+@model List<APP.Models.DTOs.DailyWorkLogSummaryDto>
+@{
+    ViewData["Title"] = "Team Leader Approval";
+}
+
+<div class="panel panel-flat">
+    <div class="panel-heading">
+        <h5 class="panel-title"><i class="icon-checkmark4 position-left"></i> Team Leader Approval - Daily Work Entries</h5>
+    </div>
+    <div class="panel-body">
+        <div class="table-responsive">
+            <table class="table table-bordered datatable-basic">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Date</th>
+                        <th>Hours</th>
+                        <th>Status</th>
+                        <th>Submitted At</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="6" class="text-center text-muted">No entries pending your approval.</td></tr>
+                    }
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.EmployeeName (@item.EmployeeCode)</td>
+                            <td>@item.WorkDate.ToString("dd-MMM-yyyy")</td>
+                            <td>@item.TotalHours.ToString("0.00")</td>
+                            <td><span class="label label-warning">@item.StatusName</span></td>
+                            <td>@(item.SubmittedAt?.ToString("dd-MMM-yyyy hh:mm tt") ?? "-")</td>
+                            <td>
+                                <button type="button" class="btn btn-xs btn-link viewBtn" data-id="@item.Id"><i class="icon-eye"></i> View</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Details Modal -->
+<div class="modal fade" id="detailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h5 class="modal-title">Daily Work Entry Details</h5>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <div class="text-center text-muted">Loading...</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-link" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-danger" id="rejectBtn">Reject</button>
+                <button type="button" class="btn bg-success" id="approveBtn">Approve</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+    <script src="~/global_assets/js/plugins/tables/datatables/datatables.min.js"></script>
+    <script>
+        $(".datatable-basic").DataTable({ order: [[4, "asc"]] });
+
+        var currentId = null;
+
+        $(document).on("click", ".viewBtn", function () {
+            currentId = $(this).data("id");
+            $("#modalBody").html('<div class="text-center text-muted">Loading...</div>');
+            $("#detailsModal").modal("show");
+
+            $.get("@Url.Action("GetEntryJson")", { id: currentId }, function (res) {
+                if (!res.success) { $("#modalBody").html('<div class="alert alert-danger">' + res.message + '</div>'); return; }
+                renderDetails(res.data);
+            });
+        });
+
+        function renderDetails(d) {
+            var rows = d.lines.map(function (l) {
+                return "<tr><td>" + (l.jobNumber || "-") + "</td><td>" + (l.jobTypeName || "-") + "</td><td>" +
+                    (l.jobItemCode || "-") + "</td><td>" + (l.workActivityName || "-") + "</td><td>" +
+                    (l.workCategoryName || "-") + "</td><td>" + (l.workEntryReasonName || "-") + "</td><td>" +
+                    parseFloat(l.hours).toFixed(2) + "</td><td>" + (l.remarks || "") + "</td></tr>";
+            }).join("");
+
+            $("#modalBody").html(
+                "<div class='row'>" +
+                "<div class='col-md-4'><strong>Employee:</strong> " + d.employeeName + " (" + d.employeeCode + ")</div>" +
+                "<div class='col-md-4'><strong>Date:</strong> " + d.workDate.substring(0, 10) + "</div>" +
+                "<div class='col-md-4'><strong>Total Hours:</strong> " + d.totalHours.toFixed(2) + "</div>" +
+                "</div><hr/>" +
+                "<div class='table-responsive'><table class='table table-bordered'>" +
+                "<thead><tr><th>Job</th><th>Job Type</th><th>Structure</th><th>Activity</th><th>Category</th><th>Reason</th><th>Hours</th><th>Remarks</th></tr></thead>" +
+                "<tbody>" + rows + "</tbody></table></div>"
+            );
+        }
+
+        $("#approveBtn").on("click", function () {
+            swal({
+                title: "Approve this entry?", type: "warning", showCancelButton: true,
+                confirmButtonColor: "#66BB6A", confirmButtonText: "Yes, approve"
+            }, function (confirmed) {
+                if (!confirmed) return;
+                $.post("@Url.Action("Approve")", { id: currentId }, function (res) {
+                    if (res.success) {
+                        swal({ title: "Approved", type: "success" }, function () { location.reload(); });
+                    } else {
+                        swal("Error", res.message || "Unable to approve.", "error");
+                    }
+                });
+            });
+        });
+
+        $("#rejectBtn").on("click", function () {
+            swal({
+                title: "Reject this entry",
+                text: "Please provide a reason:",
+                type: "input",
+                showCancelButton: true,
+                confirmButtonColor: "#E53935",
+                confirmButtonText: "Reject",
+                inputPlaceholder: "Rejection reason"
+            }, function (reason) {
+                if (reason === false) return;
+                if (!reason || !reason.trim()) { swal.showInputError("Rejection reason is required."); return; }
+
+                $.ajax({
+                    url: "@Url.Action("Reject")?id=" + encodeURIComponent(currentId),
+                    type: "POST", contentType: "application/json",
+                    data: JSON.stringify({ Reason: reason }),
+                    success: function (res) {
+                        if (res.success) {
+                            swal({ title: "Rejected", type: "success" }, function () { location.reload(); });
+                        } else {
+                            swal("Error", res.message || "Unable to reject.", "error");
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+}

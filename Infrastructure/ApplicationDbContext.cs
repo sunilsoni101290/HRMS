@@ -14,7 +14,7 @@ namespace Infrastructure
     public class ApplicationDbContext : DbContext
     {
         private readonly ITenantService _tenantService;
-        public ApplicationDbContext(DbContextOptions options, ITenantService tenantService) : base(options)
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, ITenantService tenantService) : base(options)
         {
             _tenantService = tenantService;
         }
@@ -77,6 +77,35 @@ namespace Infrastructure
         public DbSet<BiometricAgent> BiometricAgents { get; set; }
         public DbSet<BiometricDeviceTestRequest> BiometricDeviceTestRequests { get; set; }
         public DbSet<BiometricSyncLog> BiometricSyncLogs { get; set; }
+
+        // eSSL eTimeTrackLite1 direct-SQL attendance integration - the
+        // per-tenant sync cursor/lock. History for this feature reuses
+        // BiometricSyncLogs above (SyncType = "EsslDbPull") rather than a
+        // second history table. See Domain/Entities/EsslAttendanceSyncState.cs.
+        public DbSet<EsslAttendanceSyncState> EsslAttendanceSyncStates { get; set; }
+
+        // Editable connection/sync configuration for the eSSL integration -
+        // one row per tenant. See Domain/Entities/EsslIntegrationSetting.cs.
+        public DbSet<EsslIntegrationSetting> EsslIntegrationSettings { get; set; }
+
+        // Daily Work Entry / Employee Work Tracking module - master data
+        // (Client/WorkJob/JobItem/JobType/WorkActivity/WorkEntryReason/
+        // DocumentStatus) plus the DailyWorkLog (header, one per
+        // Employee+Date, carries the Draft/Submitted/Approved/Rejected
+        // workflow) and DailyWorkEntry (line items) transaction tables. See
+        // Domain/Entities/DailyWorkLog.cs's remarks for why status lives on
+        // the header rather than every line.
+        public DbSet<Client> Clients { get; set; }
+        public DbSet<WorkJob> WorkJobs { get; set; }
+        public DbSet<JobItem> JobItems { get; set; }
+        public DbSet<JobType> JobTypes { get; set; }
+        public DbSet<WorkActivity> WorkActivities { get; set; }
+        public DbSet<WorkEntryReason> WorkEntryReasons { get; set; }
+        public DbSet<DocumentStatus> DocumentStatuses { get; set; }
+        public DbSet<DailyWorkLog> DailyWorkLogs { get; set; }
+        public DbSet<DailyWorkEntry> DailyWorkEntries { get; set; }
+        public DbSet<DailyWorkLogApprovalHistory> DailyWorkLogApprovalHistories { get; set; }
+
         public DbSet<AttendanceRegularization> AttendanceRegularizations { get; set; }
         public DbSet<AttendanceRegularizationApprovalHistory> AttendanceRegularizationApprovalHistories { get; set; }
 
@@ -1146,7 +1175,61 @@ namespace Infrastructure
                     .WithMany()
                     .HasForeignKey(e => e.DeviceId)
                     .IsRequired(false);
+
+                // Query pattern for the eSSL Sync Logs admin screen: latest
+                // "EsslDbPull" runs first.
+                entity.HasIndex(e => new { e.TenantId, e.SyncType, e.StartTime })
+                    .HasDatabaseName("IX_BiometricSyncLogs_Tenant_SyncType_StartTime");
             });
+
+            modelBuilder.Entity<EsslAttendanceSyncState>(entity =>
+            {
+                // One cursor/lock row per tenant - upserted, never duplicated.
+                entity.HasIndex(e => e.TenantId)
+                    .IsUnique()
+                    .HasDatabaseName("IX_EsslAttendanceSyncStates_Tenant");
+            });
+
+            modelBuilder.Entity<EsslIntegrationSetting>(entity =>
+            {
+                // One configuration row per tenant - upserted, never duplicated.
+                entity.HasIndex(e => e.TenantId)
+                    .IsUnique()
+                    .HasDatabaseName("IX_EsslIntegrationSettings_Tenant");
+            });
+
+            // =====================================================
+            // Daily Work Entry / Employee Work Tracking module
+            // =====================================================
+
+            modelBuilder.Entity<WorkJob>()
+                .HasIndex(x => x.JobNumber);
+
+            modelBuilder.Entity<JobItem>()
+                .HasIndex(x => x.WorkJobId);
+
+            modelBuilder.Entity<WorkActivity>()
+                .HasIndex(x => x.JobTypeId);
+
+            // One header row per Employee+Date - Employee+Date and
+            // Employee+Month(via Employee+Date range) are this module's
+            // hottest report/lookup paths (spec section 40).
+            modelBuilder.Entity<DailyWorkLog>()
+                .HasIndex(x => new { x.EmployeeId, x.WorkDate })
+                .IsUnique()
+                .HasDatabaseName("IX_DailyWorkLogs_Employee_Date");
+
+            modelBuilder.Entity<DailyWorkLog>()
+                .HasIndex(x => new { x.TenantId, x.Status });
+
+            modelBuilder.Entity<DailyWorkEntry>()
+                .HasIndex(x => x.DailyWorkLogId);
+
+            modelBuilder.Entity<DailyWorkEntry>()
+                .HasIndex(x => new { x.WorkJobId, x.JobItemId });
+
+            modelBuilder.Entity<DailyWorkLogApprovalHistory>()
+                .HasIndex(x => x.DailyWorkLogId);
 
             // =====================================================
             // 🔥 GLOBAL FIX (VERY IMPORTANT)
