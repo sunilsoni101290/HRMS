@@ -694,6 +694,21 @@ namespace Domain.Helper
         public const string WORK_ENTRY_APPROVAL_CONTROLLER = "DailyWorkEntry";
         public const string WORK_ENTRY_APPROVAL_ACTION = "PendingApproval";
 
+        // Job/Work Assignment - the Manager -> Employee assignment layer
+        // that Daily Work Entry's job/structure/activity dropdowns are
+        // scoped to (see WorkAssignmentService remarks). WORK_ASSIGNMENT's
+        // Create/Approve-equivalent actions are authorized purely through
+        // the Employee.ReportingManagerId hierarchy (same pattern as
+        // DAILY_WORK_ENTRY's Team Leader approval) with an Actions.Create
+        // permission override for HR/Admin - never a hard-coded role name.
+        public const string WORK_ASSIGNMENT = "WORK_ASSIGNMENT";
+        public const string WORK_ASSIGNMENT_CONTROLLER = "EmployeeWorkAssignment";
+        public const string WORK_ASSIGNMENT_ACTION = "Assign";
+
+        public const string MY_ASSIGNED_JOBS = "MY_ASSIGNED_JOBS";
+        public const string MY_ASSIGNED_JOBS_CONTROLLER = "EmployeeWorkAssignment";
+        public const string MY_ASSIGNED_JOBS_ACTION = ACTION_INDEX;
+
         // Masters (Job/Client/Job Type/Work Activity/Downtime-Idle Reason/
         // Document Status) - one admin screen with tabs, same grouping
         // convention as ESSL_INTEGRATION's Settings/Sync Logs/Unmapped

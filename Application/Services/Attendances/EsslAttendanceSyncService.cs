@@ -203,7 +203,7 @@ namespace Application.Services.Attendances
                     var batch = await _esslDataSource.GetDeviceLogsAsync(
                         tenantId, fromDateInclusive, toDateExclusive, lastSeenId, batchSize, ct);
 
-                    if (batch.Count == 0)
+                        if (batch.Count == 0)
                         break;
 
                     result.RecordsFound += batch.Count;
@@ -586,27 +586,39 @@ namespace Application.Services.Attendances
             var pageNumber = filter.PageNumber < 1 ? 1 : filter.PageNumber;
             var pageSize = filter.PageSize is < 1 or > 200 ? 20 : filter.PageSize;
 
-            var entities = await query
+            // NOTE: BiometricSyncLogs was originally created by an ad-hoc SQL
+            // script before this feature had a real EF migration (see the
+            // remarks on PendingMigrationEsslAttendanceSyncStates) - its
+            // actual physical columns don't necessarily match the NOT NULL
+            // assumptions in the entity/migration DDL. Some legacy rows have
+            // NULL in StartTime/RecordsFetched/RecordsInserted/
+            // RecordsSkipped/RecordsFailed, and reading a NULL SQL value
+            // into a non-nullable DateTime/int throws
+            // System.Data.SqlTypes.SqlNullValueException at materialization
+            // time. Projecting straight to the DTO with a nullable cast +
+            // coalesce (translated by EF Core into SQL COALESCE/ISNULL)
+            // avoids ever reading those columns as a non-nullable type,
+            // without requiring any database/schema change.
+            var items = await query
                 .OrderByDescending(x => x.StartTime)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
+                .Select(x => new EsslSyncHistoryDto
+                {
+                    Id = x.Id,
+                    StartTime = (DateTime?)x.StartTime ?? DateTime.MinValue,
+                    EndTime = x.EndTime,
+                    FromDate = x.FromDate,
+                    ToDate = x.ToDate,
+                    RecordsFetched = (int?)x.RecordsFetched ?? 0,
+                    RecordsInserted = (int?)x.RecordsInserted ?? 0,
+                    RecordsSkipped = (int?)x.RecordsSkipped ?? 0,
+                    RecordsFailed = (int?)x.RecordsFailed ?? 0,
+                    Status = x.Status ?? "Unknown",
+                    ErrorMessage = x.ErrorMessage,
+                    TriggeredBy = x.TriggeredBy
+                })
                 .ToListAsync();
-
-            var items = entities.Select(x => new EsslSyncHistoryDto
-            {
-                Id = x.Id,
-                StartTime = x.StartTime,
-                EndTime = x.EndTime,
-                FromDate = x.FromDate,
-                ToDate = x.ToDate,
-                RecordsFetched = x.RecordsFetched,
-                RecordsInserted = x.RecordsInserted,
-                RecordsSkipped = x.RecordsSkipped,
-                RecordsFailed = x.RecordsFailed,
-                Status = x.Status,
-                ErrorMessage = x.ErrorMessage,
-                TriggeredBy = x.TriggeredBy
-            }).ToList();
 
             return new PagedResult<EsslSyncHistoryDto>
             {

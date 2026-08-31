@@ -34,6 +34,24 @@ namespace Application.DTOs.WorkTracking
 
         [MaxLength(500)]
         public string? Remarks { get; set; }
+
+        /// <summary>Free-text "what was actually completed today" - separate from the fixed WorkActivity name (spec section 11).</summary>
+        [MaxLength(1000)]
+        public string? WorkDoneToday { get; set; }
+
+        /// <summary>
+        /// Which EmployeeWorkAssignment this line is charged against - the
+        /// employee picks from their OWN assigned jobs (spec section 9),
+        /// never an arbitrary Job Master entry. Re-validated server-side
+        /// (ownership, active status, Job/JobItem/Activity match - spec
+        /// section 24) before the line is ever persisted. Null only for
+        /// Idle/Downtime lines or an explicitly-justified AdhocReason line.
+        /// </summary>
+        public string? AssignmentId { get; set; }
+
+        /// <summary>Required when a Direct/Indirect line is submitted WITHOUT a matching AssignmentId (spec section 14 - controlled "Unassigned/Ad-hoc Work" exception).</summary>
+        [MaxLength(500)]
+        public string? AdhocReason { get; set; }
     }
 
     /// <summary>Save Draft / Submit request body - EmployeeId is deliberately absent; the server always resolves it from the acting user (spec section 35).</summary>
@@ -71,6 +89,10 @@ namespace Application.DTOs.WorkTracking
 
         public decimal Hours { get; set; }
         public string? Remarks { get; set; }
+        public string? WorkDoneToday { get; set; }
+
+        public string? AssignmentId { get; set; }
+        public string? AdhocReason { get; set; }
     }
 
     public class DailyWorkLogDto

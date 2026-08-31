@@ -1,207 +1,507 @@
-﻿@model IEnumerable<EmployeeListDto>
+@model IEnumerable<EmployeeListDto>
 
-<div class="panel panel-flat">
-    <div class="panel-heading">
+@{
+    ViewData["Title"] = "Employees";
+}
 
-        <h5 class="panel-title">
+<style>
+    /* ===== Employee List - Enterprise redesign =====
+       Namespaced (emplist-*) so nothing here leaks into other screens,
+       same convention as empdetail-*/myprofile-* in Details.cshtml. */
 
-            <i class="icon-users position-left"></i>
+    .emplist-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-bottom: 18px;
+    }
 
-            Employee Management
+    .emplist-header h4 {
+        margin: 0 0 4px;
+        font-weight: 700;
+        color: #263047;
+    }
 
-        </h5>
+    .emplist-header p {
+        margin: 0;
+        color: #8a93a6;
+        font-size: 13px;
+    }
 
-        <div class="heading-elements">
+    .emplist-header-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
 
-            <a asp-action="Import"
-               class="btn btn-default">
+    .emplist-toolbar {
+        background: #fff;
+        border: 1px solid #eef0f4;
+        border-radius: 10px;
+        padding: 16px 18px;
+        margin-bottom: 18px;
+        box-shadow: 0 1px 4px rgba(0,0,0,.04);
+    }
 
-                <i class="icon-file-excel"></i>
-                Import Employees
+    .emplist-toolbar .form-group {
+        margin-bottom: 10px;
+    }
 
-            </a>
+    .emplist-toolbar label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: .4px;
+        color: #9aa5b8;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
 
-            <a asp-action="Create"
-               class="btn bg-primary">
+    .emplist-card {
+        background: #fff;
+        border: 1px solid #eef0f4;
+        border-radius: 10px;
+        box-shadow: 0 1px 4px rgba(0,0,0,.04);
+        overflow: hidden;
+    }
 
-                <i class="icon-plus22"></i>
-                Add Employee
+    .emplist-table {
+        margin-bottom: 0;
+    }
 
-            </a>
+    .emplist-table thead th {
+        background: #fafbfd;
+        color: #6b7488;
+        font-size: 11.5px;
+        text-transform: uppercase;
+        letter-spacing: .4px;
+        font-weight: 700;
+        border-bottom: 1px solid #eef0f4;
+        white-space: nowrap;
+        vertical-align: middle;
+    }
 
-        </div>
+    .emplist-table tbody td {
+        vertical-align: middle;
+        font-size: 13.5px;
+        color: #2c3548;
+    }
 
+    .emplist-table tbody tr:hover {
+        background: #f7f9fc;
+    }
+
+    .emplist-avatar {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        object-fit: cover;
+        background: #eaf2ff;
+        flex-shrink: 0;
+    }
+
+    .emplist-avatar-initials {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: linear-gradient(135deg,#4e9cff,#2b6fd9);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+
+    .emplist-name-cell {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .emplist-name-cell .emp-name {
+        font-weight: 600;
+        color: #263047;
+        white-space: nowrap;
+    }
+
+    .emplist-name-cell .emp-code {
+        font-size: 11.5px;
+        color: #9aa5b8;
+    }
+
+    .emplist-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 11.5px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .emplist-badge.active {
+        background: #e7f7ee;
+        color: #1e8e4e;
+    }
+
+    .emplist-badge.relieved {
+        background: #fdecea;
+        color: #c62828;
+    }
+
+    .emplist-badge i {
+        font-size: 8px;
+    }
+
+    .emplist-actions .btn {
+        padding: 5px 9px;
+    }
+
+    .emplist-empty {
+        text-align: center;
+        padding: 60px 20px;
+        color: #9aa5b8;
+    }
+
+    .emplist-empty i {
+        font-size: 46px;
+        opacity: .35;
+        margin-bottom: 12px;
+        display: block;
+    }
+
+    .emplist-empty h6 {
+        color: #4a5568;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    .emplist-loading {
+        text-align: center;
+        padding: 50px 20px;
+        color: #9aa5b8;
+    }
+
+    .emplist-count-badge {
+        background: #eaf2ff;
+        color: #2b6fd9;
+        border-radius: 20px;
+        padding: 2px 10px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-left: 8px;
+    }
+</style>
+
+<div class="emplist-header">
+    <div>
+        <h4>Employees <span class="emplist-count-badge" id="employeeCount">@(Model?.Count() ?? 0)</span></h4>
+        <p>Manage employee records, personal information and employment details</p>
     </div>
 
-    <div class="panel-body">
+    <div class="emplist-header-actions">
+        <a asp-action="Import" class="btn btn-default">
+            <i class="icon-file-excel position-left"></i>
+            Import
+        </a>
 
-        <div class="row">
+        <a asp-action="Create" class="btn bg-primary">
+            <i class="icon-plus22 position-left"></i>
+            Add Employee
+        </a>
+    </div>
+</div>
 
-            <div class="col-md-4">
-
-                <input type="text"
-                       id="searchInput"
-                       class="form-control"
-                       placeholder="Search Employee..." />
-
+<div class="emplist-toolbar">
+    <div class="row">
+        <div class="col-md-3">
+            <div class="form-group">
+                <label>Search</label>
+                <input type="text" id="filterSearch" class="form-control"
+                       placeholder="Name, code, mobile or email..." />
             </div>
-
         </div>
 
+        <div class="col-md-2">
+            <div class="form-group">
+                <label>Department</label>
+                <select id="filterDepartment" class="form-control">
+                    <option value="">All Departments</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="col-md-2">
+            <div class="form-group">
+                <label>Designation</label>
+                <select id="filterDesignation" class="form-control">
+                    <option value="">All Designations</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="col-md-2">
+            <div class="form-group">
+                <label>Status</label>
+                <select id="filterStatus" class="form-control">
+                    <option value="">All</option>
+                    <option value="active">Active</option>
+                    <option value="relieved">Relieved</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <label>&nbsp;</label>
+            <div class="form-group" style="display:flex; gap:8px;">
+                <button type="button" id="btnClearFilters" class="btn btn-default btn-block">
+                    <i class="icon-cross2 position-left"></i>
+                    Clear Filters
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="emplist-card">
+
+    <div class="table-responsive">
+        <table class="table emplist-table" id="employeeDataTable">
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Department</th>
+                    <th>Designation</th>
+                    <th>Mobile</th>
+                    <th>Email</th>
+                    <th>Joining Date</th>
+                    <th>Status</th>
+                    <th width="140">Action</th>
+                </tr>
+            </thead>
+
+            <tbody id="employeeTableBody">
+
+                @if (Model != null && Model.Any())
+                {
+                    @foreach (var item in Model)
+                    {
+                        bool isActive = !item.RelievingDate.HasValue;
+                        var fullName = $"{item.FirstName} {item.LastName}".Trim();
+                        var initials = string.Concat(
+                        (item.FirstName?.Length > 0 ? item.FirstName[0].ToString() : ""),
+                        (item.LastName?.Length > 0 ? item.LastName[0].ToString() : "")).ToUpper();
+
+                        <tr class="employee-row"
+                            data-search="@($"{fullName} {item.EmployeeCode} {item.Phone} {item.Email}".ToLower())"
+                            data-department="@item.DepartmentName"
+                            data-designation="@item.DesignationName"
+                            data-status="@(isActive ? "active" : "relieved")">
+
+                            <td>
+                                <div class="emplist-name-cell">
+
+                                    @if (!string.IsNullOrEmpty(item.FilePath))
+                                    {
+                                        <img src="@item.FilePath" class="emplist-avatar" alt="@fullName" />
+                                    }
+                                    else
+                                    {
+                                        <span class="emplist-avatar-initials">@(string.IsNullOrWhiteSpace(initials) ? "?" : initials)</span>
+                                    }
+
+                                    <div>
+                                        <div class="emp-name">@fullName</div>
+                                        <div class="emp-code">@item.EmployeeCode</div>
+                                    </div>
+
+                                </div>
+                            </td>
+
+                            <td>@(item.DepartmentName ?? "-")</td>
+                            <td>@(item.DesignationName ?? "-")</td>
+                            <td>@(item.Phone ?? "-")</td>
+                            <td>@(item.Email ?? "-")</td>
+                            <td>@(item.JoiningDate?.ToString("dd-MMM-yyyy") ?? "-")</td>
+
+                            <td>
+                                @if (isActive)
+                                {
+                                    <span class="emplist-badge active"><i class="icon-checkmark3"></i> Active</span>
+                                }
+                                else
+                                {
+                                    <span class="emplist-badge relieved"><i class="icon-cross2"></i> Relieved</span>
+                                }
+                            </td>
+
+                            <td class="emplist-actions">
+                                <div class="btn-group">
+
+                                    <a asp-action="Details" asp-route-id="@item.Id"
+                                       class="btn btn-default btn-icon" data-popup="tooltip" title="View Details">
+                                        <i class="icon-eye"></i>
+                                    </a>
+
+                                    <a asp-action="Edit" asp-route-id="@item.Id"
+                                       class="btn btn-primary btn-icon" data-popup="tooltip" title="Edit">
+                                        <i class="icon-pencil7"></i>
+                                    </a>
+
+                                    <button type="button"
+                                            class="btn btn-danger btn-icon btn-delete-employee"
+                                            data-id="@item.Id"
+                                            data-name="@fullName"
+                                            data-popup="tooltip" title="Delete">
+                                        <i class="icon-trash"></i>
+                                    </button>
+
+                                </div>
+                            </td>
+
+                        </tr>
+                    }
+                }
+
+            </tbody>
+        </table>
     </div>
 
-    <table
-           class="table table-bordered table-striped table-hover datatable-basic">
+    @if (Model == null || !Model.Any())
+    {
+        <div class="emplist-empty">
+            <i class="icon-users"></i>
+            <h6>No Employees Found</h6>
+            <p>Get started by adding your first employee record.</p>
+            <a asp-action="Create" class="btn bg-primary" style="margin-top:8px;">
+                <i class="icon-plus22 position-left"></i>
+                Add Employee
+            </a>
+        </div>
+    }
 
-        <thead>
+    <div id="noResultsRow" class="emplist-empty" style="display:none;">
+        <i class="icon-search4"></i>
+        <h6>No Matching Employees</h6>
+        <p>Try adjusting your search or filters.</p>
+    </div>
 
-            <tr>
-
-                <th width="50">#</th>
-                <th>Photo</th>
-                <th>Employee Code</th>
-                <th>Employee Name</th>
-                <th>Company</th>
-                <th>Department</th>
-                <th>Designation</th>
-                <th>Phone</th>
-                <th>Email</th>
-                <th>Joining Date</th>
-                <th width="180">Action</th>
-
-            </tr>
-
-        </thead>
-
-        <tbody id="employeeTable">
-
-            @{
-                int sr = 1;
-            }
-
-            @foreach (var item in Model)
-            {
-                <tr>
-
-                    <td>@sr</td>
-
-                    <td>
-
-                        @if (!string.IsNullOrEmpty(item.FilePath))
-                        {
-                            <img src="@item.FilePath"
-                                 class="img-circle"
-                                 style="width:40px;height:40px;object-fit:cover;" />
-                        }
-                        else
-                        {
-                            <img src="~/images/no-image.png"
-                                 class="img-circle"
-                                 style="width:40px;height:40px;" />
-                        }
-
-                    </td>
-
-                    <td>
-
-                        <span class="label bg-primary">
-                            @item.EmployeeCode
-                        </span>
-
-                    </td>
-
-                    <td>
-
-                        <strong>
-                            @item.FirstName @item.LastName
-                        </strong>
-
-                    </td>
-
-                    <td>@item.CompanyName</td>
-
-                    <td>@item.DepartmentName</td>
-
-                    <td>@item.DesignationName</td>
-
-                    <td>@item.Phone</td>
-
-                    <td>@item.Email</td>
-
-                    <td>
-                        @(item.JoiningDate?.ToString("dd-MMM-yyyy"))
-                    </td>
-
-                    <td>
-
-                        <div class="btn-group">
-
-                            <a asp-action="Details"
-                               asp-route-id="@item.Id"
-                               class="btn btn-default btn-icon"
-                               data-popup="tooltip"
-                               title="Details">
-
-                                <i class="icon-eye"></i>
-
-                            </a>
-
-                            <a asp-action="Edit"
-                               asp-route-id="@item.Id"
-                               class="btn btn-primary btn-icon"
-                               data-popup="tooltip"
-                               title="Edit">
-
-                                <i class="icon-pencil7"></i>
-
-                            </a>
-
-                            <a asp-action="Delete"
-                               asp-route-id="@item.Id"
-                               class="btn btn-danger btn-icon btnDelete"
-                               data-popup="tooltip"
-                               title="Delete">
-
-                                <i class="icon-trash"></i>
-
-                            </a>
-
-                        </div>
-
-                    </td>
-
-                </tr>
-
-                sr++;
-            }
-
-        </tbody>
-
-    </table>
 </div>
 
 @section Scripts {
 
     <script>
+        $(function () {
 
-        document.getElementById("searchInput")
-            .addEventListener("keyup", function () {
+            // Populate Department/Designation filters from the rendered rows
+            // themselves - no extra API call needed, this data is already
+            // on the page.
+            var deptSet = {}, desigSet = {};
 
-                let value = this.value.toLowerCase();
-
-                let rows = document.querySelectorAll("#employeeTable tr");
-
-                rows.forEach(function (row) {
-
-                    let text = row.innerText.toLowerCase();
-
-                    row.style.display =
-                        text.includes(value) ? "" : "none";
-
-                });
-
+            $('#employeeTableBody .employee-row').each(function () {
+                var dept = $(this).data('department');
+                var desig = $(this).data('designation');
+                if (dept) deptSet[dept] = true;
+                if (desig) desigSet[desig] = true;
             });
 
+            Object.keys(deptSet).sort().forEach(function (d) {
+                $('#filterDepartment').append('<option value="' + d + '">' + d + '</option>');
+            });
+
+            Object.keys(desigSet).sort().forEach(function (d) {
+                $('#filterDesignation').append('<option value="' + d + '">' + d + '</option>');
+            });
+
+            function applyFilters() {
+                var search = $('#filterSearch').val().toLowerCase().trim();
+                var dept = $('#filterDepartment').val();
+                var desig = $('#filterDesignation').val();
+                var status = $('#filterStatus').val();
+
+                var visibleCount = 0;
+
+                $('#employeeTableBody .employee-row').each(function () {
+                    var $row = $(this);
+
+                    var matchesSearch = !search || ($row.data('search') + '').indexOf(search) !== -1;
+                    var matchesDept = !dept || $row.data('department') === dept;
+                    var matchesDesig = !desig || $row.data('designation') === desig;
+                    var matchesStatus = !status || $row.data('status') === status;
+
+                    var visible = matchesSearch && matchesDept && matchesDesig && matchesStatus;
+
+                    $row.toggle(visible);
+
+                    if (visible) visibleCount++;
+                });
+
+                $('#employeeCount').text(visibleCount);
+                $('#noResultsRow').toggle(visibleCount === 0 && $('#employeeTableBody .employee-row').length > 0);
+            }
+
+            $('#filterSearch').on('keyup', applyFilters);
+            $('#filterDepartment, #filterDesignation, #filterStatus').on('change', applyFilters);
+
+            $('#btnClearFilters').on('click', function () {
+                $('#filterSearch').val('');
+                $('#filterDepartment').val('');
+                $('#filterDesignation').val('');
+                $('#filterStatus').val('');
+                applyFilters();
+            });
+
+            // Delete - confirmation before any destructive action, no
+            // immediate navigation on click.
+            $(document).on('click', '.btn-delete-employee', function () {
+                var id = $(this).data('id');
+                var name = $(this).data('name');
+                var deleteUrl = '@Url.Action("Delete", "Employee")/' + id;
+
+                swal({
+                    title: 'Are you sure?',
+                    text: 'You are about to delete "' + name + '". This action cannot be undone.',
+                    type: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#EF5350',
+                    confirmButtonText: 'Delete Employee',
+                    cancelButtonText: 'Cancel',
+                    closeOnConfirm: false
+                }, function (isConfirm) {
+                    if (!isConfirm) return;
+
+                    window.location.href = deleteUrl;
+                });
+            });
+
+            @if (TempData["Success"] != null)
+            {
+                <text>
+                    swal({
+                        title: 'Success',
+                        text: '@Html.Raw(TempData["Success"])',
+                        type: 'success',
+                        confirmButtonColor: '#66BB6A'
+                    });
+                </text>
+            }
+
+            @if (TempData["Error"] != null)
+            {
+                <text>
+                    swal({
+                        title: 'Something went wrong',
+                        text: '@Html.Raw(TempData["Error"])',
+                        type: 'error',
+                        confirmButtonColor: '#EF5350'
+                    });
+                </text>
+            }
+        });
     </script>
 
 }

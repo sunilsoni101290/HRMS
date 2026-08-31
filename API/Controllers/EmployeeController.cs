@@ -80,18 +80,53 @@ namespace API.Controllers
         [HttpPut("update-employee")]
         public async Task<IActionResult> Update([FromBody] EmployeeDto dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var result = await _service.UpdateAsync(dto);
-
-            return Ok(new
+            try
             {
-                Success = result,
-                Message = result
-                    ? "Employee updated successfully"
-                    : "Employee update failed"
-            });
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                // UpdateAsync now throws (rather than swallowing the reason
+                // and returning false) for "not found" and "duplicate
+                // Employee Code" - see EmployeeService.UpdateAsync - so a
+                // false return here is no longer expected, but is still
+                // handled defensively rather than assumed unreachable.
+                var result = await _service.UpdateAsync(dto);
+
+                return Ok(new ApiResponse<object>
+                {
+                    Success = result,
+                    Message = result
+                        ? "Employee updated successfully"
+                        : "Employee update failed"
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+        }
+
+        // ==============================
+        // CHECK EMPLOYEE CODE (duplicate check)
+        // ==============================
+        // Backs the Create/Edit form's blur-triggered AJAX validation.
+        // employeeId is the employee currently being edited (omit/blank on
+        // Create) so an employee's own unchanged code is never flagged.
+        [HttpGet("check-employee-code")]
+        public async Task<IActionResult> CheckEmployeeCode(
+            [FromQuery] string employeeCode,
+            [FromQuery] string? employeeId)
+        {
+            if (string.IsNullOrWhiteSpace(employeeCode))
+                return Ok(new ApiResponse<object> { Success = true, Data = new { exists = false } });
+
+            var exists = await _service.CheckEmployeeCodeExistsAsync(employeeCode, employeeId);
+
+            return Ok(new ApiResponse<object> { Success = true, Data = new { exists } });
         }
 
         // ==============================

@@ -16,7 +16,8 @@ namespace Application.DTOs.Attendances
         public string BiometricEmployeeCode { get; set; }
 
         public string? CardNumber { get; set; }
-
+        public string? CreatedBy { get; set; }
+        public string? TenantId { get; set; }
         public bool IsActive { get; set; }
     }
 }

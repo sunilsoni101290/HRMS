@@ -23,5 +23,8 @@ namespace APP.Models.DTOs
 
         [Display(Name = "Active")]
         public bool IsActive { get; set; } = true;
+
+        public string? CreatedBy { get; set; }
+        public string? TenantId { get; set; }
     }
 }

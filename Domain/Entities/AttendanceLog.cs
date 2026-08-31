@@ -33,6 +33,18 @@ namespace Domain.Entities
         public string? DeviceId { get; set; }
 
         public string? BiometricCode { get; set; }
+
+        // Links this log back to the exact raw BiometricAttendanceLog row
+        // that produced it (spec: "Attendances -> AttendanceLogs ->
+        // BiometricAttendanceLogs" traceability, and the idempotency guard
+        // in AttendanceProcessorService.ProcessAttendanceAsync - "has this
+        // raw punch already been applied?" is answered by looking this up
+        // rather than a fragile EmployeeId+PunchTime match alone). Null for
+        // logs created by the manual/web punch clock (IsManual = true) or
+        // any log created before this column existed.
+        public string? BiometricAttendanceLogId { get; set; }
+        public virtual BiometricAttendanceLog? BiometricAttendanceLog { get; set; }
+
         public override string GetSequencePrefix() => "ATL";
     }
 }

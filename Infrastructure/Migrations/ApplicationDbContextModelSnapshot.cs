@@ -1087,6 +1087,9 @@ namespace Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("BiometricAttendanceLogId")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("BiometricCode")
                         .HasColumnType("nvarchar(max)");
 
@@ -1147,7 +1150,12 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("AttendanceId");
 
-                    b.HasIndex("EmployeeId");
+                    b.HasIndex("BiometricAttendanceLogId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_AttendanceLogs_BiometricAttendanceLogId")
+                        .HasFilter("[BiometricAttendanceLogId] IS NOT NULL");
+
+                    b.HasIndex("EmployeeId", "PunchTime");
 
                     b.ToTable("AttendanceLogs");
                 });
@@ -1490,6 +1498,9 @@ namespace Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("IX_BiometricAttendanceLogs_Device_TransactionId")
                         .HasFilter("[DeviceTransactionId] IS NOT NULL");
+
+                    b.HasIndex("TenantId", "IsProcessed")
+                        .HasDatabaseName("IX_BiometricAttendanceLogs_Tenant_IsProcessed");
 
                     b.HasIndex("TenantId", "DeviceId", "EmployeeCode", "PunchTime")
                         .IsUnique()
@@ -2315,6 +2326,13 @@ namespace Infrastructure.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("AdhocReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("AssignmentId")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -2357,6 +2375,10 @@ namespace Infrastructure.Migrations
                     b.Property<string>("WorkActivityId")
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("WorkDoneToday")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<string>("WorkEntryReasonId")
                         .HasColumnType("nvarchar(450)");
 
@@ -2364,6 +2386,8 @@ namespace Infrastructure.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AssignmentId");
 
                     b.HasIndex("DailyWorkLogId");
 
@@ -3941,6 +3965,167 @@ namespace Infrastructure.Migrations
                     b.HasIndex("TenantId", "Status");
 
                     b.ToTable("EmployeeTransfers");
+                });
+
+            modelBuilder.Entity("Domain.Entities.EmployeeWorkAssignment", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("AcceptedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("AssignedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("AssignmentType")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("EmployeeId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal?>("EstimatedHours")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("ExpectedEndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Instructions")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("JobItemId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("JobTypeId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReassignedFromId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("RejectedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TenantId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("WorkActivityId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("WorkJobId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignedBy");
+
+                    b.HasIndex("JobItemId");
+
+                    b.HasIndex("JobTypeId");
+
+                    b.HasIndex("ReassignedFromId");
+
+                    b.HasIndex("WorkActivityId");
+
+                    b.HasIndex("EmployeeId", "Status");
+
+                    b.HasIndex("WorkJobId", "JobItemId");
+
+                    b.ToTable("EmployeeWorkAssignments");
+                });
+
+            modelBuilder.Entity("Domain.Entities.EmployeeWorkAssignmentHistory", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("Action")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ActionBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ActionDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("EmployeeWorkAssignmentId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("TenantId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeWorkAssignmentId");
+
+                    b.ToTable("EmployeeWorkAssignmentHistories");
                 });
 
             modelBuilder.Entity("Domain.Entities.ErrorLog", b =>
@@ -8636,6 +8821,11 @@ namespace Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Domain.Entities.BiometricAttendanceLog", "BiometricAttendanceLog")
+                        .WithMany()
+                        .HasForeignKey("BiometricAttendanceLogId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Domain.Entities.Employee", "Employee")
                         .WithMany()
                         .HasForeignKey("EmployeeId")
@@ -8643,6 +8833,8 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Attendance");
+
+                    b.Navigation("BiometricAttendanceLog");
 
                     b.Navigation("Employee");
                 });
@@ -8903,6 +9095,11 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Entities.DailyWorkEntry", b =>
                 {
+                    b.HasOne("Domain.Entities.EmployeeWorkAssignment", "Assignment")
+                        .WithMany("DailyWorkEntries")
+                        .HasForeignKey("AssignmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Domain.Entities.DailyWorkLog", "DailyWorkLog")
                         .WithMany("Entries")
                         .HasForeignKey("DailyWorkLogId")
@@ -8933,6 +9130,8 @@ namespace Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("WorkJobId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Assignment");
 
                     b.Navigation("DailyWorkLog");
 
@@ -9352,6 +9551,65 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("Domain.Entities.EmployeeWorkAssignment", b =>
+                {
+                    b.HasOne("Domain.Entities.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.JobItem", "JobItem")
+                        .WithMany()
+                        .HasForeignKey("JobItemId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Domain.Entities.JobType", "JobType")
+                        .WithMany()
+                        .HasForeignKey("JobTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.EmployeeWorkAssignment", "ReassignedFrom")
+                        .WithMany()
+                        .HasForeignKey("ReassignedFromId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Domain.Entities.WorkActivity", "WorkActivity")
+                        .WithMany()
+                        .HasForeignKey("WorkActivityId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Domain.Entities.WorkJob", "WorkJob")
+                        .WithMany()
+                        .HasForeignKey("WorkJobId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("JobItem");
+
+                    b.Navigation("JobType");
+
+                    b.Navigation("ReassignedFrom");
+
+                    b.Navigation("WorkActivity");
+
+                    b.Navigation("WorkJob");
+                });
+
+            modelBuilder.Entity("Domain.Entities.EmployeeWorkAssignmentHistory", b =>
+                {
+                    b.HasOne("Domain.Entities.EmployeeWorkAssignment", "EmployeeWorkAssignment")
+                        .WithMany()
+                        .HasForeignKey("EmployeeWorkAssignmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("EmployeeWorkAssignment");
                 });
 
             modelBuilder.Entity("Domain.Entities.Event", b =>
@@ -10328,6 +10586,11 @@ namespace Infrastructure.Migrations
                     b.Navigation("EmiSchedules");
 
                     b.Navigation("PaymentHistories");
+                });
+
+            modelBuilder.Entity("Domain.Entities.EmployeeWorkAssignment", b =>
+                {
+                    b.Navigation("DailyWorkEntries");
                 });
 
             modelBuilder.Entity("Domain.Entities.Event", b =>

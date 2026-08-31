@@ -208,6 +208,7 @@ builder.Services.AddScoped<Application.Interfaces.WorkTracking.IWorkTrackingMast
 builder.Services.AddScoped<Application.Interfaces.WorkTracking.IDailyWorkEntryService, Application.Services.WorkTracking.DailyWorkEntryService>();
 builder.Services.AddScoped<Application.Interfaces.WorkTracking.IWorkTrackingReportService, Application.Services.WorkTracking.WorkTrackingReportService>();
 builder.Services.AddScoped<Application.Interfaces.WorkTracking.IVpisIntegrationService, Application.Services.WorkTracking.VpisIntegrationService>();
+builder.Services.AddScoped<Application.Interfaces.WorkTracking.IWorkAssignmentService, Application.Services.WorkTracking.WorkAssignmentService>();
 builder.Services.AddScoped<IOnDutyRequestService, OnDutyRequestService>();
 builder.Services.AddScoped<IShortLeaveRequestService, ShortLeaveRequestService>();
 builder.Services.AddScoped<ICompOffService, CompOffService>();

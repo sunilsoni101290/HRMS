@@ -1,0 +1,115 @@
+@model List<APP.Models.DTOs.EmployeeWorkAssignmentSummaryDto>
+@{
+    ViewData["Title"] = "Assignments I've Made";
+}
+
+<div class="panel panel-flat">
+    <div class="panel-heading">
+        <h5 class="panel-title"><i class="icon-list position-left"></i> Assignments I've Made / My Team's Assignments</h5>
+        <div class="heading-elements">
+            <a asp-action="Assign" class="btn bg-primary btn-sm"><i class="icon-plus22 position-left"></i> Assign Work</a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+
+        <div class="row" id="teamOverview" style="display:none;">
+            <div class="col-md-2 col-sm-4"><div class="well well-sm text-center"><div class="text-size-large text-bold" id="ovTeamMembers">-</div><div class="text-muted text-size-small">Team Members</div></div></div>
+            <div class="col-md-2 col-sm-4"><div class="well well-sm text-center"><div class="text-size-large text-bold" id="ovActiveAssignments">-</div><div class="text-muted text-size-small">Active Assignments</div></div></div>
+            <div class="col-md-2 col-sm-4"><div class="well well-sm text-center"><div class="text-size-large text-bold" id="ovPendingApprovals">-</div><div class="text-muted text-size-small">Pending Daily Approvals</div></div></div>
+            <div class="col-md-2 col-sm-4"><div class="well well-sm text-center"><div class="text-size-large text-bold text-danger" id="ovOverdue">-</div><div class="text-muted text-size-small">Overdue Assignments</div></div></div>
+            <div class="col-md-2 col-sm-4"><div class="well well-sm text-center"><div class="text-size-large text-bold" id="ovEstHours">-</div><div class="text-muted text-size-small">Estimated Hours</div></div></div>
+            <div class="col-md-2 col-sm-4"><div class="well well-sm text-center"><div class="text-size-large text-bold" id="ovActualHours">-</div><div class="text-muted text-size-small">Actual Hours</div></div></div>
+        </div>
+
+        @if (Model == null || Model.Count == 0)
+        {
+            <div class="text-center text-muted" style="padding:40px 0;">
+                <i class="icon-list3" style="font-size:40px; opacity:.3; display:block; margin-bottom:10px;"></i>
+                No assignments yet - use "Assign Work" to get started.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped datatable-basic">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Job</th>
+                            <th>Client</th>
+                            <th>Structure</th>
+                            <th>Activity</th>
+                            <th>Est. Hours</th>
+                            <th>Actual Hours</th>
+                            <th>Status</th>
+                            <th>Expected End</th>
+                            <th width="100">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var a in Model)
+                        {
+                            <tr>
+                                <td><strong>@a.EmployeeName</strong><br /><small class="text-muted">@a.EmployeeCode</small></td>
+                                <td>@a.JobNumber</td>
+                                <td>@(a.ClientName ?? "-")</td>
+                                <td>@(a.JobItemCode ?? "Any")</td>
+                                <td>@(a.WorkActivityName ?? "Any")</td>
+                                <td>@(a.EstimatedHours?.ToString("0.##") ?? "-")</td>
+                                <td>
+                                    @a.ActualHours.ToString("0.##")
+                                    @if (a.IsOverUtilized)
+                                    {
+                                        <i class="icon-warning22 text-danger" title="Over-utilized"></i>
+                                    }
+                                </td>
+                                <td>
+                                    @{
+                                        var badgeClass = a.Status switch
+                                        {
+                                            1 => "bg-info",
+                                            2 => "bg-primary",
+                                            3 => "bg-warning",
+                                            4 => "bg-success",
+                                            5 => "bg-danger",
+                                            _ => "bg-grey"
+                                        };
+                                    }
+                                    <span class="label @badgeClass">@a.StatusName</span>
+                                    @if (a.IsOverdue)
+                                    {
+                                        <span class="label bg-danger-300" style="margin-left:4px;">Overdue</span>
+                                    }
+                                </td>
+                                <td>@(a.ExpectedEndDate?.ToString("dd-MMM-yyyy") ?? "-")</td>
+                                <td>
+                                    <a asp-action="Details" asp-route-id="@a.Id" class="btn btn-default btn-icon btn-xs" title="View">
+                                        <i class="icon-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $.get("@Url.Action("GetTeamWorkOverview")", function (res) {
+            if (!res || !res.data) return;
+            var d = res.data;
+            $("#ovTeamMembers").text(d.teamMembers);
+            $("#ovActiveAssignments").text(d.activeAssignments);
+            $("#ovPendingApprovals").text(d.pendingDailyApprovals);
+            $("#ovOverdue").text(d.overdueAssignments);
+            $("#ovEstHours").text(parseFloat(d.estimatedHours || 0).toFixed(2));
+            $("#ovActualHours").text(parseFloat(d.actualHours || 0).toFixed(2));
+            $("#teamOverview").show();
+        });
+    </script>
+}

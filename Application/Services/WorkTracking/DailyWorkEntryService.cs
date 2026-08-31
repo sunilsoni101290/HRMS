@@ -252,7 +252,10 @@ namespace Application.Services.WorkTracking
         // Validates every relationship server-side (spec section 14/35) -
         // never trusts that a JobItem really belongs to the posted WorkJob,
         // or that a WorkActivity really belongs to the posted JobType, or
-        // that a WorkEntryReason's category matches the activity's.
+        // that a WorkEntryReason's category matches the activity's, or
+        // (spec section 24) that a posted AssignmentId really belongs to
+        // THIS employee and really matches the Job/JobItem/Activity being
+        // charged.
         private async Task<DailyWorkEntry> BuildAndValidateLineAsync(
             DailyWorkEntryLineInputDto line, string dailyWorkLogId, string tenantId, string employeeId, DateTime workDate)
         {
@@ -319,6 +322,58 @@ namespace Application.Services.WorkTracking
                 reasonId = line.WorkEntryReasonId;
             }
 
+            // ==============================================================
+            // Assignment validation (spec section 24) - a Direct/Indirect
+            // line charged against a real Job must be backed by an
+            // EmployeeWorkAssignment that (a) actually belongs to THIS
+            // employee, (b) is still active, and (c) its own Job/JobItem/
+            // Activity match what this line is posting. An Idle/Downtime
+            // line never needs one (spec section 15 - Idle/Downtime don't
+            // require a Job Assignment at all). If no assignment is posted
+            // for a normal project line, an explicit AdhocReason is
+            // required instead - the controlled "Unassigned/Ad-hoc Work"
+            // exception (spec section 14); the system never silently lets a
+            // Direct/Indirect line through against an arbitrary Job with no
+            // assignment and no justification.
+            // ==============================================================
+
+            var isIdleOrDowntime = activity != null &&
+                (activity.WorkCategory == WorkCategory.Idle || activity.WorkCategory == WorkCategory.Downtime);
+
+            string? assignmentId = null;
+
+            if (!string.IsNullOrEmpty(line.AssignmentId))
+            {
+                var assignment = await _context.EmployeeWorkAssignments
+                    .FirstOrDefaultAsync(x => x.Id == line.AssignmentId && x.TenantId == tenantId);
+
+                if (assignment == null || assignment.EmployeeId != employeeId)
+                    throw new Exception("Selected assignment does not belong to you.");
+
+                var liveStatuses = new[] { AssignmentStatus.Assigned, AssignmentStatus.Accepted, AssignmentStatus.InProgress };
+                if (!liveStatuses.Contains(assignment.Status))
+                    throw new Exception($"This assignment is {assignment.Status} and can no longer accept new work entries.");
+
+                if (assignment.WorkJobId != line.WorkJobId)
+                    throw new Exception("Selected assignment does not match the selected job.");
+
+                // Job-level assignments may cover any of that job's
+                // structures/activities; an assignment pinned to a specific
+                // JobItem/Activity must match exactly.
+                if (!string.IsNullOrEmpty(assignment.JobItemId) && assignment.JobItemId != line.JobItemId)
+                    throw new Exception("Selected assignment does not match the selected structure/equipment/job item.");
+
+                if (!string.IsNullOrEmpty(assignment.WorkActivityId) && assignment.WorkActivityId != line.WorkActivityId)
+                    throw new Exception("Selected assignment does not match the selected work activity.");
+
+                assignmentId = assignment.Id;
+            }
+            else if (!isIdleOrDowntime && workJob != null)
+            {
+                if (string.IsNullOrWhiteSpace(line.AdhocReason))
+                    throw new Exception("This job has not been assigned to you - select one of your assigned jobs, or provide a reason for unassigned/ad-hoc work.");
+            }
+
             return new DailyWorkEntry
             {
                 Id = IDManager.GetNewId(new DailyWorkEntry()),
@@ -329,7 +384,10 @@ namespace Application.Services.WorkTracking
                 WorkActivityId = activity?.Id,
                 WorkEntryReasonId = reasonId,
                 Hours = line.Hours,
-                Remarks = line.Remarks?.Trim()
+                Remarks = line.Remarks?.Trim(),
+                WorkDoneToday = isIdleOrDowntime ? null : line.WorkDoneToday?.Trim(),
+                AssignmentId = assignmentId,
+                AdhocReason = assignmentId == null && !isIdleOrDowntime ? line.AdhocReason?.Trim() : null
             };
         }
 
@@ -528,7 +586,10 @@ namespace Application.Services.WorkTracking
                 WorkEntryReasonId = e.WorkEntryReasonId,
                 WorkEntryReasonName = e.WorkEntryReason?.Name,
                 Hours = e.Hours,
-                Remarks = e.Remarks
+                Remarks = e.Remarks,
+                WorkDoneToday = e.WorkDoneToday,
+                AssignmentId = e.AssignmentId,
+                AdhocReason = e.AdhocReason
             }).ToList();
 
             decimal Sum(WorkCategory cat) => lines.Where(l => l.WorkCategory == (int)cat).Sum(l => l.Hours);

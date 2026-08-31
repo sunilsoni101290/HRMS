@@ -23,5 +23,13 @@ namespace Application.Interfaces.EmployeeInterface
         // the request were tampered with.
         Task<bool> UpdatePhotoAsync(string id, string filePath);
 
+        // Backs the Create/Edit form's live "Employee Code already exists"
+        // check (blur-triggered AJAX) as well as the server-side re-check
+        // inside CreateAsync/UpdateAsync - a single source of truth for what
+        // "duplicate Employee Code" means, so the two can never disagree.
+        // excludeEmployeeId must be passed (the employee's own Id) when
+        // editing, so an employee's own unchanged code is never flagged.
+        Task<bool> CheckEmployeeCodeExistsAsync(string employeeCode, string? excludeEmployeeId);
+
     }
 }

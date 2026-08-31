@@ -2070,18 +2070,35 @@ namespace Infrastructure.Data
             Def("Employee Work Management", AppFeatureConstants.EMPLOYEE_WORK_MANAGEMENT, "", "",
                 null, "bi bi-clipboard-data", AppFeatureType.Transaction, 150);
 
+            // Job/Work Assignment (Manager -> Employee) - sits ABOVE Daily
+            // Work Entry in the menu per spec's suggested ordering, since an
+            // assignment must exist before an employee's Daily Work Entry
+            // dropdowns have anything assignment-scoped to show. Assign/
+            // Reassign are reachable by any Reporting-Manager logged in
+            // under the plain self-service role (same convention as Team
+            // Leader Approval below) - never admin-gated; authorization is
+            // enforced server-side by WorkAssignmentService.
+            Def("Job/Work Assignment", AppFeatureConstants.WORK_ASSIGNMENT,
+                AppFeatureConstants.WORK_ASSIGNMENT_CONTROLLER, AppFeatureConstants.WORK_ASSIGNMENT_ACTION,
+                AppFeatureConstants.EMPLOYEE_WORK_MANAGEMENT, "bi bi-person-plus-fill", AppFeatureType.Transaction, 151,
+                canAdd: true);
+
+            Def("My Assigned Jobs", AppFeatureConstants.MY_ASSIGNED_JOBS,
+                AppFeatureConstants.MY_ASSIGNED_JOBS_CONTROLLER, AppFeatureConstants.MY_ASSIGNED_JOBS_ACTION,
+                AppFeatureConstants.EMPLOYEE_WORK_MANAGEMENT, "bi bi-briefcase", AppFeatureType.Transaction, 152);
+
             Def("Daily Work Entry", AppFeatureConstants.DAILY_WORK_ENTRY,
                 AppFeatureConstants.DAILY_WORK_ENTRY_CONTROLLER, AppFeatureConstants.DAILY_WORK_ENTRY_ACTION,
-                AppFeatureConstants.EMPLOYEE_WORK_MANAGEMENT, "bi bi-pencil-square", AppFeatureType.Transaction, 151,
+                AppFeatureConstants.EMPLOYEE_WORK_MANAGEMENT, "bi bi-pencil-square", AppFeatureType.Transaction, 153,
                 canAdd: true, canEdit: true);
 
             Def("My Work Entries", AppFeatureConstants.MY_WORK_ENTRIES,
                 AppFeatureConstants.MY_WORK_ENTRIES_CONTROLLER, AppFeatureConstants.MY_WORK_ENTRIES_ACTION,
-                AppFeatureConstants.EMPLOYEE_WORK_MANAGEMENT, "bi bi-list-check", AppFeatureType.Transaction, 152);
+                AppFeatureConstants.EMPLOYEE_WORK_MANAGEMENT, "bi bi-list-check", AppFeatureType.Transaction, 154);
 
             Def("Team Leader Approval", AppFeatureConstants.WORK_ENTRY_APPROVAL,
                 AppFeatureConstants.WORK_ENTRY_APPROVAL_CONTROLLER, AppFeatureConstants.WORK_ENTRY_APPROVAL_ACTION,
-                AppFeatureConstants.EMPLOYEE_WORK_MANAGEMENT, "bi bi-check2-square", AppFeatureType.Transaction, 153,
+                AppFeatureConstants.EMPLOYEE_WORK_MANAGEMENT, "bi bi-check2-square", AppFeatureType.Transaction, 155,
                 canApprove: true);
 
             // Masters (Client/Job/Job Type/Work Activity/Idle-Downtime
@@ -2089,27 +2106,27 @@ namespace Infrastructure.Data
             // same grouping convention as eSSL Integration above.
             Def("Work Tracking Masters", AppFeatureConstants.WORK_TRACKING_MASTERS,
                 AppFeatureConstants.WORK_TRACKING_MASTERS_CONTROLLER, AppFeatureConstants.WORK_TRACKING_MASTERS_ACTION,
-                AppFeatureConstants.EMPLOYEE_WORK_MANAGEMENT, "bi bi-gear-wide-connected", AppFeatureType.Master, 154,
+                AppFeatureConstants.EMPLOYEE_WORK_MANAGEMENT, "bi bi-gear-wide-connected", AppFeatureType.Master, 156,
                 canAdd: true, canEdit: true);
 
             Def("Employee Work Report", AppFeatureConstants.EMPLOYEE_WORK_REPORT,
                 AppFeatureConstants.EMPLOYEE_WORK_REPORT_CONTROLLER, AppFeatureConstants.EMPLOYEE_WORK_REPORT_ACTION,
-                AppFeatureConstants.EMPLOYEE_WORK_MANAGEMENT, "bi bi-person-lines-fill", AppFeatureType.Report, 155,
+                AppFeatureConstants.EMPLOYEE_WORK_MANAGEMENT, "bi bi-person-lines-fill", AppFeatureType.Report, 157,
                 canExport: true);
 
             Def("Job-wise Work Report", AppFeatureConstants.JOB_WISE_WORK_REPORT,
                 AppFeatureConstants.JOB_WISE_WORK_REPORT_CONTROLLER, AppFeatureConstants.JOB_WISE_WORK_REPORT_ACTION,
-                AppFeatureConstants.EMPLOYEE_WORK_MANAGEMENT, "bi bi-briefcase-fill", AppFeatureType.Report, 156,
+                AppFeatureConstants.EMPLOYEE_WORK_MANAGEMENT, "bi bi-briefcase-fill", AppFeatureType.Report, 158,
                 canExport: true);
 
             Def("Structure/Equipment Work Report", AppFeatureConstants.STRUCTURE_WORK_REPORT,
                 AppFeatureConstants.STRUCTURE_WORK_REPORT_CONTROLLER, AppFeatureConstants.STRUCTURE_WORK_REPORT_ACTION,
-                AppFeatureConstants.EMPLOYEE_WORK_MANAGEMENT, "bi bi-diagram-3-fill", AppFeatureType.Report, 157,
+                AppFeatureConstants.EMPLOYEE_WORK_MANAGEMENT, "bi bi-diagram-3-fill", AppFeatureType.Report, 159,
                 canExport: true);
 
             Def("Work Utilization Report", AppFeatureConstants.WORK_UTILIZATION_REPORT,
                 AppFeatureConstants.WORK_UTILIZATION_REPORT_CONTROLLER, AppFeatureConstants.WORK_UTILIZATION_REPORT_ACTION,
-                AppFeatureConstants.EMPLOYEE_WORK_MANAGEMENT, "bi bi-speedometer", AppFeatureType.Report, 158,
+                AppFeatureConstants.EMPLOYEE_WORK_MANAGEMENT, "bi bi-speedometer", AppFeatureType.Report, 160,
                 canExport: true);
 
             // ---------------- RECONCILE (upsert by Code) ----------------
