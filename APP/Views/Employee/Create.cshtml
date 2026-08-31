@@ -1,4 +1,4 @@
-﻿
+
 @model EmployeeDto
 
 @{
@@ -15,187 +15,302 @@
     // is only about not showing/letting a self-service user touch fields
     // that will be ignored (or rejected) anyway.
     string lockedAttr = isAdmin ? "" : "disabled";
+
+    bool isEdit = !string.IsNullOrEmpty(Model?.Id);
 }
 
-<div class="panel panel-flat">
-    <div class="panel-heading">
+<style>
+    /* ===== Employee Create/Edit - Enterprise redesign =====
+       Namespaced (empform-*) - purely presentational, no field name,
+       binding, validation or route changes underneath. */
 
-        <h5 class="panel-title">
+    .empform-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 18px;
+    }
 
-            <i class="icon-user position-left"></i>
+    .empform-header h4 {
+        margin: 0 0 4px;
+        font-weight: 700;
+        color: #263047;
+    }
 
-            @(string.IsNullOrEmpty(Model?.Id)
-                    ? "Create Employee"
-                    : (isAdmin ? "Edit Employee" : "Edit My Profile"))
+    .empform-header p {
+        margin: 0;
+        color: #8a93a6;
+        font-size: 13px;
+    }
 
-        </h5>
+    .empform-section {
+        background: #fff;
+        border: 1px solid #eef0f4;
+        border-radius: 10px;
+        box-shadow: 0 1px 4px rgba(0,0,0,.05);
+        margin-bottom: 20px;
+        overflow: hidden;
+    }
 
-        <div class="heading-elements">
+    .empform-section-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 15px 20px;
+        border-bottom: 1px solid #f0f2f6;
+        background: #fafbfd;
+    }
 
-            @if (isAdmin)
-            {
-                <a asp-action="Index"
-                   class="btn btn-default">
+    .empform-section-header i {
+        font-size: 16px;
+        color: #4e9cff;
+        background: #eaf2ff;
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 
-                    <i class="icon-arrow-left13"></i>
-                    Back
+    .empform-section-header h6 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 700;
+        color: #263047;
+    }
 
-                </a>
-            }
-            else
-            {
-                <a asp-action="Details"
-                   asp-route-id="@Model.Id"
-                   class="btn btn-default">
+    .empform-section-body {
+        padding: 20px 22px 8px;
+    }
 
-                    <i class="icon-arrow-left13"></i>
-                    Back to My Profile
+    .empform-collapsible .empform-section-header {
+        cursor: pointer;
+        user-select: none;
+    }
 
-                </a>
-            }
-        </div>
+    .empform-collapsible .empform-section-header .toggle-icon {
+        margin-left: auto;
+        color: #9aa5b8;
+        font-size: 12px;
+        background: none;
+        width: auto;
+        height: auto;
+    }
 
+    .empform-photo-card {
+        background: #fff;
+        border: 1px solid #eef0f4;
+        border-radius: 10px;
+        box-shadow: 0 1px 4px rgba(0,0,0,.05);
+        padding: 22px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .empform-photo-frame {
+        width: 128px;
+        height: 128px;
+        border-radius: 50%;
+        margin: 0 auto 14px;
+        overflow: hidden;
+        border: 3px solid #eef0f4;
+        background: #f4f6fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+
+    .empform-photo-frame img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .empform-photo-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .empform-photo-actions .btn {
+        font-size: 12.5px;
+        padding: 6px 14px;
+        border-radius: 20px;
+    }
+
+    .empform-photo-hint {
+        font-size: 11.5px;
+        color: #9aa5b8;
+        margin-top: 10px;
+    }
+
+    .empform-required::after {
+        content: " *";
+        color: #e53935;
+    }
+
+    .empform-actions-bar {
+        position: sticky;
+        bottom: 0;
+        background: #fff;
+        border: 1px solid #eef0f4;
+        border-radius: 10px;
+        padding: 14px 20px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        box-shadow: 0 -2px 10px rgba(0,0,0,.04);
+        margin-top: 6px;
+    }
+
+    .empform-section .form-control.is-invalid,
+    .empform-section .form-control.input-validation-error {
+        border-color: #e53935;
+        background-color: #fff6f6;
+    }
+
+    .empform-section .text-danger {
+        display: block;
+        font-size: 12px;
+        margin-top: 3px;
+    }
+</style>
+
+<div class="empform-header">
+    <div>
+        <h4>@(isEdit ? (isAdmin ? "Edit Employee" : "Edit My Profile") : "Create Employee")</h4>
+        <p>Manage employee personal, contact and employment information</p>
     </div>
-    <div class="panel-body">
 
-        @if (!isAdmin)
+    <div>
+        @if (isAdmin)
         {
-            <div class="alert alert-info alert-styled-left mb-15">
-                <span class="text-semibold">Only your contact details can be updated here.</span>
-                Everything else on this page is shown for reference - contact HR/Admin if it needs to change.
-            </div>
+            <a asp-action="Index" class="btn btn-default">
+                <i class="icon-arrow-left13 position-left"></i>
+                Back to List
+            </a>
         }
-
-        @if (ViewBag.FromCandidate ?? false)
+        else
         {
-            <div class="alert alert-info alert-styled-left mb-15">
-                <span class="text-semibold">Creating employee record from selected candidate.</span>
-                Onboarding will start automatically once this employee is saved.
-            </div>
+            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-default">
+                <i class="icon-arrow-left13 position-left"></i>
+                Back to My Profile
+            </a>
         }
+    </div>
+</div>
 
-        <form asp-action="@(Model.Id == null ? "Create" : "Edit")"
-              asp-controller="Employee"
-              method="post" enctype="multipart/form-data">
+@if (!isAdmin)
+{
+    <div class="alert alert-info alert-styled-left mb-15">
+        <span class="text-semibold">Only your contact details can be updated here.</span>
+        Everything else on this page is shown for reference - contact HR/Admin if it needs to change.
+    </div>
+}
 
-            <input type="hidden" asp-for="CandidateId" />
+@if (ViewBag.FromCandidate ?? false)
+{
+    <div class="alert alert-info alert-styled-left mb-15">
+        <span class="text-semibold">Creating employee record from selected candidate.</span>
+        Onboarding will start automatically once this employee is saved.
+    </div>
+}
 
-            <div class="row">
+<form id="employeeForm"
+      asp-action="@(Model.Id == null ? "Create" : "Edit")"
+      asp-controller="Employee"
+      method="post" enctype="multipart/form-data" novalidate>
 
-                <div class="col-md-4">
+    <input type="hidden" asp-for="CandidateId" />
+    <input type="hidden" asp-for="Id" />
 
-                    <div class="form-group">
+    <div class="row">
 
-                        <label class="text-semibold">
+        <div class="col-md-3">
 
-                            Profile Image
+            <div class="empform-photo-card">
 
-                        </label>
-
-                        <input type="file"
-                               name="UploadImage"
-                               class="form-control"
-                               accept="image/*" />
-
-                    </div>
-
-                </div>
-
-                <div class="col-md-4">
-
+                <div class="empform-photo-frame">
                     @if (!string.IsNullOrEmpty(Model?.FilePath))
                     {
-                        <img src="@Model.FilePath"
-                             id="profilePreview"
-                             class="img-responsive"
-                             style="width:150px;height:150px;object-fit:cover;margin:auto;" />
-
-                        <input asp-for="FilePath"
-                               type="hidden" />
+                        <img src="@Model.FilePath" id="profilePreview" alt="Profile Photo" />
+                        <input asp-for="FilePath" type="hidden" />
                     }
                     else
                     {
-                        <img id="profilePreview"
-                             src="~/images/no-image.png"
-                             class="img-responsive"
-                             style="width:150px;height:150px;margin:auto;" />
+                        <img src="~/images/no-image.png" id="profilePreview" alt="Profile Photo" />
                     }
-
                 </div>
+
+                <input type="file" name="UploadImage" id="profileImageInput"
+                       accept="image/jpeg,image/jpg,image/png" style="display:none;" />
+
+                <div class="empform-photo-actions">
+                    <button type="button" class="btn btn-default" id="btnChoosePhoto">
+                        <i class="icon-upload3 position-left"></i>
+                        Upload Photo
+                    </button>
+                    <button type="button" class="btn btn-link text-danger" id="btnRemovePhoto" style="display:none;">
+                        Remove
+                    </button>
+                </div>
+
+                <div class="empform-photo-hint">JPG or PNG • Max 2 MB</div>
 
             </div>
 
-            <div class="panel panel-flat">
+        </div>
 
-                <div class="panel-heading">
-                    <h6 class="panel-title">
-                        <i class="icon-user position-left"></i>
-                        Personal Information
-                    </h6>
+        <div class="col-md-9">
+
+            <!-- ========================================================
+                 SECTION 1: Basic Information
+                 ======================================================== -->
+            <div class="empform-section">
+                <div class="empform-section-header">
+                    <i class="icon-user"></i>
+                    <h6>Basic Information</h6>
                 </div>
 
-                <div class="panel-body">
-
+                <div class="empform-section-body">
                     <div class="row">
 
                         <div class="col-md-4">
-
                             <div class="form-group">
-
-                                <label asp-for="EmployeeCode"
-                                       class="text-semibold">
-                                </label>
-
-                                <input asp-for="EmployeeCode"
-                                       class="form-control"
-                                       placeholder="Enter Employee Code"
-                                       disabled="@(isAdmin ? null : "disabled")" />
-
-                                <span asp-validation-for="EmployeeCode"
-                                      class="text-danger"></span>
-
+                                <label asp-for="EmployeeCode" class="text-semibold empform-required"></label>
+                                <div style="position:relative;">
+                                    <input asp-for="EmployeeCode" class="form-control" placeholder="Enter Employee Code"
+                                           autocomplete="off"
+                                           disabled="@(isAdmin ? null : "disabled")" />
+                                    <i id="employeeCodeSpinner" class="icon-spinner2 spinner"
+                                       style="display:none; position:absolute; right:10px; top:9px; color:#9aa0ac;"></i>
+                                </div>
+                                <span asp-validation-for="EmployeeCode" class="text-danger"></span>
+                                <small id="employeeCodeStatus" class="text-success" style="display:none;"></small>
                             </div>
-
                         </div>
 
                         <div class="col-md-4">
-
                             <div class="form-group">
-
-                                <label asp-for="FirstName"
-                                       class="text-semibold">
-                                </label>
-
-                                <input asp-for="FirstName"
-                                       class="form-control"
-                                       placeholder="Enter First Name"
+                                <label asp-for="FirstName" class="text-semibold empform-required"></label>
+                                <input asp-for="FirstName" class="form-control" placeholder="Enter First Name"
                                        disabled="@(isAdmin ? null : "disabled")" />
-
-                                <span asp-validation-for="FirstName"
-                                      class="text-danger"></span>
-
+                                <span asp-validation-for="FirstName" class="text-danger"></span>
                             </div>
-
                         </div>
 
                         <div class="col-md-4">
-
                             <div class="form-group">
-
-                                <label asp-for="LastName"
-                                       class="text-semibold">
-                                </label>
-
-                                <input asp-for="LastName"
-                                       class="form-control"
-                                       placeholder="Enter Last Name"
+                                <label asp-for="LastName" class="text-semibold"></label>
+                                <input asp-for="LastName" class="form-control" placeholder="Enter Last Name"
                                        disabled="@(isAdmin ? null : "disabled")" />
-
-                                <span asp-validation-for="LastName"
-                                      class="text-danger"></span>
-
+                                <span asp-validation-for="LastName" class="text-danger"></span>
                             </div>
-
                         </div>
 
                     </div>
@@ -203,1121 +318,785 @@
                     <div class="row">
 
                         <div class="col-md-4">
-
                             <div class="form-group">
-
-                                <label asp-for="DateOfBirth"
-                                       class="text-semibold">
-                                </label>
-
-                                <input asp-for="DateOfBirth"
-                                       type="date"
-                                       class="form-control"
+                                <label asp-for="DateOfBirth" class="text-semibold"></label>
+                                <input asp-for="DateOfBirth" type="date" class="form-control"
                                        disabled="@(isAdmin ? null : "disabled")" />
-
+                                <span asp-validation-for="DateOfBirth" class="text-danger"></span>
                             </div>
-
                         </div>
 
                         <div class="col-md-4">
-
                             <div class="form-group">
-
-                                <label asp-for="Gender"
-                                       class="text-semibold">
-                                </label>
-
-                                <select asp-for="Gender"
-                                        asp-items="Html.GetEnumSelectList<EnumExtensions.Gender>()"
-                                        class="form-control"
-                                        disabled="@(isAdmin ? null : "disabled")">
-
-                                    <option value="">
-                                        Select Gender
-                                    </option>
-
+                                <label asp-for="Gender" class="text-semibold empform-required"></label>
+                                <select asp-for="Gender" asp-items="Html.GetEnumSelectList<EnumExtensions.Gender>()"
+                                        class="form-control" disabled="@(isAdmin ? null : "disabled")">
+                                    <option value="">Select Gender</option>
                                 </select>
-
+                                <span asp-validation-for="Gender" class="text-danger"></span>
                             </div>
-
                         </div>
 
                         <div class="col-md-4">
-
                             <div class="form-group">
-
-                                <label asp-for="MaritalStatus"
-                                       class="text-semibold">
-                                </label>
-
-                                <select asp-for="MaritalStatus"
-                                        asp-items="Html.GetEnumSelectList<EnumExtensions.MaritalStatus>()"
-                                        class="form-control"
-                                        disabled="@(isAdmin ? null : "disabled")">
-
-                                    <option value="">
-                                        Select Marital Status
-                                    </option>
-
+                                <label asp-for="MaritalStatus" class="text-semibold empform-required"></label>
+                                <select asp-for="MaritalStatus" asp-items="Html.GetEnumSelectList<EnumExtensions.MaritalStatus>()"
+                                        class="form-control" disabled="@(isAdmin ? null : "disabled")">
+                                    <option value="">Select Marital Status</option>
                                 </select>
-
+                                <span asp-validation-for="MaritalStatus" class="text-danger"></span>
                             </div>
-
                         </div>
 
                     </div>
-
                 </div>
-
             </div>
-            <div class="panel panel-flat">
-                <div class="panel-heading">
 
-                    <h6 class="panel-title">
-                        <i class="icon-phone position-left"></i>
-                        Contact Details
-                    </h6>
-
+            <!-- ========================================================
+                 SECTION 2: Contact Information
+                 ======================================================== -->
+            <div class="empform-section">
+                <div class="empform-section-header">
+                    <i class="icon-phone"></i>
+                    <h6>Contact Information</h6>
                 </div>
 
-                <div class="panel-body">
-
-                    <!-- Contact Information -->
+                <div class="empform-section-body">
 
                     <div class="row">
 
                         <div class="col-md-4">
-
                             <div class="form-group">
-
-                                <label asp-for="Email"
-                                       class="text-semibold">
-                                </label>
-
-                                <input asp-for="Email"
-                                       class="form-control"
-                                       placeholder="Enter Email Address"
+                                <label asp-for="Email" class="text-semibold"></label>
+                                <input asp-for="Email" type="email" class="form-control" placeholder="Enter Email Address"
                                        disabled="@(isAdmin ? null : "disabled")" />
-
-                                <span asp-validation-for="Email"
-                                      class="text-danger"></span>
-
+                                <span asp-validation-for="Email" class="text-danger"></span>
                             </div>
-
                         </div>
 
                         <div class="col-md-4">
-
                             <div class="form-group">
-
-                                <label asp-for="Phone"
-                                       class="text-semibold">
-                                </label>
-
-                                <input asp-for="Phone"
-                                       class="form-control"
-                                       placeholder="Enter Mobile Number" />
-
-                                <span asp-validation-for="Phone"
-                                      class="text-danger"></span>
-
+                                <label asp-for="Phone" class="text-semibold empform-required"></label>
+                                <input asp-for="Phone" class="form-control" placeholder="Enter Mobile Number" />
+                                <span asp-validation-for="Phone" class="text-danger"></span>
                             </div>
-
                         </div>
 
                         <div class="col-md-4">
-
                             <div class="form-group">
-
-                                <label asp-for="EmergencyContact"
-                                       class="text-semibold">
-                                </label>
-
-                                <input asp-for="EmergencyContact"
-                                       class="form-control"
-                                       placeholder="Enter Emergency Contact" />
-
-                                <span asp-validation-for="EmergencyContact"
-                                      class="text-danger"></span>
-
+                                <label asp-for="EmergencyContact" class="text-semibold"></label>
+                                <input asp-for="EmergencyContact" class="form-control" placeholder="Enter Emergency Contact" />
+                                <span asp-validation-for="EmergencyContact" class="text-danger"></span>
                             </div>
-
                         </div>
 
                     </div>
-
-                    <!-- Verification -->
 
                     <div class="row">
 
                         <div class="col-md-3">
-
                             <div class="checkbox">
-
                                 <label>
-
-                                    <input asp-for="EmailConfirmed"
-                                           type="checkbox"
-                                           disabled="@(isAdmin ? null : "disabled")" />
-
+                                    <input asp-for="EmailConfirmed" type="checkbox" disabled="@(isAdmin ? null : "disabled")" />
                                     Email Verified
-
                                 </label>
-
                             </div>
-
                         </div>
 
                         <div class="col-md-3">
-
                             <div class="checkbox">
-
                                 <label>
-
-                                    <input asp-for="PhoneConfirmed"
-                                           type="checkbox"
-                                           disabled="@(isAdmin ? null : "disabled")" />
-
+                                    <input asp-for="PhoneConfirmed" type="checkbox" disabled="@(isAdmin ? null : "disabled")" />
                                     Mobile Verified
-
                                 </label>
-
                             </div>
-
                         </div>
 
                     </div>
 
                     <hr />
 
-                    <!-- Address -->
-
                     <div class="row">
 
                         <div class="col-md-8">
-
                             <div class="form-group">
-
-                                <label asp-for="Address"
-                                       class="text-semibold">
-                                </label>
-
-                                <textarea asp-for="Address"
-                                          rows="4"
-                                          class="form-control"
-                                          placeholder="Enter Complete Address">
-                                        </textarea>
-
-                                <span asp-validation-for="Address"
-                                      class="text-danger"></span>
-
+                                <label asp-for="Address" class="text-semibold empform-required"></label>
+                                <textarea asp-for="Address" rows="3" class="form-control" placeholder="Enter Complete Address"></textarea>
+                                <span asp-validation-for="Address" class="text-danger"></span>
                             </div>
-
                         </div>
 
                         <div class="col-md-4">
-
                             <div class="form-group">
-
-                                <label asp-for="Pincode"
-                                       class="text-semibold">
-                                </label>
-
-                                <input asp-for="Pincode"
-                                       class="form-control"
-                                       placeholder="Enter Pincode" />
-
-                                <span asp-validation-for="Pincode"
-                                      class="text-danger"></span>
-
+                                <label asp-for="Pincode" class="text-semibold empform-required"></label>
+                                <input asp-for="Pincode" class="form-control" placeholder="Enter Pincode" />
+                                <span asp-validation-for="Pincode" class="text-danger"></span>
                             </div>
-
                         </div>
 
                     </div>
 
                 </div>
             </div>
-            <div class="panel panel-flat">
-                <div class="panel-heading">
 
-                    <h6 class="panel-title">
-                        <i class="icon-office position-left"></i>
-                        Organization Details
-                    </h6>
-
+            <!-- ========================================================
+                 SECTION 3: Employment Information (Organization + Employment
+                 Details combined - same fields as before, one section)
+                 ======================================================== -->
+            <div class="empform-section">
+                <div class="empform-section-header">
+                    <i class="icon-office"></i>
+                    <h6>Employment Information</h6>
                 </div>
 
-                <div class="panel-body">
-
-                    <!-- Row 1 -->
-
-                    <div class="row">
-
-                        <div class="col-md-4">
-
-                            <div class="form-group">
-
-                                <label asp-for="RoleId"
-                                       class="text-semibold">
-                                </label>
-
-                                <select asp-for="RoleId"
-                                        asp-items="ViewBag.RoleList"
-                                        class="form-control"
-                                        disabled="@(isAdmin ? null : "disabled")">
-
-                                    <option value="">
-                                        Select Role
-                                    </option>
-
-                                </select>
-
-                                <span asp-validation-for="RoleId"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                        </div>
-
-                        <div class="col-md-4">
-
-                            <div class="form-group">
-
-                                <label asp-for="CompanyId"
-                                       class="text-semibold">
-                                </label>
-
-                                <select asp-for="CompanyId"
-                                        asp-items="ViewBag.CompanyList"
-                                        class="form-control"
-                                        id="CompanyId"
-                                        disabled="@(isAdmin ? null : "disabled")">
-
-                                    <option value="">
-                                        Select Company
-                                    </option>
-
-                                </select>
-
-                                <span asp-validation-for="CompanyId"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                        </div>
-
-                        <div class="col-md-4">
-
-                            <div class="form-group">
-
-                                <label asp-for="BranchId"
-                                       class="text-semibold">
-                                </label>
-
-                                <select asp-for="BranchId"
-                                        asp-items="ViewBag.BranchList"
-                                        class="form-control"
-                                        id="BranchId"
-                                        disabled="@(isAdmin ? null : "disabled")">
-
-                                    <option value="">
-                                        Select Branch
-                                    </option>
-
-                                </select>
-
-                                <span asp-validation-for="BranchId"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    <!-- Row 2 -->
-
-                    <div class="row">
-
-                        <div class="col-md-4">
-
-                            <div class="form-group">
-
-                                <label asp-for="DepartmentId"
-                                       class="text-semibold">
-                                </label>
-
-                                <select asp-for="DepartmentId"
-                                        asp-items="ViewBag.DepartmentList"
-                                        class="form-control"
-                                        id="DepartmentId"
-                                        disabled="@(isAdmin ? null : "disabled")">
-
-                                    <option value="">
-                                        Select Department
-                                    </option>
-
-                                </select>
-
-                                <span asp-validation-for="DepartmentId"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                        </div>
-
-                        <div class="col-md-4">
-
-                            <div class="form-group">
-
-                                <label asp-for="DesignationId"
-                                       class="text-semibold">
-                                </label>
-
-                                <select asp-for="DesignationId"
-                                        asp-items="ViewBag.DesignationList"
-                                        class="form-control"
-                                        id="DesignationId"
-                                        disabled="@(isAdmin ? null : "disabled")">
-
-                                    <option value="">
-                                        Select Designation
-                                    </option>
-
-                                </select>
-
-                                <span asp-validation-for="DesignationId"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                        </div>
-
-                        <div class="col-md-4">
-
-                            <div class="form-group">
-
-                                <label asp-for="ReportingManagerId"
-                                       class="text-semibold">
-                                </label>
-
-                                <select asp-for="ReportingManagerId"
-                                        asp-items="ViewBag.ReportingManagerList"
-                                        class="form-control"
-                                        disabled="@(isAdmin ? null : "disabled")">
-
-                                    <option value="">
-                                        Select Reporting Manager
-                                    </option>
-
-                                </select>
-
-                                <span asp-validation-for="ReportingManagerId"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    <!-- Row 3 -->
-
-                    <div class="row">
-
-                        <div class="col-md-4">
-
-                            <div class="form-group">
-
-                                <label asp-for="ShiftId"
-                                       class="text-semibold">
-                                </label>
-
-                                <select asp-for="ShiftId"
-                                        asp-items="ViewBag.ShiftList"
-                                        class="form-control"
-                                        disabled="@(isAdmin ? null : "disabled")">
-
-                                    <option value="">
-                                        Select Shift
-                                    </option>
-
-                                </select>
-
-                                <span asp-validation-for="ShiftId"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-            <div class="panel panel-flat">
-                <div class="panel-heading">
-
-                    <h6 class="panel-title">
-                        <i class="icon-vcard position-left"></i>
-                        KYC & Identity Verification
-                    </h6>
-
-                </div>
-
-                <div class="panel-body">
-
-                    <div class="row">
-
-                        <!-- PAN Number -->
-
-                        <div class="col-md-6">
-
-                            <div class="form-group">
-
-                                <label asp-for="PANNumber"
-                                       class="text-semibold">
-                                </label>
-
-                                <input asp-for="PANNumber"
-                                       class="form-control text-uppercase"
-                                       placeholder="ABCDE1234F"
-                                       maxlength="10"
-                                       disabled="@(isAdmin ? null : "disabled")" />
-
-                                <span asp-validation-for="PANNumber"
-                                      class="text-danger"></span>
-
-                                <small class="text-muted">
-                                    Example: ABCDE1234F
-                                </small>
-
-                            </div>
-
-                        </div>
-
-                        <!-- Aadhar Number -->
-
-                        <div class="col-md-6">
-
-                            <div class="form-group">
-
-                                <label asp-for="AadharNumber"
-                                       class="text-semibold">
-                                </label>
-
-                                <input asp-for="AadharNumber"
-                                       class="form-control"
-                                       maxlength="12"
-                                       placeholder="123412341234"
-                                       disabled="@(isAdmin ? null : "disabled")" />
-
-                                <span asp-validation-for="AadharNumber"
-                                      class="text-danger"></span>
-
-                                <small class="text-muted">
-                                    Enter 12 digit Aadhaar Number
-                                </small>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-            <!-- Passport Information -->
-
-            <div class="panel panel-flat">
-
-                <div class="panel-heading">
-
-                    <h6 class="panel-title">
-
-                        <i class="icon-airplane3 position-left"></i>
-                        Passport Information
-
-                    </h6>
-
-                </div>
-
-                <div class="panel-body">
-
+                <div class="empform-section-body">
                     <fieldset disabled="@(isAdmin ? null : "disabled")">
 
-                    <!-- Row 1 -->
-
                     <div class="row">
 
-                        <!-- Passport Number -->
-
                         <div class="col-md-4">
-
                             <div class="form-group">
-
-                                <label asp-for="PassportNumber"
-                                       class="text-semibold"></label>
-
-                                <input asp-for="PassportNumber"
-                                       class="form-control text-uppercase"
-                                       placeholder="Enter Passport Number" />
-
-                                <span asp-validation-for="PassportNumber"
-                                      class="text-danger"></span>
-
+                                <label asp-for="RoleId" class="text-semibold empform-required"></label>
+                                <select asp-for="RoleId" asp-items="ViewBag.RoleList" class="form-control">
+                                    <option value="">Select Role</option>
+                                </select>
+                                <span asp-validation-for="RoleId" class="text-danger"></span>
                             </div>
-
                         </div>
 
-                        <!-- Nationality -->
-
                         <div class="col-md-4">
-
                             <div class="form-group">
-
-                                <label asp-for="Nationality"
-                                       class="text-semibold"></label>
-
-                                <select asp-for="Nationality"
-                                        asp-items="Html.GetEnumSelectList<EnumExtensions.Nationality>()"
-                                        class="form-control">
+                                <label asp-for="CompanyId" class="text-semibold empform-required"></label>
+                                <select asp-for="CompanyId" asp-items="ViewBag.CompanyList" class="form-control" id="CompanyId">
+                                    <option value="">Select Company</option>
                                 </select>
-
-                                <span asp-validation-for="Nationality"
-                                      class="text-danger"></span>
-
+                                <span asp-validation-for="CompanyId" class="text-danger"></span>
                             </div>
-
                         </div>
 
-                        <!-- Passport Status -->
-
                         <div class="col-md-4">
-
                             <div class="form-group">
-
-                                <label asp-for="PassportStatus"
-                                       class="text-semibold"></label>
-
-                                <select asp-for="PassportStatus"
-                                        asp-items="Html.GetEnumSelectList<EnumExtensions.PassportStatus>()"
-                                        class="form-control">
+                                <label asp-for="BranchId" class="text-semibold"></label>
+                                <select asp-for="BranchId" asp-items="ViewBag.BranchList" class="form-control" id="BranchId">
+                                    <option value="">Select Branch</option>
                                 </select>
-
-                                <span asp-validation-for="PassportStatus"
-                                      class="text-danger"></span>
-
+                                <span asp-validation-for="BranchId" class="text-danger"></span>
                             </div>
-
                         </div>
 
                     </div>
 
-                    <!-- Row 2 -->
-
                     <div class="row">
 
-                        <!-- Issue Date -->
-
                         <div class="col-md-4">
-
                             <div class="form-group">
-
-                                <label asp-for="IssueDate"
-                                       class="text-semibold"></label>
-
-                                <input asp-for="IssueDate"
-                                       type="date"
-                                       class="form-control" />
-
-                                <span asp-validation-for="IssueDate"
-                                      class="text-danger"></span>
-
+                                <label asp-for="DepartmentId" class="text-semibold empform-required"></label>
+                                <select asp-for="DepartmentId" asp-items="ViewBag.DepartmentList" class="form-control" id="DepartmentId">
+                                    <option value="">Select Department</option>
+                                </select>
+                                <span asp-validation-for="DepartmentId" class="text-danger"></span>
                             </div>
-
                         </div>
 
-                        <!-- Expiry Date -->
-
                         <div class="col-md-4">
-
                             <div class="form-group">
-
-                                <label asp-for="ExpiryDate"
-                                       class="text-semibold"></label>
-
-                                <input asp-for="ExpiryDate"
-                                       type="date"
-                                       class="form-control" />
-
-                                <span asp-validation-for="ExpiryDate"
-                                      class="text-danger"></span>
-
+                                <label asp-for="DesignationId" class="text-semibold empform-required"></label>
+                                <select asp-for="DesignationId" asp-items="ViewBag.DesignationList" class="form-control" id="DesignationId">
+                                    <option value="">Select Designation</option>
+                                </select>
+                                <span asp-validation-for="DesignationId" class="text-danger"></span>
                             </div>
-
                         </div>
 
-                        <!-- Place Of Issue -->
-
                         <div class="col-md-4">
-
                             <div class="form-group">
-
-                                <label asp-for="PlaceOfIssue"
-                                       class="text-semibold"></label>
-
-                                <input asp-for="PlaceOfIssue"
-                                       class="form-control"
-                                       placeholder="Enter Place Of Issue" />
-
-                                <span asp-validation-for="PlaceOfIssue"
-                                      class="text-danger"></span>
-
+                                <label asp-for="ReportingManagerId" class="text-semibold"></label>
+                                <select asp-for="ReportingManagerId" asp-items="ViewBag.ReportingManagerList" class="form-control">
+                                    <option value="">Select Reporting Manager</option>
+                                </select>
+                                <span asp-validation-for="ReportingManagerId" class="text-danger"></span>
                             </div>
-
                         </div>
 
                     </div>
 
-                    <!-- Row 3 -->
+                    <div class="row">
+
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label asp-for="ShiftId" class="text-semibold"></label>
+                                <select asp-for="ShiftId" asp-items="ViewBag.ShiftList" class="form-control">
+                                    <option value="">Select Shift</option>
+                                </select>
+                                <span asp-validation-for="ShiftId" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label asp-for="JoiningDate" class="text-semibold empform-required"></label>
+                                <input asp-for="JoiningDate" type="date" class="form-control" />
+                                <span asp-validation-for="JoiningDate" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label asp-for="EmploymentType" class="text-semibold empform-required"></label>
+                                <select asp-for="EmploymentType" asp-items="Html.GetEnumSelectList<EnumExtensions.EmploymentType>()" class="form-control">
+                                    <option value="">Select Employment Type</option>
+                                </select>
+                                <span asp-validation-for="EmploymentType" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                    </div>
 
                     <div class="row">
 
-                        <!-- Passport Issuing Country -->
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label asp-for="ConfirmationDate" class="text-semibold"></label>
+                                <input asp-for="ConfirmationDate" type="date" class="form-control" />
+                                <span asp-validation-for="ConfirmationDate" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label asp-for="RelievingDate" class="text-semibold"></label>
+                                <input asp-for="RelievingDate" type="date" class="form-control" />
+                                <span asp-validation-for="RelievingDate" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="text-semibold">Employee Status</label>
+                                <select name="EmployeeStatus" class="form-control">
+                                    <option value="Active">Active</option>
+                                    <option value="Inactive">Inactive</option>
+                                    <option value="Resigned">Resigned</option>
+                                    <option value="Terminated">Terminated</option>
+                                </select>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    </fieldset>
+                </div>
+            </div>
+
+            <!-- ========================================================
+                 SECTION 4: Additional Information (KYC + Passport) -
+                 collapsible, less frequently edited.
+                 ======================================================== -->
+            <div class="empform-section empform-collapsible">
+                <div class="empform-section-header" data-toggle-target="#kycBody">
+                    <i class="icon-vcard"></i>
+                    <h6>KYC &amp; Identity Verification</h6>
+                    <i class="bi bi-chevron-down toggle-icon"></i>
+                </div>
+
+                <div class="empform-section-body" id="kycBody">
+                    <div class="row">
 
                         <div class="col-md-6">
-
                             <div class="form-group">
-
-                                <label asp-for="CountryId"
-                                       class="text-semibold"></label>
-
-                                <select asp-for="CountryId"
-                                        asp-items="ViewBag.CountryList"
-                                        class="form-control">
-
-                                    <option value="">
-                                        Select Country
-                                    </option>
-
-                                </select>
-
-                                <span asp-validation-for="CountryId"
-                                      class="text-danger"></span>
-
+                                <label asp-for="PANNumber" class="text-semibold"></label>
+                                <input asp-for="PANNumber" class="form-control text-uppercase" placeholder="ABCDE1234F" maxlength="10"
+                                       disabled="@(isAdmin ? null : "disabled")" />
+                                <span asp-validation-for="PANNumber" class="text-danger"></span>
+                                <small class="text-muted">Example: ABCDE1234F</small>
                             </div>
-
                         </div>
 
-                        <!-- Upload Passport -->
-
                         <div class="col-md-6">
-
                             <div class="form-group">
-
-                                <label asp-for="UploadPassport"
-                                       class="text-semibold"></label>
-
-                                <input asp-for="UploadPassport"
-                                       type="file"
-                                       class="form-control"
-                                       accept=".pdf,.jpg,.jpeg,.png" />
-
-                                <span asp-validation-for="UploadPassport"
-                                      class="text-danger"></span>
-
+                                <label asp-for="AadharNumber" class="text-semibold"></label>
+                                <input asp-for="AadharNumber" class="form-control" maxlength="12" placeholder="123412341234"
+                                       disabled="@(isAdmin ? null : "disabled")" />
+                                <span asp-validation-for="AadharNumber" class="text-danger"></span>
+                                <small class="text-muted">Enter 12 digit Aadhaar Number</small>
                             </div>
+                        </div>
 
+                    </div>
+                </div>
+            </div>
+
+            <div class="empform-section empform-collapsible">
+                <div class="empform-section-header" data-toggle-target="#passportBody">
+                    <i class="icon-airplane3"></i>
+                    <h6>Passport Information</h6>
+                    <i class="bi bi-chevron-down toggle-icon"></i>
+                </div>
+
+                <div class="empform-section-body" id="passportBody" style="display:none;">
+                    <fieldset disabled="@(isAdmin ? null : "disabled")">
+
+                    <div class="row">
+
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label asp-for="PassportNumber" class="text-semibold"></label>
+                                <input asp-for="PassportNumber" class="form-control text-uppercase" placeholder="Enter Passport Number" />
+                                <span asp-validation-for="PassportNumber" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label asp-for="Nationality" class="text-semibold"></label>
+                                <select asp-for="Nationality" asp-items="Html.GetEnumSelectList<EnumExtensions.Nationality>()" class="form-control"></select>
+                                <span asp-validation-for="Nationality" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label asp-for="PassportStatus" class="text-semibold"></label>
+                                <select asp-for="PassportStatus" asp-items="Html.GetEnumSelectList<EnumExtensions.PassportStatus>()" class="form-control"></select>
+                                <span asp-validation-for="PassportStatus" class="text-danger"></span>
+                            </div>
                         </div>
 
                     </div>
 
-                    <!-- Existing Passport Document -->
+                    <div class="row">
+
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label asp-for="IssueDate" class="text-semibold"></label>
+                                <input asp-for="IssueDate" type="date" class="form-control" />
+                                <span asp-validation-for="IssueDate" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label asp-for="ExpiryDate" class="text-semibold"></label>
+                                <input asp-for="ExpiryDate" type="date" class="form-control" />
+                                <span asp-validation-for="ExpiryDate" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label asp-for="PlaceOfIssue" class="text-semibold"></label>
+                                <input asp-for="PlaceOfIssue" class="form-control" placeholder="Enter Place Of Issue" />
+                                <span asp-validation-for="PlaceOfIssue" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="row">
+
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label asp-for="CountryId" class="text-semibold"></label>
+                                <select asp-for="CountryId" asp-items="ViewBag.CountryList" class="form-control">
+                                    <option value="">Select Country</option>
+                                </select>
+                                <span asp-validation-for="CountryId" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label asp-for="UploadPassport" class="text-semibold"></label>
+                                <input asp-for="UploadPassport" type="file" class="form-control" accept=".pdf,.jpg,.jpeg,.png" />
+                                <span asp-validation-for="UploadPassport" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                    </div>
+
                     @if (!string.IsNullOrWhiteSpace(Model.PassportFilePath))
                     {
                         <hr />
 
                         <div class="row">
-
                             <div class="col-md-12">
-
-                                <label class="text-semibold">
-                                    Existing Passport Document
-                                </label>
-
+                                <label class="text-semibold">Existing Passport Document</label>
                                 <br />
-
-                                <a href="@Model.PassportFilePath"
-                                   target="_blank"
-                                   class="btn btn-primary">
-
+                                <a href="@Model.PassportFilePath" target="_blank" class="btn btn-primary">
                                     <i class="icon-file-eye"></i>
-
                                     View Passport
-
                                 </a>
-
-                                <input asp-for="PassportFilePath"
-                                       type="hidden" />
-
+                                <input asp-for="PassportFilePath" type="hidden" />
                             </div>
-
                         </div>
                     }
 
                     </fieldset>
-
                 </div>
-
             </div>
-            <div class="panel panel-flat">
-                <div class="panel-heading">
 
-                    <h6 class="panel-title">
-                        <i class="icon-briefcase position-left"></i>
-                        Employment Details
-                    </h6>
+        </div>
 
-                </div>
-
-                <div class="panel-body">
-
-                    <fieldset disabled="@(isAdmin ? null : "disabled")">
-
-                    <!-- Employment Dates -->
-
-                    <div class="row">
-
-                        <div class="col-md-4">
-
-                            <div class="form-group">
-
-                                <label asp-for="JoiningDate"
-                                       class="text-semibold">
-                                </label>
-
-                                <input asp-for="JoiningDate"
-                                       type="date"
-                                       class="form-control" />
-
-                                <span asp-validation-for="JoiningDate"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                        </div>
-
-                        <div class="col-md-4">
-
-                            <div class="form-group">
-
-                                <label asp-for="ConfirmationDate"
-                                       class="text-semibold">
-                                </label>
-
-                                <input asp-for="ConfirmationDate"
-                                       type="date"
-                                       class="form-control" />
-
-                                <span asp-validation-for="ConfirmationDate"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                        </div>
-
-                        <div class="col-md-4">
-
-                            <div class="form-group">
-
-                                <label asp-for="RelievingDate"
-                                       class="text-semibold">
-                                </label>
-
-                                <input asp-for="RelievingDate"
-                                       type="date"
-                                       class="form-control" />
-
-                                <span asp-validation-for="RelievingDate"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                        </div>
-
-                      
-
-                    </div>
-
-                    <hr />
-
-                    <!-- Additional Employment Information -->
-
-                    <div class="row">
-                        <div class="col-md-4">
-
-                            <div class="form-group">
-
-                                <label asp-for="EmploymentType"
-                                       class="text-semibold">
-                                </label>
-
-                                <select asp-for="EmploymentType"
-                                        asp-items="Html.GetEnumSelectList<EnumExtensions.EmploymentType>()"
-                                        class="form-control">
-
-                                    <option value="">
-                                        Select Employment Type
-                                    </option>
-
-                                </select>
-
-                                <span asp-validation-for="EmploymentType"
-                                      class="text-danger"></span>
-
-                            </div>
-
-                        </div>
-                        <div class="col-md-4">
-
-                            <div class="form-group">
-
-                                <label class="text-semibold">
-                                    Employee Status
-                                </label>
-
-                                <select name="EmployeeStatus"
-                                        class="form-control">
-
-                                    <option value="Active">Active</option>
-                                    <option value="Inactive">Inactive</option>
-                                    <option value="Resigned">Resigned</option>
-                                    <option value="Terminated">Terminated</option>
-
-                                </select>
-
-                            </div>
-
-                        </div>
-                    </div>
-
-                    </fieldset>
-
-                </div>
-
-            </div><!-- Buttons -->
-            <div class="text-end fa-align-right">
-
-                @if (isAdmin)
-                {
-                    <a asp-action="Index"
-                       class="btn btn-light border rounded-3 px-4">
-
-                        <i class="bi bi-arrow-left"></i>
-                        Back
-
-                    </a>
-                }
-                else
-                {
-                    <a asp-action="Details"
-                       asp-route-id="@Model.Id"
-                       class="btn btn-light border rounded-3 px-4">
-
-                        <i class="bi bi-arrow-left"></i>
-                        Cancel
-
-                    </a>
-                }
-
-                <button type="submit"
-                        class="btn btn-primary rounded-3 px-4">
-
-                    <i class="bi bi-check-circle"></i>
-
-                    @(string.IsNullOrEmpty(Model?.Id)
-                        ? "Save"
-                        : "Update")
-
-                </button>
-
-            </div>
-        </form>
     </div>
-</div>
+
+    <!-- ========================================================
+         Sticky Save/Cancel bar
+         ======================================================== -->
+    <div class="empform-actions-bar">
+
+        @if (isAdmin)
+        {
+            <a asp-action="Index" class="btn btn-light border rounded-3 px-4">
+                <i class="bi bi-arrow-left"></i>
+                Cancel
+            </a>
+        }
+        else
+        {
+            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-light border rounded-3 px-4">
+                <i class="bi bi-arrow-left"></i>
+                Cancel
+            </a>
+        }
+
+        <button type="submit" class="btn btn-primary rounded-3 px-4" id="btnSaveEmployee">
+            <i class="bi bi-check-circle"></i>
+            <span id="btnSaveEmployeeText">@(isEdit ? "Update" : "Save Employee")</span>
+        </button>
+
+    </div>
+</form>
+
 @section Scripts {
     <script>
 
         @if (TempData["Success"] != null)
         {
-                    <text>
-                            swal({
-                                title: 'Success',
-                                text: '@Html.Raw(TempData["Success"])',
-                                type: 'success',
-                                confirmButtonColor: '#66BB6A'
-                            });
-                    </text>
+            <text>
+                swal({
+                    title: '@(isEdit ? "Employee Updated Successfully" : "Employee Created Successfully")',
+                    text: '@Html.Raw(TempData["Success"])',
+                    type: 'success',
+                    confirmButtonColor: '#66BB6A'
+                });
+            </text>
         }
 
         @if (TempData["Error"] != null)
         {
-                    <text>
-                            swal({
-                                title: 'Error',
-                                text: '@Html.Raw(TempData["Error"])',
-                                type: 'error',
-                                confirmButtonColor: '#EF5350'
-                            });
-                    </text>
+            <text>
+                swal({
+                    title: 'Something went wrong',
+                    text: '@Html.Raw(TempData["Error"])',
+                    type: 'error',
+                    confirmButtonColor: '#EF5350'
+                });
+            </text>
         }
 
-    </script>
-    <script>
+        // =====================================================================
+        // Employee Code duplicate validation (blur-triggered, debounced)
+        // =====================================================================
+        // Reuses the existing jQuery Unobtrusive Validation setup already on
+        // this form (see the submit handler's `$(this).valid()` check below)
+        // rather than adding a second validation system: a custom rule is
+        // registered on the EmployeeCode field so the normal submit-time
+        // `.valid()` call also blocks submission on a still-duplicate code,
+        // and errors render into the SAME <span asp-validation-for="EmployeeCode">
+        // this form already has - no new validation-message markup/CSS.
+        var employeeCodeExists = false;
+        var employeeCodeCheckXhr = null;
+        var employeeCodeDebounceTimer = null;
+        var lastCheckedEmployeeCode = null;
+        var lastAlertedEmployeeCode = null;
+        var currentEmployeeId = @Html.Raw(string.IsNullOrEmpty(Model?.Id) ? "null" : $"'{Model.Id}'");
+
+        function setEmployeeCodeUiState(state, message) {
+            var $input = $('#EmployeeCode');
+            var $status = $('#employeeCodeStatus');
+            var $errorSpan = $("span[data-valmsg-for='EmployeeCode']");
+
+            $input.removeClass('is-invalid is-valid input-validation-error');
+            $status.hide().text('');
+
+            if (state === 'invalid') {
+                $input.addClass('is-invalid input-validation-error');
+                $errorSpan.addClass('field-validation-error').text(message || 'Employee Code already exists.');
+            } else if (state === 'valid') {
+                $input.addClass('is-valid');
+                $errorSpan.removeClass('field-validation-error').text('');
+                $status.text('✓ Employee Code is available.').show();
+            } else {
+                // 'checking' / 'idle' - just clear the previous state above.
+                $errorSpan.removeClass('field-validation-error').text('');
+            }
+        }
+
+        function checkEmployeeCode(employeeCode) {
+            employeeCode = (employeeCode || '').trim();
+
+            // Requirement 3: empty value is the required-field validator's
+            // job, never the duplicate-check API's.
+            if (!employeeCode) {
+                employeeCodeExists = false;
+                lastCheckedEmployeeCode = null;
+                setEmployeeCodeUiState('idle');
+                return;
+            }
+
+            // Don't re-check (or re-alert) a value that hasn't changed since
+            // the last check - requirement 17.
+            if (employeeCode === lastCheckedEmployeeCode) {
+                return;
+            }
+
+            // Cancel any still-in-flight request for a previous value so a
+            // slow stale response can never overwrite the result of a newer
+            // one (requirement 11).
+            if (employeeCodeCheckXhr && employeeCodeCheckXhr.readyState !== 4) {
+                employeeCodeCheckXhr.abort();
+            }
+
+            $('#employeeCodeSpinner').show();
+            setEmployeeCodeUiState('checking');
+
+            employeeCodeCheckXhr = $.ajax({
+                url: '@Url.Action("CheckEmployeeCode")',
+                type: 'GET',
+                data: {
+                    employeeCode: employeeCode,
+                    employeeId: currentEmployeeId
+                },
+                success: function (res) {
+                    $('#employeeCodeSpinner').hide();
+
+                    if (res && res.error) {
+                        employeeCodeExists = false;
+                        lastCheckedEmployeeCode = null;
+                        setEmployeeCodeUiState('idle');
+                        swal({
+                            title: 'Unable to Validate Employee Code',
+                            text: res.message || 'Unable to check Employee Code right now. Please try again.',
+                            type: 'warning'
+                        });
+                        return;
+                    }
+
+                    lastCheckedEmployeeCode = employeeCode;
+
+                    if (res && res.exists) {
+                        employeeCodeExists = true;
+                        setEmployeeCodeUiState('invalid', "Employee Code '" + employeeCode + "' already exists.");
+
+                        if (lastAlertedEmployeeCode !== employeeCode) {
+                            lastAlertedEmployeeCode = employeeCode;
+                            swal({
+                                title: 'Employee Code Already Exists',
+                                text: "Employee Code '" + employeeCode + "' is already registered. Please enter a different Employee Code.",
+                                type: 'warning'
+                            });
+                        }
+
+                        $('html, body').animate({ scrollTop: $('#EmployeeCode').offset().top - 120 }, 200);
+                        $('#EmployeeCode').trigger('focus');
+                    } else {
+                        employeeCodeExists = false;
+                        setEmployeeCodeUiState('valid');
+                    }
+                },
+                error: function (jqXhr) {
+                    $('#employeeCodeSpinner').hide();
+
+                    if (jqXhr.statusText === 'abort') return;
+
+                    employeeCodeExists = false;
+                    lastCheckedEmployeeCode = null;
+                    setEmployeeCodeUiState('idle');
+                    swal({
+                        title: 'Unable to Validate Employee Code',
+                        text: 'Unable to check Employee Code right now. Please try again.',
+                        type: 'warning'
+                    });
+                }
+            });
+        }
 
         $(document).ready(function () {
 
-            $("input[name='UploadImage']").change(function () {
+            // jQuery Validate custom rule: makes the form's existing
+            // `.valid()` call (already run on submit below) fail whenever
+            // employeeCodeExists is true, so submission is blocked even if
+            // blur somehow hasn't fired yet - requirement 12's "don't rely
+            // only on the flag" is satisfied by the server re-checking in
+            // EmployeeService.CreateAsync/UpdateAsync regardless.
+            if ($.validator && !$.validator.methods.employeeCodeUnique) {
+                $.validator.addMethod('employeeCodeUnique', function (value, element) {
+                    return !employeeCodeExists;
+                }, 'Employee Code already exists.');
+            }
 
-                var file = this.files[0];
+            if ($.validator) {
+                $('#EmployeeCode').rules('add', {
+                    employeeCodeUnique: true,
+                    messages: { employeeCodeUnique: 'Employee Code already exists.' }
+                });
+            }
 
-                if (file) {
-
-                    var reader = new FileReader();
-
-                    reader.onload = function (e) {
-
-                        $("#profilePreview")
-                            .attr("src", e.target.result);
-
-                    };
-
-                    reader.readAsDataURL(file);
-                }
-
+            $('#EmployeeCode').on('blur', function () {
+                var value = $(this).val().trim();
+                checkEmployeeCode(value);
             });
 
-        });
+            // Debounced live check while typing (300-500ms) in addition to
+            // the mandatory blur check - requirement 11.
+            $('#EmployeeCode').on('input', function () {
+                var $el = $(this);
+                clearTimeout(employeeCodeDebounceTimer);
+                employeeCodeDebounceTimer = setTimeout(function () {
+                    checkEmployeeCode($el.val());
+                }, 400);
+            });
 
-    </script>
-        <script>
+            // ===== Profile Photo widget: choose / preview / remove =====
+            $('#btnChoosePhoto').on('click', function () {
+                $('#profileImageInput').trigger('click');
+            });
 
-        $(document).ready(function () {
+            $('#profileImageInput').on('change', function () {
+                var file = this.files[0];
+                if (!file) return;
 
-        // =========================================
-        // COMPANY CHANGE -> LOAD BRANCH
-        // =========================================
+                var allowed = ['image/jpeg', 'image/jpg', 'image/png'];
+                if (allowed.indexOf(file.type) === -1) {
+                    swal({ title: 'Invalid file', text: 'Only JPG and PNG images are allowed.', type: 'warning' });
+                    $(this).val('');
+                    return;
+                }
 
-        $(document).on("change", "#CompanyId", function () {
+                if (file.size > 2 * 1024 * 1024) {
+                    swal({ title: 'File too large', text: 'Maximum image size is 2 MB.', type: 'warning' });
+                    $(this).val('');
+                    return;
+                }
 
-        debugger;
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    $('#profilePreview').attr('src', e.target.result);
+                    $('#btnRemovePhoto').show();
+                };
+                reader.readAsDataURL(file);
+            });
 
-        let companyId = $(this).val();
+            $('#btnRemovePhoto').on('click', function () {
+                $('#profileImageInput').val('');
+                $('#profilePreview').attr('src', '@Url.Content("~/images/no-image.png")');
+                $(this).hide();
+            });
 
-        console.log(companyId);
+            if ($('#profilePreview').attr('src') && $('#profilePreview').attr('src').indexOf('no-image') === -1) {
+                $('#btnRemovePhoto').show();
+            }
 
-        // Reset Branch Dropdown
-        if (companyId == null || companyId === "") {
+            // ===== Collapsible sections (KYC / Passport) =====
+            $('.empform-collapsible .empform-section-header').on('click', function () {
+                var target = $(this).data('toggle-target');
+                $(target).slideToggle(150);
+                $(this).find('.toggle-icon').toggleClass('bi-chevron-down bi-chevron-up');
+            });
 
-        $("#BranchId").html(
-        '<option value="">-- Select Branch --</option>'
-        );
+            // ===== Prevent duplicate submission + button loading state =====
+            $('#employeeForm').on('submit', function (e) {
 
-        return;
-        }
+                if ($(this).data('submitting')) {
+                    e.preventDefault();
+                    return false;
+                }
 
-        $.ajax({
+                // Explicit client-side guard (requirement 12) - checked
+                // ahead of $(this).valid() so a duplicate code always shows
+                // its own SweetAlert on submit, even though the
+                // employeeCodeUnique rule registered above would also block
+                // .valid() from passing. This is a convenience only; the
+                // real authority is EmployeeService.CreateAsync/UpdateAsync
+                // re-checking on the server (requirement 13).
+                if (employeeCodeExists) {
+                    e.preventDefault();
+                    swal({
+                        title: 'Employee Code Already Exists',
+                        text: 'Please enter a different Employee Code before saving.',
+                        type: 'warning'
+                    });
+                    $('html, body').animate({ scrollTop: $('#EmployeeCode').offset().top - 120 }, 200);
+                    $('#EmployeeCode').trigger('focus');
+                    return false;
+                }
 
-        url: '@Url.Action("GetBranchByCompanyId")',
+                if ($.validator && !$(this).valid()) {
+                    // Let jQuery Validate show inline messages and focus
+                    // the first invalid field - do not disable the button.
+                    var $firstError = $('.input-validation-error, .is-invalid').first();
+                    if ($firstError.length) {
+                        $('html, body').animate({ scrollTop: $firstError.offset().top - 120 }, 300);
+                        $firstError.focus();
+                    }
+                    return true;
+                }
 
-        type: 'GET',
+                $(this).data('submitting', true);
+                $('#btnSaveEmployee').prop('disabled', true);
+                $('#btnSaveEmployeeText').text('@(isEdit ? "Updating Employee..." : "Saving Employee...")');
+            });
 
-        data: { companyId: companyId },
+            // ===== Company -> Branch, Department -> Designation cascades =====
+            $(document).on('change', '#CompanyId', function () {
+                var companyId = $(this).val();
 
-        success: function (response) {
+                if (!companyId) {
+                    $('#BranchId').html('<option value="">-- Select Branch --</option>');
+                    return;
+                }
 
-        let html =
-        '<option value="">-- Select Branch --</option>';
+                $.ajax({
+                    url: '@Url.Action("GetBranchByCompanyId")',
+                    type: 'GET',
+                    data: { companyId: companyId },
+                    success: function (response) {
+                        var html = '<option value="">-- Select Branch --</option>';
+                        $.each(response, function (i, item) {
+                            html += '<option value="' + item.value + '">' + item.text + '</option>';
+                        });
+                        $('#BranchId').html(html);
+                    },
+                    error: function () {
+                        swal({ title: 'Something went wrong', text: 'Unable to load branches. Please try again.', type: 'error' });
+                    }
+                });
+            });
 
-        $.each(response, function (i, item) {
+            $(document).on('change', '#DepartmentId', function () {
+                var departmentId = $(this).val();
 
-        html += `
-        <option value="${item.value}">
-        ${item.text}
-        </option>`;
-        });
+                if (!departmentId) {
+                    $('#DesignationId').html('<option value="">-- Select Designation --</option>');
+                    return;
+                }
 
-        $("#BranchId").html(html);
-        },
-
-        error: function (xhr) {
-
-        console.log(xhr);
-
-        alert("Error loading branches");
-        }
-        });
-
-        });
-
-
-        // =========================================
-        // DEPARTMENT CHANGE -> LOAD DESIGNATION
-        // =========================================
-
-        $(document).on("change", "#DepartmentId", function () {
-
-        debugger;
-
-        let departmentId = $(this).val();
-
-        console.log(departmentId);
-
-        // Reset Designation Dropdown
-        if (departmentId == null || departmentId === "") {
-
-        $("#DesignationId").html(
-        '<option value="">-- Select Designation --</option>'
-        );
-
-        return;
-        }
-
-        $.ajax({
-
-        url: '@Url.Action("GetDesignationByDepartmentId")',
-
-        type: 'GET',
-
-        data: { departmentId: departmentId },
-
-        success: function (response) {
-
-        let html =
-        '<option value="">-- Select Designation --</option>';
-
-        $.each(response, function (i, item) {
-
-        html += `
-        <option value="${item.value}">
-        ${item.text}
-        </option>`;
-        });
-
-        $("#DesignationId").html(html);
-        },
-
-        error: function (xhr) {
-
-        console.log(xhr);
-
-        alert("Error loading designations");
-        }
-        });
-
-        });
+                $.ajax({
+                    url: '@Url.Action("GetDesignationByDepartmentId")',
+                    type: 'GET',
+                    data: { departmentId: departmentId },
+                    success: function (response) {
+                        var html = '<option value="">-- Select Designation --</option>';
+                        $.each(response, function (i, item) {
+                            html += '<option value="' + item.value + '">' + item.text + '</option>';
+                        });
+                        $('#DesignationId').html(html);
+                    },
+                    error: function () {
+                        swal({ title: 'Something went wrong', text: 'Unable to load designations. Please try again.', type: 'error' });
+                    }
+                });
+            });
 
         });
 

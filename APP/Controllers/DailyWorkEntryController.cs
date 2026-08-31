@@ -99,6 +99,18 @@ namespace APP.Controllers
             }
         }
 
+        // The employee's own assignment-scoped Job/Structure/Activity combo
+        // list (spec section 9) - Daily Work Entry's "Assigned Work"
+        // dropdown filters THIS in-memory rather than the full Job master,
+        // so an employee can only charge normal project work against
+        // something a manager actually assigned to them.
+        [HttpGet]
+        public async Task<JsonResult> GetMyAssignedWorkCombo()
+        {
+            var response = await _apiService.GetAsync<ApiResponse<List<AssignedWorkComboDto>>>("employeeworkassignment/my/work-combo");
+            return Json(new { success = true, data = response?.Data ?? new List<AssignedWorkComboDto>() });
+        }
+
         [HttpGet]
         public async Task<JsonResult> GetJobTypes()
         {

@@ -1061,6 +1061,41 @@ namespace Domain.Enums
             Downtime = 4
         }
 
+        /// <summary>EmployeeWorkAssignment.AssignmentType - what granularity a manager assigned (spec: "Job / Task / Activity").</summary>
+        public enum AssignmentType
+        {
+            Job = 1,
+            Task = 2,
+            Activity = 3
+        }
+
+        /// <summary>EmployeeWorkAssignment.Priority.</summary>
+        public enum AssignmentPriority
+        {
+            Low = 1,
+            Normal = 2,
+            High = 3,
+            Urgent = 4
+        }
+
+        /// <summary>
+        /// EmployeeWorkAssignment lifecycle (spec section 6):
+        /// Assigned -> Accepted -> InProgress -> Completed, or
+        /// Assigned -> Rejected/Returned. An employee can only move a live
+        /// assignment forward through this chain (WorkAssignmentService
+        /// enforces legal transitions) - they can never delete/remove an
+        /// assignment their manager created.
+        /// </summary>
+        public enum AssignmentStatus
+        {
+            Assigned = 1,
+            Accepted = 2,
+            InProgress = 3,
+            Completed = 4,
+            Rejected = 5,
+            Returned = 6
+        }
+
         /// <summary>Skids Packages activities are scoped to one of these disciplines (Excel: "Skids Packages -> Piping/Equipment/Structural/E&I", dropdown reuses each discipline's own activity list). Null for every JobType other than Skids Packages.</summary>
         public enum SkidsDiscipline
         {

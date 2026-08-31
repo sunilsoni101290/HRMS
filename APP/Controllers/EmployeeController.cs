@@ -219,11 +219,23 @@ namespace APP.Controllers
                     "",
                     response.Message);
             }
+            catch (ApiException apiEx)
+            {
+                // PostAsync<TRequest,TResponse> throws ApiException with a
+                // generic "API Error" Message and the real server message
+                // buried in ResponseContent (see ApiService.PostAsync) - a
+                // duplicate Employee Code (or the existing phone/email
+                // duplicate checks) would previously have shown the literal
+                // text "API Error" here instead of the actual reason.
+                ModelState.AddModelError(
+                    "",
+                    GetFriendlyErrorMessage(apiEx.ResponseContent, "Unable to create employee."));
+            }
             catch (Exception ex)
             {
                 ModelState.AddModelError(
                     "",
-                    ex.Message);
+                    GetFriendlyErrorMessage(ex.Message, "Unable to create employee."));
             }
 
             ViewBag.FromCandidate = !string.IsNullOrWhiteSpace(dto.CandidateId);
@@ -485,22 +497,41 @@ namespace APP.Controllers
                 }
                 #endregion
 
-                var response = await _apiService.PutAsync<EmployeeDto, ApiResponse<EmployeeDto>>
-                    (
-                        $"Employee/update-employee",
-                        dto
-                    );
-
                 ViewBag.IsAdmin = _isAdmin;
 
-                if (response.Success)
+                try
                 {
-                    TempData["Success"] = "Employee updated successfully.";
+                    // PutAsync<TRequest,TResponse> doesn't throw ApiException
+                    // on a non-success response the way PostAsync does - a
+                    // BadRequest from the API (e.g. duplicate Employee Code,
+                    // now that EmployeeController.Update wraps UpdateAsync in
+                    // try/catch) surfaces here as a plain Exception whose
+                    // Message is "Bad Request (400): {json}" (see
+                    // ApiService.HandleResponse) - GetFriendlyErrorMessage
+                    // strips that prefix and pulls out the real message.
+                    var response = await _apiService.PutAsync<EmployeeDto, ApiResponse<EmployeeDto>>
+                        (
+                            $"Employee/update-employee",
+                            dto
+                        );
 
-                    return View("Create", dto);
+                    if (response.Success)
+                    {
+                        TempData["Success"] = "Employee updated successfully.";
+
+                        return View("Create", dto);
+                    }
+
+                    TempData["Error"] = response.Message ?? "Unable to update employee.";
                 }
-
-                TempData["Error"] = response.Message ?? "Unable to update employee.";
+                catch (ApiException apiEx)
+                {
+                    TempData["Error"] = GetFriendlyErrorMessage(apiEx.ResponseContent, "Unable to update employee.");
+                }
+                catch (Exception ex)
+                {
+                    TempData["Error"] = GetFriendlyErrorMessage(ex.Message, "Unable to update employee.");
+                }
 
                 if (!_isAdmin)
                     return View("Create", dto);
@@ -736,6 +767,31 @@ namespace APP.Controllers
         }
         #endregion
 
+
+        // Backs the Create/Edit form's blur-triggered duplicate Employee
+        // Code check. employeeId is the record currently being edited
+        // (omitted/blank on Create) so the employee's own unchanged code is
+        // never flagged as a duplicate of itself.
+        [HttpGet]
+        public async Task<JsonResult> CheckEmployeeCode(string employeeCode, string? employeeId)
+        {
+            if (string.IsNullOrWhiteSpace(employeeCode))
+                return Json(new { exists = false });
+
+            try
+            {
+                var url = $"Employee/check-employee-code?employeeCode={Uri.EscapeDataString(employeeCode.Trim())}"
+                    + (string.IsNullOrWhiteSpace(employeeId) ? "" : $"&employeeId={Uri.EscapeDataString(employeeId)}");
+
+                var response = await _apiService.GetAsync<ApiResponse<EmployeeCodeExistsDto>>(url);
+
+                return Json(new { exists = response?.Data?.Exists ?? false });
+            }
+            catch (Exception)
+            {
+                return Json(new { error = true, message = "Unable to check Employee Code right now. Please try again." });
+            }
+        }
 
         [HttpGet]
         public async Task<JsonResult> GetBranchByCompanyId(string companyId)
@@ -1145,6 +1201,52 @@ namespace APP.Controllers
                 TempData["Info"] = $"{result.SuccessCount} of {result.TotalRows} employee(s) imported. {result.FailureCount} failed - see details below.";
 
             return View(result);
+        }
+
+        // General-purpose counterpart to GetErrorMessage(json) below (which
+        // is hard-coded to the bulk-import flow's "Import failed." fallback
+        // and assumes its input is already bare JSON). This one also
+        // strips the "Bad Request (400): {json}" / "API Error" prefixes
+        // ApiService's various exception paths can produce (see
+        // ApiService.HandleResponse and PostAsync<TRequest,TResponse>), so
+        // Create/Edit can show the real server-side validation message
+        // (e.g. a duplicate Employee Code) instead of a generic string.
+        private static string GetFriendlyErrorMessage(string? raw, string fallback)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+                return fallback;
+
+            try
+            {
+                var jsonStart = raw.IndexOf('{');
+                var json = jsonStart >= 0 ? raw.Substring(jsonStart) : raw;
+
+                var obj = Newtonsoft.Json.Linq.JObject.Parse(json);
+
+                if (obj["Message"] != null)
+                    return obj["Message"]!.ToString();
+
+                if (obj["message"] != null)
+                    return obj["message"]!.ToString();
+
+                if (obj["Errors"] is Newtonsoft.Json.Linq.JArray errors && errors.Count > 0)
+                    return errors[0]?.ToString() ?? fallback;
+
+                if (obj["errors"] is Newtonsoft.Json.Linq.JObject validationErrors)
+                {
+                    foreach (var property in validationErrors.Properties())
+                    {
+                        if (property.Value is Newtonsoft.Json.Linq.JArray arr && arr.Count > 0)
+                            return arr[0]?.ToString() ?? fallback;
+                    }
+                }
+
+                return fallback;
+            }
+            catch
+            {
+                return fallback;
+            }
         }
 
         private string GetErrorMessage(string json)

@@ -1,0 +1,676 @@
+@model APP.Models.DTOs.SaveEmployeeWorkAssignmentDto
+@{
+    ViewData["Title"] = "Assign Job / Work";
+}
+
+<style>
+    /* ==================== Assign Job/Work - enterprise redesign ====================
+       Namespaced ".wa-*" to avoid clashing with any other page's styles.
+       Reuses the existing Limitless admin shell (panel, form-control, btn
+       bg-primary, icon-* classes) - no new CSS framework introduced. */
+    .wa-header { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:4px; }
+    .wa-header h5 { margin:0 0 4px 0; }
+    .wa-subtitle { color:#7a7f8c; font-size:12.5px; margin:0; }
+    .wa-breadcrumb { font-size:12px; color:#9aa0ac; margin-bottom:14px; }
+    .wa-breadcrumb a { color:#9aa0ac; }
+    .wa-breadcrumb .sep { margin:0 6px; }
+
+    .wa-required-legend { font-size:11.5px; color:#9aa0ac; margin-bottom:18px; }
+    .wa-required-legend .text-danger { font-weight:700; }
+
+    .wa-section { border:1px solid #e5e7eb; border-radius:6px; margin-bottom:18px; background:#fff; }
+    .wa-section-head { display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid #eef0f2; }
+    .wa-step-badge { width:24px; height:24px; border-radius:50%; background:#eef2ff; color:#3b5bdb; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .wa-section-head h6 { margin:0; font-weight:700; letter-spacing:.3px; text-transform:uppercase; font-size:12.5px; color:#3b3f47; }
+    .wa-section-body { padding:16px; }
+
+    .wa-field-label { font-weight:600; font-size:13px; color:#3b3f47; margin-bottom:4px; }
+    .wa-help { font-size:11.5px; color:#9aa0ac; margin-top:4px; display:block; }
+    .wa-error { font-size:11.5px; color:#e7515a; margin-top:4px; display:block; min-height:14px; }
+    .wa-invalid { border-color:#e7515a !important; }
+
+    /* Employee searchable combobox */
+    .wa-combo { position:relative; }
+    .wa-combo-input { cursor:text; }
+    .wa-combo-panel { position:absolute; z-index:1050; top:calc(100% + 4px); left:0; right:0; background:#fff; border:1px solid #d7dae0; border-radius:4px; box-shadow:0 6px 16px rgba(0,0,0,.12); max-height:280px; overflow-y:auto; display:none; }
+    .wa-combo-panel.open { display:block; }
+    .wa-combo-search { padding:8px; border-bottom:1px solid #eef0f2; }
+    .wa-combo-search input { width:100%; border:1px solid #d7dae0; border-radius:4px; padding:6px 10px; font-size:13px; }
+    .wa-combo-list { max-height:220px; overflow-y:auto; }
+    .wa-combo-item { display:flex; align-items:center; gap:10px; padding:8px 12px; cursor:pointer; }
+    .wa-combo-item:hover, .wa-combo-item.active { background:#f4f6fb; }
+    .wa-combo-avatar { width:30px; height:30px; border-radius:50%; background:#3b5bdb; color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .wa-combo-name { font-size:13px; font-weight:600; color:#3b3f47; }
+    .wa-combo-meta { font-size:11.5px; color:#9aa0ac; }
+    .wa-combo-empty, .wa-combo-loading, .wa-combo-error { padding:16px 12px; text-align:center; font-size:12.5px; color:#9aa0ac; }
+    .wa-combo-error { color:#e7515a; }
+    .wa-combo-error a { cursor:pointer; text-decoration:underline; }
+
+    .wa-selected-employee { display:none; margin-top:10px; align-items:center; gap:12px; padding:10px 12px; background:#f7f9fc; border:1px solid #e5e7eb; border-radius:6px; }
+    .wa-selected-employee.show { display:flex; }
+    .wa-selected-avatar { width:40px; height:40px; border-radius:50%; background:#3b5bdb; color:#fff; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .wa-selected-name { font-weight:700; font-size:13.5px; color:#3b3f47; }
+    .wa-selected-meta { font-size:12px; color:#7a7f8c; }
+    .wa-selected-clear { margin-left:auto; color:#9aa0ac; cursor:pointer; }
+
+    /* Assignment type cards */
+    .wa-type-options { display:flex; gap:10px; flex-wrap:wrap; }
+    .wa-type-card { flex:1 1 140px; border:1px solid #d7dae0; border-radius:6px; padding:10px 12px; cursor:pointer; position:relative; transition:border-color .15s, background .15s; }
+    .wa-type-card:hover { border-color:#3b5bdb; }
+    .wa-type-card.selected { border-color:#3b5bdb; background:#f4f6fb; }
+    .wa-type-card .wa-type-title { font-weight:700; font-size:13px; color:#3b3f47; display:flex; align-items:center; gap:6px; }
+    .wa-type-card .wa-type-desc { font-size:11.5px; color:#9aa0ac; margin-top:2px; }
+    .wa-type-card .wa-type-check { position:absolute; top:8px; right:10px; color:#3b5bdb; display:none; }
+    .wa-type-card.selected .wa-type-check { display:inline; }
+
+    .wa-summary { background:#f7f9fc; border:1px dashed #d7dae0; border-radius:6px; padding:14px 16px; }
+    .wa-summary h6 { margin:0 0 10px 0; font-weight:700; font-size:12.5px; text-transform:uppercase; letter-spacing:.3px; color:#3b3f47; }
+    .wa-summary-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px 18px; }
+    .wa-summary-item .lbl { font-size:11px; color:#9aa0ac; text-transform:uppercase; }
+    .wa-summary-item .val { font-size:13px; font-weight:600; color:#3b3f47; }
+    .wa-summary-item .val.muted { color:#c4c8d0; font-weight:400; }
+
+    .wa-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:4px; }
+
+    @@media (max-width: 767px) {
+        .wa-type-options { flex-direction:column; }
+    }
+</style>
+
+<div class="wa-breadcrumb">
+    <a asp-controller="EmployeeDashboard" asp-action="Index">Home</a>
+    <span class="sep">/</span>
+    <span>Employee Management</span>
+    <span class="sep">/</span>
+    <span>Job / Work Assignment</span>
+    <span class="sep">/</span>
+    <span>Assign</span>
+</div>
+
+<div class="panel panel-flat">
+    <div class="panel-body">
+
+        <div class="wa-header">
+            <div>
+                <h5><i class="icon-user-plus position-left"></i>Assign Job / Work</h5>
+                <p class="wa-subtitle">Assign work to an employee and define expected completion.</p>
+            </div>
+            <div>
+                <a asp-action="AssignedByMeOrTeam" class="btn btn-default btn-sm">
+                    <i class="icon-list position-left"></i> Assignments I've Made
+                </a>
+            </div>
+        </div>
+
+        <div class="wa-required-legend"><span class="text-danger">*</span> Required fields</div>
+
+        <form id="assignForm" novalidate>
+
+            <!-- STEP 1: EMPLOYEE -->
+            <div class="wa-section">
+                <div class="wa-section-head">
+                    <span class="wa-step-badge">1</span>
+                    <h6>Employee</h6>
+                </div>
+                <div class="wa-section-body">
+                    <label class="wa-field-label" for="employeeSearchInput">Employee <span class="text-danger">*</span></label>
+                    <div class="wa-combo">
+                        <input type="text" id="employeeSearchInput" class="form-control wa-combo-input" placeholder="Search employee by name or code..." autocomplete="off" />
+                        <input type="hidden" id="employeeId" />
+                        <div class="wa-combo-panel" id="employeeComboPanel">
+                            <div class="wa-combo-search">
+                                <input type="text" id="employeeComboFilter" placeholder="Enter name or code..." />
+                            </div>
+                            <div class="wa-combo-list" id="employeeComboList"></div>
+                        </div>
+                    </div>
+                    <span class="wa-error" data-field="employeeId"></span>
+
+                    <div class="wa-selected-employee" id="selectedEmployeeCard">
+                        <div class="wa-selected-avatar" id="selectedEmployeeAvatar">--</div>
+                        <div>
+                            <div class="wa-selected-name" id="selectedEmployeeName">--</div>
+                            <div class="wa-selected-meta" id="selectedEmployeeMeta">--</div>
+                        </div>
+                        <span class="wa-selected-clear" id="clearSelectedEmployee" title="Change employee"><i class="icon-cross2"></i></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 2: WORK DETAILS -->
+            <div class="wa-section">
+                <div class="wa-section-head">
+                    <span class="wa-step-badge">2</span>
+                    <h6>Work Details</h6>
+                </div>
+                <div class="wa-section-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="wa-field-label" for="jobTypeId">Job Type <span class="text-danger">*</span></label>
+                            <select id="jobTypeId" class="form-control">
+                                <option value="">-- Loading job types... --</option>
+                            </select>
+                            <span class="wa-error" data-field="jobTypeId"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="wa-field-label" for="workJobId">Job Number <span class="text-danger">*</span></label>
+                            <select id="workJobId" class="form-control">
+                                <option value="">-- Loading jobs... --</option>
+                            </select>
+                            <span class="wa-error" data-field="workJobId"></span>
+                        </div>
+                    </div>
+
+                    <div class="row" style="margin-top:14px;">
+                        <div class="col-md-6">
+                            <label class="wa-field-label" for="jobItemId">Structure / Equipment / Job ID</label>
+                            <select id="jobItemId" class="form-control" disabled>
+                                <option value="">-- Select Job Number first --</option>
+                            </select>
+                            <span class="wa-help">Leave blank to assign the whole job (any structure/equipment).</span>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="wa-field-label" for="workActivityId">Work Activity</label>
+                            <select id="workActivityId" class="form-control" disabled>
+                                <option value="">-- Select Job Type first --</option>
+                            </select>
+                            <span class="wa-help">Select a specific activity, or leave blank to assign any activity under this job type.</span>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:14px;">
+                        <label class="wa-field-label">Assignment Type <span class="text-danger">*</span></label>
+                        <input type="hidden" id="assignmentType" value="1" />
+                        <div class="wa-type-options" id="assignmentTypeOptions">
+                            <div class="wa-type-card selected" data-value="1">
+                                <i class="icon-checkmark3 wa-type-check"></i>
+                                <div class="wa-type-title">Job</div>
+                                <div class="wa-type-desc">Entire job - any structure/activity</div>
+                            </div>
+                            <div class="wa-type-card" data-value="2">
+                                <i class="icon-checkmark3 wa-type-check"></i>
+                                <div class="wa-type-title">Task</div>
+                                <div class="wa-type-desc">A defined task within the job</div>
+                            </div>
+                            <div class="wa-type-card" data-value="3">
+                                <i class="icon-checkmark3 wa-type-check"></i>
+                                <div class="wa-type-title">Activity</div>
+                                <div class="wa-type-desc">This exact activity only</div>
+                            </div>
+                        </div>
+                        <span class="wa-help">Selecting "Activity" requires a Work Activity to be chosen above.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 3: SCHEDULE & PRIORITY -->
+            <div class="wa-section">
+                <div class="wa-section-head">
+                    <span class="wa-step-badge">3</span>
+                    <h6>Schedule &amp; Priority</h6>
+                </div>
+                <div class="wa-section-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label class="wa-field-label" for="priority">Priority</label>
+                            <select id="priority" class="form-control">
+                                <option value="1">Low</option>
+                                <option value="2" selected>Normal</option>
+                                <option value="3">High</option>
+                                <option value="4">Urgent</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="wa-field-label" for="startDate">Start Date</label>
+                            <input type="date" id="startDate" class="form-control" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="wa-field-label" for="expectedEndDate">Expected End Date</label>
+                            <input type="date" id="expectedEndDate" class="form-control" />
+                            <span class="wa-error" data-field="expectedEndDate"></span>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="wa-field-label" for="estimatedHours">Estimated Hours</label>
+                            <input type="number" id="estimatedHours" class="form-control" step="0.5" min="0" placeholder="0.00" />
+                            <span class="wa-error" data-field="estimatedHours"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 4: INSTRUCTIONS -->
+            <div class="wa-section">
+                <div class="wa-section-head">
+                    <span class="wa-step-badge">4</span>
+                    <h6>Instructions</h6>
+                </div>
+                <div class="wa-section-body">
+                    <label class="wa-field-label" for="instructions">Instructions / Notes</label>
+                    <textarea id="instructions" class="form-control" rows="3" maxlength="1000" placeholder="Add instructions, expectations, or notes for the employee..."></textarea>
+                    <span class="wa-help"><span id="instructionsCount">0</span>/1000</span>
+                </div>
+            </div>
+
+            <!-- SUMMARY -->
+            <div class="wa-summary" style="margin-bottom:18px;">
+                <h6>Assignment Summary</h6>
+                <div class="wa-summary-grid">
+                    <div class="wa-summary-item"><div class="lbl">Employee</div><div class="val muted" id="sumEmployee">Not selected</div></div>
+                    <div class="wa-summary-item"><div class="lbl">Job</div><div class="val muted" id="sumJob">Not selected</div></div>
+                    <div class="wa-summary-item"><div class="lbl">Activity</div><div class="val muted" id="sumActivity">Any / whole job</div></div>
+                    <div class="wa-summary-item"><div class="lbl">Assignment Type</div><div class="val" id="sumType">Job</div></div>
+                    <div class="wa-summary-item"><div class="lbl">Priority</div><div class="val" id="sumPriority">Normal</div></div>
+                    <div class="wa-summary-item"><div class="lbl">Start</div><div class="val muted" id="sumStart">--</div></div>
+                    <div class="wa-summary-item"><div class="lbl">Expected End</div><div class="val muted" id="sumEnd">--</div></div>
+                    <div class="wa-summary-item"><div class="lbl">Estimated Hours</div><div class="val muted" id="sumHours">--</div></div>
+                </div>
+            </div>
+
+            <div class="wa-actions">
+                <a asp-action="AssignedByMeOrTeam" class="btn btn-link">Cancel</a>
+                <button type="button" id="btnAssign" class="btn bg-primary">
+                    <i class="icon-checkmark3 position-left"></i>
+                    <span id="btnAssignText">Assign Work</span>
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+    <script>
+        // ==============================================================
+        // Root cause of the previously "non-functional" page: this app's
+        // JSON output preserves PascalCase (Program.cs sets
+        // JsonSerializerOptions.PropertyNamingPolicy = null), so every AJAX
+        // response here carries PascalCase keys (Id/Name/Code/Value/Text...).
+        // The old script read them as camelCase (item.id/item.name), which
+        // made "$("<option>").val(undefined)" run as a jQuery GETTER
+        // (jQuery treats an explicit `undefined` argument to .val()/.text()
+        // as "read the current value" rather than "set it to undefined"),
+        // so the chained .text(...) call blew up with a TypeError and
+        // silently aborted populateSelect() before a single <option> was
+        // appended - every dropdown on this page (Employee, Job Type, Job
+        // Number, Work Activity) stayed empty. Fixed below by reading the
+        // exact casing each endpoint actually returns.
+        // ==============================================================
+
+        var employeeCache = [];
+        var selectedEmployee = null;
+        var jobTypesLoaded = false;
+
+        function initials(name) {
+            if (!name) return "?";
+            var parts = name.trim().split(/\s+/);
+            return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
+        }
+
+        // -------------------- Employee searchable combobox --------------------
+        function loadEmployees() {
+            $("#employeeComboList").html('<div class="wa-combo-loading">Searching employees...</div>');
+            $("#employeeSearchInput").prop("disabled", true).attr("placeholder", "Loading employees...");
+
+            $.get("@Url.Action("GetEmployeesDropdown")")
+                .done(function (res) {
+                    employeeCache = (res && res.data) || [];
+                    $("#employeeSearchInput").prop("disabled", false).attr("placeholder", "Search employee by name or code...");
+                    renderEmployeeList(employeeCache);
+                })
+                .fail(function () {
+                    $("#employeeSearchInput").prop("disabled", false).attr("placeholder", "Search employee by name or code...");
+                    $("#employeeComboList").html('<div class="wa-combo-error">Unable to load employees. <a onclick="loadEmployees()">Retry</a></div>');
+                });
+        }
+
+        function renderEmployeeList(list) {
+            var $list = $("#employeeComboList");
+            if (!list.length) {
+                $list.html('<div class="wa-combo-empty">No active employees found.</div>');
+                return;
+            }
+            var html = list.map(function (e) {
+                return '<div class="wa-combo-item" data-id="' + e.id + '">' +
+                    '<div class="wa-combo-avatar">' + initials(e.name) + '</div>' +
+                    '<div><div class="wa-combo-name">' + e.name + '</div>' +
+                    '<div class="wa-combo-meta">' + e.code + (e.department ? " &middot; " + e.department : "") + '</div></div>' +
+                    '</div>';
+            }).join("");
+            $list.html(html);
+        }
+
+        function openEmployeeCombo() {
+            $("#employeeComboPanel").addClass("open");
+            $("#employeeComboFilter").val("").trigger("focus");
+            renderEmployeeList(employeeCache);
+        }
+
+        function closeEmployeeCombo() {
+            $("#employeeComboPanel").removeClass("open");
+        }
+
+        $("#employeeSearchInput").on("focus click", function () {
+            if (!$("#employeeId").val()) openEmployeeCombo();
+        });
+
+        $("#employeeComboFilter").on("input", function () {
+            var q = $(this).val().trim().toLowerCase();
+            if (!q) { renderEmployeeList(employeeCache); return; }
+            var filtered = employeeCache.filter(function (e) {
+                return (e.name || "").toLowerCase().indexOf(q) > -1 ||
+                       (e.code || "").toLowerCase().indexOf(q) > -1 ||
+                       (e.department || "").toLowerCase().indexOf(q) > -1;
+            });
+            renderEmployeeList(filtered);
+        });
+
+        $(document).on("click", ".wa-combo-item", function () {
+            var id = $(this).data("id").toString();
+            var emp = employeeCache.find(function (e) { return e.id === id; });
+            if (!emp) return;
+
+            selectedEmployee = emp;
+            $("#employeeId").val(emp.id);
+            $("#employeeSearchInput").val(emp.code + " - " + emp.name);
+            $(".wa-error[data-field='employeeId']").text("");
+            $("#employeeSearchInput").removeClass("wa-invalid");
+
+            $("#selectedEmployeeAvatar").text(initials(emp.name));
+            $("#selectedEmployeeName").text(emp.name);
+            $("#selectedEmployeeMeta").text(emp.code + (emp.department ? " | " + emp.department : "") + (emp.designation ? " | " + emp.designation : ""));
+            $("#selectedEmployeeCard").addClass("show");
+
+            closeEmployeeCombo();
+            updateSummary();
+        });
+
+        $("#clearSelectedEmployee").on("click", function () {
+            selectedEmployee = null;
+            $("#employeeId").val("");
+            $("#employeeSearchInput").val("");
+            $("#selectedEmployeeCard").removeClass("show");
+            updateSummary();
+        });
+
+        $(document).on("click", function (e) {
+            if (!$(e.target).closest(".wa-combo").length) closeEmployeeCombo();
+        });
+
+        // -------------------- Job Type -> Work Activity --------------------
+        function loadJobTypes() {
+            $.get("@Url.Action("GetJobTypes")")
+                .done(function (res) {
+                    var items = (res && res.data) || [];
+                    var $sel = $("#jobTypeId").empty();
+                    $sel.append($("<option>").val("").text("-- Select Job Type --"));
+                    if (!items.length) {
+                        $sel.append($("<option>").val("").text("No job types available."));
+                    } else {
+                        items.forEach(function (jt) {
+                            $sel.append($("<option>").val(jt.Id).text(jt.Name));
+                        });
+                    }
+                    jobTypesLoaded = true;
+                })
+                .fail(function () {
+                    $("#jobTypeId").empty().append($("<option>").val("").text("Unable to load job types."));
+                });
+        }
+
+        $("#jobTypeId").on("change", function () {
+            var jobTypeId = $(this).val();
+            $(".wa-error[data-field='jobTypeId']").text("");
+
+            $("#workActivityId").prop("disabled", true).empty()
+                .append($("<option>").val("").text(jobTypeId ? "-- Loading activities... --" : "-- Select Job Type first --"));
+
+            if (!jobTypeId) { updateSummary(); return; }
+
+            $.get("@Url.Action("GetWorkActivities")", { jobTypeId: jobTypeId })
+                .done(function (res) {
+                    var items = (res && res.data) || [];
+                    var $sel = $("#workActivityId").empty();
+                    $sel.append($("<option>").val("").text("-- Any Activity --"));
+                    if (!items.length) {
+                        $sel.append($("<option>").val("").text("No activities available for this job type."));
+                    } else {
+                        items.forEach(function (a) {
+                            $sel.append($("<option>").val(a.Id).text(a.Name));
+                        });
+                    }
+                    $("#workActivityId").prop("disabled", false);
+                    updateSummary();
+                })
+                .fail(function () {
+                    $("#workActivityId").empty().append($("<option>").val("").text("Unable to load activities."));
+                });
+        });
+
+        // -------------------- Job Number -> Job Item --------------------
+        // Job Number is an independent master (WorkJob: JobNumber/JobName/
+        // Client) - the existing schema never ties it to Job Type, so this
+        // list is not re-filtered when Job Type changes (preserving the
+        // real business rule rather than inventing a dependency that
+        // doesn't exist in the data model).
+        function loadJobsDropdown() {
+            $.get("@Url.Action("GetJobsDropdown")")
+                .done(function (res) {
+                    var items = (res && res.data) || [];
+                    var $sel = $("#workJobId").empty();
+                    $sel.append($("<option>").val("").text("-- Select Job Number --"));
+                    if (!items.length) {
+                        $sel.append($("<option>").val("").text("No jobs available."));
+                    } else {
+                        items.forEach(function (j) {
+                            $sel.append($("<option>").val(j.Value).text(j.Text));
+                        });
+                    }
+                })
+                .fail(function () {
+                    $("#workJobId").empty().append($("<option>").val("").text("Unable to load jobs."));
+                });
+        }
+
+        $("#workJobId").on("change", function () {
+            var jobId = $(this).val();
+            $(".wa-error[data-field='workJobId']").text("");
+
+            $("#jobItemId").prop("disabled", true).empty()
+                .append($("<option>").val("").text(jobId ? "-- Loading... --" : "-- Select Job Number first --"));
+
+            if (!jobId) { updateSummary(); return; }
+
+            $.get("@Url.Action("GetJobItems")", { jobId: jobId })
+                .done(function (res) {
+                    var items = (res && res.data) || [];
+                    var $sel = $("#jobItemId").empty();
+                    $sel.append($("<option>").val("").text("-- Any Structure/Equipment (whole job) --"));
+                    if (!items.length) {
+                        $sel.append($("<option>").val("").text("No structures/equipment recorded for this job."));
+                    } else {
+                        items.forEach(function (it) {
+                            $sel.append($("<option>").val(it.Id).text(it.Code));
+                        });
+                    }
+                    $("#jobItemId").prop("disabled", false);
+                    updateSummary();
+                })
+                .fail(function () {
+                    $("#jobItemId").empty().append($("<option>").val("").text("Unable to load structures/equipment."));
+                });
+        });
+
+        // -------------------- Assignment Type cards --------------------
+        $(document).on("click", ".wa-type-card", function () {
+            $(".wa-type-card").removeClass("selected");
+            $(this).addClass("selected");
+            $("#assignmentType").val($(this).data("value"));
+            updateSummary();
+        });
+
+        // -------------------- Live summary --------------------
+        function updateSummary() {
+            $("#sumEmployee").text(selectedEmployee ? selectedEmployee.name + " (" + selectedEmployee.code + ")" : "Not selected")
+                .toggleClass("muted", !selectedEmployee);
+
+            var jobText = $("#workJobId option:selected").text();
+            var hasJob = !!$("#workJobId").val();
+            $("#sumJob").text(hasJob ? jobText : "Not selected").toggleClass("muted", !hasJob);
+
+            var activityId = $("#workActivityId").val();
+            var jobItemId = $("#jobItemId").val();
+            var activityLabel = [];
+            if (jobItemId) activityLabel.push($("#jobItemId option:selected").text());
+            if (activityId) activityLabel.push($("#workActivityId option:selected").text());
+            $("#sumActivity").text(activityLabel.length ? activityLabel.join(" / ") : "Any / whole job")
+                .toggleClass("muted", activityLabel.length === 0);
+
+            $("#sumType").text($(".wa-type-card.selected .wa-type-title").text() || "Job");
+            $("#sumPriority").text($("#priority option:selected").text());
+
+            var start = $("#startDate").val();
+            var end = $("#expectedEndDate").val();
+            $("#sumStart").text(start || "--").toggleClass("muted", !start);
+            $("#sumEnd").text(end || "--").toggleClass("muted", !end);
+
+            var hrs = $("#estimatedHours").val();
+            $("#sumHours").text(hrs ? hrs : "--").toggleClass("muted", !hrs);
+        }
+
+        $("#priority, #startDate, #expectedEndDate, #estimatedHours, #jobItemId, #workActivityId").on("change input", updateSummary);
+
+        $("#instructions").on("input", function () {
+            $("#instructionsCount").text($(this).val().length);
+        });
+
+        $("#expectedEndDate, #startDate").on("change", function () {
+            $(".wa-error[data-field='expectedEndDate']").text("");
+            var start = $("#startDate").val();
+            var end = $("#expectedEndDate").val();
+            if (start && end && end < start) {
+                $(".wa-error[data-field='expectedEndDate']").text("Expected End Date cannot be earlier than Start Date.");
+            }
+        });
+
+        // -------------------- Submit --------------------
+        var isSubmitting = false;
+
+        function focusField(selector) {
+            var $el = $(selector);
+            $('html, body').animate({ scrollTop: $el.offset().top - 120 }, 200);
+            $el.trigger("focus");
+        }
+
+        $("#btnAssign").on("click", function () {
+            if (isSubmitting) return;
+
+            $(".wa-error").text("");
+            $(".wa-invalid").removeClass("wa-invalid");
+            var valid = true;
+            var firstInvalid = null;
+
+            var employeeId = $("#employeeId").val();
+            var jobTypeId = $("#jobTypeId").val();
+            var workJobId = $("#workJobId").val();
+            var assignmentType = parseInt($("#assignmentType").val());
+            var workActivityId = $("#workActivityId").val() || null;
+            var startDate = $("#startDate").val();
+            var expectedEndDate = $("#expectedEndDate").val();
+            var estimatedHours = $("#estimatedHours").val();
+
+            if (!employeeId) {
+                $(".wa-error[data-field='employeeId']").text("Employee is required.");
+                $("#employeeSearchInput").addClass("wa-invalid");
+                valid = false; firstInvalid = firstInvalid || "#employeeSearchInput";
+            }
+            if (!jobTypeId) {
+                $(".wa-error[data-field='jobTypeId']").text("Job type is required.");
+                $("#jobTypeId").addClass("wa-invalid");
+                valid = false; firstInvalid = firstInvalid || "#jobTypeId";
+            }
+            if (!workJobId) {
+                $(".wa-error[data-field='workJobId']").text("Job number is required.");
+                $("#workJobId").addClass("wa-invalid");
+                valid = false; firstInvalid = firstInvalid || "#workJobId";
+            }
+            if (assignmentType === 3 && !workActivityId) {
+                $(".wa-help").filter(function () { return $(this).prev("select").is("#workActivityId"); });
+                swal("Activity Required", "An Activity-level assignment must have a specific Work Activity selected.", "warning");
+                valid = false; firstInvalid = firstInvalid || "#workActivityId";
+            }
+            if (startDate && expectedEndDate && expectedEndDate < startDate) {
+                $(".wa-error[data-field='expectedEndDate']").text("Expected End Date cannot be earlier than Start Date.");
+                valid = false; firstInvalid = firstInvalid || "#expectedEndDate";
+            }
+            if (estimatedHours && parseFloat(estimatedHours) < 0) {
+                $(".wa-error[data-field='estimatedHours']").text("Estimated hours cannot be negative.");
+                valid = false; firstInvalid = firstInvalid || "#estimatedHours";
+            }
+
+            if (!valid) {
+                if (firstInvalid) focusField(firstInvalid);
+                return;
+            }
+
+            var payload = {
+                EmployeeId: employeeId,
+                JobTypeId: jobTypeId,
+                WorkJobId: workJobId,
+                JobItemId: $("#jobItemId").val() || null,
+                WorkActivityId: workActivityId,
+                AssignmentType: assignmentType,
+                Priority: parseInt($("#priority").val()),
+                StartDate: startDate || null,
+                ExpectedEndDate: expectedEndDate || null,
+                EstimatedHours: estimatedHours ? parseFloat(estimatedHours) : null,
+                Instructions: $("#instructions").val()
+            };
+
+            isSubmitting = true;
+            $("#btnAssign").prop("disabled", true);
+            $("#btnAssignText").text("Assigning Work...");
+
+            $.ajax({
+                url: "@Url.Action("SaveAssignment")",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(payload),
+                success: function (res) {
+                    isSubmitting = false;
+                    $("#btnAssign").prop("disabled", false);
+                    $("#btnAssignText").text("Assign Work");
+
+                    if (res.success) {
+                        swal({
+                            title: "Work Assigned Successfully",
+                            text: res.message || "The work has been assigned to the selected employee.",
+                            type: "success",
+                            confirmButtonText: "View Assignments"
+                        }, function () {
+                            window.location.href = "@Url.Action("AssignedByMeOrTeam")";
+                        });
+                    } else if ((res.message || "").toLowerCase().indexOf("already assigned") > -1) {
+                        swal("Work Already Assigned", res.message, "warning");
+                    } else {
+                        swal("Something Went Wrong", res.message || "Unable to assign work. Please try again.", "error");
+                    }
+                },
+                error: function () {
+                    isSubmitting = false;
+                    $("#btnAssign").prop("disabled", false);
+                    $("#btnAssignText").text("Assign Work");
+                    swal("Something Went Wrong", "Unable to reach the server. Please try again.", "error");
+                }
+            });
+        });
+
+        $(function () {
+            loadEmployees();
+            loadJobTypes();
+            loadJobsDropdown();
+            updateSummary();
+        });
+    </script>
+}

@@ -1,5 +1,6 @@
 using Application.DTOs.Attendances;
 using Application.Interfaces.Attendances;
+using Application.Interfaces.ErrorLog;
 using Domain.Entities;
 using Infrastructure;
 using Infrastructure.Data;
@@ -18,10 +19,12 @@ namespace Application.Services.Attendances
     public class EmployeeBiometricMappingService : IEmployeeBiometricMappingService
     {
         private readonly ApplicationDbContext _db;
-
-        public EmployeeBiometricMappingService(ApplicationDbContext db)
+        private readonly IErrorLogService _errorLogService;
+        private string tenantId = string.Empty;
+        public EmployeeBiometricMappingService(ApplicationDbContext db, IErrorLogService errorLogService)
         {
             _db = db;
+            _errorLogService = errorLogService;
         }
 
         public async Task<List<EmployeeBiometricMappingDto>> GetAllAsync()
@@ -59,38 +62,60 @@ namespace Application.Services.Attendances
 
         public async Task<EmployeeBiometricMappingDto> CreateAsync(EmployeeBiometricMappingDto dto)
         {
-            var employee = await _db.Employees
-                .FirstOrDefaultAsync(x => x.Id == dto.EmployeeId);
-
-            if (employee == null)
-                throw new InvalidOperationException("Employee not found.");
-
-            var alreadyMapped = await _db.EmployeeBiometricMappings
-                .AnyAsync(x =>
-                    x.BiometricEmployeeCode == dto.BiometricEmployeeCode);
-
-            if (alreadyMapped)
-                throw new InvalidOperationException(
-                    $"Biometric code '{dto.BiometricEmployeeCode}' is already mapped to another employee.");
-
-            var entity = new EmployeeBiometricMapping
+            try
             {
-                Id = IDManager.GetNewId(new EmployeeBiometricMapping()),
-                EmployeeId = dto.EmployeeId,
-                BiometricEmployeeCode = dto.BiometricEmployeeCode,
-                CardNumber = dto.CardNumber,
-                IsActive = dto.IsActive,
-                TenantId = employee.TenantId,
-                CreatedOn = DateTime.UtcNow
-            };
+                var employee = await _db.Employees
+                    .FirstOrDefaultAsync(x => x.Id == dto.EmployeeId);
 
-            _db.EmployeeBiometricMappings.Add(entity);
+                if (employee == null)
+                    throw new InvalidOperationException("Employee not found.");
 
-            await _db.SaveChangesAsync();
+                var alreadyMapped = await _db.EmployeeBiometricMappings
+                    .AnyAsync(x =>
+                        x.BiometricEmployeeCode == dto.BiometricEmployeeCode);
 
-            dto.Id = entity.Id;
+                if (alreadyMapped)
+                {
+                    throw new InvalidOperationException(
+                        $"Biometric code '{dto.BiometricEmployeeCode}' is already mapped to another employee.");
+                }
 
-            return dto;
+                tenantId = employee.TenantId;
+
+                var entity = new EmployeeBiometricMapping
+                {
+                    Id = IDManager.GetNewId(new EmployeeBiometricMapping()),
+                    EmployeeId = dto.EmployeeId,
+                    BiometricEmployeeCode = dto.BiometricEmployeeCode,
+                    CardNumber = dto.CardNumber,
+                    IsActive = dto.IsActive,
+                    TenantId = employee.TenantId,
+                    CreatedBy=dto.CreatedBy,
+                    CreatedOn = DateTime.UtcNow
+                };
+
+                _db.EmployeeBiometricMappings.Add(entity);
+
+                await _db.SaveChangesAsync();
+
+                dto.Id = entity.Id;
+
+                return dto;
+            }
+            catch (Exception ex)
+            {
+                // Log exception
+                await _errorLogService.LogAsync(
+                    ex,
+                    module: "HRMS",
+                    feature: "Employee Biometric Mapping",
+                    controller: "EmployeeBiometricMapping",
+                    action: "CreateAsync",
+                    userId:dto.CreatedBy,
+                    tenantId: tenantId
+                );
+                throw;
+            }
         }
 
         public async Task<bool> UpdateAsync(EmployeeBiometricMappingDto dto)

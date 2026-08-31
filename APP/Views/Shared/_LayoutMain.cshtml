@@ -180,6 +180,27 @@
 	<script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
 
 	<style>
+		/* Fix: native dropdowns were rendering with
+		   invisible text (blank rows, the highlighted row a solid color
+		   with no visible label) whenever the OS/browser is in dark mode.
+		   The page itself is always light-themed, but without an explicit
+		   color-scheme the browser paints a plain <select>'s native
+		   popup list using dark-mode system colors while this page's own
+		   CSS keeps the closed control light - the mismatch is what hides
+		   the option text. Forcing color-scheme: light (plus an explicit
+		   background/text color as a fallback for browsers that don't
+		   support color-scheme) makes every dropdown across the app -
+		   including plain selects with no JS plugin at all, like
+		   EmployeeWorkAssignment/Assign.cshtml's Employee/Job Type
+		   dropdowns - always render with dark text on a light background,
+		   regardless of the user's OS theme. */
+		select.form-control,
+		select {
+			color-scheme: light;
+			background-color: #fff;
+			color: #333333;
+		}
+
 		.navigation-main li.active > a {
 		background-color: #2196F3;
 		color: #fff;

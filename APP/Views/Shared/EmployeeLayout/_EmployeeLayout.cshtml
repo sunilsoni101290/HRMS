@@ -68,6 +68,21 @@
 
     @RenderSection("Styles", false)
 
+    <!-- Fix: native <select>/<option> dropdowns rendered with invisible
+         text when the OS/browser is in dark mode (blank rows, the
+         highlighted row a solid color with no visible label) - the page
+         is always light-themed, but without an explicit color-scheme the
+         browser paints a plain <select>'s native popup using dark-mode
+         system colors. Same fix applied in _LayoutMain.cshtml. -->
+    <style>
+        select.form-control,
+        select {
+            color-scheme: light;
+            background-color: #fff;
+            color: #333333;
+        }
+    </style>
+
 </head>
 
 <body class="navbar-top">

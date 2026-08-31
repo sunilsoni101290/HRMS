@@ -1,0 +1,351 @@
+@model APP.Models.DTOs.BulkMappingViewModel
+
+@{
+    ViewData["Title"] = "Bulk Employee Biometric Mapping";
+}
+
+<style>
+    /* Namespaced ".bem-*" - reuses the existing Limitless admin shell (panel,
+       form-control, btn, label/badge classes) - no new CSS framework. */
+    .bem-toolbar { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+    .bem-toolbar .spacer { flex:1 1 auto; }
+    .bem-search { max-width:280px; }
+    .bem-table-wrap { max-height:560px; overflow-y:auto; border:1px solid #e5e7eb; border-radius:4px; }
+    .bem-table-wrap table { margin-bottom:0; }
+    .bem-table-wrap thead th { position:sticky; top:0; background:#fff; z-index:2; }
+    .bem-row-dirty td { background:#fffdf4; }
+    .bem-status { font-size:11px; padding:2px 8px; border-radius:10px; }
+    .bem-status.mapped { background:#e6f8ee; color:#1a9e5c; }
+    .bem-status.unmapped { background:#fdeeee; color:#e7515a; }
+    .bem-inline-input { padding:4px 8px; height:30px; font-size:12.5px; }
+    .bem-section-title { font-weight:700; text-transform:uppercase; font-size:12.5px; letter-spacing:.3px; color:#3b3f47; margin:22px 0 10px; }
+    .bem-empty { text-align:center; color:#9aa0ac; padding:24px; }
+    #bemSaveResult { margin-top:14px; }
+</style>
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+
+        <h5 class="panel-title">
+            <i class="icon-fingerprint position-left"></i>
+            Bulk Employee Biometric Mapping
+        </h5>
+
+        <div class="heading-elements">
+            <a asp-action="Index" class="btn btn-default btn-sm">
+                <i class="icon-list position-left"></i> Single Mapping List
+            </a>
+        </div>
+
+    </div>
+
+    <div class="panel-body">
+
+        <p class="text-muted">
+            Map many employees to their biometric device codes in one place. Edit any row directly, upload
+            an Excel sheet, or auto-map employees whose device code already matches their Employee Code.
+        </p>
+
+        <div class="bem-toolbar">
+            <a asp-action="DownloadImportTemplate" class="btn btn-default btn-sm">
+                <i class="icon-file-download position-left"></i> Download Template
+            </a>
+            <a asp-action="Import" class="btn btn-default btn-sm">
+                <i class="icon-upload3 position-left"></i> Import Excel
+            </a>
+            <a asp-action="Export" class="btn btn-default btn-sm">
+                <i class="icon-file-spreadsheet position-left"></i> Export Current Mappings
+            </a>
+            <button type="button" id="btnAutoMap" class="btn btn-default btn-sm">
+                <i class="icon-magic-wand position-left"></i> Auto-map Exact Matches
+            </button>
+            <div class="spacer"></div>
+            <input type="text" id="bemSearch" class="form-control input-sm bem-search" placeholder="Search employee, code, department..." />
+            <button type="button" id="btnSaveAll" class="btn bg-primary btn-sm" disabled>
+                <i class="icon-checkmark3 position-left"></i>
+                <span id="btnSaveAllText">Save All Changes</span>
+            </button>
+        </div>
+
+        <div class="bem-table-wrap">
+            <table class="table table-bordered table-hover" id="bemGrid">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Department</th>
+                        <th style="width:200px;">Biometric Employee Code</th>
+                        <th style="width:160px;">Card Number</th>
+                        <th style="width:70px;" class="text-center">Active</th>
+                        <th style="width:90px;" class="text-center">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Rows.Count == 0)
+                    {
+                        <tr><td colspan="6" class="bem-empty">No active employees found.</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var row in Model.Rows)
+                        {
+                            <tr class="bem-row"
+                                data-employee-id="@row.EmployeeId"
+                                data-mapping-id="@row.MappingId"
+                                data-search="@($"{row.EmployeeCode} {row.EmployeeName} {row.Department}".ToLowerInvariant())">
+                                <td>
+                                    <strong>@row.EmployeeName</strong><br />
+                                    <small class="text-muted">@row.EmployeeCode</small>
+                                </td>
+                                <td>@(row.Department ?? "-")</td>
+                                <td>
+                                    <input type="text" class="form-control bem-inline-input bem-code"
+                                           value="@row.BiometricEmployeeCode" placeholder="e.g. EMP001" />
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control bem-inline-input bem-card"
+                                           value="@row.CardNumber" placeholder="Optional" />
+                                </td>
+                                <td class="text-center">
+                                    <input type="checkbox" class="bem-active" @(row.IsActive ? "checked" : "") />
+                                </td>
+                                <td class="text-center">
+                                    @if (!string.IsNullOrEmpty(row.BiometricEmployeeCode))
+                                    {
+                                        <span class="bem-status mapped">Mapped</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="bem-status unmapped">Unmapped</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div id="bemSaveResult"></div>
+
+        <div class="bem-section-title">Unmapped From Device (eSSL punches with no mapping yet)</div>
+
+        @if (Model.Unmapped.Count == 0)
+        {
+            <p class="text-muted">No unmapped biometric codes - every eSSL punch is mapped, or eSSL isn't configured for this tenant.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped" id="bemUnmappedGrid">
+                    <thead>
+                        <tr>
+                            <th>Biometric Code</th>
+                            <th>eSSL Employee Name</th>
+                            <th class="text-center">Punches</th>
+                            <th>Last Seen</th>
+                            <th style="width:260px;">Employee</th>
+                            <th style="width:90px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var u in Model.Unmapped)
+                        {
+                            <tr class="bem-unmapped-row" data-code="@u.BiometricEmployeeCode">
+                                <td><code>@u.BiometricEmployeeCode</code></td>
+                                <td>@(u.EsslEmployeeName ?? "-")</td>
+                                <td class="text-center">@u.PunchCount</td>
+                                <td>@u.LastSeen.ToString("dd-MMM-yyyy hh:mm tt")</td>
+                                <td>
+                                    <input type="text" class="form-control input-sm bem-unmapped-employee"
+                                           list="bemEmployeeOptions" placeholder="Type employee code or name..." />
+                                </td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-xs bg-primary bem-map-btn">Map</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <datalist id="bemEmployeeOptions">
+            @foreach (var row in Model.Rows)
+            {
+                <option value="@(row.EmployeeCode + " - " + row.EmployeeName)" data-id="@row.EmployeeId"></option>
+            }
+        </datalist>
+
+    </div>
+
+</div>
+
+@section Scripts {
+    <script src="~/global_assets/js/plugins/notifications/sweet_alert.min.js"></script>
+    <script>
+        var employeeOptionList = Array.prototype.slice.call(document.querySelectorAll("#bemEmployeeOptions option"));
+
+        function markDirty($row) {
+            $row.addClass("bem-row-dirty").data("dirty", true);
+            $("#btnSaveAll").prop("disabled", false);
+        }
+
+        $(document).on("input change", ".bem-code, .bem-card, .bem-active", function () {
+            var $row = $(this).closest(".bem-row");
+            markDirty($row);
+
+            var hasCode = $.trim($row.find(".bem-code").val()) !== "";
+            var $status = $row.find(".bem-status");
+            $status.attr("class", "bem-status " + (hasCode ? "mapped" : "unmapped")).text(hasCode ? "Mapped" : "Unmapped");
+        });
+
+        $("#bemSearch").on("input", function () {
+            var q = $(this).val().trim().toLowerCase();
+            $("#bemGrid tbody tr.bem-row").each(function () {
+                var haystack = $(this).data("search") || "";
+                $(this).toggle(haystack.indexOf(q) > -1);
+            });
+        });
+
+        function renderSaveResult(result) {
+            if (!result || !result.results || !result.results.length) {
+                $("#bemSaveResult").html("");
+                return;
+            }
+
+            var rowsHtml = result.results.map(function (r) {
+                return "<tr><td>" + r.employeeCode + "</td><td>" + r.employeeName + "</td>" +
+                    "<td>" + (r.success ? '<span class="label bg-success">Success</span>' : '<span class="label bg-danger">Failed</span>') + "</td>" +
+                    "<td>" + r.message + "</td></tr>";
+            }).join("");
+
+            var html = '<div class="row text-center">' +
+                '<div class="col-md-4"><div class="panel panel-body bg-slate-400"><h3 class="no-margin">' + result.totalRows + '</h3><span class="text-uppercase text-size-mini">Total Rows</span></div></div>' +
+                '<div class="col-md-4"><div class="panel panel-body bg-success-400"><h3 class="no-margin">' + result.successCount + '</h3><span class="text-uppercase text-size-mini">Saved</span></div></div>' +
+                '<div class="col-md-4"><div class="panel panel-body bg-danger-400"><h3 class="no-margin">' + result.failureCount + '</h3><span class="text-uppercase text-size-mini">Failed</span></div></div>' +
+                '</div>' +
+                '<table class="table table-bordered table-striped"><thead><tr><th>Employee Code</th><th>Employee Name</th><th>Status</th><th>Message</th></tr></thead><tbody>' + rowsHtml + '</tbody></table>';
+
+            $("#bemSaveResult").html(html);
+        }
+
+        $("#btnSaveAll").on("click", function () {
+            var rows = [];
+            $("#bemGrid tbody tr.bem-row").each(function () {
+                var $row = $(this);
+                if (!$row.data("dirty")) return;
+
+                rows.push({
+                    EmployeeId: $row.data("employee-id"),
+                    MappingId: $row.data("mapping-id") || null,
+                    BiometricEmployeeCode: $.trim($row.find(".bem-code").val()),
+                    CardNumber: $.trim($row.find(".bem-card").val()) || null,
+                    IsActive: $row.find(".bem-active").is(":checked")
+                });
+            });
+
+            if (!rows.length) {
+                swal("Nothing to Save", "No rows have been changed.", "info");
+                return;
+            }
+
+            $("#btnSaveAll").prop("disabled", true);
+            $("#btnSaveAllText").text("Saving...");
+
+            $.ajax({
+                url: "@Url.Action("SaveBulk")",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(rows),
+                success: function (result) {
+                    $("#btnSaveAllText").text("Save All Changes");
+                    renderSaveResult(result);
+
+                    if (result.failureCount === 0) {
+                        swal({ title: "Saved", text: result.successCount + " mapping(s) saved successfully.", type: "success" }, function () {
+                            location.reload();
+                        });
+                    } else {
+                        swal("Partially Saved", result.successCount + " succeeded, " + result.failureCount + " failed. See details below.", "warning");
+                        $("#btnSaveAll").prop("disabled", false);
+                    }
+                },
+                error: function () {
+                    $("#btnSaveAll").prop("disabled", false);
+                    $("#btnSaveAllText").text("Save All Changes");
+                    swal("Something Went Wrong", "Unable to reach the server. Please try again.", "error");
+                }
+            });
+        });
+
+        $("#btnAutoMap").on("click", function () {
+            $("#btnAutoMap").prop("disabled", true);
+
+            $.ajax({
+                url: "@Url.Action("AutoMap")",
+                type: "POST",
+                success: function (res) {
+                    $("#btnAutoMap").prop("disabled", false);
+
+                    if (res.success === false) {
+                        swal("Unable to Auto-map", res.message || "Please try again.", "warning");
+                    } else if (res.createdCount > 0) {
+                        swal({ title: "Auto-map Complete", text: res.createdCount + " employee(s) auto-mapped by matching code.", type: "success" }, function () {
+                            location.reload();
+                        });
+                    } else {
+                        swal("No Exact Matches", "No unmapped biometric codes matched an Employee Code exactly.", "info");
+                    }
+                },
+                error: function () {
+                    $("#btnAutoMap").prop("disabled", false);
+                    swal("Something Went Wrong", "Unable to reach the server. Please try again.", "error");
+                }
+            });
+        });
+
+        $(document).on("click", ".bem-map-btn", function () {
+            var $row = $(this).closest(".bem-unmapped-row");
+            var code = $row.data("code");
+            var typed = $.trim($row.find(".bem-unmapped-employee").val());
+
+            var match = employeeOptionList.find(function (opt) { return opt.value === typed; });
+            if (!match) {
+                swal("Select an Employee", "Type an employee code/name and pick a matching suggestion from the list.", "warning");
+                return;
+            }
+
+            var employeeId = match.getAttribute("data-id");
+            var $btn = $(this).prop("disabled", true);
+
+            $.ajax({
+                url: "@Url.Action("SaveBulk")",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify([{ EmployeeId: employeeId, MappingId: null, BiometricEmployeeCode: code, CardNumber: null, IsActive: true }]),
+                success: function (result) {
+                    var r = result.results && result.results[0];
+                    if (r && r.success) {
+                        swal({ title: "Mapped", text: code + " mapped successfully.", type: "success" }, function () {
+                            location.reload();
+                        });
+                    } else {
+                        $btn.prop("disabled", false);
+                        swal("Mapping Failed", (r && r.message) || "Unable to map this employee.", "error");
+                    }
+                },
+                error: function () {
+                    $btn.prop("disabled", false);
+                    swal("Something Went Wrong", "Unable to reach the server. Please try again.", "error");
+                }
+            });
+        });
+
+        window.onbeforeunload = function () {
+            if ($("#btnSaveAll").length && !$("#btnSaveAll").prop("disabled")) {
+                return "You have unsaved mapping changes.";
+            }
+        };
+    </script>
+}

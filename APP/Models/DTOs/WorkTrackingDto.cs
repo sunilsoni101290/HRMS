@@ -101,6 +101,9 @@ namespace APP.Models.DTOs
         public string? WorkEntryReasonId { get; set; }
         [Range(0.01, 24)] public decimal Hours { get; set; }
         public string? Remarks { get; set; }
+        public string? WorkDoneToday { get; set; }
+        public string? AssignmentId { get; set; }
+        public string? AdhocReason { get; set; }
     }
 
     public class SaveDailyWorkLogDto
@@ -127,6 +130,9 @@ namespace APP.Models.DTOs
         public string? WorkEntryReasonName { get; set; }
         public decimal Hours { get; set; }
         public string? Remarks { get; set; }
+        public string? WorkDoneToday { get; set; }
+        public string? AssignmentId { get; set; }
+        public string? AdhocReason { get; set; }
     }
 
     public class DailyWorkLogDto
@@ -254,5 +260,152 @@ namespace APP.Models.DTOs
         public decimal IdleHours { get; set; }
         public decimal DowntimeHours { get; set; }
         public decimal UtilizationPercent { get; set; }
+    }
+
+    // ==============================
+    // Employee Job/Work Assignment - mirrors Application/DTOs/WorkTracking/AssignmentDtos.cs
+    // ==============================
+
+    public class SaveEmployeeWorkAssignmentDto
+    {
+        [Required] public string EmployeeId { get; set; } = "";
+        [Required] public string WorkJobId { get; set; } = "";
+        [Required] public string JobTypeId { get; set; } = "";
+        public string? JobItemId { get; set; }
+        public string? WorkActivityId { get; set; }
+        public int AssignmentType { get; set; } = 1;
+        public int Priority { get; set; } = 2;
+        public DateTime? StartDate { get; set; }
+        public DateTime? ExpectedEndDate { get; set; }
+        [Range(0, 100000)] public decimal? EstimatedHours { get; set; }
+        public string? Instructions { get; set; }
+    }
+
+    public class UpdateAssignmentStatusDto
+    {
+        [Required] public int Status { get; set; }
+        public string? Remarks { get; set; }
+    }
+
+    public class ReassignEmployeeWorkAssignmentDto
+    {
+        [Required] public string NewEmployeeId { get; set; } = "";
+        public string? Remarks { get; set; }
+    }
+
+    public class EmployeeWorkAssignmentDto
+    {
+        public string Id { get; set; } = "";
+        public string EmployeeId { get; set; } = "";
+        public string? EmployeeCode { get; set; }
+        public string? EmployeeName { get; set; }
+        public string? DepartmentName { get; set; }
+        public string? AssignedByName { get; set; }
+        public string WorkJobId { get; set; } = "";
+        public string? JobNumber { get; set; }
+        public string? JobName { get; set; }
+        public string? ClientName { get; set; }
+        public string? JobTypeId { get; set; }
+        public string? JobTypeName { get; set; }
+        public string? JobItemId { get; set; }
+        public string? JobItemCode { get; set; }
+        public string? WorkActivityId { get; set; }
+        public string? WorkActivityName { get; set; }
+        public int AssignmentType { get; set; }
+        public string? AssignmentTypeName { get; set; }
+        public int Priority { get; set; }
+        public string? PriorityName { get; set; }
+        public int Status { get; set; }
+        public string? StatusName { get; set; }
+        public DateTime? StartDate { get; set; }
+        public DateTime? ExpectedEndDate { get; set; }
+        public decimal? EstimatedHours { get; set; }
+        public decimal ActualHours { get; set; }
+        public decimal? RemainingHours { get; set; }
+        public bool IsOverUtilized { get; set; }
+        public string? Instructions { get; set; }
+        public DateTime? AcceptedAt { get; set; }
+        public DateTime? StartedAt { get; set; }
+        public DateTime? CompletedAt { get; set; }
+        public DateTime? RejectedAt { get; set; }
+        public string? RejectionReason { get; set; }
+        public string? ReassignedFromId { get; set; }
+        public DateTime CreatedOn { get; set; }
+    }
+
+    public class EmployeeWorkAssignmentSummaryDto
+    {
+        public string Id { get; set; } = "";
+        public string EmployeeCode { get; set; } = "";
+        public string EmployeeName { get; set; } = "";
+        public string JobNumber { get; set; } = "";
+        public string? ClientName { get; set; }
+        public string? JobItemCode { get; set; }
+        public string? WorkActivityName { get; set; }
+        public decimal? EstimatedHours { get; set; }
+        public decimal ActualHours { get; set; }
+        public decimal? RemainingHours { get; set; }
+        public bool IsOverUtilized { get; set; }
+        public int Status { get; set; }
+        public string StatusName { get; set; } = "";
+        public DateTime? ExpectedEndDate { get; set; }
+        public bool IsOverdue { get; set; }
+    }
+
+    public class AssignedWorkComboDto
+    {
+        public string AssignmentId { get; set; } = "";
+        public string WorkJobId { get; set; } = "";
+        public string JobNumber { get; set; } = "";
+        public string JobTypeId { get; set; } = "";
+        public string? JobItemId { get; set; }
+        public string? JobItemCode { get; set; }
+        public string? WorkActivityId { get; set; }
+        public string? WorkActivityName { get; set; }
+        public int AssignmentType { get; set; }
+        public int Status { get; set; }
+    }
+
+    public class MyWorkDashboardDto
+    {
+        public int AssignedJobs { get; set; }
+        public int InProgress { get; set; }
+        public int Completed { get; set; }
+        public int PendingDailyEntries { get; set; }
+        public decimal TodayHours { get; set; }
+        public decimal ThisWeekHours { get; set; }
+        public decimal ThisMonthHours { get; set; }
+        public int PendingSubmission { get; set; }
+        public int RejectedEntries { get; set; }
+        public List<EmployeeWorkAssignmentSummaryDto> TodaysAssignedWork { get; set; } = new();
+    }
+
+    public class TeamWorkOverviewDto
+    {
+        public int TeamMembers { get; set; }
+        public int ActiveAssignments { get; set; }
+        public int PendingDailyApprovals { get; set; }
+        public int OverdueAssignments { get; set; }
+        public decimal EstimatedHours { get; set; }
+        public decimal ActualHours { get; set; }
+        public decimal DirectHours { get; set; }
+        public decimal IndirectHours { get; set; }
+        public decimal IdleHours { get; set; }
+        public decimal DowntimeHours { get; set; }
+    }
+
+    public class EmployeeAssignmentReportRowDto
+    {
+        public string EmployeeCode { get; set; } = "";
+        public string EmployeeName { get; set; } = "";
+        public string JobNumber { get; set; } = "";
+        public string? JobItemCode { get; set; }
+        public string? WorkActivityName { get; set; }
+        public string? AssignedByName { get; set; }
+        public DateTime AssignedDate { get; set; }
+        public decimal? EstimatedHours { get; set; }
+        public decimal ActualHours { get; set; }
+        public decimal? RemainingHours { get; set; }
+        public string StatusName { get; set; } = "";
     }
 }

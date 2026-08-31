@@ -160,6 +160,27 @@
             font-weight: 500;
             word-break: break-word;
         }
+
+        .empdetail-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .empdetail-status.active {
+            background: rgba(102,187,106,.18);
+            color: #a5e8ac;
+        }
+
+        .empdetail-status.relieved {
+            background: rgba(239,83,80,.18);
+            color: #ffb0ad;
+        }
     </style>
 
     <div class="empdetail-toolbar">
@@ -206,6 +227,15 @@
                     <i class="bi bi-person-badge"></i>
                     @Model.EmployeeCode
                 </span>
+
+                @if (Model.RelievingDate.HasValue)
+                {
+                    <span class="empdetail-status relieved"><i class="bi bi-x-circle"></i> Relieved</span>
+                }
+                else
+                {
+                    <span class="empdetail-status active"><i class="bi bi-check-circle"></i> Active</span>
+                }
 
                 <div class="empdetail-quickinfo">
 

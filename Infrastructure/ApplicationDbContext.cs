@@ -106,6 +106,12 @@ namespace Infrastructure
         public DbSet<DailyWorkEntry> DailyWorkEntries { get; set; }
         public DbSet<DailyWorkLogApprovalHistory> DailyWorkLogApprovalHistories { get; set; }
 
+        // Employee Job/Work Assignment - the Manager -> Employee assignment
+        // layer that sits between the Job master and DailyWorkEntry (see
+        // Domain/Entities/EmployeeWorkAssignment.cs's remarks).
+        public DbSet<EmployeeWorkAssignment> EmployeeWorkAssignments { get; set; }
+        public DbSet<EmployeeWorkAssignmentHistory> EmployeeWorkAssignmentHistories { get; set; }
+
         public DbSet<AttendanceRegularization> AttendanceRegularizations { get; set; }
         public DbSet<AttendanceRegularizationApprovalHistory> AttendanceRegularizationApprovalHistories { get; set; }
 
@@ -501,6 +507,27 @@ namespace Infrastructure
 
             modelBuilder.Entity<Attendance>()
                 .HasIndex(x => new { x.EmployeeId, x.Date });
+
+            // AttendanceLog had no explicit indexes before this feature -
+            // AttendanceId/EmployeeId are the two lookup paths used by
+            // AttendanceService (Include(x => x.Logs)) and
+            // AttendanceProcessorService's tag-back query; PunchTime backs
+            // the "find the log for this exact punch" lookup used there too.
+            modelBuilder.Entity<AttendanceLog>()
+                .HasIndex(x => x.AttendanceId);
+
+            modelBuilder.Entity<AttendanceLog>()
+                .HasIndex(x => new { x.EmployeeId, x.PunchTime });
+
+            // DB-level idempotency backstop: the same raw biometric punch
+            // can never be linked to more than one AttendanceLog. Filtered
+            // so manual/web punches (BiometricAttendanceLogId = NULL) are
+            // never constrained by this.
+            modelBuilder.Entity<AttendanceLog>()
+                .HasIndex(x => x.BiometricAttendanceLogId)
+                .IsUnique()
+                .HasFilter("[BiometricAttendanceLogId] IS NOT NULL")
+                .HasDatabaseName("IX_AttendanceLogs_BiometricAttendanceLogId");
 
             modelBuilder.Entity<AttendanceRegularization>()
                 .HasIndex(x => new { x.EmployeeId, x.Date });
@@ -1164,6 +1191,13 @@ namespace Infrastructure
                     .IsUnique()
                     .HasFilter("[DeviceTransactionId] IS NOT NULL")
                     .HasDatabaseName("IX_BiometricAttendanceLogs_Device_TransactionId");
+
+                // AttendanceProcessorService's main query is
+                // "Where(x => !x.IsProcessed)" across the whole table -
+                // without this, that becomes a full table scan once the
+                // table grows past a trivial size.
+                entity.HasIndex(e => new { e.TenantId, e.IsProcessed })
+                    .HasDatabaseName("IX_BiometricAttendanceLogs_Tenant_IsProcessed");
             });
 
             modelBuilder.Entity<BiometricSyncLog>(entity =>
@@ -1230,6 +1264,44 @@ namespace Infrastructure
 
             modelBuilder.Entity<DailyWorkLogApprovalHistory>()
                 .HasIndex(x => x.DailyWorkLogId);
+
+            // Backs WorkAssignmentService's "how much has actually been
+            // logged against this assignment" aggregation.
+            modelBuilder.Entity<DailyWorkEntry>()
+                .HasIndex(x => x.AssignmentId);
+
+            // =====================================================
+            // Employee Job/Work Assignment
+            // =====================================================
+
+            // "My Assigned Jobs" (spec section 7) and the assignment-scoped
+            // cascading dropdowns in Daily Work Entry (spec section 9) both
+            // filter by Employee+Status - this is the hottest read path.
+            modelBuilder.Entity<EmployeeWorkAssignment>()
+                .HasIndex(x => new { x.EmployeeId, x.Status });
+
+            // Manager's "assignments I made" / Team Leader's "my team's
+            // assignments" views (spec section 20).
+            modelBuilder.Entity<EmployeeWorkAssignment>()
+                .HasIndex(x => x.AssignedBy);
+
+            modelBuilder.Entity<EmployeeWorkAssignment>()
+                .HasIndex(x => new { x.WorkJobId, x.JobItemId });
+
+            modelBuilder.Entity<EmployeeWorkAssignment>()
+                .HasIndex(x => x.ReassignedFromId);
+
+            // A self-reference (ReassignedFrom) needs Restrict, not the
+            // provider default Cascade, or SQL Server refuses to create the
+            // FK ("may cause cycles or multiple cascade paths").
+            modelBuilder.Entity<EmployeeWorkAssignment>()
+                .HasOne(x => x.ReassignedFrom)
+                .WithMany()
+                .HasForeignKey(x => x.ReassignedFromId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<EmployeeWorkAssignmentHistory>()
+                .HasIndex(x => x.EmployeeWorkAssignmentId);
 
             // =====================================================
             // 🔥 GLOBAL FIX (VERY IMPORTANT)

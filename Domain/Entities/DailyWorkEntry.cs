@@ -55,6 +55,43 @@ namespace Domain.Entities
         [MaxLength(500)]
         public string? Remarks { get; set; }
 
+        /// <summary>
+        /// Free-text "what was actually completed" - deliberately separate
+        /// from WorkActivity.Name (spec section 11: "Work Activity" is the
+        /// fixed master activity being charged to, "Work Done Today" is the
+        /// free description of today's actual progress against it). Null
+        /// for Idle/Downtime lines, where there is no "work done" to
+        /// describe.
+        /// </summary>
+        [MaxLength(1000)]
+        public string? WorkDoneToday { get; set; }
+
+        /// <summary>
+        /// Links this line back to the EmployeeWorkAssignment it is being
+        /// charged against (spec sections 13/28/29: Job Master -> Job
+        /// Assignment -> Employee -> Daily Work Entry). Null for
+        /// Idle/Downtime lines (which have no assignment at all) and for
+        /// AdhocReason-justified unassigned work (spec section 14). Every
+        /// non-null value here is re-validated server-side on save - it
+        /// must belong to this line's employee, be Active/Accepted/
+        /// InProgress, and its Job/JobItem/WorkActivity must match this
+        /// line's own values (never trusted from the client).
+        /// </summary>
+        public string? AssignmentId { get; set; }
+
+        [ForeignKey(nameof(AssignmentId))]
+        public virtual EmployeeWorkAssignment? Assignment { get; set; }
+
+        /// <summary>
+        /// Required justification when a Direct/Indirect line is saved
+        /// WITHOUT a matching EmployeeWorkAssignment (spec section 14 -
+        /// "Unassigned/Ad-hoc Work" controlled exception path). Null for
+        /// every normally-assigned line and for Idle/Downtime lines (which
+        /// never require an assignment in the first place).
+        /// </summary>
+        [MaxLength(500)]
+        public string? AdhocReason { get; set; }
+
         public override string GetSequencePrefix() => "DWE";
     }
 }

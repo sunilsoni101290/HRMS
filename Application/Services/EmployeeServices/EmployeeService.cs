@@ -155,6 +155,19 @@ namespace Application.Services.EmployeeServices
                 if (emailExists)
                     throw new Exception("User already exists with same email");
 
+                // Employee Code duplicate check (defect fix - previously
+                // never validated at all, relying only on the database's
+                // unique index to reject a duplicate with a raw SQL
+                // exception). Skipped when blank so the separate
+                // required-field validation owns that case.
+                if (!string.IsNullOrWhiteSpace(dto.EmployeeCode))
+                {
+                    bool codeExists = await CheckEmployeeCodeExistsAsync(dto.EmployeeCode, null);
+
+                    if (codeExists)
+                        throw new Exception($"Employee Code '{dto.EmployeeCode.Trim()}' already exists.");
+                }
+
                 // =========================================
                 // CREATE EMPLOYEE
                 // =========================================
@@ -179,7 +192,24 @@ namespace Application.Services.EmployeeServices
 
                 _db.Employees.Add(employee);
 
-                await _db.SaveChangesAsync();
+                try
+                {
+                    await _db.SaveChangesAsync();
+                }
+                catch (DbUpdateException ex) when (IsEmployeeCodeUniqueViolation(ex))
+                {
+                    // Race condition safety net (spec section 14): the
+                    // AnyAsync check above already ran and passed, but
+                    // another request could have inserted the same code in
+                    // the gap between that check and this save. The
+                    // Employees.EmployeeCode unique index (already present
+                    // in ApplicationDbContext.OnModelCreating) is what
+                    // actually guarantees correctness here - this just
+                    // turns its raw SQL exception into the same
+                    // user-friendly message as the pre-check above, instead
+                    // of a generic "database error".
+                    throw new Exception($"Employee Code '{dto.EmployeeCode?.Trim()}' already exists.");
+                }
 
                 // =========================================
                 // GENERATE USERNAME
@@ -478,23 +508,84 @@ namespace Application.Services.EmployeeServices
         // ==============================
         public async Task<bool> UpdateAsync(EmployeeDto dto)
         {
-            try
-            {
+            // Previously wrapped everything (including "Employee not
+            // found") in a try/catch that swallowed the real reason and
+            // always returned false - the API controller then always
+            // reported the same generic "Employee update failed" no matter
+            // what actually went wrong. Now lets specific, meaningful
+            // failures (not found, duplicate Employee Code) propagate as
+            // exceptions with a real message, same contract CreateAsync
+            // already uses - the API controller's Update action has been
+            // updated to catch and surface these (see EmployeeController.cs).
             var entity = await _db.Employees.FindAsync(dto.Id);
 
-            if (entity == null)
+            if (entity == null || entity.IsDeleted)
                 throw new Exception("Employee not found");
+
+            if (!string.IsNullOrWhiteSpace(dto.EmployeeCode))
+            {
+                bool codeExists = await CheckEmployeeCodeExistsAsync(dto.EmployeeCode, dto.Id);
+
+                if (codeExists)
+                    throw new Exception($"Employee Code '{dto.EmployeeCode.Trim()}' already exists.");
+            }
 
             EmployeeMapper.UpdateEntity(entity, dto);
 
-            await SaveAsync();
+            try
+            {
+                await SaveAsync();
+            }
+            catch (DbUpdateException ex) when (IsEmployeeCodeUniqueViolation(ex))
+            {
+                // Race-condition safety net - see the matching comment in
+                // CreateAsync.
+                throw new Exception($"Employee Code '{dto.EmployeeCode?.Trim()}' already exists.");
+            }
 
             return true;
-            }
-            catch (Exception)
-            {
+        }
+
+        // Single source of truth for "does this Employee Code already
+        // belong to a different employee" - used by CreateAsync,
+        // UpdateAsync, and the check-employee-code endpoint the Create/Edit
+        // form calls on blur. Equality is a plain EF `==`, so it is
+        // translated to SQL `=` and respects whatever collation the
+        // Employees.EmployeeCode column already has (no ToUpper/ToLower
+        // forced here, so behavior never diverges from what the database
+        // itself, and its unique index, actually enforce).
+        public async Task<bool> CheckEmployeeCodeExistsAsync(string employeeCode, string? excludeEmployeeId)
+        {
+            if (string.IsNullOrWhiteSpace(employeeCode))
                 return false;
-            }
+
+            var normalized = employeeCode.Trim();
+
+            return await _db.Employees.AnyAsync(x =>
+                x.EmployeeCode == normalized &&
+                !x.IsDeleted &&
+                (string.IsNullOrEmpty(excludeEmployeeId) || x.Id != excludeEmployeeId));
+        }
+
+        // Best-effort detection of a unique-index violation on
+        // Employees.EmployeeCode specifically (SQL Server error 2601/2627
+        // for a duplicate key), rather than treating every DbUpdateException
+        // as a duplicate-code error.
+        private static bool IsEmployeeCodeUniqueViolation(DbUpdateException ex)
+        {
+            var message = ex.InnerException?.Message ?? ex.Message;
+
+            if (string.IsNullOrEmpty(message))
+                return false;
+
+            var looksLikeUniqueViolation =
+                message.Contains("2601") ||
+                message.Contains("2627") ||
+                message.Contains("duplicate key", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("unique index", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("unique constraint", StringComparison.OrdinalIgnoreCase);
+
+            return looksLikeUniqueViolation && message.Contains("EmployeeCode", StringComparison.OrdinalIgnoreCase);
         }
 
         // ==============================

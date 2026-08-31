@@ -301,13 +301,19 @@
             $("#masterModalTitle").text((data ? "Edit " : "Add ") + type);
 
             if (data) {
-                $("#m_id").val(data.id);
-                $("#m_isActive").prop("checked", data.isActive);
-                if (type === "client") { $("#m_name").val(data.name); $("#m_code").val(data.code); }
-                if (type === "jobtype") { $("#m_name").val(data.name); $("#m_code").val(data.code); $("#m_displayOrder").val(data.displayOrder); $("#m_hasDisciplines").prop("checked", data.hasDisciplines); }
-                if (type === "job") { $("#m_jobNumber").val(data.jobNumber); $("#m_jobName").val(data.jobName); $("#m_clientId").val(data.clientId); $("#m_status").val(data.status); }
-                if (type === "reason") { $("#m_name").val(data.name); $("#m_reasonCategory").val(data.category); $("#m_order2").val(data.displayOrder); }
-                if (type === "docstatus") { $("#m_name").val(data.displayName); $("#m_code").val(data.code); $("#m_order3").val(data.displayOrder); }
+                // NOTE: the server (Program.cs sets PropertyNamingPolicy = null,
+                // and Newtonsoft.Json.JsonConvert.SerializeObject used in this
+                // view also defaults to PascalCase) always sends PascalCase
+                // property names - never camelCase. Reading data.name/data.code
+                // etc. here always returned undefined; fixed to match the real
+                // payload casing (data.Name/data.Code/...).
+                $("#m_id").val(data.Id);
+                $("#m_isActive").prop("checked", data.IsActive);
+                if (type === "client") { $("#m_name").val(data.Name); $("#m_code").val(data.Code); }
+                if (type === "jobtype") { $("#m_name").val(data.Name); $("#m_code").val(data.Code); $("#m_displayOrder").val(data.DisplayOrder); $("#m_hasDisciplines").prop("checked", data.HasDisciplines); }
+                if (type === "job") { $("#m_jobNumber").val(data.JobNumber); $("#m_jobName").val(data.JobName); $("#m_clientId").val(data.ClientId); $("#m_status").val(data.Status); }
+                if (type === "reason") { $("#m_name").val(data.Name); $("#m_reasonCategory").val(data.Category); $("#m_order2").val(data.DisplayOrder); }
+                if (type === "docstatus") { $("#m_name").val(data.DisplayName); $("#m_code").val(data.Code); $("#m_order3").val(data.DisplayOrder); }
             }
 
             $("#masterModal").modal("show");
@@ -321,15 +327,15 @@
             $("#m_type").val("jobitem");
             showFields("jobitem");
             $("#masterModalTitle").text(data ? "Edit Job Item" : "Add Job Item");
-            $("#masterModal").data("jobId", data ? data.workJobId : jobId);
+            $("#masterModal").data("jobId", data ? data.WorkJobId : jobId);
 
             if (data) {
-                $("#m_id").val(data.id);
-                $("#m_itemCode").val(data.code);
-                $("#m_itemType").val(data.itemType);
-                $("#m_weight").val(data.totalWeightMT);
-                $("#m_docStatusId").val(data.documentStatusId || "");
-                $("#m_isActive").prop("checked", data.isActive);
+                $("#m_id").val(data.Id);
+                $("#m_itemCode").val(data.Code);
+                $("#m_itemType").val(data.ItemType);
+                $("#m_weight").val(data.TotalWeightMT);
+                $("#m_docStatusId").val(data.DocumentStatusId || "");
+                $("#m_isActive").prop("checked", data.IsActive);
             }
 
             $("#masterModal").modal("show");
@@ -343,15 +349,15 @@
             $("#m_type").val("activity");
             showFields("activity");
             $("#masterModalTitle").text(data ? "Edit Activity" : "Add Activity");
-            $("#masterModal").data("jobTypeId", data ? data.jobTypeId : jobTypeId);
+            $("#masterModal").data("jobTypeId", data ? data.JobTypeId : jobTypeId);
 
             if (data) {
-                $("#m_id").val(data.id);
-                $("#m_activityName").val(data.name);
-                $("#m_workCategory").val(data.workCategory);
-                $("#m_skidsDiscipline").val(data.skidsDiscipline || "");
-                $("#m_order2").val(data.displayOrder);
-                $("#m_isActive").prop("checked", data.isActive);
+                $("#m_id").val(data.Id);
+                $("#m_activityName").val(data.Name);
+                $("#m_workCategory").val(data.WorkCategory);
+                $("#m_skidsDiscipline").val(data.SkidsDiscipline || "");
+                $("#m_order2").val(data.DisplayOrder);
+                $("#m_isActive").prop("checked", data.IsActive);
             }
 
             $("#masterModal").modal("show");
@@ -363,7 +369,7 @@
 
             $.get("@Url.Action("GetJobItems")", { jobId: jobId }, function (res) {
                 var rows = (res.data || []).map(function (d) {
-                    return "<tr><td>" + d.code + "</td><td>" + (d.itemTypeName || "") + "</td><td>" + (d.totalWeightMT || "-") + "</td><td>" + (d.documentStatusName || "-") +
+                    return "<tr><td>" + d.Code + "</td><td>" + (d.ItemTypeName || "") + "</td><td>" + (d.TotalWeightMT || "-") + "</td><td>" + (d.DocumentStatusName || "-") +
                         "</td><td><button class='btn btn-xs btn-link' onclick='openJobItemModal(" + JSON.stringify(d).replace(/'/g, "&#39;") + ")'>Edit</button></td></tr>";
                 }).join("");
                 $("#jobItemsBody").html(rows || '<tr><td colspan="5" class="text-center text-muted">No items yet.</td></tr>');
@@ -376,7 +382,7 @@
 
             $.get("@Url.Action("GetWorkActivities")", { jobTypeId: jobTypeId }, function (res) {
                 var rows = (res.data || []).map(function (d) {
-                    return "<tr><td>" + d.name + "</td><td>" + (d.workCategoryName || "") + "</td><td>" + (d.skidsDisciplineName || "-") + "</td><td>" + d.displayOrder +
+                    return "<tr><td>" + d.Name + "</td><td>" + (d.WorkCategoryName || "") + "</td><td>" + (d.SkidsDisciplineName || "-") + "</td><td>" + d.DisplayOrder +
                         "</td><td><button class='btn btn-xs btn-link' onclick='openActivityModal(" + JSON.stringify(d).replace(/'/g, "&#39;") + ")'>Edit</button></td></tr>";
                 }).join("");
                 $("#activitiesBody").html(rows || '<tr><td colspan="5" class="text-center text-muted">No activities yet.</td></tr>');
