@@ -56,7 +56,7 @@ namespace APP.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(DesignationDto dto)
         {
-            if (!ModelState.IsValid)
+            if (dto == null)
             {
                 await LoadDropdowns();
                 return View(dto);

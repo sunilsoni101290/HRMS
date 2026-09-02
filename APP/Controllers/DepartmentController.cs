@@ -50,7 +50,7 @@ namespace APP.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(DepartmentDto dto)
         {
-            if (!ModelState.IsValid || dto == null)
+            if (dto == null)
             {
                 await LoadDropdowns();
                 return View("Create", dto);
