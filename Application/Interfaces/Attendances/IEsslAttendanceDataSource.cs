@@ -66,21 +66,45 @@ namespace Application.Interfaces.Attendances
         Task<(bool Success, string Message)> TestConnectionAsync(EsslConnectionParameters parameters, CancellationToken ct = default);
 
         /// <summary>
-        /// Reads one batch of raw punches strictly after (LogDate >=
-        /// fromDateInclusive) and (LogDate &lt; toDateExclusive), ordered by
-        /// DeviceLogId ascending (an indexed, monotonic column - requirement
-        /// #27), skipping any DeviceLogId already at or below
-        /// afterDeviceLogId so a resumed/overlapping window doesn't re-walk
-        /// rows the caller already has in hand within THIS run (cross-run
-        /// duplicate prevention is the DB unique index on
-        /// BiometricAttendanceLog, not this parameter). batchSize caps how
-        /// many rows come back - never "SELECT * FROM DeviceLogs" (requirement #26).
+        /// Safely discovers which physical DeviceLogs tables actually exist
+        /// right now for this tenant's configured database, restricted to
+        /// names matching EsslDeviceLogTableName's whitelist (the bare
+        /// "DeviceLogs" table, plus any "DeviceLogs_M_YYYY" monthly partition
+        /// whose calendar month overlaps [fromDateInclusive, toDateExclusive)).
+        /// Queries sys.tables/sys.schemas only - never touches row data, never
+        /// creates/alters anything. Returns an empty list (never throws) if
+        /// eSSL is disabled/unreachable, so a discovery failure degrades to
+        /// "nothing to read this run" rather than crashing the sync.
         /// </summary>
-        Task<List<EsslDeviceLogRaw>> GetDeviceLogsAsync(
+        Task<List<string>> DiscoverDeviceLogTablesAsync(
             string tenantId,
             DateTime fromDateInclusive,
             DateTime toDateExclusive,
-            int afterDeviceLogId,
+            CancellationToken ct = default);
+
+        /// <summary>
+        /// Reads one batch of raw punches strictly after (LogDate >=
+        /// fromDateInclusive) and (LogDate &lt; toDateExclusive), UNIONed
+        /// across every table in sourceTables (each of which MUST already be
+        /// EsslDeviceLogTableName-valid - see DiscoverDeviceLogTablesAsync),
+        /// ordered by (LogDate, SourceTable, DeviceLogId) ascending - the
+        /// composite keyset that stays correct even though DeviceLogId alone
+        /// can collide across two different physical tables (requirement
+        /// #27's "ORDER BY on an indexed/monotonic column" plus requirement
+        /// #9's "process punches chronologically"). afterCursor (null on a
+        /// run's first call) skips rows already returned earlier in THIS run
+        /// so a resumed/overlapping window doesn't re-walk rows the caller
+        /// already has in hand (cross-run duplicate prevention is the DB
+        /// unique index on BiometricAttendanceLog, not this parameter).
+        /// batchSize caps how many rows come back - never "SELECT * FROM
+        /// DeviceLogs" (requirement #26).
+        /// </summary>
+        Task<List<EsslDeviceLogRaw>> GetDeviceLogsAsync(
+            string tenantId,
+            IReadOnlyList<string> sourceTables,
+            DateTime fromDateInclusive,
+            DateTime toDateExclusive,
+            EsslDeviceLogCursor? afterCursor,
             int batchSize,
             CancellationToken ct = default);
 

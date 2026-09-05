@@ -47,9 +47,35 @@ namespace Infrastructure.EsslIntegration
                 entity.Property(e => e.DeviceId).HasColumnName("DeviceId");
                 entity.Property(e => e.UserId).HasColumnName("UserId").HasMaxLength(50);
                 entity.Property(e => e.LogDate).HasColumnName("LogDate");
+                entity.Property(e => e.DownloadDate).HasColumnName("DownloadDate");
                 entity.Property(e => e.Direction).HasColumnName("Direction");
                 entity.Property(e => e.AttDirection).HasColumnName("AttDirection");
                 entity.Property(e => e.WorkCode).HasColumnName("WorkCode");
+
+                // C1-C7 are intentionally NOT mapped here (Ignore'd below) -
+                // this DbContext/DbSet is only ever used for the trivial
+                // single-table "Test Connection" sample query
+                // (EsslAttendanceDataSource.TestRawConnectionAsync), which
+                // never selects them, and their real underlying SQL type is
+                // unconfirmed (see EsslDeviceLogRaw's remarks) - mapping them
+                // here with a possibly-wrong type could break that query for
+                // no benefit. The actual sync path (GetDeviceLogsAsync) reads
+                // C1-C7 via raw ADO.NET with an explicit CONVERT instead,
+                // which sidesteps the type-guessing problem entirely.
+                entity.Ignore(e => e.C1);
+                entity.Ignore(e => e.C2);
+                entity.Ignore(e => e.C3);
+                entity.Ignore(e => e.C4);
+                entity.Ignore(e => e.C5);
+                entity.Ignore(e => e.C6);
+                entity.Ignore(e => e.C7);
+
+                // SourceTable is never a real eTimeTrackLite1 column - it is
+                // populated in memory only by the raw-ADO.NET read path in
+                // EsslAttendanceDataSource.GetDeviceLogsAsync, never by EF
+                // Core, which would otherwise try (and fail) to find a
+                // matching column for it.
+                entity.Ignore(e => e.SourceTable);
 
                 // Helps the (LogDate range) + (DeviceLogId keyset) query
                 // pattern EsslAttendanceDataSource uses - if the real table

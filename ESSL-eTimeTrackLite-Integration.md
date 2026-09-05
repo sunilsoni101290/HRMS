@@ -207,6 +207,59 @@ sequentially, isolating one tenant's failure from the others.
   and the next scheduled cycle simply retries - no manual intervention needed for a
   transient outage.
 
+## Monthly DeviceLogs_M_YYYY partition table support
+
+eTimeTrackLite1 installations can store raw punches either in the single
+`dbo.DeviceLogs` table, or split across monthly partition tables named
+`dbo.DeviceLogs_{month}_{year}` (no leading zero on the month - e.g.
+`DeviceLogs_8_2026` for August 2026, `DeviceLogs_9_2026` for September 2026),
+or both at once. This integration discovers and reads from whichever of
+those actually exist - nothing is hardcoded to a specific month/year, and no
+schema change on the `etimetracklite1` side is required or ever made.
+
+- **Discovery** (`EsslAttendanceDataSource.DiscoverDeviceLogTablesAsync`) -
+  a metadata-only query against `sys.tables`/`sys.schemas` (never reads a row
+  of punch data), run once per sync, restricted to `dbo`. Every discovered
+  name is validated against `EsslDeviceLogTableName`'s whitelist (`DeviceLogs`
+  or `DeviceLogs_<1-12>_<yyyy>` exactly) before it can ever reach dynamic SQL -
+  a differently-named table is silently ignored, never queried. The bare
+  `DeviceLogs` table is always included when present; a monthly table is
+  included only when its calendar month overlaps the sync window, so a
+  historical import of just August doesn't also scan every other month that
+  has ever existed.
+- **Reading** (`EsslAttendanceDataSource.GetDeviceLogsAsync`) - UNIONs the
+  validated tables together via raw ADO.NET (parameterized SQL, never string-
+  concatenated values - only the already-whitelisted table identifiers are
+  interpolated), ordered by `(LogDate, SourceTable, DeviceLogId)` ascending.
+  This is why the ordering key is a composite, not just `DeviceLogId`:
+  `DeviceLogId` is only an `IDENTITY` column *within one physical table*, so
+  two different monthly tables can genuinely contain the same `DeviceLogId`
+  for two different punches - a plain `DeviceLogId`-only cursor would
+  silently skip or duplicate rows once more than one table is involved.
+  LogDate-first ordering also directly satisfies "process punches
+  chronologically."
+- **Idempotency across tables** - `BuildDeviceTransactionId` keeps the
+  original, unqualified `"ESSL-{DeviceLogId}"` format for rows read from the
+  bare `DeviceLogs` table (so already-imported production rows keep matching
+  on the next run), and uses a table-qualified `"ESSL-{SourceTable}-{DeviceLogId}"`
+  format for any row read from a monthly table (which never had legacy rows
+  under any format, since this integration could not read from them before) -
+  see `EsslAttendanceSyncService.BuildDeviceTransactionId`'s XML doc comment.
+  No index/constraint change was needed - the existing unique index on
+  `BiometricAttendanceLogs` already enforces uniqueness on whatever value
+  `DeviceTransactionId` holds.
+- **Audit trail** - `BiometricAttendanceLog.SourceTable`/`DownloadDate` (new
+  columns, per row) and `BiometricSyncLog.SourceTables` (new column, per run)
+  record exactly which physical table produced a given HRMS attendance entry
+  and when eTimeTrackLite1 downloaded it - see
+  "add DeviceLogs monthly table support columns.sql" (repo root) for the
+  schema change, idempotent like the earlier eSSL scripts.
+- **DownloadDate vs. LogDate is unchanged by this work** - the sync window
+  and all attendance-date logic still key off `LogDate` exclusively (see the
+  original "Sync window / late-arriving records" section above);
+  `DownloadDate` is now captured for audit/troubleshooting but was never, and
+  still is not, used to decide what to import or which date a punch belongs to.
+
 ## Files changed
 
 See the chat summary for the full list of files added/modified, database changes,

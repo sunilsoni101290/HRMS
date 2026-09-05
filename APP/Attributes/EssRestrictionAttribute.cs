@@ -122,19 +122,6 @@ namespace APP.Attributes
             // created off an approved Probation Confirmation. See
             // Domain/Helper/AppFeatureConstants.PIP.
             "Pip",
-            // Daily Work Entry module masters (Client/WorkJob/JobType/
-            // WorkActivity/WorkEntryReason/DocumentStatus) and cross-
-            // employee reports (Monthly/Job-wise/Structure-wise/
-            // Utilization) are HR/Admin only - no self-service equivalent.
-            // DailyWorkEntryController itself is deliberately NOT listed
-            // here: Create/MyEntries/Details are self-service, and
-            // PendingApproval/Approve/Reject follow the same
-            // "Reporting Manager may be logged in under the plain
-            // self-service role" convention as LeaveApplication/
-            // AttendanceRegularization above - the API already scopes the
-            // approval queue to the caller's own direct reports.
-            "WorkTrackingMaster",
-            "WorkTrackingReport",
         };
 
         // NOTE: "EmployeeFeedback" is deliberately NOT listed here (neither

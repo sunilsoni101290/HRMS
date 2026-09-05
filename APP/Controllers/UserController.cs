@@ -99,41 +99,57 @@ namespace APP.Controllers
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    TempData["GlobalError"] = "User ID is required.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                if (string.IsNullOrWhiteSpace(newPassword))
+                {
+                    TempData["GlobalError"] = "New password is required.";
+                    return RedirectToAction(nameof(Index));
+                }
+
                 dynamic result = await _apiService.PutAsync<dynamic>(
                     $"user/reset-password/{id}",
-                    new ResetPasswordRequest { UserId = id, NewPassword = newPassword });
+                    new ResetPasswordRequest
+                    {
+                        UserId = id,
+                        NewPassword = newPassword
+                    });
 
-                string resultPassword = result?.newPassword ?? result?.NewPassword;
+                // API success response received
+                string resultPassword =
+                    result?.newPassword ?? result?.NewPassword;
 
                 TempData["Success"] = "Password reset successfully.";
                 TempData["NewPassword"] = resultPassword;
             }
             catch (ApiException ex)
             {
-                TempData["GlobalError"] = GetErrorMessage(ex.ResponseContent);
+                TempData["GlobalError"] =
+                    GetErrorMessage(ex.ResponseContent);
             }
             catch (ApplicationException ex)
             {
-                // ApiService.PutAsync -> HandleResponse throws
-                // ApplicationException($"Bad Request (400): {json}") for a
-                // 400 response - e.g. the "password must be at least 6
-                // characters" validation error. Strip the prefix so
-                // GetErrorMessage gets clean JSON to parse.
                 const string prefix = "Bad Request (400): ";
+
                 var json = ex.Message.StartsWith(prefix)
                     ? ex.Message.Substring(prefix.Length)
                     : ex.Message;
 
                 TempData["GlobalError"] = GetErrorMessage(json);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                TempData["GlobalError"] = "Failed to reset password.";
+                
+                TempData["GlobalError"] =
+                    "Failed to reset password.";
             }
 
             return RedirectToAction(nameof(Index));
         }
-
         [HttpPost]
         public async Task<IActionResult> ToggleActive(string id)
         {

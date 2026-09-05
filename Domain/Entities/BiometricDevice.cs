@@ -138,6 +138,28 @@ namespace Domain.Entities
         [MaxLength(30)]
         public string? VerifyMode { get; set; }
 
+        /// <summary>
+        /// For eSSL-sourced rows only (DeviceId starts with "ESSL-"): which
+        /// physical eTimeTrackLite1 table this punch was read from -
+        /// "DeviceLogs" or a discovered "DeviceLogs_M_YYYY" monthly
+        /// partition. Null for punches from any other source (agent-pushed
+        /// devices via BiometricSyncService, manual/web punches). Audit only
+        /// - "which biometric record generated this HRMS attendance entry"
+        /// (requirement #23) - never used by attendance processing logic.
+        /// </summary>
+        [MaxLength(60)]
+        public string? SourceTable { get; set; }
+
+        /// <summary>
+        /// For eSSL-sourced rows only: when eTimeTrackLite1 downloaded this
+        /// punch from the device into its own database - NOT the punch time
+        /// (PunchTime/LogDate is). Audit/troubleshooting only (e.g. "this
+        /// August 4th punch wasn't visible to eTimeTrackLite1 until August
+        /// 31st") - never used by attendance processing logic. Null for
+        /// punches from any other source.
+        /// </summary>
+        public DateTime? DownloadDate { get; set; }
+
         public bool IsDuplicate { get; set; }
 
         public bool IsProcessed { get; set; }
@@ -343,6 +365,19 @@ namespace Domain.Entities
         /// <summary>"System" for the background service, or the acting user's name for a manual/historical sync - same convention as ErrorLog.ResolvedBy.</summary>
         [MaxLength(100)]
         public string? TriggeredBy { get; set; }
+
+        /// <summary>
+        /// Populated only for SyncType = "EsslDbPull" - a comma-separated
+        /// list of the physical eTimeTrackLite1 tables this run actually
+        /// scanned (e.g. "DeviceLogs, DeviceLogs_8_2026, DeviceLogs_9_2026"),
+        /// as discovered by EsslAttendanceDataSource.DiscoverDeviceLogTablesAsync.
+        /// Audit/troubleshooting only - lets an admin see exactly which
+        /// monthly partition tables were (or, for a run that found none,
+        /// were NOT) picked up for a given window, without needing direct
+        /// SQL access to eTimeTrackLite1.
+        /// </summary>
+        [MaxLength(500)]
+        public string? SourceTables { get; set; }
 
         public override string GetSequencePrefix()
             => "BSL";

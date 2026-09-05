@@ -192,16 +192,36 @@ namespace Application.Services.Attendances
                 // punch-pairing logic" when direction isn't reliably stored).
                 var lastPunchTypeByEmployeeDay = new Dictionary<(string Code, DateTime Day), PunchType>();
 
-                int lastSeenId = 0;
+                // Requirement #3/#4 - discover which physical tables
+                // (DeviceLogs plus any DeviceLogs_M_YYYY monthly partitions
+                // whose calendar month overlaps this run's window) actually
+                // exist right now, ONCE per run - not once per batch. An
+                // empty result is not an error (e.g. a historical import for
+                // a month that was never partitioned, or eSSL temporarily
+                // unreachable) - the run simply finds zero records and
+                // completes normally, exactly like an empty DeviceLogs table
+                // would today.
+                var sourceTables = await _esslDataSource.DiscoverDeviceLogTablesAsync(
+                    tenantId, fromDateInclusive, toDateExclusive, ct);
+
+                result.TablesScanned = sourceTables;
+
+                _logger.LogInformation(
+                    "eSSL sync: table discovery for tenant {TenantId}, window {FromDate:yyyy-MM-dd HH:mm} to {ToDate:yyyy-MM-dd HH:mm} -> [{Tables}].",
+                    tenantId, fromDateInclusive, toDateExclusive,
+                    sourceTables.Count == 0 ? "(none found)" : string.Join(", ", sourceTables));
+
+                EsslDeviceLogCursor? cursor = null;
                 int maxProcessedDeviceLogId = state.LastProcessedDeviceLogId ?? 0;
                 DateTime? maxProcessedLogDate = state.LastProcessedLogDate;
+                string? maxProcessedSourceTable = state.LastProcessedSourceTable;
 
-                while (true)
+                while (sourceTables.Count > 0)
                 {
                     ct.ThrowIfCancellationRequested();
 
                     var batch = await _esslDataSource.GetDeviceLogsAsync(
-                        tenantId, fromDateInclusive, toDateExclusive, lastSeenId, batchSize, ct);
+                        tenantId, sourceTables, fromDateInclusive, toDateExclusive, cursor, batchSize, ct);
 
                         if (batch.Count == 0)
                         break;
@@ -214,7 +234,7 @@ namespace Application.Services.Attendances
                     // attempt (and the resulting DbUpdateException) for the
                     // common "already imported" case - the unique index
                     // remains the actual correctness guarantee.
-                    var candidateTxnIds = batch.Select(r => $"ESSL-{r.DeviceLogId}").ToList();
+                    var candidateTxnIds = batch.Select(BuildDeviceTransactionId).ToList();
 
                     var alreadyImported = (await _db.BiometricAttendanceLogs
                             .AsNoTracking()
@@ -225,11 +245,9 @@ namespace Application.Services.Attendances
 
                     foreach (var raw in batch)
                     {
-                        lastSeenId = raw.DeviceLogId;
-
                         try
                         {
-                            var transactionId = $"ESSL-{raw.DeviceLogId}";
+                            var transactionId = BuildDeviceTransactionId(raw);
 
                             if (alreadyImported.Contains(transactionId))
                             {
@@ -260,6 +278,8 @@ namespace Application.Services.Attendances
                                 VerifyMode = null,
                                 IsDuplicate = false,
                                 IsProcessed = false,
+                                SourceTable = raw.SourceTable,
+                                DownloadDate = raw.DownloadDate,
                                 CreatedBy = triggeredBy,
                                 CreatedOn = DateTime.UtcNow
                             };
@@ -271,10 +291,16 @@ namespace Application.Services.Attendances
                             result.RecordsImported++;
                             syncLog.RecordsInserted++;
 
-                            if (raw.DeviceLogId > maxProcessedDeviceLogId)
+                            // Chronological watermark - LogDate is the
+                            // primary ordering key now that more than one
+                            // physical table can be involved (see
+                            // EsslDeviceLogCursor's remarks: DeviceLogId
+                            // alone is only unique within one table).
+                            if (maxProcessedLogDate == null || raw.LogDate >= maxProcessedLogDate)
                             {
-                                maxProcessedDeviceLogId = raw.DeviceLogId;
                                 maxProcessedLogDate = raw.LogDate;
+                                maxProcessedDeviceLogId = raw.DeviceLogId;
+                                maxProcessedSourceTable = raw.SourceTable;
                             }
                         }
                         catch (DbUpdateException dbEx)
@@ -301,8 +327,8 @@ namespace Application.Services.Attendances
                             syncLog.RecordsFailed++;
 
                             _logger.LogError(rowEx,
-                                "eSSL sync: failed to import punch DeviceLogId {DeviceLogId}, UserId {UserId}, DeviceId {DeviceId}, LogDate {LogDate:o}.",
-                                raw.DeviceLogId, raw.UserId, raw.DeviceId, raw.LogDate);
+                                "eSSL sync: failed to import punch DeviceLogId {DeviceLogId}, SourceTable {SourceTable}, UserId {UserId}, DeviceId {DeviceId}, LogDate {LogDate:o}.",
+                                raw.DeviceLogId, raw.SourceTable, raw.UserId, raw.DeviceId, raw.LogDate);
 
                             await _errorLogService.LogAsync(
                                 rowEx,
@@ -312,6 +338,14 @@ namespace Application.Services.Attendances
                                 action: "SyncAsync",
                                 tenantId: tenantId);
                         }
+
+                        // Advance the intra-run keyset cursor regardless of
+                        // success/duplicate/failure - once this row has been
+                        // seen (in any outcome), the next batch in THIS run
+                        // must never fetch it again. Cross-run duplicate
+                        // safety still comes from the DB unique index, not
+                        // from this cursor.
+                        cursor = EsslDeviceLogCursor.FromRow(raw);
                     }
 
                     if (batch.Count < batchSize)
@@ -337,6 +371,7 @@ namespace Application.Services.Attendances
 
                 state.LastProcessedDeviceLogId = maxProcessedDeviceLogId;
                 state.LastProcessedLogDate = maxProcessedLogDate;
+                state.LastProcessedSourceTable = maxProcessedSourceTable;
                 state.RecordsRead = result.RecordsFound;
                 state.RecordsImported = result.RecordsImported;
                 state.RecordsSkipped = result.RecordsSkipped;
@@ -345,9 +380,12 @@ namespace Application.Services.Attendances
                 state.LastError = null;
 
                 syncLog.Status = result.ErrorCount > 0 ? "PartialFailure" : "Success";
+                syncLog.SourceTables = sourceTables.Count == 0 ? null : string.Join(", ", sourceTables);
 
                 result.Success = true;
-                result.Message = $"Sync completed. Found {result.RecordsFound}, imported {result.RecordsImported}, skipped {result.RecordsSkipped}, failed {result.ErrorCount}.";
+                result.Message = sourceTables.Count == 0
+                    ? "Sync completed. No DeviceLogs tables were found for the requested window."
+                    : $"Sync completed. Found {result.RecordsFound}, imported {result.RecordsImported}, skipped {result.RecordsSkipped}, failed {result.ErrorCount}. Tables: {string.Join(", ", sourceTables)}.";
             }
             catch (Exception ex)
             {
@@ -765,6 +803,35 @@ namespace Application.Services.Attendances
         {
             if (string.IsNullOrEmpty(value)) return value ?? "";
             return value.Length <= maxLength ? value : value.Substring(0, maxLength);
+        }
+
+        // ==================================================================
+        // IDEMPOTENCY KEY (requirement #7/#23 - stable per-record source identity)
+        // ==================================================================
+
+        /// <summary>
+        /// The bare "DeviceLogs" table keeps its ORIGINAL, unqualified format
+        /// ("ESSL-{DeviceLogId}") so already-imported production rows from
+        /// before monthly-table support was added keep matching on the next
+        /// run (backward compatible - never re-imported as if new). Any
+        /// DISCOVERED monthly table ("DeviceLogs_M_YYYY") - which never had
+        /// legacy rows under any format, since this integration could not
+        /// read from them before - gets a table-qualified format instead
+        /// ("ESSL-{SourceTable}-{DeviceLogId}"), which is required for
+        /// correctness: DeviceLogId is only unique WITHIN one physical table,
+        /// so two different monthly tables can genuinely contain the same
+        /// DeviceLogId for two different punches (see EsslDeviceLogRaw's
+        /// remarks) - the unqualified format alone would silently collapse
+        /// those into one BiometricAttendanceLog row via the unique index.
+        /// Max observed length is well under BiometricAttendanceLog.
+        /// DeviceTransactionId's 100-char limit ("ESSL-" + up to ~20 chars of
+        /// table name + "-" + up to 10 digits).
+        /// </summary>
+        internal static string BuildDeviceTransactionId(EsslDeviceLogRaw raw)
+        {
+            return string.Equals(raw.SourceTable, EsslDeviceLogTableName.BaseTableName, StringComparison.OrdinalIgnoreCase)
+                ? $"ESSL-{raw.DeviceLogId}"
+                : $"ESSL-{raw.SourceTable}-{raw.DeviceLogId}";
         }
     }
 }

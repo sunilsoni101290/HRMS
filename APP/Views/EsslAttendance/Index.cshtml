@@ -533,6 +533,7 @@
                                 var d = resp.data;
                                 $("#syncResultBody").html(
                                     "<table class='table table-condensed'>" +
+                                    "<tr><th>Tables Scanned</th><td>" + (d.tablesScanned && d.tablesScanned.length ? d.tablesScanned.join(", ") : "<span class=\'muted\'>none found</span>") + "</td></tr>" +
                                     "<tr><th>Records Found</th><td>" + d.recordsFound + "</td></tr>" +
                                     "<tr><th>Imported</th><td>" + d.recordsImported + "</td></tr>" +
                                     "<tr><th>Skipped / Duplicates</th><td>" + d.recordsSkipped + " (" + d.duplicateCount + " duplicates)</td></tr>" +

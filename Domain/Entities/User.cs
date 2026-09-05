@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Data;
@@ -21,6 +21,12 @@ namespace Domain.Entities
         // Security
         [Required]
         public string PasswordHash { get; set; }
+
+        // Date/time the password was last set or reset (any of:
+        // self-registration, self-service change, forgot-password reset,
+        // admin create, admin reset). Null means never explicitly stamped
+        // (e.g. a record created before this column existed).
+        public DateTime? PasswordChangedOn { get; set; }
 
         public bool EmailConfirmed { get; set; }
         public bool PhoneConfirmed { get; set; }

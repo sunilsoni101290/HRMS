@@ -36,6 +36,21 @@ namespace Domain.Entities
         /// <summary>LogDate of the last successfully imported row - the query window floor for the next run is this MINUS the configured overlap, not this exact value, so late-arriving/corrected rows with an earlier LogDate than the current watermark are still picked up.</summary>
         public DateTime? LastProcessedLogDate { get; set; }
 
+        /// <summary>
+        /// Which physical eTimeTrackLite1 table (e.g. "DeviceLogs" or
+        /// "DeviceLogs_8_2026") LastProcessedDeviceLogId came from -
+        /// informational/audit only. Once monthly DeviceLogs_M_YYYY
+        /// partition tables are involved, DeviceLogId alone is only unique
+        /// WITHIN one physical table (see EsslDeviceLogRaw's remarks), so
+        /// this column exists purely so the Settings screen/troubleshooting
+        /// can show an unambiguous watermark - it is never used as the sole
+        /// basis for the next run's query window (LastProcessedLogDate minus
+        /// the configured overlap is), and it is never used for duplicate
+        /// detection either (the DB unique index on BiometricAttendanceLog is).
+        /// </summary>
+        [MaxLength(60)]
+        public string? LastProcessedSourceTable { get; set; }
+
         public DateTime? LastSyncStartedAt { get; set; }
 
         public DateTime? LastSyncCompletedAt { get; set; }

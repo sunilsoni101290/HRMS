@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace APP.Models.DTOs
@@ -80,6 +81,7 @@ namespace APP.Models.DTOs
         public int UnknownEmployeeCount { get; set; }
         public int ErrorCount { get; set; }
         public double DurationSeconds { get; set; }
+        public List<string> TablesScanned { get; set; } = new();
     }
 
     public class EsslSyncHistoryDto

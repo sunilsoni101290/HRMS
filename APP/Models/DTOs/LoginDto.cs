@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace APP.Models.DTOs
 {
@@ -101,6 +101,9 @@ namespace APP.Models.DTOs
         // Login Info
         public DateTime? LastLoginDate { get; set; }
         public string? LastLoginIP { get; set; }
+
+        // Security - when the password was last set/reset
+        public DateTime? PasswordChangedOn { get; set; }
 
         // Common Status
         public bool IsActive { get; set; }
