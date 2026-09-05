@@ -1,4 +1,4 @@
-﻿using Application.DTOs.Auth;
+using Application.DTOs.Auth;
 using Application.DTOs.LoginHistory;
 using Application.Interfaces.Auth;
 using Application.Interfaces.JWT_TOKEN;
@@ -54,6 +54,7 @@ namespace Application.Services.Auth
                 BranchId = dto.BranchId,
                 EmployeeId = dto.EmployeeId,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+                PasswordChangedOn = DateTime.UtcNow,
                 CreatedBy = string.IsNullOrEmpty(dto.CreatedBy) ? "System" : dto.CreatedBy
             };
 
@@ -849,6 +850,7 @@ namespace Application.Services.Auth
                     return new ChangePasswordResultDto { Success = false, Message = "New password must be different from the current password." };
 
                 user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword, workFactor: 12);
+                user.PasswordChangedOn = DateTime.UtcNow;
 
                 await _db.SaveChangesAsync();
 
@@ -892,6 +894,7 @@ namespace Application.Services.Auth
                     return new ForgotPasswordResultDto { Success = false, Message = "New password must be different from the current password." };
 
                 user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword, workFactor: 12);
+                user.PasswordChangedOn = DateTime.UtcNow;
 
                 // A successful self-service reset is a reasonable moment to
                 // also clear any lockout, so a locked-out user isn't left

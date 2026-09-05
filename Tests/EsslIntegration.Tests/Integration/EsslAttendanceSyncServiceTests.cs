@@ -53,16 +53,28 @@ namespace EsslIntegration.Tests.Integration
 
         private static (EsslAttendanceSyncService Service, Mock<IEsslAttendanceDataSource> DataSourceMock) BuildService(
             Infrastructure.ApplicationDbContext db,
-            List<EsslDeviceLogRaw> rowsToReturn)
+            List<EsslDeviceLogRaw> rowsToReturn,
+            List<string>? tablesToDiscover = null)
         {
             var dataSourceMock = new Mock<IEsslAttendanceDataSource>();
             dataSourceMock
                 .Setup(x => x.IsEnabledAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
             dataSourceMock
+                .Setup(x => x.DiscoverDeviceLogTablesAsync(
+                    It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(tablesToDiscover ?? new List<string> { "DeviceLogs" });
+            dataSourceMock
                 .Setup(x => x.GetDeviceLogsAsync(
-                    It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(rowsToReturn);
+                    It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(),
+                    It.IsAny<EsslDeviceLogCursor?>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((string _, IReadOnlyList<string> _, DateTime _, DateTime _, EsslDeviceLogCursor? cursor, int _, CancellationToken _) =>
+                    // Mimic the real data source's keyset pagination well
+                    // enough for the SyncAsync while-loop to terminate:
+                    // once a cursor has been handed back (meaning the
+                    // service has already consumed every row once), the
+                    // second call in the same run returns nothing further.
+                    cursor == null ? rowsToReturn : new List<EsslDeviceLogRaw>());
 
             var processorMock = new Mock<IAttendanceProcessorService>();
             processorMock.Setup(x => x.ProcessAttendanceAsync()).ReturnsAsync(true);
@@ -171,6 +183,134 @@ namespace EsslIntegration.Tests.Integration
 
             result.Success.Should().BeFalse();
             (await fixture.Context.BiometricAttendanceLogs.CountAsync()).Should().Be(0);
+        }
+
+        // ==================================================================
+        // MONTHLY DEVICELOGS TABLE DISCOVERY / TABLE-QUALIFIED IDEMPOTENCY
+        // ==================================================================
+
+        [Fact]
+        public async Task Sync_WhenNoDeviceLogTablesDiscovered_SucceedsWithZeroRecords()
+        {
+            // "Missing monthly table" scenario - e.g. a historical import for
+            // a month that was never partitioned, or the database is
+            // temporarily unreachable for metadata queries. Must not be
+            // treated as a hard failure.
+            using var fixture = await EsslTestFixture.CreateAsync();
+
+            var (service, _) = BuildService(fixture.Context, new List<EsslDeviceLogRaw>(), tablesToDiscover: new List<string>());
+
+            var result = await service.SyncAsync(new EsslSyncRequestDto(), EsslTestFixture.TenantId, "Test");
+
+            result.Success.Should().BeTrue();
+            result.RecordsFound.Should().Be(0);
+            result.TablesScanned.Should().BeEmpty();
+            (await fixture.Context.BiometricAttendanceLogs.CountAsync()).Should().Be(0);
+        }
+
+        [Fact]
+        public async Task Sync_ReportsDiscoveredTables_OnTheResult()
+        {
+            using var fixture = await EsslTestFixture.CreateAsync();
+
+            var now = DateTime.Now;
+            var rows = new List<EsslDeviceLogRaw>
+            {
+                new()
+                {
+                    DeviceLogId = 91,
+                    DeviceId = 19,
+                    UserId = EsslTestFixture.MappedBiometricCode,
+                    LogDate = now.AddMinutes(-30),
+                    Direction = "in",
+                    SourceTable = "DeviceLogs_8_2026"
+                }
+            };
+
+            var (service, _) = BuildService(fixture.Context, rows, tablesToDiscover: new List<string> { "DeviceLogs", "DeviceLogs_8_2026" });
+
+            var result = await service.SyncAsync(new EsslSyncRequestDto(), EsslTestFixture.TenantId, "Test");
+
+            result.Success.Should().BeTrue();
+            result.TablesScanned.Should().BeEquivalentTo(new[] { "DeviceLogs", "DeviceLogs_8_2026" });
+        }
+
+        [Fact]
+        public void BuildDeviceTransactionId_ForBaseDeviceLogsTable_UsesLegacyUnqualifiedFormat()
+        {
+            // Backward compatibility: rows from the bare "DeviceLogs" table
+            // must keep matching whatever format production already saved
+            // before monthly-table support existed.
+            var raw = new EsslDeviceLogRaw { DeviceLogId = 91, SourceTable = "DeviceLogs" };
+
+            EsslAttendanceSyncService.BuildDeviceTransactionId(raw).Should().Be("ESSL-91");
+        }
+
+        [Fact]
+        public void BuildDeviceTransactionId_ForMonthlyTable_IsTableQualified()
+        {
+            var raw = new EsslDeviceLogRaw { DeviceLogId = 91, SourceTable = "DeviceLogs_8_2026" };
+
+            EsslAttendanceSyncService.BuildDeviceTransactionId(raw).Should().Be("ESSL-DeviceLogs_8_2026-91");
+        }
+
+        [Fact]
+        public void BuildDeviceTransactionId_SameDeviceLogId_DifferentMonthlyTables_ProducesDistinctIds()
+        {
+            // The exact scenario that makes the base-table-only format
+            // unsafe once monthly partitions exist: DeviceLogId is only an
+            // IDENTITY within one physical table, so the SAME id can appear
+            // in two different monthly tables for two genuinely different
+            // punches. The idempotency key must disambiguate them.
+            var rawAugust = new EsslDeviceLogRaw { DeviceLogId = 91, SourceTable = "DeviceLogs_8_2026" };
+            var rawSeptember = new EsslDeviceLogRaw { DeviceLogId = 91, SourceTable = "DeviceLogs_9_2026" };
+
+            var idAugust = EsslAttendanceSyncService.BuildDeviceTransactionId(rawAugust);
+            var idSeptember = EsslAttendanceSyncService.BuildDeviceTransactionId(rawSeptember);
+
+            idAugust.Should().NotBe(idSeptember);
+        }
+
+        [Fact]
+        public async Task Sync_UsesLogDate_NotDownloadDate_ForAttendanceProcessing()
+        {
+            // The exact scenario called out by the integration requirement:
+            // DeviceLogId 91 / DeviceId 19 / UserId 2, LogDate 2026-08-04,
+            // DownloadDate 2026-08-31 (downloaded 27 days after the actual
+            // punch). The imported row's PunchTime must be the August 4th
+            // LogDate, never the August 31st DownloadDate.
+            using var fixture = await EsslTestFixture.CreateAsync();
+
+            var logDate = new DateTime(2026, 8, 4, 16, 14, 9);
+            var downloadDate = new DateTime(2026, 8, 31, 18, 30, 9);
+
+            var rows = new List<EsslDeviceLogRaw>
+            {
+                new()
+                {
+                    DeviceLogId = 91,
+                    DeviceId = 19,
+                    UserId = EsslTestFixture.MappedBiometricCode,
+                    LogDate = logDate,
+                    DownloadDate = downloadDate,
+                    Direction = "in",
+                    SourceTable = "DeviceLogs"
+                }
+            };
+
+            var (service, _) = BuildService(fixture.Context, rows);
+
+            var result = await service.SyncAsync(
+                new EsslSyncRequestDto { FromDate = new DateTime(2026, 8, 1), ToDate = new DateTime(2026, 8, 31) },
+                EsslTestFixture.TenantId,
+                "Test");
+
+            result.RecordsImported.Should().Be(1);
+
+            var saved = (await fixture.Context.BiometricAttendanceLogs.ToListAsync()).Single();
+            saved.PunchTime.Should().Be(logDate);
+            saved.DownloadDate.Should().Be(downloadDate);
+            saved.SourceTable.Should().Be("DeviceLogs");
         }
     }
 }

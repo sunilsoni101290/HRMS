@@ -204,11 +204,6 @@ builder.Services.AddScoped<Application.Interfaces.Leaves.IApprovalDelegationServ
 builder.Services.AddScoped<IAttendanceRegularizationService, AttendanceRegularizationService>();
 builder.Services.AddScoped<IAttendancePolicyService, AttendancePolicyService>();
 builder.Services.AddScoped<IWfhRequestService, WfhRequestService>();
-builder.Services.AddScoped<Application.Interfaces.WorkTracking.IWorkTrackingMasterService, Application.Services.WorkTracking.WorkTrackingMasterService>();
-builder.Services.AddScoped<Application.Interfaces.WorkTracking.IDailyWorkEntryService, Application.Services.WorkTracking.DailyWorkEntryService>();
-builder.Services.AddScoped<Application.Interfaces.WorkTracking.IWorkTrackingReportService, Application.Services.WorkTracking.WorkTrackingReportService>();
-builder.Services.AddScoped<Application.Interfaces.WorkTracking.IVpisIntegrationService, Application.Services.WorkTracking.VpisIntegrationService>();
-builder.Services.AddScoped<Application.Interfaces.WorkTracking.IWorkAssignmentService, Application.Services.WorkTracking.WorkAssignmentService>();
 builder.Services.AddScoped<IOnDutyRequestService, OnDutyRequestService>();
 builder.Services.AddScoped<IShortLeaveRequestService, ShortLeaveRequestService>();
 builder.Services.AddScoped<ICompOffService, CompOffService>();

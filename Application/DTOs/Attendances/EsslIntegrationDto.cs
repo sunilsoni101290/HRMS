@@ -128,6 +128,17 @@ namespace Application.DTOs.Attendances
         public int ErrorCount { get; set; }
 
         public double DurationSeconds { get; set; }
+
+        /// <summary>
+        /// The physical eTimeTrackLite1 tables this run actually scanned
+        /// (e.g. ["DeviceLogs", "DeviceLogs_8_2026"]) - see
+        /// EsslAttendanceDataSource.DiscoverDeviceLogTablesAsync. Empty means
+        /// no matching table was found for the requested window (a
+        /// misconfigured/unreachable database, or a historical import for a
+        /// month that was never partitioned) - never silently treated the
+        /// same as "found tables but they had zero rows".
+        /// </summary>
+        public List<string> TablesScanned { get; set; } = new();
     }
 
     public class EsslSyncHistoryDto

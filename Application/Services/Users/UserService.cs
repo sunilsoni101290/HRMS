@@ -70,6 +70,7 @@ namespace Application.Services.Users
                     AccessFailedCount = x.AccessFailedCount,
                     LastLoginDate = x.LastLoginDate,
                     LastLoginIP = x.LastLoginIP,
+                    PasswordChangedOn = x.PasswordChangedOn,
                     IsActive = x.IsActive,
                     CreatedDate = x.CreatedOn,
                     CreatedBy = x.CreatedBy
@@ -143,6 +144,7 @@ namespace Application.Services.Users
                     PhoneNumber = dto.PhoneNumber,
                     PasswordHash = PasswordHelper.HashPassword(
                         string.IsNullOrWhiteSpace(dto.Password) ? "Welcome@123" : dto.Password),
+                    PasswordChangedOn = DateTime.UtcNow,
                     EmailConfirmed = true,
                     PhoneConfirmed = false,
                     IsLocked = false,
@@ -271,6 +273,7 @@ namespace Application.Services.Users
                 }
 
                 user.PasswordHash = PasswordHelper.HashPassword(newPassword);
+                user.PasswordChangedOn = DateTime.UtcNow;
                 user.ModifiedOn = DateTime.UtcNow;
 
                 _context.Users.Update(user);

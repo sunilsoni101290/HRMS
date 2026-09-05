@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Application.Interfaces.Attendances;
@@ -28,9 +29,20 @@ namespace Application.Services.Attendances
     /// deployment that never opens the new Settings form keeps working
     /// exactly as before.
     ///
-    /// No method here ever calls SaveChangesAsync against the eSSL side -
-    /// EsslDbContext instances built in this class are always short-lived,
-    /// read-only, AsNoTracking, and disposed at the end of each call.
+    /// No method here ever calls SaveChangesAsync/INSERT/UPDATE/DELETE
+    /// against the eSSL side. GetDeviceLogsAsync/DiscoverDeviceLogTablesAsync
+    /// use raw ADO.NET (Microsoft.Data.SqlClient) rather than EF Core,
+    /// because the set of physical tables to read from is only known at
+    /// runtime (DeviceLogs plus zero or more discovered DeviceLogs_M_YYYY
+    /// partitions) - EF Core requires each DbSet to map onto one fixed table
+    /// name, so it cannot express "UNION ALL across a dynamically-discovered
+    /// table list" the way a hand-built parameterized query can. Every
+    /// table name that reaches that dynamic SQL is validated against
+    /// EsslDeviceLogTableName's whitelist first (defense in depth: also
+    /// re-validated here, not just trusted from the caller) - only ever
+    /// "DeviceLogs" or "DeviceLogs_&lt;1-12&gt;_&lt;yyyy&gt;" is accepted,
+    /// and every value (dates, batch size, cursor) is passed as a SQL
+    /// parameter, never concatenated.
     /// </summary>
     public class EsslAttendanceDataSource : IEsslAttendanceDataSource
     {
@@ -38,6 +50,17 @@ namespace Application.Services.Attendances
         private readonly IConfiguration _configuration;
         private readonly IDataProtector _protector;
         private readonly ILogger<EsslAttendanceDataSource> _logger;
+
+        // Columns selected from DeviceLogs (and, by assumption, every
+        // identically-shaped monthly partition - see EsslDeviceLogRaw's
+        // remarks). C1-C7 read via CONVERT(nvarchar(50), ...) so an unknown
+        // underlying column type on a given installation can never break the
+        // query. Never "SELECT *" (requirement #26).
+        private const string DeviceLogColumns =
+            "[DeviceLogId], [DeviceId], [UserId], [LogDate], [DownloadDate], [Direction], [AttDirection], [WorkCode], " +
+            "CONVERT(nvarchar(50), [C1]) AS [C1], CONVERT(nvarchar(50), [C2]) AS [C2], CONVERT(nvarchar(50), [C3]) AS [C3], " +
+            "CONVERT(nvarchar(50), [C4]) AS [C4], CONVERT(nvarchar(50), [C5]) AS [C5], CONVERT(nvarchar(50), [C6]) AS [C6], " +
+            "CONVERT(nvarchar(50), [C7]) AS [C7]";
 
         public EsslAttendanceDataSource(
             ApplicationDbContext db,
@@ -101,36 +124,217 @@ namespace Application.Services.Attendances
             return await TestRawConnectionAsync(connectionString, ct);
         }
 
-        public async Task<List<EsslDeviceLogRaw>> GetDeviceLogsAsync(
+        public async Task<List<string>> DiscoverDeviceLogTablesAsync(
             string tenantId,
             DateTime fromDateInclusive,
             DateTime toDateExclusive,
-            int afterDeviceLogId,
-            int batchSize,
             CancellationToken ct = default)
         {
             var connectionString = await BuildConnectionStringAsync(tenantId, ct);
 
             if (connectionString == null)
-                return new List<EsslDeviceLogRaw>();
+                return new List<string>();
 
-            using var esslDb = CreateContext(connectionString);
+            try
+            {
+                return await DiscoverDeviceLogTablesByConnectionAsync(connectionString, fromDateInclusive, toDateExclusive, ct);
+            }
+            catch (Exception ex)
+            {
+                // Requirement: a single bad/unreachable step must never take
+                // down the whole sync - discovery failing degrades to "no
+                // tables this run" (the caller logs/reports that), not a
+                // thrown exception.
+                _logger.LogError(ex, "eSSL DiscoverDeviceLogTablesAsync failed for tenant {TenantId}.", tenantId);
+                return new List<string>();
+            }
+        }
 
-            // LogDate range (indexed, requirement #26) + DeviceLogId keyset
-            // (requirement #27 - "ORDER BY on an indexed column", plus this
-            // is what makes repeated batches within one run advance instead
-            // of re-fetching the same rows). NOT "SELECT *" - only the
-            // columns EsslDeviceLogRaw declares are ever read (no image blob,
-            // no lat/long).
-            return await esslDb.DeviceLogs
-                .AsNoTracking()
-                .Where(x =>
-                    x.LogDate >= fromDateInclusive &&
-                    x.LogDate < toDateExclusive &&
-                    x.DeviceLogId > afterDeviceLogId)
-                .OrderBy(x => x.DeviceLogId)
-                .Take(batchSize)
-                .ToListAsync(ct);
+        /// <summary>
+        /// Shared metadata-only discovery (sys.tables/sys.schemas) used by
+        /// both the public per-tenant DiscoverDeviceLogTablesAsync and
+        /// TestRawConnectionAsync (which already has a resolved connection
+        /// string in hand and would otherwise need a second
+        /// EsslIntegrationSettings lookup). Never reads a single row of
+        /// DeviceLogs data, never creates/alters anything. Callers are
+        /// responsible for catching/logging - this method lets exceptions
+        /// propagate so each caller can decide its own failure behavior.
+        /// </summary>
+        private static async Task<List<string>> DiscoverDeviceLogTablesByConnectionAsync(
+            string connectionString,
+            DateTime fromDateInclusive,
+            DateTime toDateExclusive,
+            CancellationToken ct)
+        {
+            using var connection = new SqlConnection(connectionString);
+            await connection.OpenAsync(ct);
+
+            using var command = new SqlCommand(
+                "SELECT t.name FROM sys.tables t " +
+                "INNER JOIN sys.schemas s ON t.schema_id = s.schema_id " +
+                "WHERE s.name = 'dbo' AND (t.name = 'DeviceLogs' OR t.name LIKE 'DeviceLogs[_]%')",
+                connection);
+            command.CommandTimeout = 30;
+
+            var discovered = new List<string>();
+
+            using (var reader = await command.ExecuteReaderAsync(ct))
+            {
+                while (await reader.ReadAsync(ct))
+                {
+                    var name = reader.GetString(0);
+
+                    // Re-validated here (not just trusted from the LIKE
+                    // filter above, which is only a cheap pre-filter) - this
+                    // is the actual whitelist gate before a name can ever
+                    // reach dynamic SQL.
+                    if (EsslDeviceLogTableName.IsValidTableName(name))
+                        discovered.Add(name);
+                }
+            }
+
+            var result = new List<string>();
+
+            // The bare "DeviceLogs" table, if present, is always included
+            // regardless of the requested window - installations that never
+            // adopted monthly partitioning keep all history there, and even
+            // partitioned installations may still land the current,
+            // not-yet-archived month's rows there.
+            if (discovered.Contains(EsslDeviceLogTableName.BaseTableName))
+                result.Add(EsslDeviceLogTableName.BaseTableName);
+
+            foreach (var name in discovered)
+            {
+                if (name == EsslDeviceLogTableName.BaseTableName)
+                    continue;
+
+                if (!EsslDeviceLogTableName.TryParseMonthlyTable(name, out var year, out var month))
+                    continue;
+
+                if (EsslDeviceLogTableName.MonthOverlapsRange(year, month, fromDateInclusive, toDateExclusive))
+                    result.Add(name);
+            }
+
+            return result;
+        }
+
+        public async Task<List<EsslDeviceLogRaw>> GetDeviceLogsAsync(
+            string tenantId,
+            IReadOnlyList<string> sourceTables,
+            DateTime fromDateInclusive,
+            DateTime toDateExclusive,
+            EsslDeviceLogCursor? afterCursor,
+            int batchSize,
+            CancellationToken ct = default)
+        {
+            var results = new List<EsslDeviceLogRaw>();
+
+            // Only ever validated, whitelisted identifiers reach the SQL
+            // text below - anything else is dropped rather than trusted.
+            var validTables = (sourceTables ?? Array.Empty<string>())
+                .Where(EsslDeviceLogTableName.IsValidTableName)
+                .Distinct()
+                .ToList();
+
+            if (validTables.Count == 0)
+                return results;
+
+            var connectionString = await BuildConnectionStringAsync(tenantId, ct);
+
+            if (connectionString == null)
+                return results;
+
+            // UNION ALL across every validated table, each branch filtered
+            // by the same LogDate range, then re-sorted and re-paged as one
+            // combined result set (SQL Server does this for us via the
+            // outer ORDER BY/OFFSET-FETCH over the UNION ALL). SourceTable is
+            // a literal per branch so the caller can tell which physical
+            // table each row came from - required for idempotency (see
+            // EsslDeviceLogRaw/EsslDeviceLogCursor remarks).
+            var unionParts = new List<string>();
+            for (int i = 0; i < validTables.Count; i++)
+            {
+                unionParts.Add(
+                    $"SELECT {DeviceLogColumns}, '{validTables[i].Replace("'", "''")}' AS [SourceTable] " +
+                    $"FROM {EsslDeviceLogTableName.ToBracketedIdentifier(validTables[i])} " +
+                    "WHERE [LogDate] >= @FromDate AND [LogDate] < @ToDate");
+            }
+
+            var sql = new StringBuilder();
+            sql.Append("SELECT * FROM (");
+            sql.Append(string.Join(" UNION ALL ", unionParts));
+            sql.Append(") AS Combined ");
+
+            if (afterCursor != null)
+            {
+                sql.Append(
+                    "WHERE ([LogDate] > @CursorLogDate) " +
+                    "OR ([LogDate] = @CursorLogDate AND [SourceTable] > @CursorSourceTable) " +
+                    "OR ([LogDate] = @CursorLogDate AND [SourceTable] = @CursorSourceTable AND [DeviceLogId] > @CursorDeviceLogId) ");
+            }
+
+            sql.Append("ORDER BY [LogDate] ASC, [SourceTable] ASC, [DeviceLogId] ASC ");
+            sql.Append("OFFSET 0 ROWS FETCH NEXT @BatchSize ROWS ONLY;");
+
+            try
+            {
+                using var connection = new SqlConnection(connectionString);
+                await connection.OpenAsync(ct);
+
+                using var command = new SqlCommand(sql.ToString(), connection);
+                command.CommandTimeout = 60;
+
+                command.Parameters.AddWithValue("@FromDate", fromDateInclusive);
+                command.Parameters.AddWithValue("@ToDate", toDateExclusive);
+                command.Parameters.AddWithValue("@BatchSize", batchSize);
+
+                if (afterCursor != null)
+                {
+                    command.Parameters.AddWithValue("@CursorLogDate", afterCursor.LogDate);
+                    command.Parameters.AddWithValue("@CursorSourceTable", afterCursor.SourceTable);
+                    command.Parameters.AddWithValue("@CursorDeviceLogId", afterCursor.DeviceLogId);
+                }
+
+                using var reader = await command.ExecuteReaderAsync(ct);
+
+                while (await reader.ReadAsync(ct))
+                {
+                    results.Add(new EsslDeviceLogRaw
+                    {
+                        DeviceLogId = reader.GetInt32(reader.GetOrdinal("DeviceLogId")),
+                        DeviceId = reader.GetInt32(reader.GetOrdinal("DeviceId")),
+                        UserId = reader.IsDBNull(reader.GetOrdinal("UserId")) ? "" : reader.GetString(reader.GetOrdinal("UserId")),
+                        LogDate = reader.GetDateTime(reader.GetOrdinal("LogDate")),
+                        DownloadDate = reader.IsDBNull(reader.GetOrdinal("DownloadDate")) ? (DateTime?)null : reader.GetDateTime(reader.GetOrdinal("DownloadDate")),
+                        Direction = reader.IsDBNull(reader.GetOrdinal("Direction")) ? null : reader.GetString(reader.GetOrdinal("Direction")),
+                        AttDirection = reader.IsDBNull(reader.GetOrdinal("AttDirection")) ? null : reader.GetString(reader.GetOrdinal("AttDirection")),
+                        WorkCode = reader.IsDBNull(reader.GetOrdinal("WorkCode")) ? null : reader.GetString(reader.GetOrdinal("WorkCode")),
+                        C1 = GetNullableString(reader, "C1"),
+                        C2 = GetNullableString(reader, "C2"),
+                        C3 = GetNullableString(reader, "C3"),
+                        C4 = GetNullableString(reader, "C4"),
+                        C5 = GetNullableString(reader, "C5"),
+                        C6 = GetNullableString(reader, "C6"),
+                        C7 = GetNullableString(reader, "C7"),
+                        SourceTable = reader.GetString(reader.GetOrdinal("SourceTable"))
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "eSSL GetDeviceLogsAsync failed for tenant {TenantId} against tables [{Tables}].",
+                    tenantId, string.Join(", ", validTables));
+                throw;
+            }
+
+            return results;
+        }
+
+        private static string? GetNullableString(SqlDataReader reader, string columnName)
+        {
+            var ordinal = reader.GetOrdinal(columnName);
+            return reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
         }
 
         public async Task<Dictionary<string, EsslEmployeeRaw>> GetEmployeeNamesAsync(
@@ -173,7 +377,7 @@ namespace Application.Services.Attendances
         }
 
         // ==================================================================
-        // CONNECTION RESOLUTION (single place all four public methods above
+        // CONNECTION RESOLUTION (single place all public methods above
         // funnel through - requirement #10: "Do not duplicate SQL
         // connection-building logic")
         // ==================================================================
@@ -284,9 +488,27 @@ namespace Application.Services.Attendances
                     .Select(x => new { x.DeviceLogId, x.LogDate })
                     .FirstOrDefaultAsync(ct);
 
+                // Bonus diagnostic (best-effort, never fails the test) -
+                // lets an admin immediately see whether monthly partition
+                // tables are present without leaving the Test Connection
+                // button.
+                string tableSummary;
+                try
+                {
+                    var now = DateTime.Now;
+                    var tables = await DiscoverDeviceLogTablesByConnectionAsync(connectionString, now.AddMonths(-1), now.AddDays(1), ct);
+                    tableSummary = tables.Count == 0
+                        ? " No DeviceLogs tables were found."
+                        : $" Tables found: {string.Join(", ", tables)}.";
+                }
+                catch
+                {
+                    tableSummary = "";
+                }
+
                 return sample == null
-                    ? (true, "Database connection successful. DeviceLogs table is reachable but currently empty.")
-                    : (true, $"Database connection successful. Latest DeviceLogId = {sample.DeviceLogId}, LogDate = {sample.LogDate:yyyy-MM-dd HH:mm:ss}.");
+                    ? (true, "Database connection successful. DeviceLogs table is reachable but currently empty." + tableSummary)
+                    : (true, $"Database connection successful. Latest DeviceLogId = {sample.DeviceLogId}, LogDate = {sample.LogDate:yyyy-MM-dd HH:mm:ss}." + tableSummary);
             }
             catch (SqlException sqlEx)
             {
@@ -312,6 +534,30 @@ namespace Application.Services.Attendances
                 _logger.LogError(ex, "eSSL TestConnectionAsync failed (non-SQL exception).");
                 return (false, "Unable to connect to the database. Please verify the server, database, authentication, and credentials.");
             }
+        }
+
+        private static string? ExtractServerName(string connectionString)
+        {
+            if (string.IsNullOrWhiteSpace(connectionString))
+                return null;
+
+            try
+            {
+                var builder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(connectionString);
+                return builder.DataSource;
+            }
+            catch
+            {
+                // Never let a malformed connection string leak into an
+                // exception message shown anywhere near the UI.
+                return "(configured)";
+            }
+        }
+
+        private static string Truncate(string? value, int maxLength)
+        {
+            if (string.IsNullOrEmpty(value)) return value ?? "";
+            return value.Length <= maxLength ? value : value.Substring(0, maxLength);
         }
     }
 }

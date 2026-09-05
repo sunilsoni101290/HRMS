@@ -1,4 +1,4 @@
-﻿using Application.DTOs.Employee;
+using Application.DTOs.Employee;
 using Application.DTOs.Onboarding;
 using Application.Interfaces;
 using Application.Interfaces.EmployeeInterface;
@@ -256,6 +256,8 @@ namespace Application.Services.EmployeeServices
                     PhoneConfirmed = dto.PhoneConfirmed,
 
                     PasswordHash = passwordHash,
+
+                    PasswordChangedOn = DateTime.UtcNow,
 
                     IsActive = true,
 

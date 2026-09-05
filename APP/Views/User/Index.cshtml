@@ -32,6 +32,7 @@
                     <th>Employee</th>
                     <th>Status</th>
                     <th>Last Login</th>
+                    <th>Password Changed</th>
                     <th width="240">Action</th>
                 </tr>
             </thead>
@@ -52,6 +53,25 @@
                                 @if (item.IsLocked) { <span class="label bg-danger"><i class="icon-lock"></i> Locked</span> }
                             </td>
                             <td>@(item.LastLoginDate.HasValue ? item.LastLoginDate.Value.ToString("dd MMM yyyy HH:mm") : "-")</td>
+                            <td>
+                                @if (item.PasswordChangedOn.HasValue)
+                                {
+                                    var daysAgo = (DateTime.UtcNow - item.PasswordChangedOn.Value).Days;
+                                    <span title="@item.PasswordChangedOn.Value.ToString("dd MMM yyyy HH:mm")">@item.PasswordChangedOn.Value.ToString("dd MMM yyyy")</span>
+                                    @if (daysAgo >= 90)
+                                    {
+                                        <br /><span class="label bg-warning" title="Password not changed in over 90 days"><i class="icon-warning22"></i> @daysAgo days ago</span>
+                                    }
+                                    else
+                                    {
+                                        <br /><small class="text-muted">@daysAgo day@(daysAgo == 1 ? "" : "s") ago</small>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
                             <td>
                                 <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary btn-icon" title="Edit"><i class="icon-pencil7"></i></a>
 
@@ -79,7 +99,7 @@
                 }
                 else
                 {
-                    <tr><td colspan="8" class="text-center text-muted" style="padding:30px;"><i class="icon-users" style="font-size:32px;"></i><br />No users found.</td></tr>
+                    <tr><td colspan="9" class="text-center text-muted" style="padding:30px;"><i class="icon-users" style="font-size:32px;"></i><br />No users found.</td></tr>
                 }
             </tbody>
         </table>

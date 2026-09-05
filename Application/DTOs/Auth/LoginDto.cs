@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -86,6 +86,9 @@ namespace Application.DTOs.Auth
         // Login Info
         public DateTime? LastLoginDate { get; set; }
         public string? LastLoginIP { get; set; }
+
+        // Security - when the password was last set/reset
+        public DateTime? PasswordChangedOn { get; set; }
 
         // Common Status
         public bool IsActive { get; set; }
