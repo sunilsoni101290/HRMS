@@ -46,6 +46,15 @@ namespace Application.DTOs.Attendances
         [Display(Name = "Short Leave Hours / Day")]
         public decimal ShortLeaveHoursPerDay { get; set; }
 
+        // Salary Processing - see AttendancePolicy.SalaryProrationBasis's
+        // remarks. 1 = Calendar Days, 2 = Working Days (fixed).
+        [Display(Name = "Salary Proration Basis")]
+        public int SalaryProrationBasis { get; set; } = 2;
+        public string? SalaryProrationBasisName { get; set; }
+
+        [Display(Name = "Fixed Working Days / Month")]
+        public decimal FixedWorkingDaysPerMonth { get; set; } = 26m;
+
         [MaxLength(500)]
         public string? Remarks { get; set; }
 

@@ -92,13 +92,10 @@
                                             }
                                         </td>
                                     </tr>
-                                    @if (!string.IsNullOrEmpty(status.LastError))
-                                    {
-                                        <tr>
-                                            <th>Last Error</th>
-                                            <td colspan="3" class="text-danger" id="statLastError">@status.LastError</td>
-                                        </tr>
-                                    }
+                                    <tr id="statLastErrorRow" style="@(string.IsNullOrEmpty(status.LastError) ? "display:none;" : "")">
+                                        <th>Last Error</th>
+                                        <td colspan="3" class="text-danger" id="statLastError">@status.LastError</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -250,6 +247,9 @@
                     <button type="button" class="btn bg-primary" id="syncNowBtn">
                         <i class="icon-sync position-left"></i> Sync Now
                     </button>
+                    <button type="button" class="btn btn-default" id="retryFailedBtn" title="Re-runs the sync over the date range below (or the last 90 days if none is set). Safe to re-run - already-imported punches are skipped automatically, only what's still missing gets retried.">
+                        <i class="icon-repeat position-left"></i> Retry Failed Sync
+                    </button>
                 </div>
 
                 <div class="panel panel-bordered">
@@ -270,6 +270,34 @@
                                     <i class="icon-history position-left"></i> Import Historical Data
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="syncProgressBox" style="display:none;" class="panel panel-bordered panel-info">
+                    <div class="panel-heading">
+                        <h6 class="panel-title"><i class="icon-spinner2 spinner position-left"></i> Sync In Progress...</h6>
+                    </div>
+                    <div class="panel-body">
+                        <p class="text-muted" style="margin-bottom:10px;">
+                            Running in the background - this page updates every couple of seconds. You can switch tabs or navigate away; the sync keeps running either way.
+                        </p>
+                        <table class="table table-condensed table-bordered">
+                            <tbody>
+                                <tr><th width="220">Total Found (so far)</th><td id="progRead">0</td></tr>
+                                <tr><th>Successfully Synced</th><td id="progImported">0</td></tr>
+                                <tr><th>Skipped / Duplicate</th><td id="progSkipped">0</td></tr>
+                                <tr><th>Failed</th><td id="progFailed">0</td></tr>
+                            </tbody>
+                        </table>
+                        <div id="resetStuckContainer" style="display:none; margin-top:10px;">
+                            <p class="text-warning" style="margin-bottom:6px;">
+                                <i class="icon-warning position-left"></i>
+                                This sync has been running for an unusually long time and may be stuck.
+                            </p>
+                            <button type="button" class="btn btn-sm btn-danger" id="resetStuckBtn">
+                                <i class="icon-cross2 position-left"></i> Force Reset Stuck Sync
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -513,10 +541,186 @@
             });
 
             // ==============================================================
-            // SYNC NOW / HISTORICAL IMPORT (unchanged core sync behavior)
+            // SYNC NOW / HISTORICAL IMPORT / RETRY FAILED SYNC
+            // ------------------------------------------------------------
+            // Sync Now used to be one long blocking request - the browser
+            // just sat there until the ENTIRE sync (which, for a large
+            // historical window, could be tens of minutes) finished, with
+            // no feedback in between and a real risk of the request itself
+            // timing out well before the sync did. The sync now runs in
+            // the background on the server (see API's SyncNow action) and
+            // this returns almost immediately; the page instead polls the
+            // status endpoint every 2 seconds and shows live progress
+            // until the run completes.
             // ==============================================================
-            function runSync(payload, btn, originalHtml) {
-                btn.prop("disabled", true).html('<i class="icon-spinner2 spinner position-left"></i> Syncing...');
+            var statusPollTimer = null;
+
+            // The three sync-trigger buttons are mutually exclusive for a
+            // given tenant - the backend only allows one sync (of any
+            // kind) to run at a time per tenant, so all three are shown
+            // busy/disabled together while any one of them is running.
+            // This is what actually fixes the confusing "click a button,
+            // get an 'already in progress' popup" experience: instead of
+            // discovering the lock by hitting it, the buttons themselves
+            // reflect the real backend state at all times, including
+            // right after a page load/refresh while a sync is still
+            // running in the background.
+            var syncButtonDefaults = {
+                syncNowBtn: '<i class="icon-sync position-left"></i> Sync Now',
+                retryFailedBtn: '<i class="icon-repeat position-left"></i> Retry Failed Sync',
+                historicalSyncBtn: '<i class="icon-history position-left"></i> Import Historical Data'
+            };
+
+            function setSyncButtonsBusy(isBusy) {
+                $.each(syncButtonDefaults, function (id, defaultHtml) {
+                    var $btn = $("#" + id);
+                    if (isBusy) {
+                        $btn.prop("disabled", true).html('<i class="icon-spinner2 spinner position-left"></i> Syncing...');
+                    } else {
+                        $btn.prop("disabled", false).html(defaultHtml);
+                    }
+                });
+            }
+
+            function stopStatusPoll() {
+                if (statusPollTimer) {
+                    clearInterval(statusPollTimer);
+                    statusPollTimer = null;
+                }
+            }
+
+            function renderProgress(d) {
+                $("#progRead").text(d.recordsRead || 0);
+                $("#progImported").text(d.recordsImported || 0);
+                $("#progSkipped").text(d.recordsSkipped || 0);
+                $("#progFailed").text(d.recordsFailed || 0);
+
+                if (d.canForceReset) {
+                    $("#resetStuckContainer").show();
+                } else {
+                    $("#resetStuckContainer").hide();
+                }
+            }
+
+            function formatStatusDate(isoString) {
+                if (!isoString) return "—";
+
+                var dt = new Date(isoString);
+                if (isNaN(dt.getTime())) return isoString;
+
+                var pad = function (n) { return n < 10 ? "0" + n : "" + n; };
+                var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                var hours = dt.getHours();
+                var ampm = hours >= 12 ? "PM" : "AM";
+                var h12 = hours % 12;
+                if (h12 === 0) h12 = 12;
+
+                return pad(dt.getDate()) + "-" + months[dt.getMonth()] + "-" + dt.getFullYear() + " " +
+                    pad(h12) + ":" + pad(dt.getMinutes()) + ":" + pad(dt.getSeconds()) + " " + ampm;
+            }
+
+            // Updates Card 1's status table directly from the JSON status
+            // response - requirement #7: "Stop full-page HTML polling.
+            // Poll only the lightweight status endpoint. Update status,
+            // progress and button states from the JSON response." This
+            // replaces the old behavior of location.reload()-ing the whole
+            // /EsslAttendance/Index page once a run finished, which was
+            // both unnecessary (everything shown here already came from
+            // this same JSON) and disruptive (a full navigation flashes
+            // the page and loses tab/scroll state).
+            function applyStatusToDom(d) {
+                var statusHtml;
+
+                if (d.isSyncRunning) {
+                    statusHtml = '<span class="label label-warning">Sync in progress...</span>';
+                } else if (d.lastSyncStatus === "Success") {
+                    statusHtml = '<span class="label label-success">Last sync: Success</span>';
+                } else if (d.lastSyncStatus === "PartialFailure") {
+                    statusHtml = '<span class="label label-warning">Last sync: Partial Failure</span>';
+                } else if (d.lastSyncStatus === "Failed") {
+                    statusHtml = '<span class="label label-danger">Last sync: Failed</span>';
+                } else if (d.lastSyncStatus === "Cancelled") {
+                    statusHtml = '<span class="label label-default">Last sync: Cancelled</span>';
+                } else {
+                    statusHtml = '<span class="label label-default">Never synced</span>';
+                }
+
+                $("#statSyncStatus").html(statusHtml);
+                $("#statLastStarted").text(formatStatusDate(d.lastSyncStartedAt));
+                $("#statLastCompleted").text(formatStatusDate(d.lastSyncCompletedAt));
+
+                if (d.lastProcessedDeviceLogId) {
+                    $("#statLastProcessed").text(
+                        "DeviceLogId " + d.lastProcessedDeviceLogId +
+                        (d.lastProcessedLogDate ? (", " + formatStatusDate(d.lastProcessedLogDate)) : ""));
+                } else {
+                    $("#statLastProcessed").text("—");
+                }
+
+                if (d.lastError) {
+                    $("#statLastError").text(d.lastError);
+                    $("#statLastErrorRow").show();
+                } else {
+                    $("#statLastErrorRow").hide();
+                }
+            }
+
+            // showCompletionAlert: on a fresh click we always want the
+            // "Sync Complete" popup. On page-load resume (nobody is
+            // sitting there waiting for a click to finish) we skip the
+            // popup, since a swal appearing on an unattended/returning
+            // page load is more confusing than helpful.
+            function pollStatus(showCompletionAlert) {
+                stopStatusPoll();
+
+                statusPollTimer = setInterval(function () {
+                    $.ajax({
+                        url: "@Url.Action("GetStatus")",
+                        type: "GET",
+                        success: function (resp) {
+                            if (!resp || !resp.success || !resp.data) return;
+
+                            var d = resp.data;
+                            renderProgress(d);
+
+                            if (!d.isSyncRunning) {
+                                stopStatusPoll();
+                                $("#syncProgressBox").hide();
+                                setSyncButtonsBusy(false);
+                                applyStatusToDom(d);
+
+                                if (showCompletionAlert) {
+                                    var swalType = d.lastSyncStatus === "Failed" ? "error"
+                                        : d.lastSyncStatus === "PartialFailure" ? "warning" : "success";
+
+                                    // Defensive (d.recordsRead || 0, etc.) -
+                                    // belt-and-suspenders against ever
+                                    // showing a raw JS "undefined" in this
+                                    // popup again, even though the real fix
+                                    // is server-side (ClaimSyncLockAsync -
+                                    // see API's SyncNow action).
+                                    swal({
+                                        title: "Sync Complete",
+                                        text: "Found " + (d.recordsRead || 0) + ", synced " + (d.recordsImported || 0) +
+                                            ", skipped " + (d.recordsSkipped || 0) + ", failed " + (d.recordsFailed || 0) +
+                                            (d.lastError ? (". " + d.lastError) : "."),
+                                        type: swalType
+                                    });
+                                }
+                            }
+                        }
+                        // A single missed poll (network blip) is not worth
+                        // alarming the user over - the next tick 2s later
+                        // just tries again; the run itself is unaffected
+                        // either way since it's not tied to this request.
+                    });
+                }, 2000);
+            }
+
+            function runSync(payload) {
+                setSyncButtonsBusy(true);
+                renderProgress({ recordsRead: 0, recordsImported: 0, recordsSkipped: 0, recordsFailed: 0 });
+                $("#syncProgressBox").show();
 
                 $.ajax({
                     url: "@Url.Action("SyncNow")",
@@ -524,41 +728,91 @@
                     contentType: "application/json",
                     data: JSON.stringify(payload),
                     success: function (resp) {
-                        btn.prop("disabled", false).html(originalHtml);
-
-                        if (resp.success) {
-                            swal({ title: "Sync Complete", text: resp.message, type: "success" });
-
-                            if (resp.data) {
-                                var d = resp.data;
-                                $("#syncResultBody").html(
-                                    "<table class='table table-condensed'>" +
-                                    "<tr><th>Tables Scanned</th><td>" + (d.tablesScanned && d.tablesScanned.length ? d.tablesScanned.join(", ") : "<span class=\'muted\'>none found</span>") + "</td></tr>" +
-                                    "<tr><th>Records Found</th><td>" + d.recordsFound + "</td></tr>" +
-                                    "<tr><th>Imported</th><td>" + d.recordsImported + "</td></tr>" +
-                                    "<tr><th>Skipped / Duplicates</th><td>" + d.recordsSkipped + " (" + d.duplicateCount + " duplicates)</td></tr>" +
-                                    "<tr><th>Unknown Employees</th><td>" + d.unknownEmployeeCount + "</td></tr>" +
-                                    "<tr><th>Errors</th><td>" + d.errorCount + "</td></tr>" +
-                                    "<tr><th>Duration</th><td>" + d.durationSeconds + "s</td></tr>" +
-                                    "</table>"
-                                );
-                                $("#syncResultBox").show();
-                            }
-
-                            setTimeout(function () { location.reload(); }, 1500);
-                        } else {
-                            swal("Sync Failed", resp.message || "Unable to sync.", "error");
+                        if (!resp.success) {
+                            $("#syncProgressBox").hide();
+                            setSyncButtonsBusy(false);
+                            swal("Sync Not Started", resp.message || "Unable to start sync.", "warning");
+                            return;
                         }
+
+                        pollStatus(true);
                     },
                     error: function () {
-                        btn.prop("disabled", false).html(originalHtml);
+                        $("#syncProgressBox").hide();
+                        setSyncButtonsBusy(false);
                         swal("Error", "Unable to reach the ERP API.", "error");
                     }
                 });
             }
 
+            // ==============================================================
+            // RESUME ON PAGE LOAD: if a sync (of any kind) is already
+            // running for this tenant when the page loads/refreshes - e.g.
+            // it was started from another tab, or the user simply
+            // navigated back to this page mid-sync - show the live
+            // progress panel and busy button state immediately instead of
+            // leaving the buttons looking idle/clickable until the user
+            // clicks one and gets an "already in progress" popup.
+            // ==============================================================
+            var initialSyncRunning = @Json.Serialize(status.IsSyncRunning);
+            if (initialSyncRunning) {
+                setSyncButtonsBusy(true);
+                $("#syncProgressBox").show();
+                renderProgress({
+                    recordsRead: @status.RecordsRead,
+                    recordsImported: @status.RecordsImported,
+                    recordsSkipped: @status.RecordsSkipped,
+                    recordsFailed: @status.RecordsFailed,
+                    canForceReset: @Json.Serialize(status.CanForceReset)
+                });
+                pollStatus(false);
+            }
+
+            // Force Reset Stuck Sync - only ever shown once the status poll
+            // reports canForceReset (the lock has been held past the
+            // server's own staleness threshold); the real safety check is
+            // still enforced server-side in ResetStuckSyncAsync regardless.
+            $("#resetStuckBtn").on("click", function () {
+                var $btn = $(this);
+                $btn.prop("disabled", true);
+
+                $.ajax({
+                    url: "@Url.Action("ResetStuckSync")",
+                    type: "POST",
+                    success: function (resp) {
+                        $btn.prop("disabled", false);
+
+                        if (!resp || !resp.success) {
+                            swal("Not Reset", (resp && resp.message) || "Unable to reset the stuck sync.", "warning");
+                            return;
+                        }
+
+                        swal("Reset", resp.message || "The stuck sync has been reset.", "success");
+
+                        stopStatusPoll();
+                        $("#syncProgressBox").hide();
+                        $("#resetStuckContainer").hide();
+                        setSyncButtonsBusy(false);
+
+                        $.ajax({
+                            url: "@Url.Action("GetStatus")",
+                            type: "GET",
+                            success: function (statusResp) {
+                                if (statusResp && statusResp.success && statusResp.data) {
+                                    applyStatusToDom(statusResp.data);
+                                }
+                            }
+                        });
+                    },
+                    error: function () {
+                        $btn.prop("disabled", false);
+                        swal("Error", "Unable to reach the ERP API.", "error");
+                    }
+                });
+            });
+
             $("#syncNowBtn").on("click", function () {
-                runSync({}, $(this), '<i class="icon-sync position-left"></i> Sync Now');
+                runSync({});
             });
 
             $("#historicalSyncBtn").on("click", function () {
@@ -570,7 +824,35 @@
                     return;
                 }
 
-                runSync({ FromDate: from, ToDate: to }, $(this), '<i class="icon-history position-left"></i> Import Historical Data');
+                runSync({ FromDate: from, ToDate: to });
+            });
+
+            // Retry Failed Sync: re-runs the sync over the date range
+            // currently in the Historical Import fields (or, if neither is
+            // set, a default last-90-days window). This is deliberately
+            // NOT a row-level "retry only the failed records" feature -
+            // this codebase doesn't keep a separate queryable table of
+            // failed rows to selectively replay. Instead it leans on the
+            // sync engine's own existing guarantee: re-running any window
+            // is always safe, because already-imported punches are
+            // skipped (the pre-check plus the DB unique index), so a
+            // retry only ever re-attempts what is genuinely still
+            // missing - previously failed or unmapped rows - and can
+            // never create a duplicate.
+            $("#retryFailedBtn").on("click", function () {
+                var from = $("#historyFromDate").val();
+                var to = $("#historyToDate").val();
+
+                if (!from || !to) {
+                    var toDate = new Date();
+                    var fromDate = new Date();
+                    fromDate.setDate(fromDate.getDate() - 90);
+
+                    to = toDate.toISOString().slice(0, 10);
+                    from = fromDate.toISOString().slice(0, 10);
+                }
+
+                runSync({ FromDate: from, ToDate: to });
             });
 
             // ==============================================================

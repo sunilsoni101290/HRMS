@@ -20,9 +20,43 @@ namespace EsslIntegration.Tests.Unit
         [InlineData("DeviceLogs_8_2026")]
         [InlineData("DeviceLogs_12_2026")]
         [InlineData("DeviceLogs_9_2099")]
+        // Real-world eSSL installations (confirmed via a live screenshot)
+        // spell the table name with an underscore between "Device" and
+        // "Logs" - both spellings must be accepted.
+        [InlineData("Device_Logs")]
+        [InlineData("Device_Logs_1_2026")]
+        [InlineData("Device_Logs_9_2026")]
+        [InlineData("Device_Logs_12_2099")]
         public void IsValidTableName_AcceptsExpectedShapes(string name)
         {
             EsslDeviceLogTableName.IsValidTableName(name).Should().BeTrue();
+        }
+
+        [Theory]
+        [InlineData("DeviceLogs")]
+        [InlineData("Device_Logs")]
+        public void IsBaseTableName_TrueForBaseTableRegardlessOfSpelling(string name)
+        {
+            EsslDeviceLogTableName.IsBaseTableName(name).Should().BeTrue();
+        }
+
+        [Theory]
+        [InlineData("DeviceLogs_8_2026")]
+        [InlineData("Device_Logs_8_2026")]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("SomethingElse")]
+        public void IsBaseTableName_FalseForMonthlyTablesOrGarbage(string? name)
+        {
+            EsslDeviceLogTableName.IsBaseTableName(name).Should().BeFalse();
+        }
+
+        [Fact]
+        public void TryParseMonthlyTable_ExtractsYearAndMonth_ForUnderscoreSpelling()
+        {
+            EsslDeviceLogTableName.TryParseMonthlyTable("Device_Logs_9_2026", out var year, out var month).Should().BeTrue();
+            year.Should().Be(2026);
+            month.Should().Be(9);
         }
 
         [Theory]

@@ -1,4 +1,4 @@
-﻿@{
+@{
     Layout = null;
     var pageTitle = ViewBag.Title ?? "HRMS Dashboard";
 }
@@ -7,6 +7,7 @@
 @using APP.Services.Interfaces
 @using APP.Models.DTOs
 @using Microsoft.Extensions.Configuration
+@using System.Text.Json
 
 @inject IConfiguration Configuration
 @inject IApiService apiService
@@ -46,6 +47,73 @@
         .ToList();
 
 	string currentPath = Context.Request.Path.Value?.ToLower() ?? "";
+
+    // ==================================================================
+    // MENU BAR REDESIGN - Favorites / Quick Access
+    // ==================================================================
+    // Fetched alongside the menu itself (same request-per-page-load
+    // pattern as `menus` above) so the Quick Access section renders on
+    // first paint with no extra client round-trip. Failure here (API down,
+    // brand new user with no favorites yet) degrades to "no Quick Access
+    // section" - it never blocks the rest of the sidebar from rendering.
+    List<AppFeatureDto> favorites = new();
+
+    if (!string.IsNullOrEmpty(userId))
+    {
+        try
+        {
+            var apiBaseUrl = @Configuration["ApiSettings:BaseUrl"];
+            favorites = await apiService
+                .GetAsync<List<AppFeatureDto>>($"{apiBaseUrl}AppFeatures/favorites/user/{userId}");
+        }
+        catch
+        {
+            favorites = new List<AppFeatureDto>();
+        }
+    }
+
+    var favoriteIds = (favorites ?? new List<AppFeatureDto>())
+        .Where(f => !string.IsNullOrEmpty(f.Id))
+        .Select(f => f.Id)
+        .ToHashSet();
+
+    // ==================================================================
+    // MENU BAR REDESIGN - dynamic breadcrumbs
+    // ==================================================================
+    // Every previous page showed a hardcoded "Home" breadcrumb regardless
+    // of where you were. Resolve the current page's own AppFeature (by URL
+    // prefix match, same rule already used for sidebar active-highlighting
+    // above) and, if it has a parent group, that parent too - built from
+    // data already loaded for the sidebar, no extra query.
+    AppFeatureDto currentFeature = menus
+        .Where(x => !string.IsNullOrEmpty(x.Url) && currentPath.StartsWith(Url.Content(x.Url).ToLower()))
+        .OrderByDescending(x => Url.Content(x.Url).Length) // longest/most specific URL match wins
+        .FirstOrDefault();
+
+    AppFeatureDto currentFeatureParent = currentFeature?.ParentFeatureId != null
+        ? menus.FirstOrDefault(x => x.Id == currentFeature.ParentFeatureId)
+        : null;
+
+    // ==================================================================
+    // MENU BAR REDESIGN - client-side global menu search index
+    // ==================================================================
+    // Leaf items only (a bare group header has no Url to navigate to and
+    // would just be dead weight in search results). Built from the same
+    // already role/permission-filtered `menus` list - search can never
+    // surface something the user is not otherwise allowed to see.
+    var searchIndex = menus
+        .Where(x => !string.IsNullOrEmpty(x.Url) && !string.IsNullOrEmpty(x.ControllerName))
+        .Select(x => new
+        {
+            id = x.Id,
+            name = x.Name,
+            url = Url.Content(x.Url),
+            icon = string.IsNullOrEmpty(x.Icon) ? "bi bi-dot" : x.Icon,
+            group = menus.FirstOrDefault(p => p.Id == x.ParentFeatureId)?.Name ?? ""
+        })
+        .ToList();
+
+    var searchIndexJson = JsonSerializer.Serialize(searchIndex);
 }
 
 <!DOCTYPE html>
@@ -54,7 +122,7 @@
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	
+
 	<link rel="apple-touch-icon" sizes="180x180" href="~/images/favicon_io/apple-touch-icon.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="~/images/favicon_io/favicon-32x32.png">
 	<link rel="icon" type="image/png" sizes="16x16" href="~/images/favicon_io/favicon-16x16.png">
@@ -154,6 +222,91 @@
 		.navbar-enterprise .dropdown-menu { border: none; box-shadow: 0 6px 24px rgba(0,0,0,.18); border-radius: 6px; overflow: hidden; }
 		.navbar-enterprise .dropdown-menu > li > a { padding: 9px 16px; font-size: 13px; }
 		.navbar-enterprise .dropdown-menu > li > a > i { margin-right: 8px; opacity: .75; }
+
+		/* ---------- Global menu search ---------- */
+		.navbar-menu-search { position: relative; margin: 0; padding: 0 6px 0 4px; display: flex; align-items: center; }
+		.navbar-menu-search .search-input-wrap { position: relative; }
+		.navbar-menu-search input.menu-search-input {
+			width: 260px; max-width: 42vw; height: 36px; border-radius: 6px; border: 1px solid rgba(255,255,255,.14);
+			background: rgba(255,255,255,.08); color: #eef2fa; font-size: 13px; padding: 0 34px 0 34px;
+			transition: all .15s ease;
+		}
+		.navbar-menu-search input.menu-search-input::placeholder { color: #93a3c4; }
+		.navbar-menu-search input.menu-search-input:focus {
+			outline: none; background: rgba(255,255,255,.14); border-color: #4e9cff; width: 320px;
+		}
+		.navbar-menu-search .search-icon {
+			position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #93a3c4; font-size: 13px; pointer-events: none;
+		}
+		.navbar-menu-search .search-kbd-hint {
+			position: absolute; right: 9px; top: 50%; transform: translateY(-50%); color: #6b7a99; font-size: 10.5px;
+			border: 1px solid rgba(255,255,255,.16); border-radius: 4px; padding: 1px 5px; pointer-events: none;
+		}
+		.navbar-menu-search input.menu-search-input:focus ~ .search-kbd-hint { display: none; }
+		.menu-search-results {
+			display: none; position: absolute; top: 44px; left: 0; width: 340px; max-width: 80vw; max-height: 420px;
+			overflow-y: auto; background: #fff; border-radius: 8px; box-shadow: 0 10px 32px rgba(0,0,0,.22);
+			z-index: 1050; padding: 6px 0;
+		}
+		.menu-search-results.show { display: block; }
+		.menu-search-results .search-result-group {
+			padding: 8px 16px 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; color: #93a3c4;
+		}
+		.menu-search-results a.search-result-item {
+			display: flex; align-items: center; padding: 8px 16px; font-size: 13px; color: #333; text-decoration: none;
+		}
+		.menu-search-results a.search-result-item i { margin-right: 10px; color: #4e9cff; width: 16px; text-align: center; }
+		.menu-search-results a.search-result-item:hover,
+		.menu-search-results a.search-result-item.active-result { background: #f1f5fb; }
+		.menu-search-results .search-empty { padding: 14px 16px; font-size: 12.5px; color: #93a3c4; text-align: center; }
+
+		/* ---------- Favorites / Quick Access ---------- */
+		.navigation-main .favorite-star {
+			opacity: 0; float: right; margin-top: 1px; font-size: 13px; color: #93a3c4;
+			transition: opacity .15s ease, color .15s ease; padding: 2px 4px;
+		}
+		.navigation-main > li > a:hover .favorite-star,
+		.navigation-main li ul > li > a:hover .favorite-star { opacity: .85; }
+		.navigation-main .favorite-star:hover { color: #ffc94d !important; opacity: 1; }
+		.navigation-main .favorite-star.is-favorite { opacity: 1; color: #ffc94d; }
+		.navigation-main .quick-access-section > li > a { padding-left: 20px; }
+		.navigation-main .quick-access-section .navigation-header { padding-top: 10px; }
+		body.sidebar-xs .navigation-main .favorite-star { display: none; }
+
+		/* ---------- Dynamic breadcrumbs ---------- */
+		.breadcrumb-line .breadcrumb li + li:before { content: "/"; padding: 0 8px; color: #b9c2d4; }
+
+		/* ---------- Mobile drawer polish ---------- */
+		/* Off-canvas drawer backdrop - dims the page behind the sidebar on
+		   mobile and closes the drawer on tap-outside. .sidebar-main itself
+		   is z-index:99 (see components.min.css), so 90 sits safely behind
+		   it and above ordinary page content. Hidden outright at tablet/
+		   desktop widths so it can never appear once the sidebar is back
+		   in its normal in-flow position. */
+		.sidebar-mobile-overlay {
+			display: none; position: fixed; inset: 0; background: rgba(15,23,42,.45);
+			z-index: 90;
+		}
+		body.sidebar-mobile-main .sidebar-mobile-overlay { display: block; }
+		@@media (min-width: 769px) {
+			.sidebar-mobile-overlay { display: none !important; }
+		}
+		@@media (max-width: 767px) {
+			.navbar-menu-search input.menu-search-input { width: 160px; }
+			.navbar-menu-search input.menu-search-input:focus { width: 200px; }
+
+			/* Slightly taller tap targets for touch on phones - existing
+			   desktop/tablet sizing (11px/9px) is untouched. */
+			.navigation-main > li > a { padding-top: 13px; padding-bottom: 13px; }
+			.navigation-main li ul > li > a { padding-top: 11px; padding-bottom: 11px; }
+
+			/* The open drawer already covers the full viewport, so hiding
+			   overflow while it's open costs nothing and guarantees the
+			   drawer itself never introduces horizontal scroll. Pages are
+			   otherwise untouched - any table that intentionally scrolls
+			   sideways inside its own wrapper still can. */
+			body.sidebar-mobile-main { overflow-x: hidden; }
+		}
 	</style>
 	<!-- /global stylesheets -->
 	<!-- Core JS files -->
@@ -200,15 +353,13 @@
 			color: #333333;
 		}
 
-		.navigation-main li.active > a {
-		background-color: #2196F3;
-		color: #fff;
-		}
-
-		.navigation-main li.active > a i {
-		color: #fff;
-		}
-
+		/* Active/hover coloring for the sidebar now lives in one place -
+		   the "Sidebar redesign" style block near the top of this file
+		   (.navigation-main greater-than li.active greater-than a, etc.)
+		   - this used to also be redefined here with a flat #2196F3,
+		   which (same CSS specificity, but declared later) silently
+		   overrode that design and made hover/active look inconsistent.
+		   Only the submenu collapse mechanics stay here. */
 		.navigation-main li ul {
 		display: none;
 		}
@@ -220,6 +371,35 @@
 </head>
 
 <body>
+	<!-- Menu Bar redesign - restore the sidebar's collapsed/compact state
+	     (localStorage: "hrmsSidebarXs") before first paint, so a user who
+	     collapsed the sidebar does not see it flash open on every page
+	     navigation. `document.body` already exists the instant the parser
+	     reaches this point (right after the <body> start tag), so this
+	     applies the theme's own real "sidebar-xs" class (the same one
+	     assets/js/app.js's .sidebar-main-toggle handler toggles) directly -
+	     no separate approximate style to keep in sync with the theme. -->
+	<script>
+		(function () {
+			try {
+				var pref = localStorage.getItem('hrmsSidebarXs');
+				if (pref === '1') {
+					document.body.classList.add('sidebar-xs');
+				} else if (pref === null) {
+					// First-ever visit, no saved preference yet. On tablet-
+					// width screens default to compact/icon-only mode so
+					// the content area gets more room - this is a one-time
+					// default, never forced again: the user's very first
+					// manual toggle (either direction) writes '0' or '1'
+					// above and is honoured on every later visit/device.
+					var w = window.innerWidth || document.documentElement.clientWidth;
+					if (w >= 769 && w <= 991) {
+						document.body.classList.add('sidebar-xs');
+					}
+				}
+			} catch (e) { /* localStorage unavailable (privacy mode etc.) - fall back to default expanded sidebar */ }
+		})();
+	</script>
 
 	<!-- Main navbar -->
 	<div class="navbar navbar-inverse navbar-enterprise">
@@ -243,8 +423,24 @@
 
 		<div class="navbar-collapse collapse" id="navbar-mobile">
 			<ul class="nav navbar-nav">
-				<li><a class="sidebar-control sidebar-main-toggle hidden-xs"><i class="icon-paragraph-justify3"></i></a></li>
+				<li><a class="sidebar-control sidebar-main-toggle hidden-xs" title="Collapse / expand sidebar"><i class="icon-paragraph-justify3"></i></a></li>
 			</ul>
+
+			<!-- Menu Bar redesign - global menu search. Client-side only:
+			     filters searchIndex (below) built server-side from the
+			     same role/permission-filtered `menus` this sidebar itself
+			     renders from, so results never exceed what this user is
+			     already allowed to see. Press "/" anywhere on the page to
+			     jump here (see the Scripts block near the end of body). -->
+			<div class="navbar-menu-search">
+				<div class="search-input-wrap">
+					<i class="bi bi-search search-icon"></i>
+					<input type="text" id="menuSearchInput" class="menu-search-input" placeholder="Search menu... ( / )" autocomplete="off" />
+					<span class="search-kbd-hint">/</span>
+				</div>
+				<div id="menuSearchResults" class="menu-search-results"></div>
+			</div>
+
 			<div class="navbar-right">
 				<ul class="nav navbar-nav">
 
@@ -287,6 +483,12 @@
 		<!-- Page content -->
 		<div class="page-content">
 
+			<!-- Off-canvas mobile drawer backdrop - see .sidebar-mobile-overlay
+			     CSS above. Tapping it, or picking any real menu link,
+			     closes the drawer (see the Scripts block near the end of
+			     body). -->
+			<div class="sidebar-mobile-overlay" id="sidebarMobileOverlay"></div>
+
 			<!-- Main sidebar -->
 			<div class="sidebar sidebar-main">
 				<div class="sidebar-content">
@@ -295,6 +497,33 @@
 					<div class="sidebar-category sidebar-category-visible">
 						<div class="category-content no-padding">
 							<ul class="navigation navigation-main">
+
+								@if (favorites != null && favorites.Any())
+								{
+									<!-- Menu Bar redesign - Quick Access. Flat list (no
+									     nesting) of the user's own pinned items, in the
+									     order they pinned them. Only rendered when the
+									     user actually has at least one favorite - an
+									     empty "Quick Access" header for every brand new
+									     user would just be clutter. -->
+									<li class="navigation-header">
+										<span>Quick Access</span>
+										<i class="bi bi-star-fill" title="Your pinned modules"></i>
+									</li>
+
+									foreach (var fav in favorites)
+									{
+										bool isFavActive = !string.IsNullOrEmpty(fav.Url) && currentPath.StartsWith(Url.Content(fav.Url).ToLower());
+
+										<li class="quick-access-section @(isFavActive ? "active" : "")">
+											<a href="@Url.Content(fav.Url ?? "#")" data-feature-id="@fav.Id" title="@fav.Name" data-popup="tooltip">
+												<i class="@(string.IsNullOrEmpty(fav.Icon) ? "bi bi-star" : fav.Icon)"></i>
+												@fav.Name
+												<i class="bi bi-star-fill favorite-star is-favorite" data-feature-id="@fav.Id" title="Remove from Quick Access" data-popup="tooltip"></i>
+											</a>
+										</li>
+									}
+								}
 
 								<!-- Main -->
 								<li class="navigation-header">
@@ -336,15 +565,24 @@
 														!string.IsNullOrEmpty(child.Url) &&
 														currentPath.StartsWith(Url.Content(child.Url).ToLower());
 
+													bool isChildFavorite = favoriteIds.Contains(child.Id);
+
 													<li class="@(isChildActive ? "active" : "")">
 
-														<a href="@Url.Content(child.Url ?? "#")">
+														<a href="@Url.Content(child.Url ?? "#")" data-feature-id="@child.Id" title="@child.Name" data-popup="tooltip">
 
 															<i class="@(string.IsNullOrEmpty(child.Icon)
 																								   ? "bi bi-dot"
 																								   : child.Icon)"></i>
 
 															@child.Name
+
+															@if (!string.IsNullOrEmpty(child.Url))
+															{
+																<i class="bi @(isChildFavorite ? "bi-star-fill" : "bi-star") favorite-star @(isChildFavorite ? "is-favorite" : "")"
+																   data-feature-id="@child.Id"
+																   title="@(isChildFavorite ? "Remove from Quick Access" : "Pin to Quick Access")"></i>
+															}
 
 														</a>
 
@@ -357,13 +595,22 @@
 										}
 										else
 										{
+											bool isLeafFavorite = favoriteIds.Contains(parent.Id);
+
 											<li class="@(isMenuActive ? "active" : "")">
 
-												<a href="@Url.Content(parent.Url ?? "#")">
+												<a href="@Url.Content(parent.Url ?? "#")" data-feature-id="@parent.Id" title="@parent.Name" data-popup="tooltip">
 
 													<i class="@(string.IsNullOrEmpty(parent.Icon) ? "bi bi-circle" : parent.Icon)"></i>
 
 													<span>@parent.Name</span>
+
+													@if (!string.IsNullOrEmpty(parent.Url))
+													{
+														<i class="bi @(isLeafFavorite ? "bi-star-fill" : "bi-star") favorite-star @(isLeafFavorite ? "is-favorite" : "")"
+														   data-feature-id="@parent.Id"
+														   title="@(isLeafFavorite ? "Remove from Quick Access" : "Pin to Quick Access")"></i>
+													}
 
 												</a>
 
@@ -398,9 +645,25 @@
 						</div>
 					</div>
 
+					<!-- Menu Bar redesign - dynamic breadcrumbs. Was a static
+					     "Home" link on every single page regardless of where
+					     you actually were; now resolved from the current
+					     page's own AppFeature (currentFeature/
+					     currentFeatureParent, computed above from the same
+					     menu data the sidebar renders from). Falls back to
+					     just "Home" when the current page has no matching
+					     AppFeature (e.g. Login, Error pages). -->
 					<div class="breadcrumb-line">
 						<ul class="breadcrumb">
 							<li><a asp-controller="Dashboard" asp-action="Index"><i class="icon-home2 position-left"></i> Home</a></li>
+							@if (currentFeatureParent != null)
+							{
+								<li><span>@currentFeatureParent.Name</span></li>
+							}
+							@if (currentFeature != null)
+							{
+								<li class="active"><span>@currentFeature.Name</span></li>
+							}
 						</ul>
 					</div>
 				</div>
@@ -425,6 +688,181 @@
 
 	<script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
 	<script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+
+	<!-- Menu Bar redesign - global search + Favorites toggle + sidebar
+	     collapse persistence + "/" keyboard shortcut. Vanilla JS + jQuery
+	     (both already loaded above) - no new library. -->
+	<script>
+		var hrmsMenuSearchIndex = @Html.Raw(searchIndexJson);
+
+		$(function () {
+			// ---- Sidebar collapse persistence ----
+			// app.js already toggles body.sidebar-xs on
+			// .sidebar-main-toggle click (see assets/js/app.js) - this just
+			// mirrors that same class into localStorage so the next page
+			// load's inline <script> (top of body) can restore it before
+			// paint. Does not replace app.js's own handler, both fire.
+			$(document).on('click', '.sidebar-main-toggle', function () {
+				try {
+					setTimeout(function () {
+						var collapsed = document.body.classList.contains('sidebar-xs');
+						localStorage.setItem('hrmsSidebarXs', collapsed ? '1' : '0');
+					}, 0);
+				} catch (e) { /* localStorage unavailable - collapse still works, just doesn't persist */ }
+			});
+
+			// ---- Mobile drawer: tap-outside-to-close + auto-close after
+			// picking a real menu link. Group headers use href="#" (they
+			// only expand/collapse a submenu) so they never close the
+			// drawer; only a link with a real Url does. The favorite-star
+			// icon already calls stopPropagation() on its own click
+			// handler below, so starring an item never triggers this.
+			$('#sidebarMobileOverlay').on('click', function () {
+				$('body').removeClass('sidebar-mobile-main');
+			});
+
+			$(document).on('click', '.navigation-main a[href]', function () {
+				var href = $(this).attr('href');
+				if (href && href !== '#' && window.innerWidth <= 768) {
+					$('body').removeClass('sidebar-mobile-main');
+				}
+			});
+
+			// ---- Global menu search ----
+			var $input = $('#menuSearchInput');
+			var $results = $('#menuSearchResults');
+			var activeIndex = -1;
+
+			function renderResults(matches, query) {
+				$results.empty();
+				activeIndex = -1;
+
+				if (!query) {
+					$results.removeClass('show');
+					return;
+				}
+
+				if (matches.length === 0) {
+					$results.append('<div class="search-empty">No matching module for "' + $('<div>').text(query).html() + '"</div>');
+					$results.addClass('show');
+					return;
+				}
+
+				var lastGroup = null;
+				matches.slice(0, 20).forEach(function (m) {
+					if (m.group && m.group !== lastGroup) {
+						$results.append('<div class="search-result-group">' + $('<div>').text(m.group).html() + '</div>');
+						lastGroup = m.group;
+					}
+					var $item = $('<a class="search-result-item"></a>')
+						.attr('href', m.url)
+						.attr('data-url', m.url)
+						.append('<i class="' + m.icon + '"></i><span></span>');
+					$item.find('span').text(m.name);
+					$results.append($item);
+				});
+
+				$results.addClass('show');
+			}
+
+			function doSearch() {
+				var query = $input.val().trim().toLowerCase();
+
+				if (!query) {
+					renderResults([], '');
+					return;
+				}
+
+				var matches = hrmsMenuSearchIndex.filter(function (m) {
+					return m.name.toLowerCase().indexOf(query) !== -1 ||
+						(m.group && m.group.toLowerCase().indexOf(query) !== -1);
+				});
+
+				renderResults(matches, query);
+			}
+
+			$input.on('input', doSearch);
+			$input.on('focus', function () { if ($input.val().trim()) doSearch(); });
+
+			$input.on('keydown', function (e) {
+				var $items = $results.find('.search-result-item');
+
+				if (e.key === 'Escape') {
+					$results.removeClass('show');
+					$input.blur();
+					return;
+				}
+
+				if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+					e.preventDefault();
+					if ($items.length === 0) return;
+
+					$items.removeClass('active-result');
+					if (e.key === 'ArrowDown') activeIndex = (activeIndex + 1) % $items.length;
+					else activeIndex = (activeIndex - 1 + $items.length) % $items.length;
+
+					var $active = $items.eq(activeIndex).addClass('active-result');
+					$active[0].scrollIntoView({ block: 'nearest' });
+					return;
+				}
+
+				if (e.key === 'Enter') {
+					if (activeIndex >= 0 && $items.eq(activeIndex).length) {
+						window.location.href = $items.eq(activeIndex).attr('data-url');
+					} else if ($items.length > 0) {
+						window.location.href = $items.eq(0).attr('data-url');
+					}
+				}
+			});
+
+			// "/" anywhere on the page (unless already typing in a field) jumps to search.
+			$(document).on('keydown', function (e) {
+				if (e.key === '/' && !$(e.target).is('input, textarea, select') && !e.target.isContentEditable) {
+					e.preventDefault();
+					$input.focus();
+				}
+			});
+
+			$(document).on('click', function (e) {
+				if (!$(e.target).closest('.navbar-menu-search').length) {
+					$results.removeClass('show');
+				}
+			});
+
+			// ---- Favorites / Quick Access star toggle ----
+			$(document).on('click', '.favorite-star', function (e) {
+				e.preventDefault();
+				e.stopPropagation();
+
+				var $star = $(this);
+				var featureId = $star.data('feature-id');
+				var isPinned = $star.hasClass('is-favorite');
+
+				if (!featureId) return;
+
+				$.post('@Url.Action("ToggleFavorite", "AppFeatures")', {
+					appFeatureId: featureId,
+					pin: !isPinned
+				})
+					.done(function (resp) {
+						if (resp && resp.success) {
+							// Simplest correct refresh: the Quick Access
+							// section and every star's state are all
+							// server-rendered from `favorites`/`favoriteIds`
+							// above - reloading guarantees they stay
+							// consistent with the DB rather than
+							// hand-patching the DOM in two places.
+							window.location.reload();
+						} else {
+							alert((resp && resp.message) || 'Could not update Quick Access. Please try again.');
+						}
+					})
+					.fail(function () {
+						alert('Could not update Quick Access. Please try again.');
+					});
+			});
+		});
+	</script>
 
 	@await RenderSectionAsync("Scripts", required: false)
 

@@ -33,6 +33,8 @@ namespace Application.Services.PayrollService
                     x.EmployeeId,
                     EmployeeName = x.Employee != null ? x.Employee.FirstName + " " + x.Employee.LastName : "",
                     x.EffectiveFrom,
+                    x.SourceTemplateId,
+                    SourceTemplateName = x.SourceTemplate != null ? x.SourceTemplate.Name : null,
                     Lines = x.SalaryDetails.Select(d => new
                     {
                         d.Amount,
@@ -47,6 +49,8 @@ namespace Application.Services.PayrollService
                 EmployeeId = x.EmployeeId,
                 EmployeeName = x.EmployeeName,
                 EffectiveFrom = x.EffectiveFrom,
+                SourceTemplateId = x.SourceTemplateId,
+                SourceTemplateName = x.SourceTemplateName,
                 ComponentCount = x.Lines.Count,
                 TotalEarnings = x.Lines.Where(l => l.Type == (int)SalaryComponentType.Earning).Sum(l => l.Amount),
                 TotalDeductions = x.Lines.Where(l => l.Type == (int)SalaryComponentType.Deduction).Sum(l => l.Amount),
@@ -71,6 +75,7 @@ namespace Application.Services.PayrollService
             var entity = await _context.SalaryStructures
                 .AsNoTracking()
                 .Include(x => x.Employee)
+                .Include(x => x.SourceTemplate)
                 .Include(x => x.SalaryDetails)
                     .ThenInclude(d => d.SalaryComponent)
                 .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
@@ -84,6 +89,8 @@ namespace Application.Services.PayrollService
                 EmployeeId = entity.EmployeeId,
                 EmployeeName = entity.Employee != null ? entity.Employee.FirstName + " " + entity.Employee.LastName : "",
                 EffectiveFrom = entity.EffectiveFrom,
+                SourceTemplateId = entity.SourceTemplateId,
+                SourceTemplateName = entity.SourceTemplate != null ? entity.SourceTemplate.Name : null,
                 TenantId = entity.TenantId,
                 CreatedBy = entity.CreatedBy,
                 ModifiedBy = entity.ModifiedBy,

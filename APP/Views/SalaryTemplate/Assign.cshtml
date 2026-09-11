@@ -1,0 +1,232 @@
+@model SalaryTemplateAssignDto
+
+@{
+    ViewData["Title"] = "Assign Salary Structure";
+    var templates = ViewBag.Templates as List<SalaryTemplateListDto> ?? new List<SalaryTemplateListDto>();
+    var employees = ViewBag.Employees as List<EmployeeListDto> ?? new List<EmployeeListDto>();
+    var departments = employees.Select(e => e.DepartmentName).Where(x => !string.IsNullOrEmpty(x)).Distinct().OrderBy(x => x).ToList();
+    var designations = employees.Select(e => e.DesignationName).Where(x => !string.IsNullOrEmpty(x)).Distinct().OrderBy(x => x).ToList();
+    var preselected = new HashSet<string>(Model.EmployeeIds ?? new List<string>());
+}
+
+<form asp-action="Assign" asp-controller="SalaryTemplate" method="post" id="assignForm">
+
+    <div class="panel panel-flat">
+
+        <div class="panel-heading">
+            <h5 class="panel-title"><i class="icon-user-plus position-left"></i> Assign Salary Structure to Employees</h5>
+            <div class="heading-elements">
+                <a asp-action="Index" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
+            </div>
+        </div>
+
+        <div class="panel-body">
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger">@TempData["Error"]</div>
+            }
+
+            <!-- Step 1: Structure + Effective Date -->
+            <fieldset>
+                <legend class="text-semibold"><span class="label bg-primary">1</span> Select Salary Structure</legend>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="SalaryTemplateId">Salary Structure</label> <span class="text-danger">*</span>
+                            <select asp-for="SalaryTemplateId" class="form-control" id="templateSelect" required>
+                                <option value="">Select Salary Structure</option>
+                                @foreach (var t in templates)
+                                {
+                                    if (t.Id == Model.SalaryTemplateId)
+                                    {
+                                        <option value="@t.Id" data-gross="@t.GrossSalary.ToString("F2")" selected>@t.Name (₹@t.GrossSalary.ToString("N0")/mo, @t.ComponentCount components)</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@t.Id" data-gross="@t.GrossSalary.ToString("F2")">@t.Name (₹@t.GrossSalary.ToString("N0")/mo, @t.ComponentCount components)</option>
+                                    }
+                                }
+                            </select>
+                            <span asp-validation-for="SalaryTemplateId" class="text-danger"></span>
+                            @if (!templates.Any())
+                            {
+                                <p class="text-warning" style="margin-top:6px;">
+                                    <i class="icon-warning22"></i> No active salary structures found.
+                                    <a asp-action="Create">Create one first.</a>
+                                </p>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label asp-for="EffectiveFrom">Effective From</label> <span class="text-danger">*</span>
+                            <input asp-for="EffectiveFrom" type="date" class="form-control"
+                                   value="@Model.EffectiveFrom.ToString("yyyy-MM-dd")" required />
+                            <span asp-validation-for="EffectiveFrom" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <!-- Step 2: Employees -->
+            <fieldset>
+                <legend class="text-semibold"><span class="label bg-primary">2</span> Select Employees</legend>
+
+                <div class="row" style="margin-bottom:10px;">
+                    <div class="col-md-4">
+                        <input type="text" id="empSearch" class="form-control" placeholder="Search by Name or Employee Code..." />
+                    </div>
+                    <div class="col-md-3">
+                        <select id="deptFilter" class="form-control">
+                            <option value="">All Departments</option>
+                            @foreach (var d in departments)
+                            {
+                                <option value="@d">@d</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select id="desigFilter" class="form-control">
+                            <option value="">All Designations</option>
+                            @foreach (var d in designations)
+                            {
+                                <option value="@d">@d</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2 text-right">
+                        <span class="label bg-info" style="font-size:13px;padding:6px 10px;">Selected: <span id="selectedCount">@preselected.Count</span></span>
+                    </div>
+                </div>
+
+                <div class="table-responsive" style="max-height:420px; overflow-y:auto; border:1px solid #ddd;">
+                    <table class="table table-hover table-striped" style="margin-bottom:0;">
+                        <thead style="position:sticky; top:0; background:#fff; z-index:1;">
+                            <tr>
+                                <th width="40"><input type="checkbox" id="selectAll" /></th>
+                                <th>Employee Code</th>
+                                <th>Name</th>
+                                <th>Department</th>
+                                <th>Designation</th>
+                            </tr>
+                        </thead>
+                        <tbody id="employeeRows">
+                            @foreach (var e in employees)
+                            {
+                                <tr class="emp-row"
+                                    data-search="@($"{e.EmployeeCode} {e.FirstName} {e.LastName}".ToLower())"
+                                    data-department="@e.DepartmentName"
+                                    data-designation="@e.DesignationName">
+                                    <td>
+                                        <input type="checkbox" class="emp-checkbox" value="@e.Id"
+                                               data-name="@($"{e.FirstName} {e.LastName}".Trim())"
+                                               @(preselected.Contains(e.Id) ? "checked" : "") />
+                                    </td>
+                                    <td>@e.EmployeeCode</td>
+                                    <td>@e.FirstName @e.LastName</td>
+                                    <td>@(e.DepartmentName ?? "-")</td>
+                                    <td>@(e.DesignationName ?? "-")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    @if (!employees.Any())
+                    {
+                        <p class="text-center text-muted" style="padding:20px;">No employees found.</p>
+                    }
+                </div>
+
+                <div id="employeeIdsContainer"></div>
+                <span asp-validation-for="EmployeeIds" class="text-danger"></span>
+            </fieldset>
+        </div>
+
+        <!-- Step 3: Apply -->
+        <div class="panel-footer text-right">
+            <a asp-action="Index" class="btn btn-default">Cancel</a>
+            <button type="submit" class="btn bg-success" id="applyBtn">
+                <i class="icon-checkmark3"></i> Apply Salary Structure
+            </button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        $(function () {
+
+            function updateCount() {
+                var count = $(".emp-checkbox:checked").length;
+                $("#selectedCount").text(count);
+            }
+
+            function applyFilters() {
+                var search = $("#empSearch").val().toLowerCase();
+                var dept = $("#deptFilter").val();
+                var desig = $("#desigFilter").val();
+
+                $(".emp-row").each(function () {
+                    var $row = $(this);
+                    var matchesSearch = !search || $row.data("search").indexOf(search) > -1;
+                    var matchesDept = !dept || $row.data("department") === dept;
+                    var matchesDesig = !desig || $row.data("designation") === desig;
+                    $row.toggle(matchesSearch && matchesDept && matchesDesig);
+                });
+            }
+
+            $("#empSearch, #deptFilter, #desigFilter").on("keyup change", applyFilters);
+
+            $("#selectAll").on("change", function () {
+                var checked = $(this).is(":checked");
+                // Only (de)select rows currently visible under the active
+                // filter/search - not every employee in the system.
+                $(".emp-row:visible .emp-checkbox").prop("checked", checked);
+                updateCount();
+            });
+
+            $(document).on("change", ".emp-checkbox", updateCount);
+
+            updateCount();
+
+            $("#assignForm").on("submit", function (e) {
+                var $checked = $(".emp-checkbox:checked");
+
+                if ($checked.length === 0) {
+                    e.preventDefault();
+                    swal({ title: "No Employees Selected", text: "Please select at least one employee.", type: "warning" });
+                    return;
+                }
+
+                if (!$("#templateSelect").val()) {
+                    e.preventDefault();
+                    swal({ title: "No Salary Structure Selected", text: "Please select a salary structure to apply.", type: "warning" });
+                    return;
+                }
+
+                // Build the hidden EmployeeIds[] inputs from whatever is
+                // checked right now (search/filter never removes a
+                // selection, it only hides rows - so a prior selection
+                // under a different filter is still included here).
+                $("#employeeIdsContainer").empty();
+                $checked.each(function (i) {
+                    $("<input>").attr({
+                        type: "hidden",
+                        name: "EmployeeIds[" + i + "]",
+                        value: $(this).val()
+                    }).appendTo("#employeeIdsContainer");
+                });
+
+                var templateName = $("#templateSelect option:selected").text();
+                var proceed = confirm(
+                    "This salary structure (" + templateName.split(" (")[0] + ") will be applied to " +
+                    $checked.length + " selected employee(s). Continue?"
+                );
+
+                if (!proceed) {
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -23,29 +23,22 @@ namespace Application.Services.PayrollService
         private readonly IPayrollLoanRecoveryService _loanRecoveryService;
         private readonly ILogger<PayrollBusinessService> _logger;
 
-        // Statuses that count towards "present" for proration
-        private static readonly AttendanceStatus[] PresentStatuses =
-        {
-            AttendanceStatus.Present, AttendanceStatus.Late, AttendanceStatus.EarlyExit,
-            AttendanceStatus.WorkFromHome, AttendanceStatus.OnDuty,
-            AttendanceStatus.Overtime, AttendanceStatus.CompOff
-        };
+        // Salary Processing - see SalaryCalculationService's class remarks
+        // for the root-cause writeup and the algorithm this delegates the
+        // actual proration math to (GenerateAsync/ProcessAsync/
+        // RecalculateAsync below no longer compute a factor themselves).
+        private readonly ISalaryCalculationService _salaryCalculationService;
 
-        // Statuses that count as a scheduled working day
-        private static readonly AttendanceStatus[] WorkingDayStatuses =
-        {
-            AttendanceStatus.Present, AttendanceStatus.Late, AttendanceStatus.EarlyExit,
-            AttendanceStatus.WorkFromHome, AttendanceStatus.OnDuty,
-            AttendanceStatus.Overtime, AttendanceStatus.CompOff,
-            AttendanceStatus.Absent, AttendanceStatus.Leave, AttendanceStatus.HalfDay,
-            AttendanceStatus.MissPunch
-        };
-
-        public PayrollBusinessService(ApplicationDbContext context, IPayrollLoanRecoveryService loanRecoveryService, ILogger<PayrollBusinessService> logger)
+        public PayrollBusinessService(
+            ApplicationDbContext context,
+            IPayrollLoanRecoveryService loanRecoveryService,
+            ILogger<PayrollBusinessService> logger,
+            ISalaryCalculationService salaryCalculationService)
         {
             _context = context;
             _loanRecoveryService = loanRecoveryService;
             _logger = logger;
+            _salaryCalculationService = salaryCalculationService;
         }
 
         #region Get All
@@ -301,108 +294,21 @@ namespace Application.Services.PayrollService
                     continue;
                 }
 
-                // Latest applicable structure
-                var structure = await _context.SalaryStructures
-                    .AsNoTracking()
-                    .Include(s => s.SalaryDetails)
-                        .ThenInclude(d => d.SalaryComponent)
-                    .Where(s => s.EmployeeId == employeeId && !s.IsDeleted && s.EffectiveFrom <= periodEnd)
-                    .OrderByDescending(s => s.EffectiveFrom)
-                    .FirstOrDefaultAsync();
+                // Delegates the actual proration math to
+                // SalaryCalculationService - see its class remarks for the
+                // root-cause writeup this replaces (no more ad-hoc
+                // "present attendance rows / working attendance rows"
+                // ratio here).
+                var calc = await _salaryCalculationService.CalculateAsync(employeeId, dto.SalaryYear, dto.SalaryMonth, dto.TenantId);
 
-                if (structure == null || structure.SalaryDetails == null || !structure.SalaryDetails.Any())
+                if (calc == null || !calc.CanProcess)
                 {
                     result.Skipped++;
-                    result.Messages.Add($"{employee.FirstName} {employee.LastName}: no salary structure lines.");
+                    result.Messages.Add($"{employee.FirstName} {employee.LastName}: {calc?.BlockReason ?? "could not be calculated."}");
                     continue;
                 }
 
-                // Attendance
-                var statuses = await _context.Attendances
-                    .AsNoTracking()
-                    .Where(a => a.EmployeeId == employeeId
-                             && a.Date.Year == dto.SalaryYear
-                             && a.Date.Month == dto.SalaryMonth
-                             && !a.IsDeleted)
-                    .Select(a => a.Status)
-                    .ToListAsync();
-
-                decimal workingDays = statuses.Count(s => WorkingDayStatuses.Contains(s));
-                decimal presentDays = statuses.Count(s => PresentStatuses.Contains(s))
-                                    + 0.5m * statuses.Count(s => s == AttendanceStatus.HalfDay);
-                decimal leaveDays = statuses.Count(s => s == AttendanceStatus.Leave || s == AttendanceStatus.Absent);
-
-                decimal factor = 1m;
-                if (dto.Prorated && workingDays > 0)
-                {
-                    factor = presentDays / workingDays;
-                    if (factor < 0) factor = 0;
-                    if (factor > 1) factor = 1;
-                }
-
-                if (workingDays <= 0)
-                {
-                    // No attendance data captured — pay full and record month length
-                    workingDays = DateTime.DaysInMonth(dto.SalaryYear, dto.SalaryMonth);
-                    presentDays = dto.Prorated ? workingDays : presentDays;
-                    factor = 1m;
-                }
-
-                // Build payroll
-                var payroll = new Payroll
-                {
-                    Id = IDManager.GetNewId(new Payroll()),
-                    EmployeeId = employeeId,
-                    CompanyId = employee.CompanyId,
-                    BranchId = employee.BranchId,
-                    SalaryYear = dto.SalaryYear,
-                    SalaryMonth = dto.SalaryMonth,
-                    SalaryDate = periodEnd,
-                    TotalWorkingDays = workingDays,
-                    PresentDays = presentDays,
-                    LeaveDays = leaveDays,
-                    Status = "Draft",
-                    TenantId = dto.TenantId,
-                    CreatedBy = dto.CreatedBy,
-                    PayrollDetails = new List<PayrollDetail>()
-                };
-
-                decimal grossSalary = 0, totalEarnings = 0, totalDeductions = 0;
-
-                foreach (var line in structure.SalaryDetails)
-                {
-                    bool isEarning = line.SalaryComponent != null
-                        && line.SalaryComponent.ComponentType == SalaryComponentType.Earning;
-
-                    decimal amount;
-                    if (isEarning)
-                    {
-                        grossSalary += line.Amount;
-                        amount = dto.Prorated ? Math.Round(line.Amount * factor, 2) : line.Amount;
-                        totalEarnings += amount;
-                    }
-                    else
-                    {
-                        amount = line.Amount;
-                        totalDeductions += amount;
-                    }
-
-                    payroll.PayrollDetails.Add(new PayrollDetail
-                    {
-                        Id = IDManager.GetNewId(new PayrollDetail()),
-                        PayrollId = payroll.Id,
-                        SalaryComponentId = line.SalaryComponentId,
-                        Amount = amount,
-                        IsEarning = isEarning,
-                        TenantId = dto.TenantId,
-                        CreatedBy = dto.CreatedBy
-                    });
-                }
-
-                payroll.GrossSalary = grossSalary;
-                payroll.TotalEarnings = totalEarnings;
-                payroll.TotalDeductions = totalDeductions;
-                payroll.NetSalary = totalEarnings - totalDeductions;
+                var payroll = BuildPayrollFromCalculation(calc, employee, dto.Prorated, dto.TenantId, dto.CreatedBy);
 
                 await _context.Payrolls.AddAsync(payroll);
                 generatedPayrolls.Add(payroll);
@@ -441,6 +347,324 @@ namespace Application.Services.PayrollService
             catch (Exception)
             {
                 return null;
+            }
+        }
+
+        // Builds an (unsaved) Payroll + PayrollDetails from a
+        // SalaryCalculationResultDto. When prorated is false, earnings are
+        // paid in full (MonthlySalary/each line's FullAmount) regardless of
+        // PayableDays - PayableDays/PresentDays/etc are still recorded for
+        // information, matching the pre-existing "Prorate earnings by
+        // attendance" checkbox's behavior.
+        private static Payroll BuildPayrollFromCalculation(SalaryCalculationResultDto calc, Employee employee, bool prorated, string tenantId, string createdBy)
+        {
+            var periodEnd = new DateTime(calc.SalaryYear, calc.SalaryMonth, DateTime.DaysInMonth(calc.SalaryYear, calc.SalaryMonth));
+
+            var payroll = new Payroll
+            {
+                Id = IDManager.GetNewId(new Payroll()),
+                EmployeeId = calc.EmployeeId,
+                CompanyId = employee.CompanyId,
+                BranchId = employee.BranchId,
+                SalaryYear = calc.SalaryYear,
+                SalaryMonth = calc.SalaryMonth,
+                SalaryDate = periodEnd,
+                TotalWorkingDays = calc.TotalDaysInPeriod,
+                PresentDays = calc.PresentDays,
+                LeaveDays = calc.UnpaidLeaveDays, // backward-compatible: "non-payable leave" bucket
+                PaidLeaveDays = calc.PaidLeaveDays,
+                UnpaidLeaveDays = calc.UnpaidLeaveDays,
+                PayableDays = prorated ? calc.PayableDays : calc.TotalDaysInPeriod,
+                ProrationBasisUsed = (SalaryProrationBasis)calc.ProrationBasisUsed,
+                Status = "Draft",
+                TenantId = tenantId,
+                CreatedBy = createdBy,
+                PayrollDetails = new List<PayrollDetail>()
+            };
+
+            decimal grossSalary = 0, totalEarnings = 0, totalDeductions = 0;
+
+            foreach (var line in calc.Lines)
+            {
+                var isEarning = line.ComponentType == (int)SalaryComponentType.Earning;
+
+                decimal amount;
+                if (isEarning)
+                {
+                    grossSalary += line.FullAmount;
+                    amount = prorated ? line.ProratedAmount : line.FullAmount;
+                    totalEarnings += amount;
+                }
+                else
+                {
+                    amount = line.FullAmount;
+                    totalDeductions += amount;
+                }
+
+                payroll.PayrollDetails.Add(new PayrollDetail
+                {
+                    Id = IDManager.GetNewId(new PayrollDetail()),
+                    PayrollId = payroll.Id,
+                    SalaryComponentId = line.SalaryComponentId,
+                    Amount = amount,
+                    IsEarning = isEarning,
+                    TenantId = tenantId,
+                    CreatedBy = createdBy
+                });
+            }
+
+            payroll.GrossSalary = grossSalary;
+            payroll.TotalEarnings = totalEarnings;
+            payroll.TotalDeductions = totalDeductions;
+            payroll.NetSalary = totalEarnings - totalDeductions;
+
+            return payroll;
+        }
+
+        #endregion
+
+        #region Salary Processing (Preview / Process / Recalculate)
+
+        // Step "Load Attendance" / "Review" - read-only, writes nothing.
+        // Resolves the same employee set GenerateAsync would (must have a
+        // salary structure effective by period end), runs
+        // SalaryCalculationService against all of them, and returns the
+        // full breakdown for the Review table.
+        public async Task<SalaryProcessingPreviewDto> PreviewAsync(int salaryYear, int salaryMonth, string? companyId, string? branchId, string tenantId)
+        {
+            var periodEnd = new DateTime(salaryYear, salaryMonth, DateTime.DaysInMonth(salaryYear, salaryMonth));
+
+            var structureQuery = _context.SalaryStructures
+                .AsNoTracking()
+                .Where(s => !s.IsDeleted && s.EffectiveFrom <= periodEnd);
+
+            var employeeIds = await structureQuery
+                .Select(s => s.EmployeeId)
+                .Distinct()
+                .ToListAsync();
+
+            if (!string.IsNullOrEmpty(companyId) || !string.IsNullOrEmpty(branchId))
+            {
+                var filtered = await _context.Employees
+                    .AsNoTracking()
+                    .Where(e => employeeIds.Contains(e.Id) && !e.IsDeleted
+                        && (string.IsNullOrEmpty(companyId) || e.CompanyId == companyId)
+                        && (string.IsNullOrEmpty(branchId) || e.BranchId == branchId))
+                    .Select(e => e.Id)
+                    .ToListAsync();
+
+                employeeIds = filtered;
+            }
+
+            var calculations = await _salaryCalculationService.CalculateBatchAsync(employeeIds, salaryYear, salaryMonth, tenantId);
+
+            return new SalaryProcessingPreviewDto
+            {
+                SalaryYear = salaryYear,
+                SalaryMonth = salaryMonth,
+                MonthName = MonthName(salaryMonth),
+                Employees = calculations.OrderBy(c => c.EmployeeName).ToList()
+            };
+        }
+
+        // Step "Process Salary" - writes exactly the employees the Review
+        // screen confirmed (dto.EmployeeIds), never a blind re-filter.
+        // Employees who already have a Payroll for this month are skipped
+        // (same "no overwrite" guard GenerateAsync always had) - use
+        // RecalculateAsync to revise an existing one instead.
+        public async Task<PayrollGenerateResultDto> ProcessAsync(SalaryProcessRequestDto dto)
+        {
+            var result = new PayrollGenerateResultDto();
+
+            if (dto.EmployeeIds == null || !dto.EmployeeIds.Any())
+            {
+                result.Messages.Add("No employees were selected to process.");
+                return result;
+            }
+
+            var employeeIds = dto.EmployeeIds.Distinct().ToList();
+
+            var employees = await _context.Employees
+                .AsNoTracking()
+                .Where(e => employeeIds.Contains(e.Id) && !e.IsDeleted)
+                .ToDictionaryAsync(e => e.Id, e => e);
+
+            var existingIds = (await _context.Payrolls
+                .AsNoTracking()
+                .Where(p => employeeIds.Contains(p.EmployeeId)
+                    && p.SalaryYear == dto.SalaryYear && p.SalaryMonth == dto.SalaryMonth && !p.IsDeleted)
+                .Select(p => p.EmployeeId)
+                .ToListAsync())
+                .ToHashSet();
+
+            var calculations = await _salaryCalculationService.CalculateBatchAsync(employeeIds, dto.SalaryYear, dto.SalaryMonth, dto.TenantId);
+            var generatedPayrolls = new List<Payroll>();
+
+            foreach (var calc in calculations)
+            {
+                var employeeLabel = calc.EmployeeName ?? calc.EmployeeId;
+
+                if (!employees.TryGetValue(calc.EmployeeId, out var employee))
+                {
+                    result.Skipped++;
+                    result.Messages.Add($"{employeeLabel}: employee not found.");
+                    continue;
+                }
+
+                if (existingIds.Contains(calc.EmployeeId))
+                {
+                    result.Skipped++;
+                    result.Messages.Add($"{employeeLabel}: payroll already exists for this month.");
+                    continue;
+                }
+
+                if (!calc.CanProcess)
+                {
+                    result.Skipped++;
+                    result.Messages.Add($"{employeeLabel}: {calc.BlockReason}");
+                    continue;
+                }
+
+                var payroll = BuildPayrollFromCalculation(calc, employee, prorated: true, dto.TenantId, dto.CreatedBy);
+
+                await _context.Payrolls.AddAsync(payroll);
+
+                await _context.PayrollAuditLogs.AddAsync(new PayrollAuditLog
+                {
+                    Id = IDManager.GetNewId(new PayrollAuditLog()),
+                    PayrollId = payroll.Id,
+                    Action = "Generated",
+                    NewNetSalary = payroll.NetSalary,
+                    NewPayableDays = payroll.PayableDays,
+                    PerformedBy = dto.CreatedBy,
+                    TenantId = dto.TenantId,
+                    CreatedBy = dto.CreatedBy
+                });
+
+                generatedPayrolls.Add(payroll);
+                result.Generated++;
+            }
+
+            await _context.SaveChangesAsync();
+
+            // Same Loan & Advance recovery hook GenerateAsync runs - see its
+            // remarks for why this must run per-payroll, after SaveChanges,
+            // each in its own try/catch.
+            foreach (var payroll in generatedPayrolls)
+            {
+                try
+                {
+                    var recovery = await _loanRecoveryService.RecoverForPayrollAsync(payroll.Id, dto.TenantId, dto.CreatedBy);
+
+                    if (recovery.TotalRecovered > 0 || recovery.InstallmentsSkipped > 0)
+                        result.Messages.AddRange(recovery.Messages);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Loan/Advance payroll recovery failed for Payroll {PayrollId} (Employee {EmployeeId}).", payroll.Id, payroll.EmployeeId);
+                    result.Messages.Add($"{payroll.EmployeeId}: loan/advance recovery could not be processed automatically - it can be re-run manually.");
+                }
+            }
+
+            result.Messages.Insert(0, $"Processed {result.Generated} payroll(s), skipped {result.Skipped}.");
+            return result;
+        }
+
+        // Recalculates an EXISTING Payroll against current attendance/leave
+        // data - lock rules (confirmed):
+        //   Draft      -> free, no confirmation needed.
+        //   Processed  -> allowed, but dto.Remarks is REQUIRED (why this
+        //                 already-processed payroll is being revised - a
+        //                 payslip may already have been shared).
+        //   Paid       -> refused outright. A Paid payroll is never edited
+        //                 in place - it stays as the historical record of
+        //                 what was actually paid (data integrity / audit).
+        public async Task<string> RecalculateAsync(SalaryRecalculateRequestDto dto)
+        {
+            try
+            {
+                var payroll = await _context.Payrolls
+                    .Include(p => p.PayrollDetails)
+                    .FirstOrDefaultAsync(p => p.Id == dto.PayrollId && !p.IsDeleted);
+
+                if (payroll == null)
+                    return "ERROR:Payroll not found.";
+
+                if (string.Equals(payroll.Status, "Paid", StringComparison.OrdinalIgnoreCase))
+                    return "ERROR:This payroll is marked Paid and cannot be recalculated. Its numbers are the historical record of what was actually paid.";
+
+                if (string.Equals(payroll.Status, "Processed", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(dto.Remarks))
+                    return "ERROR:This payroll is already Processed - please provide a reason (Remarks) to recalculate it.";
+
+                var employee = await _context.Employees
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(e => e.Id == payroll.EmployeeId && !e.IsDeleted);
+
+                if (employee == null)
+                    return "ERROR:Employee not found.";
+
+                var calc = await _salaryCalculationService.CalculateAsync(payroll.EmployeeId, payroll.SalaryYear, payroll.SalaryMonth, payroll.TenantId);
+
+                if (calc == null || !calc.CanProcess)
+                    return $"ERROR:{calc?.BlockReason ?? "Could not be recalculated."}";
+
+                var oldNetSalary = payroll.NetSalary;
+                var oldPayableDays = payroll.PayableDays;
+
+                var rebuilt = BuildPayrollFromCalculation(calc, employee, prorated: true, payroll.TenantId, payroll.CreatedBy);
+
+                // Replace detail lines - same "delete then re-add" pattern
+                // this codebase already uses for Salary Structure updates.
+                _context.PayrollDetails.RemoveRange(payroll.PayrollDetails);
+
+                foreach (var line in rebuilt.PayrollDetails)
+                {
+                    line.PayrollId = payroll.Id;
+                    await _context.PayrollDetails.AddAsync(line);
+                }
+
+                payroll.GrossSalary = rebuilt.GrossSalary;
+                payroll.TotalEarnings = rebuilt.TotalEarnings;
+                payroll.TotalDeductions = rebuilt.TotalDeductions;
+                payroll.NetSalary = rebuilt.NetSalary;
+                payroll.TotalWorkingDays = rebuilt.TotalWorkingDays;
+                payroll.PresentDays = rebuilt.PresentDays;
+                payroll.LeaveDays = rebuilt.LeaveDays;
+                payroll.PaidLeaveDays = rebuilt.PaidLeaveDays;
+                payroll.UnpaidLeaveDays = rebuilt.UnpaidLeaveDays;
+                payroll.PayableDays = rebuilt.PayableDays;
+                payroll.ProrationBasisUsed = rebuilt.ProrationBasisUsed;
+
+                payroll.RecalculatedCount += 1;
+                payroll.LastRecalculatedOn = DateTime.UtcNow;
+                payroll.LastRecalculatedBy = dto.PerformedBy;
+                payroll.ModifiedOn = DateTime.UtcNow;
+                payroll.ModifiedBy = dto.PerformedBy;
+
+                _context.Payrolls.Update(payroll);
+
+                await _context.PayrollAuditLogs.AddAsync(new PayrollAuditLog
+                {
+                    Id = IDManager.GetNewId(new PayrollAuditLog()),
+                    PayrollId = payroll.Id,
+                    Action = "Recalculated",
+                    OldNetSalary = oldNetSalary,
+                    NewNetSalary = payroll.NetSalary,
+                    OldPayableDays = oldPayableDays,
+                    NewPayableDays = payroll.PayableDays,
+                    PerformedBy = dto.PerformedBy,
+                    Remarks = dto.Remarks,
+                    TenantId = payroll.TenantId,
+                    CreatedBy = dto.PerformedBy
+                });
+
+                await _context.SaveChangesAsync();
+
+                return payroll.Id;
+            }
+            catch (Exception ex)
+            {
+                return $"ERROR:{ex.Message}";
             }
         }
 

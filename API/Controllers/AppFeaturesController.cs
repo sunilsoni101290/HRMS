@@ -113,5 +113,39 @@ namespace API.Controllers
 
             return Ok(result);
         }
+
+        // ======================================================
+        // MENU BAR REDESIGN - Favorites / Quick Access
+        // ======================================================
+
+        [HttpGet("favorites/user/{userId}")]
+        public async Task<IActionResult> GetFavorites(string userId)
+        {
+            var result = await _service.GetFavoritesAsync(userId);
+
+            return Ok(result);
+        }
+
+        [HttpPost("favorites")]
+        public async Task<IActionResult> AddFavorite([FromBody] FavoriteMenuRequestDto dto)
+        {
+            var result = await _service.AddFavoriteAsync(dto.UserId, dto.AppFeatureId, dto.TenantId);
+
+            if (!result)
+                return BadRequest(new { Message = "UserId and AppFeatureId are required." });
+
+            return Ok(new { Message = "Pinned to Quick Access." });
+        }
+
+        [HttpDelete("favorites/{userId}/{appFeatureId}")]
+        public async Task<IActionResult> RemoveFavorite(string userId, string appFeatureId)
+        {
+            var result = await _service.RemoveFavoriteAsync(userId, appFeatureId);
+
+            if (!result)
+                return BadRequest(new { Message = "UserId and AppFeatureId are required." });
+
+            return Ok(new { Message = "Removed from Quick Access." });
+        }
     }
 }

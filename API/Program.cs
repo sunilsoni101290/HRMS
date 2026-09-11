@@ -196,6 +196,11 @@ builder.Services.AddScoped<IAttendanceProcessorService,AttendanceProcessorServic
 builder.Services.AddScoped<IEmployeeBiometricMappingService, EmployeeBiometricMappingService>();
 builder.Services.AddScoped<IEsslAttendanceDataSource, EsslAttendanceDataSource>();
 builder.Services.AddScoped<IEsslAttendanceSyncService, EsslAttendanceSyncService>();
+// Singleton in-process queue for manual eSSL sync requests (Sync Now /
+// Historical Import / Retry Failed Sync) - consumed by the ALREADY-
+// registered EsslAttendanceSyncBackgroundService below, instead of a
+// detached Task.Run per request. See IEsslSyncJobQueue's remarks.
+builder.Services.AddSingleton<IEsslSyncJobQueue, EsslSyncJobQueue>();
 builder.Services.AddScoped<IBiometricSimulatorService, BiometricSimulatorService>();
 builder.Services.AddScoped<ILeaveTypeService, LeaveTypeService>();
 builder.Services.AddScoped<ILeaveBalanceService, LeaveBalanceService>();
@@ -235,7 +240,9 @@ builder.Services.AddScoped<Application.Interfaces.Assets.IAssetAllocationService
 // ===================== Payroll Module =====================
 builder.Services.AddScoped<Application.Interfaces.Payroll.ISalaryComponentService, Application.Services.PayrollService.SalaryComponentService>();
 builder.Services.AddScoped<Application.Interfaces.Payroll.ISalaryStructureService, Application.Services.PayrollService.SalaryStructureService>();
+builder.Services.AddScoped<Application.Interfaces.Payroll.ISalaryTemplateService, Application.Services.PayrollService.SalaryTemplateService>();
 builder.Services.AddScoped<Application.Interfaces.Payroll.IPayrollBusinessService, Application.Services.PayrollService.PayrollBusinessService>();
+builder.Services.AddScoped<Application.Interfaces.Payroll.ISalaryCalculationService, Application.Services.PayrollService.SalaryCalculationService>();
 builder.Services.AddScoped<Application.Interfaces.Payroll.IPayslipRequestService, Application.Services.PayrollService.PayslipRequestService>();
 
 // ===================== Taxation Module =====================

@@ -107,4 +107,19 @@ namespace Application.DTOs
         public string? ModifiedBy { get; set; }
 
     }
+
+    // ==================================================
+    // MENU BAR REDESIGN - Favorites / Quick Access
+    // ==================================================
+    // Request body for POST api/appfeatures/favorites (pin a menu item).
+    public class FavoriteMenuRequestDto
+    {
+        [Required]
+        public string UserId { get; set; }
+
+        [Required]
+        public string AppFeatureId { get; set; }
+
+        public string? TenantId { get; set; }
+    }
 }

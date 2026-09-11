@@ -20,6 +20,10 @@
         </h5>
         <div class="heading-elements">
             <a asp-action="Payslip" asp-route-id="@Model.Id" target="_blank" class="btn btn-info btn-xs"><i class="icon-printer"></i> Payslip</a>
+            @if (Model.Status != "Paid")
+            {
+                <button type="button" class="btn btn-warning btn-xs" id="recalcBtn" data-toggle="modal" data-target="#recalcModal"><i class="icon-loop2"></i> Recalculate</button>
+            }
             <a asp-action="Index" class="btn btn-default btn-xs"><i class="icon-arrow-left13"></i> Back</a>
         </div>
     </div>
@@ -55,10 +59,21 @@
 
         <p>
             <strong>Employee Code:</strong> @Model.EmployeeCode &nbsp;|&nbsp;
-            <strong>Working Days:</strong> @(Model.TotalWorkingDays?.ToString("0.#") ?? "-") &nbsp;|&nbsp;
-            <strong>Present Days:</strong> @(Model.PresentDays?.ToString("0.#") ?? "-") &nbsp;|&nbsp;
-            <strong>Leave Days:</strong> @(Model.LeaveDays?.ToString("0.#") ?? "-")
+            <strong>Basis:</strong> @(Model.ProrationBasisUsedName ?? "-") &nbsp;|&nbsp;
+            <strong>Total Days:</strong> @(Model.TotalWorkingDays?.ToString("0.#") ?? "-") &nbsp;|&nbsp;
+            <strong>Present:</strong> @(Model.PresentDays?.ToString("0.#") ?? "-") &nbsp;|&nbsp;
+            <strong>Paid Leave:</strong> @(Model.PaidLeaveDays?.ToString("0.#") ?? "-") &nbsp;|&nbsp;
+            <strong>Unpaid Leave:</strong> @(Model.UnpaidLeaveDays?.ToString("0.#") ?? "-") &nbsp;|&nbsp;
+            <strong>Payable Days:</strong> @(Model.PayableDays?.ToString("0.#") ?? "-")
         </p>
+
+        @if (Model.RecalculatedCount > 0)
+        {
+            <p class="text-warning">
+                <i class="icon-warning22"></i>
+                Recalculated @Model.RecalculatedCount time(s) - last on @(Model.LastRecalculatedOn?.ToString("dd MMM yyyy HH:mm") ?? "-") by @(Model.LastRecalculatedBy ?? "-").
+            </p>
+        }
 
         <div class="row">
             <div class="col-md-6">
@@ -88,3 +103,52 @@
         </div>
     </div>
 </div>
+
+@if (Model.Status != "Paid")
+{
+    <div class="modal fade" id="recalcModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <form asp-action="Recalculate" method="post">
+                <input type="hidden" name="payrollId" value="@Model.Id" />
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        <h5 class="modal-title">Recalculate Payroll</h5>
+                    </div>
+                    <div class="modal-body">
+                        <p>This re-runs Salary Processing for @Model.EmployeeName - @Model.MonthName @Model.SalaryYear against current attendance and leave data, and replaces the amounts above.</p>
+                        @if (Model.Status == "Processed")
+                        {
+                            <div class="form-group">
+                                <label>Reason (required - this payroll is already Processed)</label> <span class="text-danger">*</span>
+                                <textarea name="remarks" class="form-control" rows="2" required placeholder="Why is this being recalculated?"></textarea>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="form-group">
+                                <label>Remarks (optional)</label>
+                                <textarea name="remarks" class="form-control" rows="2"></textarea>
+                            </div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-warning"><i class="icon-loop2"></i> Recalculate</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <script>$(function(){ swal({ title:"Error", text:"@TempData["Error"]", type:"error" }); });</script>
+    }
+}

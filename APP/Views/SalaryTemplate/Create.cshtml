@@ -1,0 +1,267 @@
+@model SalaryTemplateDto
+
+@{
+    ViewData["Title"] = "Salary Structure";
+    bool isEdit = !string.IsNullOrEmpty(Model?.Id);
+    var componentList = ViewBag.ComponentList as List<SalaryComponentListDto> ?? new List<SalaryComponentListDto>();
+}
+
+<form asp-action="@(isEdit ? "Edit" : "Create")"
+      asp-controller="SalaryTemplate" asp-route-id="@Model?.Id" method="post" id="templateForm">
+
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="TenantId" type="hidden" />
+    <input asp-for="CreatedBy" type="hidden" />
+
+    <div class="panel panel-flat">
+
+        <div class="panel-heading">
+            <h5 class="panel-title">
+                <i class="icon-list-numbered position-left"></i>
+                @(isEdit ? "Edit Salary Structure" : "Create Salary Structure")
+            </h5>
+            <div class="heading-elements">
+                <a asp-action="Index" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
+            </div>
+        </div>
+
+        <div class="panel-body">
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger">@TempData["Error"]</div>
+            }
+
+            <fieldset>
+                <legend class="text-semibold"><i class="icon-info22 position-left"></i> Salary Structure Details</legend>
+
+                <div class="row">
+                    <div class="col-md-5">
+                        <div class="form-group">
+                            <label asp-for="Name"></label> <span class="text-danger">*</span>
+                            <input asp-for="Name" class="form-control" placeholder="e.g. Software Developer" autofocus />
+                            <span asp-validation-for="Name" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="EffectiveFrom"></label> <span class="text-danger">*</span>
+                            <input asp-for="EffectiveFrom" type="date" class="form-control"
+                                   value="@Model?.EffectiveFrom.ToString("yyyy-MM-dd")" />
+                            <span asp-validation-for="EffectiveFrom" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label asp-for="IsActive">Status</label>
+                            <select asp-for="IsActive" class="form-control">
+                                <option value="true">Active</option>
+                                <option value="false">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label asp-for="Description">Description (optional)</label>
+                            <input asp-for="Description" class="form-control" placeholder="Short note about this structure" />
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend class="text-semibold">
+                    <i class="icon-list position-left"></i> Salary Components
+                    <a href="javascript:void(0)" id="addRow" class="btn btn-xs bg-primary pull-right">
+                        <i class="icon-plus22"></i> Add Component
+                    </a>
+                </legend>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="componentsTable">
+                        <thead>
+                            <tr>
+                                <th>Component</th>
+                                <th width="180">Amount (₹)</th>
+                                <th width="140">Calculation Type</th>
+                                <th width="60"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="rows">
+                            @if (Model?.Details != null && Model.Details.Any())
+                            {
+                                for (int i = 0; i < Model.Details.Count; i++)
+                                {
+                                    <tr class="component-row">
+                                        <td>
+                                            <select name="Details[@i].SalaryComponentId" class="form-control component-select" required>
+                                                <option value="">Select Component</option>
+                                                @foreach (var opt in componentList)
+                                                {
+                                                    if (opt.Id == Model.Details[i].SalaryComponentId)
+                                                    {
+                                                        <option value="@opt.Id" data-type="@opt.ComponentType" selected>@opt.Name (@opt.Code)</option>
+                                                    }
+                                                    else
+                                                    {
+                                                        <option value="@opt.Id" data-type="@opt.ComponentType">@opt.Name (@opt.Code)</option>
+                                                    }
+                                                }
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input name="Details[@i].Amount" type="number" step="0.01" min="0"
+                                                   value="@Model.Details[i].Amount" class="form-control amount" placeholder="0.00" />
+                                        </td>
+                                        <td>
+                                            <select name="Details[@i].CalculationType" class="form-control">
+                                                <option value="1" selected>Fixed</option>
+                                            </select>
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-danger btn-icon removeRow"><i class="icon-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th class="text-right">Total Earnings</th>
+                                <th class="text-right"><span id="totalEarnings">0.00</span></th>
+                                <th colspan="2"></th>
+                            </tr>
+                            <tr>
+                                <th class="text-right">Total Deductions</th>
+                                <th class="text-right"><span id="totalDeductions">0.00</span></th>
+                                <th colspan="2"></th>
+                            </tr>
+                            <tr>
+                                <th class="text-right">Gross Salary</th>
+                                <th class="text-right"><strong id="grossSalary">0.00</strong></th>
+                                <th colspan="2"></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <p class="text-muted"><i class="icon-info22"></i> Gross Salary = sum of Earning components. Deductions (if any) are tracked separately and shown here for reference.</p>
+            </fieldset>
+        </div>
+
+        <div class="panel-footer text-right">
+            <a asp-action="Index" class="btn btn-default">Cancel</a>
+            <button type="submit" class="btn bg-primary">
+                <i class="icon-floppy-disk"></i> @(isEdit ? "Update" : "Save")
+            </button>
+        </div>
+    </div>
+</form>
+
+<!-- Row template -->
+<template id="rowTemplate">
+    <tr class="component-row">
+        <td>
+            <select name="Details[IDX].SalaryComponentId" class="form-control component-select" required>
+                <option value="">Select Component</option>
+                @foreach (var opt in componentList)
+                {
+                    <option value="@opt.Id" data-type="@opt.ComponentType">@opt.Name (@opt.Code)</option>
+                }
+            </select>
+        </td>
+        <td>
+            <input name="Details[IDX].Amount" type="number" step="0.01" min="0" class="form-control amount" placeholder="0.00" />
+        </td>
+        <td>
+            <select name="Details[IDX].CalculationType" class="form-control">
+                <option value="1" selected>Fixed</option>
+            </select>
+        </td>
+        <td class="text-center">
+            <button type="button" class="btn btn-danger btn-icon removeRow"><i class="icon-trash"></i></button>
+        </td>
+    </tr>
+</template>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    <script>
+        $(function () {
+
+            // Tab/Enter moves focus to the Amount field right after the
+            // Component the user just picked, then Enter on Amount adds a
+            // fresh row and focuses its Component select - keeps entry to
+            // the keyboard, matching the "less clicks" requirement.
+            function reindex() {
+                $("#rows .component-row").each(function (i) {
+                    $(this).find("select.component-select").attr("name", "Details[" + i + "].SalaryComponentId");
+                    $(this).find("input.amount").attr("name", "Details[" + i + "].Amount");
+                    $(this).find("select:not(.component-select)").attr("name", "Details[" + i + "].CalculationType");
+                });
+            }
+
+            function calcTotal() {
+                var earnings = 0, deductions = 0;
+
+                $("#rows .component-row").each(function () {
+                    var type = $(this).find("select.component-select option:selected").data("type");
+                    var amount = parseFloat($(this).find("input.amount").val());
+                    if (isNaN(amount)) amount = 0;
+
+                    if (type == 2) deductions += amount;
+                    else earnings += amount;
+                });
+
+                $("#totalEarnings").text(earnings.toFixed(2));
+                $("#totalDeductions").text(deductions.toFixed(2));
+                $("#grossSalary").text(earnings.toFixed(2));
+            }
+
+            function addRow(focusIt) {
+                var html = $("#rowTemplate").html().replace(/IDX/g, $("#rows .component-row").length);
+                var $row = $(html);
+                $("#rows").append($row);
+                reindex();
+                if (focusIt) $row.find("select.component-select").trigger("focus");
+                return $row;
+            }
+
+            $("#addRow").on("click", function () { addRow(true); });
+
+            $("#rows").on("click", ".removeRow", function () {
+                $(this).closest("tr").remove();
+                reindex();
+                calcTotal();
+            });
+
+            $("#rows").on("change", "select.component-select", calcTotal);
+            $("#rows").on("input", "input.amount", calcTotal);
+
+            // Enter on the Amount field of the LAST row adds a new row and
+            // moves focus there, instead of submitting the form early.
+            $("#rows").on("keydown", "input.amount", function (e) {
+                if (e.key !== "Enter") return;
+                e.preventDefault();
+
+                var $row = $(this).closest("tr");
+                if ($row.is("#rows .component-row:last-child")) {
+                    addRow(true);
+                } else {
+                    $row.next().find("select.component-select").trigger("focus");
+                }
+            });
+
+            // Start with one empty row if none
+            if ($("#rows .component-row").length === 0) addRow(false);
+
+            calcTotal();
+
+            $("#templateForm").on("submit", reindex);
+        });
+    </script>
+    <partial name="_ValidationScriptsPartial" />
+}

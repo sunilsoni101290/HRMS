@@ -100,6 +100,7 @@ namespace APP.Attributes
             "Permission",
             "SalaryComponent",
             "SalaryStructure",
+            "SalaryTemplate",
             "Shift",
             "State",
             "Tenant",

@@ -41,6 +41,39 @@ namespace API.Controllers
             return Ok(result);
         }
 
+        // Salary Processing - Select Month -> Load Attendance (this) ->
+        // Review -> Process (below). Read-only.
+        [HttpGet("preview")]
+        public async Task<IActionResult> Preview(int salaryYear, int salaryMonth, string? companyId, string? branchId, string tenantId)
+        {
+            var result = await _service.PreviewAsync(salaryYear, salaryMonth, companyId, branchId, tenantId);
+            return Ok(result);
+        }
+
+        // Writes exactly the employees the Review screen confirmed - see
+        // SalaryProcessRequestDto/PayrollBusinessService.ProcessAsync's
+        // remarks.
+        [HttpPost("process")]
+        public async Task<IActionResult> Process([FromBody] SalaryProcessRequestDto dto)
+        {
+            var result = await _service.ProcessAsync(dto);
+            return Ok(result);
+        }
+
+        // Re-runs Salary Processing against an EXISTING Payroll - subject
+        // to the Draft/Processed/Paid lock rules on
+        // PayrollBusinessService.RecalculateAsync.
+        [HttpPost("recalculate")]
+        public async Task<IActionResult> Recalculate([FromBody] SalaryRecalculateRequestDto dto)
+        {
+            var result = await _service.RecalculateAsync(dto);
+
+            if (result != null && result.StartsWith("ERROR:"))
+                return BadRequest(new { Message = result.Substring("ERROR:".Length) });
+
+            return Ok(new { Message = "Payroll recalculated successfully.", Id = result });
+        }
+
         [HttpPut("status/{id}")]
         public async Task<IActionResult> ChangeStatus(string id, [FromQuery] string status, [FromQuery] string userId)
         {

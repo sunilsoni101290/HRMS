@@ -54,6 +54,24 @@ namespace Domain.Entities
         // ShortLeaveHoursPerDay) - see ShortLeaveRequestService.CreateAsync.
         public decimal ShortLeaveHoursPerDay { get; set; } = 8.0m;
 
+        // =====================================================
+        // SALARY PROCESSING (attendance-based proration) - additive only,
+        // defaults match the company's most common convention (fixed
+        // Working Days basis, 26 days/month) so no already-shipped policy
+        // row changes behavior unless HR explicitly opts in via the
+        // Attendance Policy CRUD screen. See
+        // Application/Services/PayrollService/SalaryCalculationService.cs.
+        // =====================================================
+
+        public SalaryProrationBasis SalaryProrationBasis { get; set; } = SalaryProrationBasis.WorkingDays;
+
+        // Only used when SalaryProrationBasis == WorkingDays - a fixed
+        // company-wide working-days-per-month figure (e.g. 26), NOT
+        // recalculated per calendar month. Ignored when basis is
+        // CalendarDays (that basis always uses the actual days in the
+        // month instead).
+        public decimal FixedWorkingDaysPerMonth { get; set; } = 26m;
+
         [MaxLength(500)]
         public string? Remarks { get; set; }
 

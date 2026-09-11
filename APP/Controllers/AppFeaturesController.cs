@@ -110,5 +110,64 @@ namespace APP.Controllers
         }
 
         #endregion
+
+        #region Menu Bar Redesign - Favorites / Quick Access
+
+        // Called by the sidebar's JS on every page load (_LayoutMain.cshtml)
+        // to render the "Quick Access" section. JSON, not a view - this is
+        // an AJAX-only endpoint, reachable from any page regardless of
+        // which controller that page belongs to.
+        [HttpGet]
+        public async Task<IActionResult> GetMyFavorites()
+        {
+            if (string.IsNullOrEmpty(_userId))
+                return Json(new List<AppFeatureDto>());
+
+            try
+            {
+                var data = await _apiService
+                    .GetAsync<List<AppFeatureDto>>($"AppFeatures/favorites/user/{_userId}");
+                return Json(data ?? new List<AppFeatureDto>());
+            }
+            catch
+            {
+                return Json(new List<AppFeatureDto>());
+            }
+        }
+
+        // Star-icon toggle next to each menu item - one endpoint, current
+        // pinned state decides add vs remove so the frontend does not need
+        // to track which call to make.
+        [HttpPost]
+        public async Task<IActionResult> ToggleFavorite(string appFeatureId, bool pin)
+        {
+            if (string.IsNullOrEmpty(_userId) || string.IsNullOrEmpty(appFeatureId))
+                return Json(new { success = false, message = "Invalid request." });
+
+            try
+            {
+                if (pin)
+                {
+                    await _apiService.PostAsync<dynamic>("AppFeatures/favorites", new FavoriteMenuRequestDto
+                    {
+                        UserId = _userId,
+                        AppFeatureId = appFeatureId,
+                        TenantId = _tenantId
+                    });
+                }
+                else
+                {
+                    await _apiService.DeleteAsync($"AppFeatures/favorites/{_userId}/{appFeatureId}");
+                }
+
+                return Json(new { success = true });
+            }
+            catch
+            {
+                return Json(new { success = false, message = "Could not update Quick Access. Please try again." });
+            }
+        }
+
+        #endregion
     }
 }

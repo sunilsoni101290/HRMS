@@ -396,5 +396,95 @@ namespace Application.Services.Masters
                 return new List<AppFeatureDto>();
             }
         }
+
+        // ======================================================
+        // MENU BAR REDESIGN - Favorites / Quick Access
+        // ======================================================
+
+        public async Task<List<AppFeatureDto>> GetFavoritesAsync(string userId)
+        {
+            if (string.IsNullOrEmpty(userId))
+                return new List<AppFeatureDto>();
+
+            try
+            {
+                var pinnedFeatureIds = await _context.UserFavoriteMenus
+                    .AsNoTracking()
+                    .Where(f => f.UserId == userId && !f.IsDeleted)
+                    .OrderBy(f => f.DisplayOrder)
+                    .Select(f => f.AppFeatureId)
+                    .ToListAsync();
+
+                if (pinnedFeatureIds.Count == 0)
+                    return new List<AppFeatureDto>();
+
+                // Intersect against the role/permission-filtered menu (not
+                // a raw AppFeatures lookup) - a feature pinned before a
+                // permission was revoked must not still show up here.
+                var allowedMenu = await GetMenuByUserAsync(userId);
+                var allowedById = allowedMenu.ToDictionary(f => f.Id, f => f);
+
+                return pinnedFeatureIds
+                    .Where(id => allowedById.ContainsKey(id))
+                    .Select(id => allowedById[id])
+                    .ToList();
+            }
+            catch (Exception)
+            {
+                return new List<AppFeatureDto>();
+            }
+        }
+
+        public async Task<bool> AddFavoriteAsync(string userId, string appFeatureId, string tenantId)
+        {
+            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(appFeatureId))
+                return false;
+
+            var existing = await _context.UserFavoriteMenus
+                .FirstOrDefaultAsync(f => f.UserId == userId && f.AppFeatureId == appFeatureId && !f.IsDeleted);
+
+            // Idempotent - already pinned is success, not a duplicate-key error.
+            if (existing != null)
+                return true;
+
+            var maxOrder = await _context.UserFavoriteMenus
+                .Where(f => f.UserId == userId && !f.IsDeleted)
+                .Select(f => (int?)f.DisplayOrder)
+                .MaxAsync() ?? 0;
+
+            var favorite = new UserFavoriteMenu
+            {
+                Id = IDManager.GetNewId(new UserFavoriteMenu()),
+                TenantId = tenantId,
+                UserId = userId,
+                AppFeatureId = appFeatureId,
+                DisplayOrder = maxOrder + 1,
+                CreatedBy = userId
+            };
+
+            await _context.UserFavoriteMenus.AddAsync(favorite);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> RemoveFavoriteAsync(string userId, string appFeatureId)
+        {
+            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(appFeatureId))
+                return false;
+
+            var existing = await _context.UserFavoriteMenus
+                .FirstOrDefaultAsync(f => f.UserId == userId && f.AppFeatureId == appFeatureId && !f.IsDeleted);
+
+            // Already not pinned - idempotent success, same reasoning as AddFavoriteAsync.
+            if (existing == null)
+                return true;
+
+            existing.IsDeleted = true;
+            existing.ModifiedOn = DateTime.UtcNow;
+            existing.ModifiedBy = userId;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }

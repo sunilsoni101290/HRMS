@@ -1,0 +1,181 @@
+@model IEnumerable<SalaryTemplateListDto>
+
+@{
+    ViewData["Title"] = "Salary Structures";
+}
+
+<div class="panel panel-flat">
+
+    <div class="panel-heading">
+        <h5 class="panel-title">
+            <i class="icon-list-numbered position-left"></i> Salary Structures
+        </h5>
+        <div class="heading-elements">
+            <a asp-action="Create" class="btn bg-primary">
+                <i class="icon-plus22"></i> Add Structure
+            </a>
+        </div>
+    </div>
+
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-4">
+                <input type="text" id="searchInput" class="form-control" placeholder="Search structure name..." />
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-striped">
+            <thead>
+                <tr>
+                    <th width="60">#</th>
+                    <th>Structure Name</th>
+                    <th class="text-right">Gross Salary</th>
+                    <th class="text-center">Components</th>
+                    <th class="text-center">Employees</th>
+                    <th>Status</th>
+                    <th width="200">Action</th>
+                </tr>
+            </thead>
+            <tbody id="dataTable">
+                @{ int sr = 1; }
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@sr</td>
+                            <td>
+                                <strong>@item.Name</strong>
+                                @if (!string.IsNullOrEmpty(item.Description))
+                                {
+                                    <br /><small class="text-muted">@item.Description</small>
+                                }
+                            </td>
+                            <td class="text-right">₹ @item.GrossSalary.ToString("N2")</td>
+                            <td class="text-center"><span class="label bg-info">@item.ComponentCount</span></td>
+                            <td class="text-center">
+                                @if (item.EmployeeCount > 0)
+                                {
+                                    <a asp-controller="SalaryStructure" asp-action="Index" class="label bg-primary" title="View assigned employees">@item.EmployeeCount</a>
+                                }
+                                else
+                                {
+                                    <span class="label bg-grey">0</span>
+                                }
+                            </td>
+                            <td>
+                                <span class="label @(item.IsActive ? "bg-success" : "bg-grey")">@(item.IsActive ? "Active" : "Inactive")</span>
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-default btn-icon" title="View"><i class="icon-eye"></i></a>
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary btn-icon" title="Edit"><i class="icon-pencil7"></i></a>
+                                    @if (item.IsActive)
+                                    {
+                                        <a asp-action="Assign" asp-route-templateId="@item.Id" class="btn bg-success btn-icon" title="Assign to Employees"><i class="icon-user-plus"></i></a>
+                                    }
+                                    <button type="button" class="btn btn-default btn-icon dropdown-toggle" data-toggle="dropdown" title="More">
+                                        <i class="icon-menu9"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-right">
+                                        <li>
+                                            <form asp-action="ToggleActive" asp-route-id="@item.Id" method="post">
+                                                <button type="submit" class="btn-link" style="border:0;background:none;padding:0;width:100%;text-align:left;">
+                                                    <i class="@(item.IsActive ? "icon-blocked" : "icon-checkmark3")"></i>
+                                                    @(item.IsActive ? "Deactivate" : "Activate")
+                                                </button>
+                                            </form>
+                                        </li>
+                                        <li>
+                                            <a asp-action="Delete" asp-route-id="@item.Id"
+                                               onclick="return confirmDelete(@item.EmployeeCount);">
+                                                <i class="icon-trash text-danger"></i> Delete
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        sr++;
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7" class="text-center text-muted" style="padding:30px;">
+                            <i class="icon-list-numbered" style="font-size:32px;"></i><br />
+                            No salary structures found. Click "Add Structure" to create one.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    @if (TempData["Info"] != null)
+    {
+        <script>$(function(){ swal({ title:"Applied with Warnings", text:"@TempData["Info"]", type:"warning" }); });</script>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <script>$(function(){ swal({ title:"Error", text:"@TempData["Error"]", type:"error" }); });</script>
+    }
+    @if (TempData["AssignResult"] != null)
+    {
+        <script>
+            $(function () {
+                var result = @Html.Raw(TempData["AssignResult"]);
+                if (result && result.SkippedCount > 0) {
+                    var skipped = (result.Results || []).filter(function (r) { return !r.Success; });
+                    var lines = skipped.map(function (r) { return "• " + (r.EmployeeName || r.EmployeeId) + ": " + r.Message; });
+                    if (lines.length > 0) {
+                        setTimeout(function () {
+                            swal({ title: "Skipped Employees", text: lines.join("\n"), type: "info" });
+                        }, 600);
+                    }
+                }
+            });
+        </script>
+    }
+    <script>
+        $(function () {
+            $("#searchInput").on("keyup", function () {
+                var value = $(this).val().toLowerCase();
+                $("#dataTable tr").filter(function () {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+                });
+            });
+        });
+
+        function confirmDelete(employeeCount) {
+            var count = parseInt(employeeCount, 10) || 0;
+
+            if (count > 0) {
+                swal({
+                    title: "Cannot Delete",
+                    text: "This salary structure is applied to " + count + " employee(s). Deactivate it instead, or contact an administrator.",
+                    type: "warning"
+                });
+                return false;
+            }
+
+            return confirm("Delete this salary structure? This cannot be undone.");
+        }
+    </script>
+    <style>
+        .table > thead > tr > th { font-weight: 600; }
+        .table > tbody > tr > td { vertical-align: middle; }
+        .label { font-size: 11px; }
+        .btn-icon { width: 34px; }
+        .dropdown-menu li > a, .dropdown-menu li > form button { padding: 6px 15px; display: block; font-size: 13px; }
+        .dropdown-menu li > form { margin: 0; }
+    </style>
+}

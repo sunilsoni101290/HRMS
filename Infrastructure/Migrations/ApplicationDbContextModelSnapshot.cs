@@ -1181,6 +1181,9 @@ namespace Infrastructure.Migrations
                     b.Property<DateTime>("EffectiveFrom")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal>("FixedWorkingDaysPerMonth")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -1216,6 +1219,9 @@ namespace Infrastructure.Migrations
                     b.Property<string>("Remarks")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("SalaryProrationBasis")
+                        .HasColumnType("int");
 
                     b.Property<decimal>("ShortLeaveHoursPerDay")
                         .HasColumnType("decimal(18,2)");
@@ -6033,6 +6039,12 @@ namespace Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<string>("LastRecalculatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("LastRecalculatedOn")
+                        .HasColumnType("datetime2");
+
                     b.Property<decimal?>("LeaveDays")
                         .HasColumnType("decimal(18,2)");
 
@@ -6045,8 +6057,20 @@ namespace Infrastructure.Migrations
                     b.Property<decimal>("NetSalary")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<decimal?>("PaidLeaveDays")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("PayableDays")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<decimal?>("PresentDays")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("ProrationBasisUsed")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RecalculatedCount")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("SalaryDate")
                         .HasColumnType("datetime2");
@@ -6073,11 +6097,79 @@ namespace Infrastructure.Migrations
                     b.Property<decimal?>("TotalWorkingDays")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<decimal?>("UnpaidLeaveDays")
+                        .HasColumnType("decimal(18,2)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("EmployeeId", "SalaryMonth");
 
                     b.ToTable("Payrolls");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PayrollAuditLog", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("NewNetSalary")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("NewPayableDays")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("OldNetSalary")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("OldPayableDays")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("PayrollId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("PerformedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("PerformedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("TenantId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PayrollId");
+
+                    b.ToTable("PayrollAuditLogs");
                 });
 
             modelBuilder.Entity("Domain.Entities.PayrollDetail", b =>
@@ -6922,14 +7014,115 @@ namespace Infrastructure.Migrations
                     b.Property<DateTime?>("ModifiedOn")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("SourceTemplateId")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("TenantId")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("SourceTemplateId");
+
                     b.HasIndex("EmployeeId", "EffectiveFrom");
 
                     b.ToTable("SalaryStructures");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SalaryTemplate", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("EffectiveFrom")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("TenantId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name");
+
+                    b.ToTable("SalaryTemplates");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SalaryTemplateDetail", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("CalculationType")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("SalaryComponentId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("SalaryTemplateId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("TenantId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SalaryComponentId");
+
+                    b.HasIndex("SalaryTemplateId");
+
+                    b.ToTable("SalaryTemplateDetails");
                 });
 
             modelBuilder.Entity("Domain.Entities.SequenceMaster", b =>
@@ -7742,6 +7935,58 @@ namespace Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("Domain.Entities.UserFavoriteMenu", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("AppFeatureId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TenantId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AppFeatureId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "AppFeatureId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_UserFavoriteMenus_UserId_AppFeatureId")
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("UserFavoriteMenus");
                 });
 
             modelBuilder.Entity("Domain.Entities.UserRole", b =>
@@ -9245,6 +9490,17 @@ namespace Infrastructure.Migrations
                     b.Navigation("Employee");
                 });
 
+            modelBuilder.Entity("Domain.Entities.PayrollAuditLog", b =>
+                {
+                    b.HasOne("Domain.Entities.Payroll", "Payroll")
+                        .WithMany()
+                        .HasForeignKey("PayrollId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Payroll");
+                });
+
             modelBuilder.Entity("Domain.Entities.PayrollDetail", b =>
                 {
                     b.HasOne("Domain.Entities.Payroll", "Payroll")
@@ -9422,7 +9678,33 @@ namespace Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Domain.Entities.SalaryTemplate", "SourceTemplate")
+                        .WithMany()
+                        .HasForeignKey("SourceTemplateId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Employee");
+
+                    b.Navigation("SourceTemplate");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SalaryTemplateDetail", b =>
+                {
+                    b.HasOne("Domain.Entities.SalaryComponent", "SalaryComponent")
+                        .WithMany()
+                        .HasForeignKey("SalaryComponentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.SalaryTemplate", "SalaryTemplate")
+                        .WithMany("Details")
+                        .HasForeignKey("SalaryTemplateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SalaryComponent");
+
+                    b.Navigation("SalaryTemplate");
                 });
 
             modelBuilder.Entity("Domain.Entities.Shift", b =>
@@ -9595,6 +9877,25 @@ namespace Infrastructure.Migrations
                     b.Navigation("Employee");
 
                     b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("Domain.Entities.UserFavoriteMenu", b =>
+                {
+                    b.HasOne("Domain.Entities.AppFeature", "AppFeature")
+                        .WithMany()
+                        .HasForeignKey("AppFeatureId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AppFeature");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Domain.Entities.UserRole", b =>
@@ -9778,6 +10079,11 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("Domain.Entities.SalaryStructure", b =>
                 {
                     b.Navigation("SalaryDetails");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SalaryTemplate", b =>
+                {
+                    b.Navigation("Details");
                 });
 
             modelBuilder.Entity("Domain.Entities.State", b =>
