@@ -105,4 +105,18 @@ namespace APP.Models.DTOs
 
     }
 
+    // ==================================================
+    // MENU BAR REDESIGN - Favorites / Quick Access
+    // ==================================================
+    public class FavoriteMenuRequestDto
+    {
+        [Required]
+        public string UserId { get; set; }
+
+        [Required]
+        public string AppFeatureId { get; set; }
+
+        public string? TenantId { get; set; }
+    }
+
 }

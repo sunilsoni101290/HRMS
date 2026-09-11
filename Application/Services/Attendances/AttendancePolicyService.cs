@@ -114,6 +114,8 @@ namespace Application.Services.Attendances
                 MinimumAttendancePercentForFullSalary = dto.MinimumAttendancePercentForFullSalary,
                 CompOffEligibleExtraHours = dto.CompOffEligibleExtraHours,
                 ShortLeaveHoursPerDay = dto.ShortLeaveHoursPerDay,
+                SalaryProrationBasis = (SalaryProrationBasis)dto.SalaryProrationBasis,
+                FixedWorkingDaysPerMonth = dto.FixedWorkingDaysPerMonth,
                 Remarks = dto.Remarks,
 
                 TenantId = tenantId,
@@ -156,6 +158,8 @@ namespace Application.Services.Attendances
             entity.MinimumAttendancePercentForFullSalary = dto.MinimumAttendancePercentForFullSalary;
             entity.CompOffEligibleExtraHours = dto.CompOffEligibleExtraHours;
             entity.ShortLeaveHoursPerDay = dto.ShortLeaveHoursPerDay;
+            entity.SalaryProrationBasis = (SalaryProrationBasis)dto.SalaryProrationBasis;
+            entity.FixedWorkingDaysPerMonth = dto.FixedWorkingDaysPerMonth;
             entity.Remarks = dto.Remarks;
 
             entity.ModifiedOn = DateTime.UtcNow;
@@ -230,6 +234,12 @@ namespace Application.Services.Attendances
             if (!Enum.IsDefined(typeof(LateMarkPenaltyType), dto.LateMarkPenaltyType))
                 throw new Exception("Invalid Late Mark Penalty Type.");
 
+            if (!Enum.IsDefined(typeof(SalaryProrationBasis), dto.SalaryProrationBasis))
+                throw new Exception("Invalid Salary Proration Basis.");
+
+            if (dto.SalaryProrationBasis == (int)SalaryProrationBasis.WorkingDays && dto.FixedWorkingDaysPerMonth <= 0)
+                throw new Exception("Fixed Working Days / Month must be greater than zero when the Salary Proration Basis is Working Days.");
+
             // Guard against two policies with the exact same
             // CompanyId + EffectiveFrom (would make GetActiveForTenantAsync's
             // "most recent EffectiveFrom" tie-break ambiguous).
@@ -265,6 +275,9 @@ namespace Application.Services.Attendances
                 MinimumAttendancePercentForFullSalary = entity.MinimumAttendancePercentForFullSalary,
                 CompOffEligibleExtraHours = entity.CompOffEligibleExtraHours,
                 ShortLeaveHoursPerDay = entity.ShortLeaveHoursPerDay,
+                SalaryProrationBasis = (int)entity.SalaryProrationBasis,
+                SalaryProrationBasisName = entity.SalaryProrationBasis.ToString(),
+                FixedWorkingDaysPerMonth = entity.FixedWorkingDaysPerMonth,
                 Remarks = entity.Remarks,
 
                 TenantId = entity.TenantId,

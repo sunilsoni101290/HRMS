@@ -1,36 +1,33 @@
 @model PayrollGenerateDto
 
 @{
-    ViewData["Title"] = "Generate Payroll";
+    ViewData["Title"] = "Process Salary";
 }
 
-<form asp-action="Generate" asp-controller="Payroll" method="post">
+<div class="panel panel-flat">
 
-    <input asp-for="CreatedBy" type="hidden" />
-    <input asp-for="TenantId" type="hidden" />
+    <div class="panel-heading">
+        <h5 class="panel-title"><i class="icon-gear position-left"></i> Process Salary</h5>
+        <div class="heading-elements">
+            <a asp-action="Index" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
+        </div>
+    </div>
 
-    <div class="panel panel-flat">
-
-        <div class="panel-heading">
-            <h5 class="panel-title"><i class="icon-gear position-left"></i> Generate Payroll</h5>
-            <div class="heading-elements">
-                <a asp-action="Index" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
-            </div>
+    <div class="panel-body">
+        <div class="alert alert-info">
+            <i class="icon-info22"></i>
+            Per Day Salary = Monthly Salary &divide; Total Days (Calendar or Working, per each employee's company Attendance Policy) &times; Payable Days (Present + Paid Leave).
+            Employees who already have a payroll for the selected month are shown but cannot be re-processed here - use <strong>Recalculate</strong> on their existing payroll instead.
         </div>
 
-        <div class="panel-body">
-            <div class="alert alert-info">
-                <i class="icon-info22"></i>
-                Payroll is generated from each employee's latest salary structure.
-                Earnings are prorated by attendance (present days / working days) when the option below is enabled.
-                Existing records for the same month are skipped.
-            </div>
-
+        <!-- Step 1: Select Month -->
+        <fieldset>
+            <legend class="text-semibold"><span class="label bg-primary">1</span> Select Month</legend>
             <div class="row">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <div class="form-group">
-                        <label asp-for="SalaryYear"></label>
-                        <select asp-for="SalaryYear" class="form-control">
+                        <label>Year</label>
+                        <select id="salaryYear" class="form-control">
                             @for (int y = DateTime.UtcNow.Year; y >= DateTime.UtcNow.Year - 5; y--)
                             {
                                 <option value="@y">@y</option>
@@ -38,55 +35,259 @@
                         </select>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <div class="form-group">
-                        <label asp-for="SalaryMonth"></label>
-                        <select asp-for="SalaryMonth" class="form-control">
+                        <label>Month</label>
+                        <select id="salaryMonth" class="form-control">
                             @for (int m = 1; m <= 12; m++)
                             {
                                 var name = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m);
-                                <option value="@m">@name</option>
+                                if (m == DateTime.UtcNow.Month)
+                                {
+                                    <option value="@m" selected>@name</option>
+                                }
+                                else
+                                {
+                                    <option value="@m">@name</option>
+                                }
                             }
                         </select>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-3">
                     <div class="form-group">
-                        <label asp-for="EmployeeId"></label>
-                        <select asp-for="EmployeeId" asp-items="ViewBag.EmployeeList" class="form-control">
-                            <option value="">All Employees</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label asp-for="CompanyId"></label>
-                        <select asp-for="CompanyId" asp-items="ViewBag.CompanyList" class="form-control">
+                        <label>Company</label>
+                        <select id="companyId" class="form-control" asp-items="ViewBag.CompanyList">
                             <option value="">All Companies</option>
                         </select>
                     </div>
                 </div>
-                <div class="col-md-6">
-                    <div class="form-group" style="margin-top:28px;">
-                        <label class="checkbox-inline">
-                            <input asp-for="Prorated" type="checkbox" /> Prorate earnings by attendance
-                        </label>
+                <div class="col-md-3">
+                    <div class="form-group" style="margin-top:24px;">
+                        <button type="button" id="loadAttendanceBtn" class="btn bg-primary">
+                            <i class="icon-download4"></i> Load Attendance
+                        </button>
                     </div>
                 </div>
             </div>
-        </div>
+        </fieldset>
 
-        <div class="panel-footer text-right">
-            <button type="submit" class="btn bg-primary">
-                <i class="icon-cog3"></i> Generate
-            </button>
-        </div>
+        <!-- Step 2: Review -->
+        <fieldset id="reviewSection" style="display:none;">
+            <legend class="text-semibold">
+                <span class="label bg-primary">2</span> Review
+                <span class="pull-right">
+                    <span class="label bg-info" id="selectedSummary" style="font-size:13px;padding:6px 10px;">Selected: 0</span>
+                </span>
+            </legend>
+
+            <div id="reviewLoading" class="text-center text-muted" style="padding:20px; display:none;">
+                <i class="icon-spinner2 spinner"></i> Loading attendance and calculating payable days...
+            </div>
+
+            <div id="reviewEmpty" class="text-center text-muted" style="padding:30px; display:none;">
+                <i class="icon-cash3" style="font-size:32px;"></i><br />
+                No employees with a salary structure were found for this period.
+            </div>
+
+            <div class="table-responsive" id="reviewTableWrap" style="display:none;">
+                <table class="table table-hover table-striped table-condensed">
+                    <thead>
+                        <tr>
+                            <th width="34"><input type="checkbox" id="selectAllEmp" /></th>
+                            <th>Employee</th>
+                            <th class="text-right">Monthly Salary</th>
+                            <th class="text-center">Basis</th>
+                            <th class="text-center">Total Days</th>
+                            <th class="text-center">Present</th>
+                            <th class="text-center">Paid Leave</th>
+                            <th class="text-center">Payable Days</th>
+                            <th class="text-right">Gross Salary</th>
+                            <th class="text-right">Deductions</th>
+                            <th class="text-right">Net Salary</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reviewRows"></tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="8" class="text-right">Totals (selected)</th>
+                            <th class="text-right" id="totalGross">0.00</th>
+                            <th class="text-right" id="totalDeductions">0.00</th>
+                            <th class="text-right" id="totalNet">0.00</th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </fieldset>
     </div>
+
+    <!-- Step 3: Process -->
+    <div class="panel-footer text-right" id="processFooter" style="display:none;">
+        <button type="button" class="btn bg-success" id="processSalaryBtn">
+            <i class="icon-checkmark3"></i> Process Salary
+        </button>
+    </div>
+</div>
+
+<form id="processForm" asp-action="ProcessSalary" method="post" style="display:none;">
+    <input type="hidden" name="SalaryYear" id="postSalaryYear" />
+    <input type="hidden" name="SalaryMonth" id="postSalaryMonth" />
+    <div id="postEmployeeIds"></div>
 </form>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    @if (TempData["Info"] != null)
+    {
+        <script>$(function(){ swal({ title:"Some employees were skipped", text:"@TempData["Info"]", type:"info" }); });</script>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <script>$(function(){ swal({ title:"Error", text:"@TempData["Error"]", type:"error" }); });</script>
+    }
+    <script>
+        $(function () {
+            var currentData = null;
+
+            function fmt(n) { return (n || 0).toFixed(2); }
+            function fmtDays(n) { return (n === null || n === undefined) ? "-" : (Math.round(n * 10) / 10).toString(); }
+
+            function rowEligible(emp) {
+                return emp.canProcess && !emp.alreadyProcessed;
+            }
+
+            function renderRows(data) {
+                var rows = "";
+
+                $.each(data.employees || [], function (i, emp) {
+                    var eligible = rowEligible(emp);
+                    var checkboxHtml = eligible
+                        ? '<input type="checkbox" class="emp-check" value="' + emp.employeeId + '" data-gross="' + emp.grossSalary + '" data-ded="' + emp.totalDeductions + '" data-net="' + emp.netSalary + '" checked />'
+                        : '<input type="checkbox" disabled title="Cannot be processed" />';
+
+                    var notes = "";
+                    if (!emp.canProcess) {
+                        notes += '<span class="label bg-danger">' + emp.blockReason + '</span> ';
+                    }
+                    if (emp.alreadyProcessed) {
+                        notes += '<span class="label bg-grey">Already ' + emp.existingPayrollStatus + '</span> ';
+                    }
+                    $.each(emp.warnings || [], function (j, w) {
+                        notes += '<br /><small class="text-muted"><i class="icon-info22"></i> ' + w + '</small>';
+                    });
+
+                    rows += '<tr class="' + (eligible ? "" : "text-muted") + '">' +
+                        '<td>' + checkboxHtml + '</td>' +
+                        '<td><strong>' + (emp.employeeName || emp.employeeId) + '</strong><br /><small class="text-muted">' + (emp.employeeCode || "") + '</small></td>' +
+                        '<td class="text-right">' + fmt(emp.monthlySalary) + '</td>' +
+                        '<td class="text-center">' + (emp.prorationBasisUsedName || "-") + '</td>' +
+                        '<td class="text-center">' + fmtDays(emp.totalDaysInPeriod) + '</td>' +
+                        '<td class="text-center">' + fmtDays(emp.presentDays) + '</td>' +
+                        '<td class="text-center">' + fmtDays(emp.paidLeaveDays) + '</td>' +
+                        '<td class="text-center"><strong>' + fmtDays(emp.payableDays) + '</strong></td>' +
+                        '<td class="text-right">' + fmt(emp.grossSalary) + '</td>' +
+                        '<td class="text-right">' + fmt(emp.totalDeductions) + '</td>' +
+                        '<td class="text-right"><strong>' + fmt(emp.netSalary) + '</strong></td>' +
+                        '<td>' + notes + '</td>' +
+                        '</tr>';
+                });
+
+                $("#reviewRows").html(rows);
+            }
+
+            function updateSummary() {
+                var $checked = $(".emp-check:checked");
+                var gross = 0, ded = 0, net = 0;
+
+                $checked.each(function () {
+                    gross += parseFloat($(this).data("gross")) || 0;
+                    ded += parseFloat($(this).data("ded")) || 0;
+                    net += parseFloat($(this).data("net")) || 0;
+                });
+
+                $("#selectedSummary").text("Selected: " + $checked.length);
+                $("#totalGross").text(fmt(gross));
+                $("#totalDeductions").text(fmt(ded));
+                $("#totalNet").text(fmt(net));
+                $("#processFooter").toggle($checked.length > 0);
+            }
+
+            $("#loadAttendanceBtn").on("click", function () {
+                var year = $("#salaryYear").val();
+                var month = $("#salaryMonth").val();
+                var companyId = $("#companyId").val();
+
+                $("#reviewSection").show();
+                $("#reviewTableWrap").hide();
+                $("#reviewEmpty").hide();
+                $("#processFooter").hide();
+                $("#reviewLoading").show();
+
+                $.get("@Url.Action("LoadPreview", "Payroll")", { salaryYear: year, salaryMonth: month, companyId: companyId })
+                    .done(function (data) {
+                        $("#reviewLoading").hide();
+
+                        if (data && data.error) {
+                            swal({ title: "Error", text: data.error, type: "error" });
+                            return;
+                        }
+
+                        currentData = data;
+
+                        if (!data || !data.employees || data.employees.length === 0) {
+                            $("#reviewEmpty").show();
+                            return;
+                        }
+
+                        renderRows(data);
+                        $("#reviewTableWrap").show();
+                        $("#selectAllEmp").prop("checked", true);
+                        updateSummary();
+                    })
+                    .fail(function () {
+                        $("#reviewLoading").hide();
+                        swal({ title: "Error", text: "Could not load attendance for this period.", type: "error" });
+                    });
+            });
+
+            $("#selectAllEmp").on("change", function () {
+                $(".emp-check:not(:disabled)").prop("checked", $(this).is(":checked"));
+                updateSummary();
+            });
+
+            $(document).on("change", ".emp-check", updateSummary);
+
+            $("#processSalaryBtn").on("click", function () {
+                var $checked = $(".emp-check:checked");
+
+                if ($checked.length === 0) return;
+
+                var proceed = confirm(
+                    "Salary will be processed for " + $checked.length + " employee(s) for " +
+                    $("#salaryMonth option:selected").text() + " " + $("#salaryYear").val() + ". Continue?"
+                );
+
+                if (!proceed) return;
+
+                $("#postSalaryYear").val($("#salaryYear").val());
+                $("#postSalaryMonth").val($("#salaryMonth").val());
+
+                $("#postEmployeeIds").empty();
+                $checked.each(function (i) {
+                    $("<input>").attr({
+                        type: "hidden",
+                        name: "EmployeeIds[" + i + "]",
+                        value: $(this).val()
+                    }).appendTo("#postEmployeeIds");
+                });
+
+                $("#processForm").submit();
+            });
+        });
+    </script>
 }

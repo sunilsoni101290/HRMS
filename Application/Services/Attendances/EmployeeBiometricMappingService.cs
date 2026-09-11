@@ -2,6 +2,7 @@ using Application.DTOs.Attendances;
 using Application.Interfaces.Attendances;
 using Application.Interfaces.ErrorLog;
 using Domain.Entities;
+using Domain.Helper;
 using Infrastructure;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -70,9 +71,25 @@ namespace Application.Services.Attendances
                 if (employee == null)
                     throw new InvalidOperationException("Employee not found.");
 
-                var alreadyMapped = await _db.EmployeeBiometricMappings
-                    .AnyAsync(x =>
-                        x.BiometricEmployeeCode == dto.BiometricEmployeeCode);
+                // ROOT-CAUSE FIX: the uniqueness check (and the mapping
+                // value itself, below) is now normalized the same way as
+                // every lookup site (BiometricEmployeeCodeNormalizer) - a
+                // plain "==" comparison here previously let two mappings
+                // like "260123" and "260123 " both be saved as if they were
+                // different codes, which is exactly backwards from the real
+                // bug (device-vs-mapping mismatch), but still worth closing
+                // so admin data entry can't reintroduce whitespace/casing
+                // drift going forward. Small table - safe to compare
+                // in-memory rather than trying to get SQL Server's default
+                // collation to do this translation-safely.
+                var normalizedNewCode = BiometricEmployeeCodeNormalizer.Normalize(dto.BiometricEmployeeCode);
+
+                var existingCodes = await _db.EmployeeBiometricMappings
+                    .Select(x => x.BiometricEmployeeCode)
+                    .ToListAsync();
+
+                var alreadyMapped = existingCodes.Any(c =>
+                    BiometricEmployeeCodeNormalizer.Normalize(c) == normalizedNewCode);
 
                 if (alreadyMapped)
                 {
@@ -86,7 +103,12 @@ namespace Application.Services.Attendances
                 {
                     Id = IDManager.GetNewId(new EmployeeBiometricMapping()),
                     EmployeeId = dto.EmployeeId,
-                    BiometricEmployeeCode = dto.BiometricEmployeeCode,
+                    // Stored trimmed (whitespace noise removed) but with the
+                    // admin's original casing preserved for readability -
+                    // every actual match against a device's raw UserId goes
+                    // through BiometricEmployeeCodeNormalizer at lookup
+                    // time, so casing here is cosmetic only, never load-bearing.
+                    BiometricEmployeeCode = dto.BiometricEmployeeCode?.Trim() ?? "",
                     CardNumber = dto.CardNumber,
                     IsActive = dto.IsActive,
                     TenantId = employee.TenantId,
@@ -132,17 +154,22 @@ namespace Application.Services.Attendances
             if (employee == null)
                 throw new InvalidOperationException("Employee not found.");
 
-            var codeTakenByAnother = await _db.EmployeeBiometricMappings
-                .AnyAsync(x =>
-                    x.Id != dto.Id &&
-                    x.BiometricEmployeeCode == dto.BiometricEmployeeCode);
+            var normalizedUpdatedCode = BiometricEmployeeCodeNormalizer.Normalize(dto.BiometricEmployeeCode);
+
+            var otherCodes = await _db.EmployeeBiometricMappings
+                .Where(x => x.Id != dto.Id)
+                .Select(x => x.BiometricEmployeeCode)
+                .ToListAsync();
+
+            var codeTakenByAnother = otherCodes.Any(c =>
+                BiometricEmployeeCodeNormalizer.Normalize(c) == normalizedUpdatedCode);
 
             if (codeTakenByAnother)
                 throw new InvalidOperationException(
                     $"Biometric code '{dto.BiometricEmployeeCode}' is already mapped to another employee.");
 
             entity.EmployeeId = dto.EmployeeId;
-            entity.BiometricEmployeeCode = dto.BiometricEmployeeCode;
+            entity.BiometricEmployeeCode = dto.BiometricEmployeeCode?.Trim() ?? "";
             entity.CardNumber = dto.CardNumber;
             entity.IsActive = dto.IsActive;
             entity.ModifiedOn = DateTime.UtcNow;

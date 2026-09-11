@@ -97,6 +97,27 @@ namespace APP.Controllers
             }
         }
 
+        // JSON status poll, backing the live "Total / Synced / Skipped /
+        // Failed" progress readout while a Sync Now / Historical Import
+        // run is in progress (see Index.cshtml's pollStatus()). Sync Now
+        // itself now returns almost immediately (the actual sync runs in
+        // the background - see API's EsslAttendanceController.SyncNow),
+        // so the browser polls this same status endpoint every couple of
+        // seconds instead of waiting on one long request.
+        [HttpGet]
+        public async Task<JsonResult> GetStatus()
+        {
+            try
+            {
+                var response = await _apiService.GetAsync<ApiResponse<EsslSyncSettingsDto>>("EsslAttendance/settings");
+                return Json(new { success = true, data = response?.Data });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = GetErrorMessage(ex.Message) });
+            }
+        }
+
         [HttpPost]
         public async Task<JsonResult> TestConnection([FromBody] EsslDatabaseConfigDto model)
         {
@@ -153,6 +174,31 @@ namespace APP.Controllers
                     message = response?.Message ?? "Unable to reach the ERP API.",
                     data = response?.Data
                 });
+            }
+            catch (ApiException ex)
+            {
+                return Json(new { success = false, message = GetErrorMessage(ex.ResponseContent) });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = GetErrorMessage(ex.Message) });
+            }
+        }
+
+        // Safe manual recovery for a tenant whose sync lock is genuinely
+        // stuck - see API's EsslAttendanceController.ResetStuckSync /
+        // IEsslAttendanceSyncService.ResetStuckSyncAsync's remarks. The UI
+        // only shows/enables this when the status poll's CanForceReset
+        // flag is true, but the real safety gate is server-side.
+        [HttpPost]
+        public async Task<JsonResult> ResetStuckSync()
+        {
+            try
+            {
+                var response = await _apiService.PostAsync<ApiResponse<object>>(
+                    "EsslAttendance/reset-stuck-sync", new { });
+
+                return Json(new { success = response?.Success ?? false, message = response?.Message ?? "Unable to reach the ERP API." });
             }
             catch (ApiException ex)
             {

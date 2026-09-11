@@ -75,6 +75,11 @@ namespace APP.Controllers
             return View(data ?? new List<PayrollListDto>());
         }
 
+        // Salary Processing: Select Month -> Load Attendance -> Review ->
+        // Process Salary. This single page replaced the old "Generate"
+        // form (which posted straight to generation with no preview) - see
+        // LoadPreview (AJAX, populates the Review table) and ProcessSalary
+        // (POST, writes exactly the rows the user confirmed) below.
         [HttpGet]
         public async Task<IActionResult> Generate()
         {
@@ -85,30 +90,97 @@ namespace APP.Controllers
             return View(new PayrollGenerateDto());
         }
 
+        // AJAX: "Load Attendance" - runs SalaryCalculationService for every
+        // eligible employee (never writes anything) so the Review table can
+        // render Present/Paid Leave/Payable Days/Gross/Deductions/Net
+        // before anything is saved.
+        [HttpGet]
+        public async Task<IActionResult> LoadPreview(int salaryYear, int salaryMonth, string? companyId, string? branchId)
+        {
+            if (!_isAdmin)
+                return Json(new { error = "Not authorized." });
+
+            var url = $"payroll/preview?salaryYear={salaryYear}&salaryMonth={salaryMonth}&tenantId={_tenantId}";
+            if (!string.IsNullOrEmpty(companyId)) url += $"&companyId={companyId}";
+            if (!string.IsNullOrEmpty(branchId)) url += $"&branchId={branchId}";
+
+            try
+            {
+                var data = await _apiService.GetAsync<SalaryProcessingPreviewDto>(url);
+                return Json(data);
+            }
+            catch (ApiException apiEx)
+            {
+                return Json(new { error = GetErrorMessage(apiEx.ResponseContent) });
+            }
+        }
+
+        // "Process Salary" - the Review table posts back exactly the
+        // employee ids the user checked (never a blind re-filter).
         [HttpPost]
-        public async Task<IActionResult> Generate(PayrollGenerateDto dto)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ProcessSalary(SalaryProcessRequestDto dto)
         {
             if (!_isAdmin)
                 return RedirectToAction(nameof(MyPayslips));
 
-            if (dto != null)
+            if (dto == null || dto.EmployeeIds == null || !dto.EmployeeIds.Any())
             {
-                dto.TenantId = _tenantId;
-                dto.CreatedBy = _userId;
-
-                var result = await _apiService
-                    .PostAsync<PayrollGenerateResultDto>("payroll/generate", dto);
-
-                TempData["Success"] = result != null
-                    ? $"Generated {result.Generated}, skipped {result.Skipped}."
-                    : "Payroll generation completed.";
-
-                return RedirectToAction(nameof(Index),
-                    new { year = dto.SalaryYear, month = dto.SalaryMonth });
+                TempData["Error"] = "Please select at least one employee to process.";
+                return RedirectToAction(nameof(Generate));
             }
 
-            await LoadDropdowns();
-            return View(dto);
+            dto.TenantId = _tenantId;
+            dto.CreatedBy = _userId;
+
+            try
+            {
+                var result = await _apiService.PostAsync<PayrollGenerateResultDto>("payroll/process", dto);
+
+                TempData["Success"] = result != null
+                    ? $"Processed {result.Generated} payroll(s), skipped {result.Skipped}."
+                    : "Salary processing completed.";
+
+                if (result != null && result.Messages != null && result.Messages.Count > 1)
+                    TempData["Info"] = string.Join(" | ", result.Messages.Skip(1).Take(5));
+            }
+            catch (ApiException apiEx)
+            {
+                TempData["Error"] = GetErrorMessage(apiEx.ResponseContent);
+            }
+
+            return RedirectToAction(nameof(Index), new { year = dto.SalaryYear, month = dto.SalaryMonth });
+        }
+
+        // Re-runs Salary Processing for one already-generated payroll -
+        // Draft recalculates freely; Processed requires Remarks (enforced
+        // server-side too); Paid is refused. See
+        // PayrollBusinessService.RecalculateAsync's remarks.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Recalculate(string payrollId, string? remarks)
+        {
+            if (!_isAdmin)
+                return Forbid();
+
+            var dto = new SalaryRecalculateRequestDto
+            {
+                PayrollId = payrollId,
+                Remarks = remarks,
+                PerformedBy = _userId
+            };
+
+            try
+            {
+                await _apiService.PostAsync<dynamic>("payroll/recalculate", dto);
+                TempData["Success"] = "Payroll recalculated successfully.";
+            }
+            catch (ApiException apiEx)
+            {
+                TempData["Error"] = GetErrorMessage(apiEx.ResponseContent);
+            }
+
+            return RedirectToAction(nameof(Details), new { id = payrollId });
         }
 
         [HttpGet]
@@ -227,6 +299,23 @@ namespace APP.Controllers
         }
 
         #endregion
+
+        private string GetErrorMessage(string json)
+        {
+            try
+            {
+                var obj = Newtonsoft.Json.Linq.JObject.Parse(json);
+
+                if (obj["Message"] != null)
+                    return obj["Message"]!.ToString();
+
+                if (obj["Errors"] is Newtonsoft.Json.Linq.JArray errors && errors.Count > 0)
+                    return errors[0]?.ToString();
+            }
+            catch { }
+
+            return "Something went wrong.";
+        }
     }
 
     #endregion

@@ -23,11 +23,42 @@ namespace Application.Interfaces.Attendances
         /// tenant via EsslAttendanceSyncState.IsSyncRunning (requirement
         /// #12's "appropriate locking").
         /// </summary>
+        /// <summary>
+        /// lockAlreadyClaimed: pass true only when the caller has already
+        /// atomically claimed this tenant's sync lock itself via
+        /// ClaimSyncLockAsync (this is what the manual "Sync Now"/
+        /// "Historical Import"/"Retry Failed Sync" path does now, BEFORE
+        /// enqueueing the job - see EsslAttendanceController.SyncNow's
+        /// remarks) - in that case SyncAsync skips its own claim/stale-
+        /// check step entirely (claiming it a second time would otherwise
+        /// make SyncAsync see its own just-claimed lock and incorrectly
+        /// refuse to run). The automatic background cycle never pre-claims
+        /// and always leaves this false/default, so SyncAsync claims the
+        /// lock itself exactly as before for that path.
+        /// </summary>
         Task<EsslSyncResultDto> SyncAsync(
             EsslSyncRequestDto request,
             string tenantId,
             string triggeredBy,
-            CancellationToken ct = default);
+            CancellationToken ct = default,
+            bool lockAlreadyClaimed = false);
+
+        /// <summary>
+        /// Atomically claims this tenant's sync lock (same stale-lock
+        /// take-over rule SyncAsync's own internal claim uses) WITHOUT
+        /// running a sync - lets a caller (the SyncNow controller action)
+        /// guarantee the lock, and the EsslAttendanceSyncState row itself,
+        /// are already committed to the database before it responds to the
+        /// browser. This closes a real race: without it, a client that
+        /// starts polling GetStatus immediately after "Queued" comes back
+        /// could poll before the background consumer had even picked the
+        /// job off the queue, see IsSyncRunning still false (or, for a
+        /// tenant with no EsslAttendanceSyncState row yet, no row at all),
+        /// and wrongly conclude the sync had already finished - showing a
+        /// "Sync Complete" popup with blank/undefined counters while the
+        /// real sync was still running in the background.
+        /// </summary>
+        Task<(bool Success, string Message)> ClaimSyncLockAsync(string tenantId);
 
         /// <summary>Card 1 "Integration Status" - runtime/status fields only, never configuration.</summary>
         Task<EsslSyncSettingsDto> GetSettingsAsync(string tenantId);
@@ -56,5 +87,20 @@ namespace Application.Interfaces.Attendances
         Task<PagedResult<EsslSyncHistoryDto>> GetSyncHistoryAsync(EsslSyncHistoryFilterDto filter, string tenantId);
 
         Task<List<EsslUnmappedEmployeeDto>> GetUnmappedEmployeesAsync(string tenantId);
+
+        /// <summary>
+        /// Safe manual recovery for a tenant whose IsSyncRunning lock is
+        /// genuinely stuck (e.g. the process that held it crashed or was
+        /// killed, or an app restart happened mid-sync and, for some
+        /// reason, the automatic startup reconciliation in
+        /// EsslAttendanceSyncBackgroundService did not already clear it).
+        /// Only ever resets the lock when it has been held for at least
+        /// the same "stale lock" threshold SyncAsync's own automatic
+        /// take-over uses - a genuinely active sync (lock age below that
+        /// threshold) is left completely alone and this returns
+        /// Success = false instead, so this can never be used to
+        /// interrupt a real in-progress run.
+        /// </summary>
+        Task<(bool Success, string Message)> ResetStuckSyncAsync(string tenantId);
     }
 }

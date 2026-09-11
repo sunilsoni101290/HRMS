@@ -172,7 +172,9 @@ namespace Application.Services.Attendances
             using var command = new SqlCommand(
                 "SELECT t.name FROM sys.tables t " +
                 "INNER JOIN sys.schemas s ON t.schema_id = s.schema_id " +
-                "WHERE s.name = 'dbo' AND (t.name = 'DeviceLogs' OR t.name LIKE 'DeviceLogs[_]%')",
+                "WHERE s.name = 'dbo' AND (" +
+                "t.name = 'DeviceLogs' OR t.name = 'Device_Logs' OR " +
+                "t.name LIKE 'DeviceLogs[_]%' OR t.name LIKE 'Device[_]Logs[_]%')",
                 connection);
             command.CommandTimeout = 30;
 
@@ -195,18 +197,20 @@ namespace Application.Services.Attendances
 
             var result = new List<string>();
 
-            // The bare "DeviceLogs" table, if present, is always included
-            // regardless of the requested window - installations that never
-            // adopted monthly partitioning keep all history there, and even
-            // partitioned installations may still land the current,
-            // not-yet-archived month's rows there.
-            if (discovered.Contains(EsslDeviceLogTableName.BaseTableName))
-                result.Add(EsslDeviceLogTableName.BaseTableName);
-
+            // The bare device-log table, if present (whichever real-world
+            // spelling this installation uses - "DeviceLogs" or
+            // "Device_Logs"), is always included regardless of the
+            // requested window - installations that never adopted monthly
+            // partitioning keep all history there, and even partitioned
+            // installations may still land the current, not-yet-archived
+            // month's rows there.
             foreach (var name in discovered)
             {
-                if (name == EsslDeviceLogTableName.BaseTableName)
+                if (EsslDeviceLogTableName.IsBaseTableName(name))
+                {
+                    result.Add(name);
                     continue;
+                }
 
                 if (!EsslDeviceLogTableName.TryParseMonthlyTable(name, out var year, out var month))
                     continue;

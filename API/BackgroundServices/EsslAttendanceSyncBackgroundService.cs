@@ -38,19 +38,100 @@ namespace API.BackgroundServices
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly IConfiguration _configuration;
+        private readonly IEsslSyncJobQueue _jobQueue;
         private readonly ILogger<EsslAttendanceSyncBackgroundService> _logger;
 
         public EsslAttendanceSyncBackgroundService(
             IServiceScopeFactory scopeFactory,
             IConfiguration configuration,
+            IEsslSyncJobQueue jobQueue,
             ILogger<EsslAttendanceSyncBackgroundService> logger)
         {
             _scopeFactory = scopeFactory;
             _configuration = configuration;
+            _jobQueue = jobQueue;
             _logger = logger;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            // Recover any tenant left stuck "Running" by an app restart
+            // (requirement: "Recover stale Running jobs after application
+            // restart") BEFORE either loop below starts touching the
+            // table. This is a fresh process just starting up, so ANY
+            // row still showing IsSyncRunning=true at this exact moment is
+            // provably left over from a process that no longer exists -
+            // nothing legitimate could have set it since this instant -
+            // so it is always safe to clear, with no staleness/age check
+            // needed (unlike ResetStuckSyncAsync's manual UI reset, which
+            // DOES need one, since it can be clicked while a same-process
+            // sync is genuinely still running).
+            await ReconcileStaleLocksOnStartupAsync(stoppingToken);
+
+            // Two independent loops share this one host-managed service:
+            //   - PeriodicAutoSyncLoopAsync: the original automatic,
+            //     timer-driven incremental sync across every active tenant
+            //     (unchanged behavior).
+            //   - ConsumeManualJobsAsync: NEW - drains IEsslSyncJobQueue,
+            //     so a manual "Sync Now" / "Historical Import" / "Retry
+            //     Failed Sync" click also runs through this same
+            //     framework-managed BackgroundService rather than a
+            //     detached Task.Run started directly from the API
+            //     controller. Both loops call the exact same
+            //     IEsslAttendanceSyncService.SyncAsync core engine - the
+            //     only thing this changes is where a manual request is
+            //     actually executed, never the sync logic itself.
+            // Running them via Task.WhenAll means a fault in one does not
+            // silently stop the other (each already has its own top-level
+            // try/catch per iteration/item), and the host still shuts
+            // this whole service down cleanly on stoppingToken.
+            await Task.WhenAll(
+                PeriodicAutoSyncLoopAsync(stoppingToken),
+                ConsumeManualJobsAsync(stoppingToken));
+        }
+
+        /// <summary>
+        /// One-time startup sweep - see ExecuteAsync's remarks. Never
+        /// throws out of here; a failure to reconcile must not prevent the
+        /// host from starting the two real sync loops.
+        /// </summary>
+        private async Task ReconcileStaleLocksOnStartupAsync(CancellationToken stoppingToken)
+        {
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+                var stuckStates = await context.EsslAttendanceSyncStates
+                    .Where(x => x.IsSyncRunning)
+                    .ToListAsync(stoppingToken);
+
+                if (stuckStates.Count == 0)
+                    return;
+
+                var now = DateTime.Now;
+
+                foreach (var state in stuckStates)
+                {
+                    state.IsSyncRunning = false;
+                    state.LastSyncCompletedAt = now;
+                    state.LastSyncStatus = "Failed";
+                    state.LastError = "Sync was interrupted by an application restart and has been automatically reset.";
+                }
+
+                await context.SaveChangesAsync(stoppingToken);
+
+                _logger.LogWarning(
+                    "eSSL sync: reconciled {Count} tenant(s) left stuck in the Running state by a previous app restart: [{TenantIds}].",
+                    stuckStates.Count, string.Join(", ", stuckStates.Select(x => x.TenantId)));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "eSSL sync: failed to reconcile stale sync locks on startup.");
+            }
+        }
+
+        private async Task PeriodicAutoSyncLoopAsync(CancellationToken stoppingToken)
         {
             try
             {
@@ -88,6 +169,83 @@ namespace API.BackgroundServices
             }
         }
 
+        /// <summary>
+        /// Drains IEsslSyncJobQueue one job at a time (a fresh DI scope per
+        /// job, exactly like RunCycleAsync's own scope-per-cycle pattern) -
+        /// this is where a manual Sync Now / Historical Import / Retry
+        /// Failed Sync request actually executes. Sequential by design:
+        /// SyncAsync already serializes itself per tenant via
+        /// EsslAttendanceSyncState.IsSyncRunning, so processing the queue
+        /// one item at a time here adds no real throughput cost (two jobs
+        /// for the SAME tenant could never usefully run at once anyway)
+        /// while keeping this loop, and its error handling, simple.
+        /// </summary>
+        private async Task ConsumeManualJobsAsync(CancellationToken stoppingToken)
+        {
+            try
+            {
+                await foreach (var job in _jobQueue.ReadAllAsync(stoppingToken))
+                {
+                    try
+                    {
+                        using var scope = _scopeFactory.CreateScope();
+                        var syncService = scope.ServiceProvider.GetRequiredService<IEsslAttendanceSyncService>();
+                        var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+
+                        // Bounded, not truly unlimited: a per-job maximum
+                        // runtime (default 3 hours, configurable) linked to
+                        // the host's own stoppingToken. This is deliberately
+                        // NOT "stoppingToken directly" - a job already being
+                        // processed should run to a natural completion/
+                        // checkpoint rather than being cut off the instant a
+                        // host shutdown begins; it's also deliberately NOT
+                        // "CancellationToken.None" (unbounded forever) - if
+                        // SyncAsync is ever genuinely stuck on some blocking
+                        // I/O this fix's root-cause change did not
+                        // anticipate, this timeout is what actually forces
+                        // it to unwind through SyncAsync's now-guaranteed
+                        // finally block and release the tenant's lock,
+                        // rather than hanging indefinitely again.
+                        var maxDurationMinutes = configuration.GetValue<int?>("EsslDatabase:MaxSyncDurationMinutes") ?? 180;
+
+                        using var jobCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+                        jobCts.CancelAfter(TimeSpan.FromMinutes(maxDurationMinutes));
+
+                        // lockAlreadyClaimed: true - the controller's
+                        // SyncNow action already claimed this tenant's
+                        // lock synchronously (via ClaimSyncLockAsync)
+                        // before this job was even enqueued, so SyncAsync
+                        // must not try to claim it again here.
+                        var result = await syncService.SyncAsync(
+                            job.Request, job.TenantId, job.TriggeredBy, jobCts.Token, lockAlreadyClaimed: true);
+
+                        _logger.LogInformation(
+                            "eSSL manual sync job {JobId} (tenant {TenantId}, triggered by {TriggeredBy}) finished: " +
+                            "found {Found}, imported {Imported}, skipped {Skipped}, errors {Errors}, {Duration}s.",
+                            job.JobId, job.TenantId, job.TriggeredBy,
+                            result.RecordsFound, result.RecordsImported, result.RecordsSkipped,
+                            result.ErrorCount, result.DurationSeconds);
+                    }
+                    catch (Exception ex)
+                    {
+                        // SyncAsync already catches everything internally
+                        // and always returns a result rather than throwing
+                        // - this is only a backstop (e.g. DI resolution
+                        // itself failing) so one bad job can never take
+                        // this consumer loop down and stop every
+                        // subsequent queued job from ever running.
+                        _logger.LogError(ex,
+                            "eSSL manual sync job {JobId} (tenant {TenantId}) failed to run.",
+                            job.JobId, job.TenantId);
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Host is shutting down - ReadAllAsync ends cleanly.
+            }
+        }
+
         /// <summary>Runs one sync pass for every active tenant and returns how many minutes to wait before the next cycle (see class remarks).</summary>
         private async Task<int> RunCycleAsync(CancellationToken ct)
         {
@@ -95,6 +253,9 @@ namespace API.BackgroundServices
 
             var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var syncService = scope.ServiceProvider.GetRequiredService<IEsslAttendanceSyncService>();
+            var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+
+            var maxDurationMinutes = configuration.GetValue<int?>("EsslDatabase:MaxSyncDurationMinutes") ?? 180;
 
             var tenantIds = await context.Tenants
                 .AsNoTracking()
@@ -106,6 +267,13 @@ namespace API.BackgroundServices
             {
                 try
                 {
+                    // Same bounded-not-unlimited timeout as the manual job
+                    // path (see ConsumeManualJobsAsync's remarks) - one
+                    // tenant's automatic cycle can never hang the whole
+                    // periodic loop forever.
+                    using var tenantCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    tenantCts.CancelAfter(TimeSpan.FromMinutes(maxDurationMinutes));
+
                     // FromDate/ToDate both null = automatic incremental mode
                     // (resumes from EsslAttendanceSyncState per tenant).
                     // SyncAsync itself checks this tenant's own
@@ -116,7 +284,7 @@ namespace API.BackgroundServices
                         new EsslSyncRequestDto(),
                         tenantId,
                         "System",
-                        ct);
+                        tenantCts.Token);
 
                     if (result.Success && (result.RecordsImported > 0 || result.ErrorCount > 0))
                     {

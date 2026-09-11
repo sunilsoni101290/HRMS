@@ -28,6 +28,35 @@ namespace Application.DTOs.Attendances
         public int? LastProcessedDeviceLogId { get; set; }
 
         public DateTime? LastProcessedLogDate { get; set; }
+
+        // ------------------------------------------------------------
+        // Live progress - populated from EsslAttendanceSyncState, which
+        // EsslAttendanceSyncService now updates after every BATCH (not
+        // just once at the very end of a run). Polling this same
+        // GetSettingsAsync endpoint every couple of seconds while
+        // IsSyncRunning is true is what lets the UI show a live
+        // "Total / Synced / Skipped / Failed" progress readout for a
+        // large historical sync instead of one blocking request with no
+        // feedback until it finishes.
+        // ------------------------------------------------------------
+        public int RecordsRead { get; set; }
+
+        public int RecordsImported { get; set; }
+
+        public int RecordsSkipped { get; set; }
+
+        public int RecordsFailed { get; set; }
+
+        // ------------------------------------------------------------
+        // True only when IsSyncRunning is true AND the lock has been held
+        // for at least the same "stale lock" threshold SyncAsync itself
+        // uses to auto-take-over on the next Sync Now click (see
+        // EsslAttendanceSyncService.DefaultStaleLockMinutes). Drives the UI's
+        // "Force Reset Stuck Sync" control - never shown/enabled for a
+        // lock that is merely running normally, only for one old enough
+        // to be treated as abandoned.
+        // ------------------------------------------------------------
+        public bool CanForceReset { get; set; }
     }
 
     /// <summary>

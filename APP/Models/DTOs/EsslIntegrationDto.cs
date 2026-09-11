@@ -20,6 +20,19 @@ namespace APP.Models.DTOs
         public string? LastError { get; set; }
         public int? LastProcessedDeviceLogId { get; set; }
         public DateTime? LastProcessedLogDate { get; set; }
+
+        // Live progress - see the Application-side DTO's remarks. Polled via
+        // GetSettingsAsync every couple of seconds while IsSyncRunning is
+        // true to drive the UI's "Total / Synced / Skipped / Failed" readout.
+        public int RecordsRead { get; set; }
+        public int RecordsImported { get; set; }
+        public int RecordsSkipped { get; set; }
+        public int RecordsFailed { get; set; }
+
+        // Drives the UI's "Force Reset Stuck Sync" control - true only when
+        // IsSyncRunning has been true for at least the server's stale-lock
+        // threshold. Never shown/enabled for a normally-running sync.
+        public bool CanForceReset { get; set; }
     }
 
     /// <summary>Card 2 "Database Configuration" GET - never contains a password.</summary>

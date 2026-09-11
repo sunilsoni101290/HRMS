@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -323,6 +323,16 @@ namespace Domain.Helper
         public const string SALARY_STRUCTURE = "SALARY_STRUCTURE";
         public const string SALARY_STRUCTURE_CONTROLLER = "SalaryStructure";
         public const string SALARY_STRUCTURE_ACTION = ACTION_INDEX;
+
+        // Reusable salary "master" (Domain/Entities/SalaryTemplate.cs) -
+        // distinct from SALARY_STRUCTURE above, which is the actual
+        // per-employee assignment record. Menu-labeled "Salary Structure"
+        // (the reusable one, matching the feature spec) while
+        // SALARY_STRUCTURE is now labeled "Salary Assignments" in the
+        // DbSeeder menu entries - see that file's remarks.
+        public const string SALARY_TEMPLATE = "SALARY_TEMPLATE";
+        public const string SALARY_TEMPLATE_CONTROLLER = "SalaryTemplate";
+        public const string SALARY_TEMPLATE_ACTION = ACTION_INDEX;
 
         // NOTE: rectified — payroll processing/list lives on the "Payroll" controller.
         public const string PAYROLL_PROCESS = "PAYROLL_PROCESS";

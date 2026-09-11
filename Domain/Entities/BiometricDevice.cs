@@ -344,6 +344,32 @@ namespace Domain.Entities
 
         public int RecordsFailed { get; set; }
 
+        /// <summary>
+        /// Rows this run found already present in BiometricAttendanceLogs
+        /// (matched via DeviceTransactionId) and therefore did not attempt
+        /// to re-insert. Populated only for SyncType = "EsslDbPull" - see
+        /// EsslAttendanceSyncService's reconciliation logging
+        /// ("Source = AlreadyImported + Unmapped + Failed + Imported").
+        /// Counted separately from RecordsSkipped so a duplicate (expected,
+        /// harmless, re-scanning the overlap window every run) is never
+        /// confused with a genuine skip/failure on the summary screen.
+        /// </summary>
+        public int DuplicateCount { get; set; }
+
+        /// <summary>
+        /// Rows this run imported into BiometricAttendanceLogs whose
+        /// device-side employee code (UserId) had no active
+        /// EmployeeBiometricMapping at import time - see
+        /// EsslAttendanceSyncService's per-record unmapped logging and the
+        /// existing "Unmapped Employees" screen
+        /// (GetUnmappedEmployeesCoreAsync). These rows ARE imported (never
+        /// silently dropped) but AttendanceProcessorService will keep
+        /// leaving them IsProcessed=false until a matching mapping is
+        /// created, which is the single biggest real-world cause of "eSSL
+        /// source count" and "Attendance records created" diverging sharply.
+        /// </summary>
+        public int UnmappedCount { get; set; }
+
         [MaxLength(20)]
         public string Status { get; set; } = "Success";
 

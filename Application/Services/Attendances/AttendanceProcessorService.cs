@@ -3,6 +3,7 @@ using Application.DTOs.Attendances;
 using Application.Interfaces.Attendances;
 using Application.Interfaces.ErrorLog;
 using Domain.Entities;
+using Domain.Helper;
 using Infrastructure;
 using System;
 using System.Collections.Generic;
@@ -103,17 +104,27 @@ namespace Application.Services.Attendances
 
             _logger.LogInformation("Biometric attendance processing started (batchSize={BatchSize}).", batchSize);
 
-            int totalFound = 0, totalApplied = 0, totalSkippedUnmapped = 0, totalHealed = 0, totalFailed = 0;
+            int totalFound = 0, totalApplied = 0, totalSkippedUnmapped = 0, totalHealed = 0, totalFailed = 0, totalRejectedSequence = 0;
 
             try
             {
                 // Active mappings rarely change and are small relative to
                 // the punch backlog - load once for the whole run rather
                 // than once per punch (was: one query per raw log).
+                // ROOT-CAUSE FIX: keyed by BiometricEmployeeCodeNormalizer.Normalize
+                // (trim + invariant uppercase) instead of the raw
+                // BiometricEmployeeCode - see that class's remarks. This is
+                // the stage where a mapping mismatch actually costs a
+                // record: a row already sitting in BiometricAttendanceLogs
+                // (successfully imported) that fails THIS lookup is left
+                // IsProcessed=false forever and never becomes an Attendance
+                // record - which is exactly the shape of "many raw eSSL
+                // rows, far fewer Attendance rows" reported gaps like this
+                // one.
                 var mappingByCode = await _db.EmployeeBiometricMappings
                     .AsNoTracking()
                     .Where(x => x.IsActive)
-                    .GroupBy(x => x.BiometricEmployeeCode)
+                    .GroupBy(x => BiometricEmployeeCodeNormalizer.Normalize(x.BiometricEmployeeCode))
                     .ToDictionaryAsync(g => g.Key, g => g.First());
 
                 for (int batchNo = 0; batchNo < MaxBatchesPerRun; batchNo++)
@@ -134,7 +145,7 @@ namespace Application.Services.Attendances
                     totalFound += batch.Count;
 
                     var employeeIds = batch
-                        .Select(r => mappingByCode.TryGetValue(r.EmployeeCode, out var m) ? m.EmployeeId : null)
+                        .Select(r => mappingByCode.TryGetValue(BiometricEmployeeCodeNormalizer.Normalize(r.EmployeeCode), out var m) ? m.EmployeeId : null)
                         .Where(id => id != null)
                         .Distinct()
                         .ToList();
@@ -172,11 +183,17 @@ namespace Application.Services.Attendances
                                 continue;
                             }
 
-                            if (!mappingByCode.TryGetValue(raw.EmployeeCode, out var mapping))
+                            if (!mappingByCode.TryGetValue(BiometricEmployeeCodeNormalizer.Normalize(raw.EmployeeCode), out var mapping))
                             {
+                                // Phase 8 requirement: full identifying detail
+                                // every time, not just a count - SourceTable/
+                                // DeviceTransactionId (which encodes the
+                                // originating eSSL DeviceLogId) and PunchTime
+                                // (LogDate) are on BiometricAttendanceLog
+                                // itself, so no extra lookup is needed.
                                 _logger.LogWarning(
-                                    "Biometric punch skipped - no active Employee Biometric Mapping for device code {Code} (raw log {RawId}, device {DeviceId}). Create a mapping so future syncs pick this up.",
-                                    raw.EmployeeCode, raw.Id, raw.DeviceId);
+                                    "Biometric punch skipped - no active Employee Biometric Mapping for device code {Code} (raw log {RawId}, SourceTable={SourceTable}, DeviceTransactionId={DeviceTransactionId}, LogDate={LogDate:o}, device {DeviceId}). Create a mapping so future syncs pick this up.",
+                                    raw.EmployeeCode, raw.Id, raw.SourceTable, raw.DeviceTransactionId, raw.PunchTime, raw.DeviceId);
                                 totalSkippedUnmapped++;
                                 continue; // left unprocessed for retry, per spec section 12
                             }
@@ -258,9 +275,29 @@ namespace Application.Services.Attendances
                                 // this is retried on the next sync and
                                 // visible via this warning for investigation
                                 // - never silently dropped.
+                                //
+                                // NOTE for reconciling a raw-row-count vs
+                                // Attendance-row-count gap: this is the other
+                                // major, entirely-expected reason those two
+                                // numbers diverge even with mapping fully
+                                // correct. A real device commonly logs
+                                // several raw punches per employee per day
+                                // (duplicate taps, IN/OUT/BreakOut/BreakIn),
+                                // which legitimately collapse into far fewer
+                                // Attendance rows once paired - "2671 raw
+                                // DeviceLogs rows" was never expected to
+                                // equal "2671 Attendance rows" even for a
+                                // fully-mapped, fully-healthy sync.
+                                // totalRejectedSequence is counted separately
+                                // from totalSkippedUnmapped so the final
+                                // summary line distinguishes "stuck because
+                                // of a mapping problem" from "stuck because
+                                // the device sent an out-of-sequence punch"
+                                // - they need different fixes.
+                                totalRejectedSequence++;
                                 _logger.LogWarning(
-                                    "Biometric punch could not be applied to attendance - Employee {EmployeeId}, PunchType {PunchType}, PunchTime {PunchTime:o} (raw log {RawId}). Left unprocessed for retry.",
-                                    employee.Id, raw.PunchType, raw.PunchTime, raw.Id);
+                                    "Biometric punch could not be applied to attendance - Employee {EmployeeId}, PunchType {PunchType}, PunchTime {PunchTime:o} (raw log {RawId}, SourceTable={SourceTable}, DeviceTransactionId={DeviceTransactionId}). Left unprocessed for retry.",
+                                    employee.Id, raw.PunchType, raw.PunchTime, raw.Id, raw.SourceTable, raw.DeviceTransactionId);
                                 continue;
                             }
 
@@ -350,9 +387,10 @@ namespace Application.Services.Attendances
                     _db.ChangeTracker.Clear();
                 }
 
+                var reconciles = totalFound == (totalApplied + totalHealed + totalSkippedUnmapped + totalRejectedSequence + totalFailed);
                 _logger.LogInformation(
-                    "Biometric attendance processing completed. Found={Found}, Applied={Applied}, Healed={Healed}, SkippedUnmapped={SkippedUnmapped}, Failed={Failed}.",
-                    totalFound, totalApplied, totalHealed, totalSkippedUnmapped, totalFailed);
+                    "Biometric attendance processing completed. Found={Found}, Applied={Applied}, Healed={Healed}, SkippedUnmapped={SkippedUnmapped}, RejectedOutOfSequence={RejectedSequence}, Failed={Failed}, reconciles={Reconciles} (Found should == Applied+Healed+SkippedUnmapped+RejectedOutOfSequence+Failed).",
+                    totalFound, totalApplied, totalHealed, totalSkippedUnmapped, totalRejectedSequence, totalFailed, reconciles);
 
                 return true;
             }

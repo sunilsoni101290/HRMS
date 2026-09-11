@@ -127,6 +127,25 @@
                     </div>
                 </div>
                 <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="SalaryProrationBasis">Salary Proration Basis</label>
+                            <select asp-for="SalaryProrationBasis" class="form-control" id="salaryProrationBasis">
+                                <option value="1">Calendar Days (month's actual days: 28-31)</option>
+                                <option value="2">Working Days (fixed count/month)</option>
+                            </select>
+                            <span class="help-block">Used by Salary Processing to derive Per Day Salary = Monthly Salary &divide; this basis.</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6" id="fixedWorkingDaysGroup">
+                        <div class="form-group">
+                            <label asp-for="FixedWorkingDaysPerMonth"></label>
+                            <input asp-for="FixedWorkingDaysPerMonth" type="number" step="0.5" min="1" max="31" class="form-control" />
+                            <span class="help-block">Only used when basis is "Working Days" above (e.g. 26).</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
                     <div class="col-md-12">
                         <div class="form-group">
                             <label asp-for="Remarks"></label>
@@ -150,5 +169,15 @@
     {
         <script>$(function(){ swal({ title:"Error", text:"@TempData["GlobalError"]", type:"error" }); });</script>
     }
+    <script>
+        $(function () {
+            function toggleFixedWorkingDays() {
+                var isWorkingDays = $("#salaryProrationBasis").val() === "2";
+                $("#fixedWorkingDaysGroup").toggle(isWorkingDays);
+            }
+            $("#salaryProrationBasis").on("change", toggleFixedWorkingDays);
+            toggleFixedWorkingDays();
+        });
+    </script>
     <partial name="_ValidationScriptsPartial" />
 }

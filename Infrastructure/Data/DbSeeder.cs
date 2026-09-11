@@ -1,4 +1,4 @@
-﻿using Domain.Entities;
+using Domain.Entities;
 using Domain.Helper;
 using Infrastructure.Services;
 using Microsoft.AspNetCore.Http;
@@ -1631,9 +1631,23 @@ namespace Infrastructure.Data
                 AppFeatureConstants.PAYROLL, "bi bi-cash-coin", AppFeatureType.Master, 70,
                 canAdd: true, canEdit: true, canDelete: true);
 
-            Def("Salary Structure", AppFeatureConstants.SALARY_STRUCTURE,
+            // Relabeled from "Salary Structure" to "Salary Assignments" -
+            // this is the per-employee assignment screen (Employee +
+            // EffectiveFrom + component amounts), not the new reusable
+            // template below. Code/controller/action are unchanged so
+            // existing role permissions on this feature keep working.
+            Def("Salary Assignments", AppFeatureConstants.SALARY_STRUCTURE,
                 AppFeatureConstants.SALARY_STRUCTURE_CONTROLLER, AppFeatureConstants.SALARY_STRUCTURE_ACTION,
                 AppFeatureConstants.PAYROLL, "bi bi-wallet-fill", AppFeatureType.Transaction, 71,
+                canAdd: true, canEdit: true, canDelete: true);
+
+            // Reusable salary "master" - create once (e.g. "Software
+            // Developer"), apply in bulk to many employees; each apply
+            // creates a Salary Assignment (above) per employee. See
+            // Domain/Entities/SalaryTemplate.cs.
+            Def("Salary Structure", AppFeatureConstants.SALARY_TEMPLATE,
+                AppFeatureConstants.SALARY_TEMPLATE_CONTROLLER, AppFeatureConstants.SALARY_TEMPLATE_ACTION,
+                AppFeatureConstants.PAYROLL, "bi bi-diagram-3-fill", AppFeatureType.Master, 71,
                 canAdd: true, canEdit: true, canDelete: true);
 
             Def("Payroll Processing", AppFeatureConstants.PAYROLL_PROCESS,

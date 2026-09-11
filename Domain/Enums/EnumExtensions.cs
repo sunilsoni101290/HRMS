@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
@@ -47,6 +47,22 @@ namespace Domain.Enums
         {
             Earning = 1,
             Deduction = 2
+        }
+
+        // Salary Processing - how the per-day rate denominator is derived
+        // for attendance-based proration (Application/Services/PayrollService/
+        // SalaryCalculationService.cs). Company-configurable via
+        // AttendancePolicy.SalaryProrationBasis - never mixed within one
+        // payroll run.
+        public enum SalaryProrationBasis
+        {
+            // Monthly Salary / calendar days in that month (28-31) x Payable Days.
+            CalendarDays = 1,
+
+            // Monthly Salary / AttendancePolicy.FixedWorkingDaysPerMonth
+            // (a fixed company-wide number, e.g. 26 - NOT recalculated per
+            // month) x Payable Days.
+            WorkingDays = 2
         }
         public enum HalfDayType
         {

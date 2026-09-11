@@ -1,4 +1,4 @@
-﻿using Domain.Entities;
+using Domain.Entities;
 using Domain.Interfaces;
 using Infrastructure.Data;
 using Infrastructure.Interfaces;
@@ -165,10 +165,13 @@ namespace Infrastructure
         #region 💰 PAYROLL
         public DbSet<Payroll> Payrolls { get; set; }
         public DbSet<PayrollDetail> PayrollDetails { get; set; }
+        public DbSet<PayrollAuditLog> PayrollAuditLogs { get; set; }
         public DbSet<Payslip> Payslips { get; set; }
         public DbSet<SalaryComponent> SalaryComponents { get; set; }
         public DbSet<SalaryStructure> SalaryStructures { get; set; }
         public DbSet<SalaryDetail> SalaryDetails { get; set; }
+        public DbSet<SalaryTemplate> SalaryTemplates { get; set; }
+        public DbSet<SalaryTemplateDetail> SalaryTemplateDetails { get; set; }
 
         // Payslip Request approval workflow (Employee -> Reporting Manager
         // -> Finance) - see Domain/Entities/PayslipRequest.cs.
@@ -219,6 +222,10 @@ namespace Infrastructure
 
         #region ⚙️ MASTER TABLES
         public DbSet<AppFeature> AppFeatures { get; set; }
+        // Menu Bar redesign - per-user pinned Favorites / Quick Access
+        // (Domain/Entities/UserFavoriteMenu.cs). Sits in this region since
+        // it is menu-adjacent master data, not a transactional table.
+        public DbSet<UserFavoriteMenu> UserFavoriteMenus { get; set; }
         public DbSet<FinancialYear> FinancialYears { get; set; }
         public DbSet<HolidayGroup> HolidayGroups { get; set; }
         public DbSet<HolidayGroupDetail> HolidayGroupDetails { get; set; }
@@ -515,6 +522,18 @@ namespace Infrastructure
             modelBuilder.Entity<AttendancePolicy>()
                 .HasIndex(x => new { x.TenantId, x.CompanyId, x.IsActive, x.EffectiveFrom });
 
+            // Menu Bar redesign - Favorites / Quick Access. A user can pin
+            // the same AppFeature only once (filtered so a soft-deleted
+            // un-pin does not permanently block re-pinning the same item).
+            modelBuilder.Entity<UserFavoriteMenu>()
+                .HasIndex(x => new { x.UserId, x.AppFeatureId })
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0")
+                .HasDatabaseName("IX_UserFavoriteMenus_UserId_AppFeatureId");
+
+            modelBuilder.Entity<UserFavoriteMenu>()
+                .HasIndex(x => x.UserId);
+
             // Work From Home requests - EmployeeId for "my requests"/
             // approver-scoped lookups, (TenantId, Status) for admin/HR
             // list + pending-count queries.
@@ -671,6 +690,18 @@ namespace Infrastructure
                 .HasIndex(x => new { x.EmployeeId, x.SalaryMonth });
 
             // =====================================================
+            // 💰 PAYROLL AUDIT LOG (Salary Processing revision)
+            // =====================================================
+            modelBuilder.Entity<PayrollAuditLog>()
+                .HasOne(x => x.Payroll)
+                .WithMany()
+                .HasForeignKey(x => x.PayrollId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PayrollAuditLog>()
+                .HasIndex(x => x.PayrollId);
+
+            // =====================================================
             // 💰 SALARY STRUCTURE
             // =====================================================
             modelBuilder.Entity<SalaryStructure>()
@@ -693,6 +724,34 @@ namespace Infrastructure
 
             modelBuilder.Entity<SalaryStructure>()
                 .HasIndex(x => new { x.EmployeeId, x.EffectiveFrom });
+
+            // Traceability link only (see SalaryStructure.SourceTemplateId's
+            // remarks) - SetNull so deleting a template never cascades into
+            // deleting/blocking existing employee assignments or the
+            // Payroll already generated from them.
+            modelBuilder.Entity<SalaryStructure>()
+                .HasOne(x => x.SourceTemplate)
+                .WithMany()
+                .HasForeignKey(x => x.SourceTemplateId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // =====================================================
+            // 💰 SALARY TEMPLATE (reusable master - see SalaryTemplate.cs)
+            // =====================================================
+            modelBuilder.Entity<SalaryTemplate>()
+                .HasIndex(x => x.Name);
+
+            modelBuilder.Entity<SalaryTemplate>()
+                .HasMany(x => x.Details)
+                .WithOne(x => x.SalaryTemplate)
+                .HasForeignKey(x => x.SalaryTemplateId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SalaryTemplateDetail>()
+                .HasOne(x => x.SalaryComponent)
+                .WithMany()
+                .HasForeignKey(x => x.SalaryComponentId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // =====================================================
             // ✅ TASKS
