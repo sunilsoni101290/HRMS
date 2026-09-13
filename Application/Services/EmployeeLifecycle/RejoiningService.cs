@@ -79,7 +79,7 @@ namespace Application.Services.EmployeeLifecycle
                     EmployeeId = x.Id,
                     EmployeeName = $"{x.FirstName} {x.LastName}".Trim(),
                     EmployeeCode = x.EmployeeCode,
-                    JoiningDate = x.JoiningDate,
+                    JoiningDate = (DateTime)x.JoiningDate,
                     RelievingDate = x.RelievingDate!.Value,
                     DepartmentName = x.Department?.Name,
                     DesignationName = x.Designation?.Name
@@ -118,7 +118,7 @@ namespace Application.Services.EmployeeLifecycle
             // depth against stale/manipulated "previous" data, same
             // reasoning as EmployeeTransfer's From* snapshot fields.
             var previousRelievingDate = employee.RelievingDate.Value;
-            var previousJoiningDate = employee.JoiningDate;
+            var previousJoiningDate = (DateTime)employee.JoiningDate;
 
             var entity = new RejoiningHistory
             {

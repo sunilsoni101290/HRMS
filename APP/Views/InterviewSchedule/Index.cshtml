@@ -65,14 +65,14 @@
                                         <button type="submit" class="btn btn-success btn-icon" title="Complete"><i class="icon-checkmark3"></i></button>
                                     </form>
                                     <form asp-action="Cancel" asp-route-id="@item.Id" method="post" style="display:inline;"
-                                          onsubmit="return confirm('Cancel this interview?');">
+                                          onsubmit="return confirmSweetDeleteForm(event, this, 'Cancel this interview?');">
                                         <button type="submit" class="btn btn-warning btn-icon" title="Cancel"><i class="icon-cross2"></i></button>
                                     </form>
                                 }
                                 <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-default btn-icon" title="View"><i class="icon-eye"></i></a>
                                 <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary btn-icon" title="Edit"><i class="icon-pencil7"></i></a>
                                 <a asp-action="Delete" asp-route-id="@item.Id"
-                                   onclick="return confirm('Delete this interview?');"
+                                   onclick="return confirmSweetDelete(event, this, 'Delete this interview?');"
                                    class="btn btn-danger btn-icon" title="Delete"><i class="icon-trash"></i></a>
                             </td>
                         </tr>

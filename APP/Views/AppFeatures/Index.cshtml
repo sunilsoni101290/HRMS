@@ -168,7 +168,7 @@
                             <li>
                                 <a asp-action="Delete"
                                    asp-route-id="@item.Id"
-                                   onclick="return confirm('Delete this feature?')"
+                                   onclick="return confirmSweetDelete(event, this, 'Delete this feature?');"
                                    title="Delete">
                                     <i class="icon-trash"></i>
                                 </a>

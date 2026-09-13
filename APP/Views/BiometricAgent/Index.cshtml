@@ -150,7 +150,7 @@
                                 </a>
 
                                 <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-danger btn-icon" title="Delete"
-                                   onclick="return confirm('Delete this agent? It must have no devices assigned.');">
+                                   onclick="return confirmSweetDelete(event, this, 'Delete this agent? It must have no devices assigned.');">
                                     <i class="icon-trash"></i>
                                 </a>
 

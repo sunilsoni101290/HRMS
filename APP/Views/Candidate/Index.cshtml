@@ -88,7 +88,7 @@
                                         </a>
                                     }
                                     <a asp-action="Delete" asp-route-id="@item.Id"
-                                       onclick="return confirm('Delete this candidate?');"
+                                       onclick="return confirmSweetDelete(event, this, 'Delete this candidate?');"
                                        class="btn btn-danger btn-icon" title="Delete"><i class="icon-trash"></i></a>
                                 </div>
                             </td>

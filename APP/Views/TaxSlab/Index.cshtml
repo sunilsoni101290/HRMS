@@ -98,7 +98,7 @@
                                     <i class="icon-pencil7"></i>
                                 </a>
                                 <form asp-action="Delete" asp-route-id="@item.Id" method="post" style="display:inline;"
-                                      onsubmit="return confirm('Delete this Tax Slab?');">
+                                      onsubmit="return confirmSweetDeleteForm(event, this, 'Delete this Tax Slab?');">
                                     @Html.AntiForgeryToken()
                                     <button type="submit" class="btn btn-default btn-icon" title="Delete">
                                         <i class="icon-trash"></i>

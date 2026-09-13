@@ -65,7 +65,18 @@ namespace APP.Controllers
             var model = new EmployeeDto
             {
                 JoiningDate = DateTime.UtcNow,
-                CandidateId = candidateId
+                CandidateId = candidateId,
+
+                // Requirement: "General Shift" (identified via the Shift
+                // master's IsDefaultShift flag, never a hard-coded Id/name -
+                // see GetDefaultShiftIdAsync) pre-selected for a brand-new
+                // employee. The user can still change it before saving; this
+                // only sets the initial selection. Falls back to empty (so
+                // the dropdown shows its blank "Select Shift" option and
+                // [Required] correctly blocks submission) only if no shift
+                // is flagged default yet - never left null now that ShiftId
+                // is a non-nullable, mandatory field.
+                ShiftId = await GetDefaultShiftIdAsync() ?? string.Empty
             };
 
             if (!string.IsNullOrWhiteSpace(name))
@@ -215,6 +226,19 @@ namespace APP.Controllers
                     return RedirectToAction(nameof(Index));
                 }
 
+                // Create.cshtml's SweetAlert popup only ever reads
+                // TempData["Success"] / TempData["Error"] (see its Scripts
+                // section) - it has no asp-validation-summary and never
+                // reads ModelState at all. Every failure here used to call
+                // ModelState.AddModelError only, so the page silently
+                // re-rendered with no visible error whatsoever ("Add
+                // Employee" appearing to do nothing). Now sets
+                // TempData["Error"] too, matching every other action in
+                // this app, so the same failure a user sees today (a
+                // duplicate Employee Code, a rejected field, etc.) is
+                // finally shown instead of hidden.
+                TempData["Error"] = response.Message;
+
                 ModelState.AddModelError(
                     "",
                     response.Message);
@@ -227,15 +251,19 @@ namespace APP.Controllers
                 // duplicate Employee Code (or the existing phone/email
                 // duplicate checks) would previously have shown the literal
                 // text "API Error" here instead of the actual reason.
-                ModelState.AddModelError(
-                    "",
-                    GetFriendlyErrorMessage(apiEx.ResponseContent, "Unable to create employee."));
+                var friendly = GetFriendlyErrorMessage(apiEx.ResponseContent, "Unable to create employee.");
+
+                TempData["Error"] = friendly;
+
+                ModelState.AddModelError("", friendly);
             }
             catch (Exception ex)
             {
-                ModelState.AddModelError(
-                    "",
-                    GetFriendlyErrorMessage(ex.Message, "Unable to create employee."));
+                var friendly = GetFriendlyErrorMessage(ex.Message, "Unable to create employee.");
+
+                TempData["Error"] = friendly;
+
+                ModelState.AddModelError("", friendly);
             }
 
             ViewBag.FromCandidate = !string.IsNullOrWhiteSpace(dto.CandidateId);
@@ -694,8 +722,41 @@ namespace APP.Controllers
 
         public async Task<IActionResult> Delete(string id)
         {
-            await _apiService
-                .DeleteAsync($"Employee/employee/{id}");
+            // The API only exposes a bulk-delete endpoint
+            // (POST api/Employee/delete, List<string> ids) - there is no
+            // single-employee DELETE route. This used to call a URL/verb
+            // combination ("DELETE Employee/employee/{id}") that never
+            // existed on the API, so every delete failed with an unhandled
+            // ApiException. Wired to the existing bulk endpoint with a
+            // one-item list instead, wrapped in a try/catch (matching the
+            // pattern used elsewhere in this controller, e.g.
+            // UploadProfilePhoto) so a failure - including a legitimate
+            // "can't delete, has related records" case - shows a friendly
+            // message instead of the generic error page.
+            try
+            {
+                dynamic result = await _apiService
+                    .PostAsync<dynamic>("Employee/delete", new List<string> { id });
+
+                bool success = result?.Success == true;
+
+                TempData[success ? "Success" : "GlobalError"] =
+                    (string)(result?.Message)
+                    ?? (success
+                        ? "Employee deleted successfully."
+                        : "Unable to delete the employee.");
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Let ApiSessionExpiredFilter turn this into a clean
+                // redirect to Login instead of swallowing it here.
+                throw;
+            }
+            catch (Exception)
+            {
+                TempData["GlobalError"] =
+                    "Unable to delete the employee. It may have related records (attendance, leave, payroll, etc.) that need to be removed first.";
+            }
 
             return RedirectToAction(nameof(Index));
         }
@@ -997,6 +1058,15 @@ namespace APP.Controllers
             var branchCache = new Dictionary<string, Dictionary<string, string>>();
             var designationCache = new Dictionary<string, Dictionary<string, string>>();
 
+            // ROOT-CAUSE FIX (Shift now mandatory - see EmployeeDto.ShiftId):
+            // the import template has no Shift column, so every row built
+            // below defaults to the same Shift master's IsDefaultShift
+            // record ("General Shift" - see GetDefaultShiftIdAsync) rather
+            // than leaving ShiftId null, which would now fail server-side
+            // validation on every single imported row. Fetched once, not
+            // per row.
+            var defaultShiftId = await GetDefaultShiftIdAsync() ?? string.Empty;
+
             try
             {
                 using var stream = file.OpenReadStream();
@@ -1142,6 +1212,7 @@ namespace APP.Controllers
                             DesignationId = designationId,
                             RoleId = roleId,
                             ReportingManagerId = reportingManagerId,
+                            ShiftId = defaultShiftId,
                             EmploymentType = employmentType,
                             JoiningDate = joiningDate.Value,
                             PANNumber = string.IsNullOrWhiteSpace(Cell(19)) ? null : Cell(19),
@@ -1365,14 +1436,58 @@ namespace APP.Controllers
             );
 
             // Shift
+            // ROOT-CAUSE FIX: this used to call "dropdown/default-shift",
+            // which (see DropdownService.GetDefaultShiftDropdownAsync) only
+            // ever returns the shift(s) with IsDefaultShift = true - so the
+            // Shift <select> on the Employee form only ever had ONE
+            // selectable option ("General Shift") no matter how many real
+            // shifts existed in the Shift master. "dropdown/shift" returns
+            // every active shift, which is what the dropdown is supposed to
+            // offer; which one is pre-selected on a NEW employee is handled
+            // separately below via GetDefaultShiftIdAsync(), still driven by
+            // the same IsDefaultShift master-data flag rather than any
+            // hard-coded shift name/Id.
             var shifts = await _apiService
-                .GetAsync<List<DropdownDto>>("dropdown/default-shift");
+                .GetAsync<List<DropdownDto>>("dropdown/shift");
 
             ViewBag.ShiftList = new SelectList(
                 shifts,
                 "Value",
                 "Text"
-            ); ;
+            );
+        }
+
+        #endregion
+
+        #region GetDefaultShiftIdAsync
+
+        // Identifies "the default shift" purely from existing Shift master
+        // data (Shift.IsDefaultShift, seeded true on "General Shift" - see
+        // DbSeeder.cs) via the already-existing "dropdown/default-shift" API
+        // endpoint (Where(x => x.IsActive && x.IsDefaultShift) - see
+        // DropdownService.GetDefaultShiftDropdownAsync), never by hard-coding
+        // a shift name or Id here. Used only to PRE-SELECT the Shift field
+        // when adding a brand-new employee; Edit always keeps the employee's
+        // own already-saved ShiftId untouched (see Edit GET below). Returns
+        // null (leaving the dropdown on its blank "Select Shift" option)
+        // if no shift is marked default yet - the field is still mandatory,
+        // so the user simply has to pick one themselves in that case.
+        private async Task<string?> GetDefaultShiftIdAsync()
+        {
+            try
+            {
+                var defaultShifts = await _apiService
+                    .GetAsync<List<DropdownDto>>("dropdown/default-shift");
+
+                return defaultShifts?.FirstOrDefault()?.Value;
+            }
+            catch
+            {
+                // Best-effort only - a failure here must never block the
+                // Create form from loading; the user can still pick a shift
+                // manually.
+                return null;
+            }
         }
 
         #endregion

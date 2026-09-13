@@ -156,7 +156,7 @@ namespace Application.Services.PayrollService
                 }
 
                 // ---- Employment window within the month ----
-                var joiningDate = employee.JoiningDate.Date;
+                var joiningDate = ((DateTime)employee.JoiningDate).Date;
                 var effectiveStart = joiningDate > monthStart ? joiningDate : monthStart;
                 var effectiveEnd = monthEnd;
 

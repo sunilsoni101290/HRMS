@@ -116,7 +116,7 @@ namespace Application.Services.EmployeeLifecycle
                         EmployeeCode = x.EmployeeCode,
                         DepartmentName = x.Department?.Name,
                         DesignationName = x.Designation?.Name,
-                        JoiningDate = x.JoiningDate,
+                        JoiningDate = (DateTime)x.JoiningDate,
                         ProbationEndDate = x.ProbationEndDate,
                         DaysRemaining = daysRemaining,
                         IsOverdue = daysRemaining.HasValue && daysRemaining.Value < 0
@@ -177,14 +177,14 @@ namespace Application.Services.EmployeeLifecycle
             // Employee's own ProbationEndDate if already set, else fall
             // back to JoiningDate + Designation.ProbationPeriodMonths.
             var originalProbationEndDate = employee.ProbationEndDate
-                ?? employee.JoiningDate.AddMonths(employee.Designation?.ProbationPeriodMonths ?? 3);
+                ?? ((DateTime)employee.JoiningDate).AddMonths(employee.Designation?.ProbationPeriodMonths ?? 3);
 
             var entity = new ProbationConfirmation
             {
                 Id = IDManager.GetNewId(new ProbationConfirmation()),
 
                 EmployeeId = dto.EmployeeId,
-                ProbationStartDate = employee.JoiningDate,
+                ProbationStartDate = (DateTime)employee.JoiningDate,
                 OriginalProbationEndDate = originalProbationEndDate,
 
                 Recommendation = recommendation,

@@ -113,7 +113,7 @@
                                 @if (item.IsActive)
                                 {
                                     <form asp-action="Deactivate" asp-route-id="@item.Id" method="post" style="display:inline;"
-                                          onsubmit="return confirm('Deactivate this Loan Policy? Employees will no longer be able to submit against it.');">
+                                          onsubmit="return confirmSweetDeleteForm(event, this, 'Deactivate this Loan Policy? Employees will no longer be able to submit against it.');">
                                         @Html.AntiForgeryToken()
                                         <button type="submit" class="btn btn-default btn-icon" title="Deactivate">
                                             <i class="icon-blocked"></i>

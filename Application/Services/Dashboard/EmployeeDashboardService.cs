@@ -27,7 +27,7 @@ namespace Application.Services.Dashboard
             _context = context;
         }
 
-        public async Task<EmployeeDashboardDto> GetAsync(string userId)
+        public async Task<EmployeeDashboardDto?> GetAsync(string userId)
         {
             try
             {
@@ -248,7 +248,7 @@ namespace Application.Services.Dashboard
 
         #region Profile
 
-        public async Task<EmployeeProfileDto> GetProfileAsync(string employeeId)
+        public async Task<EmployeeProfileDto?> GetProfileAsync(string employeeId)
         {
             try
             {
@@ -281,11 +281,11 @@ namespace Application.Services.Dashboard
                     Department = department ?? "",
                     Branch = "",
                     Company = company ?? "",
-                    ProfileImage = e.FilePath,
+                    ProfileImage = e.FilePath ?? "",
                     JoiningDate = e.JoiningDate,
                     ExperienceYears = Math.Max(0, today.Year - e.JoiningDate.Year),
-                    Email = e.Email,
-                    Mobile = e.Phone,
+                    Email = e.Email ?? "",
+                    Mobile = e.Phone ?? "",
                     ProfileCompletion = ProfileCompletion(e),
                     IsCheckedIn = isCheckedIn,
                     ReportingManager = manager ?? "",
@@ -540,7 +540,7 @@ namespace Application.Services.Dashboard
                 {
                     Id = 0,
                     TaskName = t.Title,
-                    Description = t.Description,
+                    Description = t.Description ?? "",
                     DueDate = t.DueDate ?? DateTime.MinValue,
                     Status = t.Status,
                     Priority = t.Priority,

@@ -90,7 +90,7 @@
                                         </li>
                                         <li>
                                             <a asp-action="Delete" asp-route-id="@item.Id"
-                                               onclick="return confirmDelete(@item.EmployeeCount);">
+                                               onclick="return confirmDelete(event, this, @item.EmployeeCount);">
                                                 <i class="icon-trash text-danger"></i> Delete
                                             </a>
                                         </li>
@@ -155,7 +155,9 @@
             });
         });
 
-        function confirmDelete(employeeCount) {
+        function confirmDelete(event, linkEl, employeeCount) {
+            if (event && event.preventDefault) event.preventDefault();
+
             var count = parseInt(employeeCount, 10) || 0;
 
             if (count > 0) {
@@ -167,7 +169,9 @@
                 return false;
             }
 
-            return confirm("Delete this salary structure? This cannot be undone.");
+            // Uses the same project-wide SweetAlert confirm as every other
+            // delete across the app - see wwwroot/js/site.js.
+            return confirmSweetDelete(event, linkEl, "Delete this salary structure? This cannot be undone.");
         }
     </script>
     <style>

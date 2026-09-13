@@ -122,8 +122,17 @@
                     <div class="col-md-3">
                         <div class="form-group">
                             <label asp-for="Url"></label>
+                            <!-- Url is computed on the server from Area/
+                                 Controller/Action (AppFeature.Url is a
+                                 read-only [NotMapped] property - see
+                                 AppFeatureService) and can never actually
+                                 be saved, so it's shown read-only here
+                                 instead of looking editable while silently
+                                 discarding whatever is typed. -->
                             <input asp-for="Url"
-                                   class="form-control" />
+                                   readonly
+                                   class="form-control"
+                                   title="Computed automatically from Area / Controller / Action - not directly editable." />
                         </div>
                     </div>
 

@@ -52,16 +52,25 @@ namespace APP.Models.DTOs
         [Display(Name = "Branch")]
         public string? BranchId { get; set; }
 
+        // Not [Required] on the Add/Edit Employee FORM by design - the
+        // form's own required inputs are only Employee Code, First
+        // Name, Gender, Role and Company. Shift stays mandatory at the
+        // API/database level (Application.DTOs.Employee.EmployeeDto.
+        // ShiftId, and the ShiftId NOT NULL migration) as defense in
+        // depth, and the dropdown still defaults a new employee to
+        // "General Shift", so this is very rarely left blank in
+        // practice - it just no longer blocks the form with a "*".
         [Display(Name = "Shift")]
-        public string? ShiftId { get; set; }
+        public string ShiftId { get; set; }
 
-        [Required(ErrorMessage = "Please select Department.")]
+        // Not [Required] - only Employee Code, First Name, Gender,
+        // Role and Company are required inputs on this form.
         [Display(Name = "Department")]
-        public string DepartmentId { get; set; }
+        public string? DepartmentId { get; set; }
 
-        [Required(ErrorMessage = "Please select Designation.")]
+        // Not [Required] - see DepartmentId above.
         [Display(Name = "Designation")]
-        public string DesignationId { get; set; }
+        public string? DesignationId { get; set; }
 
         [Display(Name = "Reporting Manager")]
         public string? ReportingManagerId { get; set; }
@@ -86,7 +95,7 @@ namespace APP.Models.DTOs
         [Required(ErrorMessage = "Please select Gender.")]
         public Gender Gender { get; set; }
 
-        [Required(ErrorMessage = "Please select Marital Status.")]
+        // Not [Required] - see DepartmentId above.
         [Display(Name = "Marital Status")]
         public MaritalStatus MaritalStatus { get; set; }
 
@@ -99,10 +108,10 @@ namespace APP.Models.DTOs
         [EmailAddress(ErrorMessage = "Invalid Email Address.")]
         public string? Email { get; set; }
 
-        [Required(ErrorMessage = "Phone Number is required.")]
+        // Not [Required] - see DepartmentId above.
         [Display(Name = "Phone Number")]
         [RegularExpression(@"^[6-9]\d{9}$", ErrorMessage = "Invalid Mobile Number.")]
-        public string Phone { get; set; }
+        public string? Phone { get; set; }
 
         [Display(Name = "Emergency Contact")]
         [RegularExpression(@"^[6-9]\d{9}$", ErrorMessage = "Invalid Emergency Contact Number.")]
@@ -112,14 +121,14 @@ namespace APP.Models.DTOs
 
         #region Address
 
-        [Required(ErrorMessage = "Address is required.")]
+        // Not [Required] - see DepartmentId above.
         [StringLength(500)]
-        public string Address { get; set; }
+        public string? Address { get; set; }
 
-        [Required(ErrorMessage = "Pin Code is required.")]
+        // Not [Required] - see DepartmentId above.
         [Display(Name = "Pin Code")]
         [RegularExpression(@"^\d{6}$", ErrorMessage = "Invalid Pin Code.")]
-        public string Pincode { get; set; }
+        public string? Pincode { get; set; }
 
         #endregion
 
@@ -150,7 +159,9 @@ namespace APP.Models.DTOs
         [Display(Name = "Relieving Date")]
         public DateTime? RelievingDate { get; set; }
 
-        [Required(ErrorMessage = "Employment Type is required.")]
+        // Not [Required] on the Add/Edit Employee FORM by design - see
+        // the ShiftId comment above; only Employee Code, First Name,
+        // Gender, Role and Company are required inputs on this form.
         [Display(Name = "Employment Type")]
         public EmploymentType EmploymentType { get; set; }
 

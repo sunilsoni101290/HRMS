@@ -144,7 +144,7 @@ namespace API.BackgroundServices
                 {
                     try
                     {
-                        int serviceDays = (today - employee.JoiningDate.Date).Days;
+                        int serviceDays = (today - ((DateTime)employee.JoiningDate).Date).Days;
 
                         if (serviceDays < leaveType.MinServiceDaysRequired)
                             continue;

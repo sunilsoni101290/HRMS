@@ -48,7 +48,7 @@
 
             <a asp-action="SyncAll"
                class="btn bg-warning btn-icon-text"
-               onclick="return confirm('Sync all active devices now?');">
+               onclick="return confirmSweetDelete(event, this, 'Sync all active devices now?');">
                 <i class="icon-sync position-left"></i>
                 Sync All Devices
             </a>
@@ -315,7 +315,7 @@
                                    class="btn bg-warning btn-icon"
                                    data-popup="tooltip"
                                    title="Sync Now"
-                                   onclick="return confirm('Pull and process punches from this device now?');">
+                                   onclick="return confirmSweetDelete(event, this, 'Pull and process punches from this device now?');">
                                     <i class="icon-sync"></i>
                                 </a>
 
@@ -324,7 +324,7 @@
                                    class="btn btn-danger btn-icon"
                                    data-popup="tooltip"
                                    title="Delete"
-                                   onclick="return confirm('Are you sure you want to delete this device? Any BiometricAgent still using its Device Key will start failing.');">
+                                   onclick="return confirmSweetDelete(event, this, 'Are you sure you want to delete this device? Any BiometricAgent still using its Device Key will start failing.');">
                                     <i class="icon-trash"></i>
                                 </a>
 

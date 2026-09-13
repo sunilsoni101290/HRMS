@@ -230,7 +230,7 @@
 
                             <li>
                                 <a asp-action="Delete"
-                                   onclick="return confirm('Delete this punch record?')">
+                                   onclick="return confirmSweetDelete(event, this, 'Delete this punch record?');">
                                     <i class="icon-trash"></i>
                                 </a>
                             </li>

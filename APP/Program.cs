@@ -3,6 +3,7 @@ using APP.Excel;
 using APP.Models;
 using APP.Services.Implementations;
 using APP.Services.Interfaces;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -66,6 +67,24 @@ builder.Services.AddSession(options =>
 
 builder.Services.AddHttpContextAccessor();
 
+// Data Protection is what encrypts the session cookie and the antiforgery
+// token - ASP.NET Core registers a default provider automatically even
+// though there's no explicit AddDataProtection() call, but its default key
+// storage location depends on a loaded user profile, which the
+// ApplicationPoolIdentity IIS runs this app as does NOT have. Without
+// this, IIS was silently generating a brand new key ring on every app
+// pool recycle - which invalidated every existing session cookie and
+// antiforgery token, surfacing as "The key {...} was not found in the key
+// ring" / "The antiforgery token could not be decrypted" and a hard-to-
+// diagnose 500 on any POST (edit/delete/create form submit) shortly after
+// a recycle. Keys are stored under App_Data\Keys, next to the app, so the
+// IIS Application Pool identity needs Modify rights there (see deployment
+// guide's folder permissions section).
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(
+        Path.Combine(builder.Environment.ContentRootPath, "App_Data", "Keys")))
+    .SetApplicationName("HRMS-ERP-APP");
+
 builder.Services.AddHttpClient<IApiService, ApiService>(client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["ApiSettings:BaseUrl"]);
@@ -90,7 +109,16 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// The IIS site (see deployment guide) is bound to HTTP only
+// (http://localhost:8080), so forcing a redirect to HTTPS in Production
+// would send every request to a binding that doesn't exist and break the
+// app. Kept for Development, where the "https" launchSettings profile
+// provides a real HTTPS endpoint to redirect to. If you later add an
+// HTTPS binding in IIS, move this back outside the check.
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseStaticFiles();
 
