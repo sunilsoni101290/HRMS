@@ -58,7 +58,7 @@
                                     <div class="btn-group">
                                         <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary btn-icon" title="Edit"><i class="icon-pencil7"></i></a>
                                         <a asp-action="Delete" asp-route-id="@item.Id"
-                                           onclick="return confirm('Delete this permission? It will be removed from every role that has it.');"
+                                           onclick="return confirmSweetDelete(event, this, 'Delete this permission? It will be removed from every role that has it.');"
                                            class="btn btn-danger btn-icon" title="Delete"><i class="icon-trash"></i></a>
                                     </div>
                                 </td>

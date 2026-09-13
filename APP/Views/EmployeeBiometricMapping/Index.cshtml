@@ -83,7 +83,7 @@
                                     <a asp-action="Delete"
                                        asp-route-id="@item.Id"
                                        title="Delete"
-                                       onclick="return confirm('Remove this employee-to-device mapping?');">
+                                       onclick="return confirmSweetDelete(event, this, 'Remove this employee-to-device mapping?');">
                                         <i class="icon-trash"></i>
                                     </a>
                                 </li>

@@ -63,7 +63,7 @@
                             <td>
                                 <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary btn-icon" title="Edit"><i class="icon-pencil7"></i></a>
                                 <form asp-action="Delete" asp-route-id="@item.Id" method="post" style="display:inline;"
-                                      onsubmit="return confirm('Delete this attendance policy?');">
+                                      onsubmit="return confirmSweetDeleteForm(event, this, 'Delete this attendance policy?');">
                                     <button type="submit" class="btn btn-danger btn-icon" title="Delete"><i class="icon-trash"></i></button>
                                 </form>
                             </td>

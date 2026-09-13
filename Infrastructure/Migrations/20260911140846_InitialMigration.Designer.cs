@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260905193440_AddUserFavoriteMenus")]
-    partial class AddUserFavoriteMenus
+    [Migration("20260911140846_InitialMigration")]
+    partial class InitialMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1722,6 +1722,9 @@ namespace Infrastructure.Migrations
                     b.Property<string>("DeviceId")
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<int>("DuplicateCount")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("EndTime")
                         .HasColumnType("datetime2");
 
@@ -1783,6 +1786,9 @@ namespace Infrastructure.Migrations
                     b.Property<string>("TriggeredBy")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("UnmappedCount")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 

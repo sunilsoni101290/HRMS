@@ -74,14 +74,14 @@
                                     {
                                         <form asp-action="Return" asp-route-id="@item.Id" method="post"
                                               style="display:inline;"
-                                              onsubmit="return confirm('Mark this asset as returned?');">
+                                              onsubmit="return confirmSweetDeleteForm(event, this, 'Mark this asset as returned?');">
                                             <button type="submit" class="btn btn-warning btn-icon" title="Return">
                                                 <i class="icon-undo2"></i>
                                             </button>
                                         </form>
                                     }
                                     <a asp-action="Delete" asp-route-id="@item.Id"
-                                       onclick="return confirm('Delete this allocation record?');"
+                                       onclick="return confirmSweetDelete(event, this, 'Delete this allocation record?');"
                                        class="btn btn-danger btn-icon" title="Delete"><i class="icon-trash"></i></a>
                                 </div>
                             </td>

@@ -77,7 +77,7 @@
                                 <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-default btn-icon" title="View"><i class="icon-eye"></i></a>
                                 <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary btn-icon" title="Edit"><i class="icon-pencil7"></i></a>
                                 <a asp-action="Delete" asp-route-id="@item.Id"
-                                   onclick="return confirm('Delete this component?');"
+                                   onclick="return confirmSweetDelete(event, this, 'Delete this component?');"
                                    class="btn btn-danger btn-icon" title="Delete"><i class="icon-trash"></i></a>
                             </div>
                         </td>

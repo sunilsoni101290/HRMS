@@ -339,7 +339,7 @@
 
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label asp-for="MaritalStatus" class="text-semibold empform-required"></label>
+                                <label asp-for="MaritalStatus" class="text-semibold"></label>
                                 <select asp-for="MaritalStatus" asp-items="Html.GetEnumSelectList<EnumExtensions.MaritalStatus>()"
                                         class="form-control" disabled="@(isAdmin ? null : "disabled")">
                                     <option value="">Select Marital Status</option>
@@ -376,7 +376,7 @@
 
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label asp-for="Phone" class="text-semibold empform-required"></label>
+                                <label asp-for="Phone" class="text-semibold"></label>
                                 <input asp-for="Phone" class="form-control" placeholder="Enter Mobile Number" />
                                 <span asp-validation-for="Phone" class="text-danger"></span>
                             </div>
@@ -420,7 +420,7 @@
 
                         <div class="col-md-8">
                             <div class="form-group">
-                                <label asp-for="Address" class="text-semibold empform-required"></label>
+                                <label asp-for="Address" class="text-semibold"></label>
                                 <textarea asp-for="Address" rows="3" class="form-control" placeholder="Enter Complete Address"></textarea>
                                 <span asp-validation-for="Address" class="text-danger"></span>
                             </div>
@@ -428,7 +428,7 @@
 
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label asp-for="Pincode" class="text-semibold empform-required"></label>
+                                <label asp-for="Pincode" class="text-semibold"></label>
                                 <input asp-for="Pincode" class="form-control" placeholder="Enter Pincode" />
                                 <span asp-validation-for="Pincode" class="text-danger"></span>
                             </div>
@@ -490,7 +490,7 @@
 
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label asp-for="DepartmentId" class="text-semibold empform-required"></label>
+                                <label asp-for="DepartmentId" class="text-semibold"></label>
                                 <select asp-for="DepartmentId" asp-items="ViewBag.DepartmentList" class="form-control" id="DepartmentId">
                                     <option value="">Select Department</option>
                                 </select>
@@ -500,7 +500,7 @@
 
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label asp-for="DesignationId" class="text-semibold empform-required"></label>
+                                <label asp-for="DesignationId" class="text-semibold"></label>
                                 <select asp-for="DesignationId" asp-items="ViewBag.DesignationList" class="form-control" id="DesignationId">
                                     <option value="">Select Designation</option>
                                 </select>
@@ -542,7 +542,7 @@
 
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label asp-for="EmploymentType" class="text-semibold empform-required"></label>
+                                <label asp-for="EmploymentType" class="text-semibold"></label>
                                 <select asp-for="EmploymentType" asp-items="Html.GetEnumSelectList<EnumExtensions.EmploymentType>()" class="form-control">
                                     <option value="">Select Employment Type</option>
                                 </select>

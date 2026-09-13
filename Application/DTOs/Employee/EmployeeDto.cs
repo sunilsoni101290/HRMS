@@ -47,16 +47,20 @@ namespace Application.DTOs.Employee
         [Display(Name = "Branch")]
         public string? BranchId { get; set; }
 
+        [Required(ErrorMessage = "Please select Shift.")]
         [Display(Name = "Shift")]
-        public string? ShiftId { get; set; }
+        public string ShiftId { get; set; }
 
-        [Required(ErrorMessage = "Please select Department.")]
+        // Not [Required] - only Employee Code, First Name, Gender,
+        // Role and Company are required on the Add/Edit Employee form
+        // (see Domain.Entities.Employee.DepartmentId, now nullable, and
+        // migration 20260913130000_MakeSomeEmployeeFieldsOptional).
         [Display(Name = "Department")]
-        public string DepartmentId { get; set; }
+        public string? DepartmentId { get; set; }
 
-        [Required(ErrorMessage = "Please select Designation.")]
+        // Not [Required] - see DepartmentId above.
         [Display(Name = "Designation")]
-        public string DesignationId { get; set; }
+        public string? DesignationId { get; set; }
 
         [Display(Name = "Reporting Manager")]
         public string? ReportingManagerId { get; set; }
@@ -91,10 +95,10 @@ namespace Application.DTOs.Employee
         [StringLength(150)]
         public string Email { get; set; }
 
-        [Required(ErrorMessage = "Phone Number is required.")]
+        // Not [Required] - see DepartmentId above.
         [Display(Name = "Phone")]
         [RegularExpression(@"^[6-9]\d{9}$", ErrorMessage = "Invalid Mobile Number.")]
-        public string Phone { get; set; }
+        public string? Phone { get; set; }
 
         [Display(Name = "Emergency Contact")]
         [RegularExpression(@"^[6-9]\d{9}$", ErrorMessage = "Invalid Emergency Contact.")]
@@ -104,14 +108,14 @@ namespace Application.DTOs.Employee
 
         #region Address
 
-        [Required(ErrorMessage = "Address is required.")]
+        // Not [Required] - see DepartmentId above.
         [StringLength(500)]
-        public string Address { get; set; }
+        public string? Address { get; set; }
 
-        [Required]
+        // Not [Required] - see DepartmentId above.
         [Display(Name = "Pin Code")]
         [RegularExpression(@"^\d{6}$", ErrorMessage = "Invalid Pin Code.")]
-        public string Pincode { get; set; }
+        public string? Pincode { get; set; }
 
         #endregion
 

@@ -96,7 +96,7 @@
                                 @if (item.ActiveAdvanceCount == 0)
                                 {
                                     <form asp-action="Delete" asp-route-id="@item.Id" method="post" style="display:inline;"
-                                          onsubmit="return confirm('Delete this Advance Type?');">
+                                          onsubmit="return confirmSweetDeleteForm(event, this, 'Delete this Advance Type?');">
                                         @Html.AntiForgeryToken()
                                         <button type="submit" class="btn btn-default btn-icon" title="Delete">
                                             <i class="icon-trash"></i>

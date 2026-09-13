@@ -1719,6 +1719,9 @@ namespace Infrastructure.Migrations
                     b.Property<string>("DeviceId")
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<int>("DuplicateCount")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("EndTime")
                         .HasColumnType("datetime2");
 
@@ -1780,6 +1783,9 @@ namespace Infrastructure.Migrations
                     b.Property<string>("TriggeredBy")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("UnmappedCount")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -2445,7 +2451,6 @@ namespace Infrastructure.Migrations
                         .HasColumnType("nvarchar(12)");
 
                     b.Property<string>("Address")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("BranchId")
@@ -2475,11 +2480,9 @@ namespace Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("DepartmentId")
-                        .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("DesignationId")
-                        .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Email")
@@ -2555,12 +2558,10 @@ namespace Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Phone")
-                        .IsRequired()
                         .HasMaxLength(15)
                         .HasColumnType("nvarchar(15)");
 
                     b.Property<string>("Pincode")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PlaceOfIssue")
@@ -2576,6 +2577,7 @@ namespace Infrastructure.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("ShiftId")
+                        .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("TenantId")
@@ -8731,14 +8733,12 @@ namespace Infrastructure.Migrations
                     b.HasOne("Domain.Entities.Department", "Department")
                         .WithMany("Employees")
                         .HasForeignKey("DepartmentId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Domain.Entities.Designation", "Designation")
                         .WithMany()
                         .HasForeignKey("DesignationId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Domain.Entities.Employee", "ReportingManager")
                         .WithMany()
@@ -8748,7 +8748,8 @@ namespace Infrastructure.Migrations
                     b.HasOne("Domain.Entities.Shift", "DefaultShift")
                         .WithMany()
                         .HasForeignKey("ShiftId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("Domain.Entities.Tenant", "Tenant")
                         .WithMany()

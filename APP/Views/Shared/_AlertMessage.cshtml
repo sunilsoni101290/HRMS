@@ -1,51 +1,69 @@
-@* This project ships Bootstrap 3.3.7, not Bootstrap 5 - the dismiss buttons
-   below previously used BS5's "btn-close" + "data-bs-dismiss", which BS3's
-   jQuery plugin doesn't recognize at all, so every alert on every page was
-   silently stuck on screen with a non-functional (x). Converted to BS3's
-   ".close" + "data-dismiss" convention, which the loaded bootstrap.min.js
-   actually understands. *@
+@* ROOT-LEVEL FIX: this partial is rendered on every single page via
+   _LayoutMain.cshtml (see the @await Html.PartialAsync("_AlertMessage") call),
+   so it is the ONE place that already sees every controller's post-CRUD
+   TempData["Success"/"Error"/"GlobalError"/"Warning"/"Info"] message -
+   whichever of the ~80 modules' Create/Edit/Delete actions set it. Converting
+   THIS file to raise a SweetAlert popup instead of a plain Bootstrap alert
+   div is what makes "SweetAlert on every CRUD operation" apply project-wide
+   without touching each controller/view individually - anything that
+   already followed the existing TempData convention picks this up for free.
 
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade in shadow-sm" role="alert">
-        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-        <i class="bi bi-check-circle-fill me-2"></i>
-        @TempData["Success"]
-    </div>
+   sweet_alert.min.js (loaded in _LayoutMain.cshtml's <head>) is the older
+   SweetAlert v1 - global swal(title, text, type) / swal({options}) API, NOT
+   SweetAlert2's Swal.fire(...) - this file deliberately matches that same
+   v1 API already used by the ~46 existing manual swal(...) calls elsewhere
+   in the app, so there is only ever one SweetAlert convention in this
+   project, not two competing ones.
+
+   Messages are JSON-serialized (System.Text.Json) rather than dropped into
+   the script as a raw string, so a message containing a quote, apostrophe,
+   or newline (e.g. "Employee 'John O'Brien' deleted.") can never break out
+   of the JS string literal - this is the same class of bug as building SQL
+   by string concatenation, just for JS instead. *@
+@{
+    var success = TempData["Success"]?.ToString();
+    var error = TempData["Error"]?.ToString();
+    var globalError = TempData["GlobalError"]?.ToString();
+    var warning = TempData["Warning"]?.ToString();
+    var info = TempData["Info"]?.ToString();
 }
 
-@if (TempData["Error"] != null)
+@if (!string.IsNullOrEmpty(success) || !string.IsNullOrEmpty(error) || !string.IsNullOrEmpty(globalError) || !string.IsNullOrEmpty(warning) || !string.IsNullOrEmpty(info))
 {
-    <div class="alert alert-danger alert-dismissible fade in shadow-sm" role="alert">
-        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-        @TempData["Error"]
-    </div>
-}
+    <script>
+        (function () {
+            if (typeof swal !== "function") {
+                // Defensive fallback only - sweet_alert.min.js should always
+                // be loaded by _LayoutMain.cshtml. Never fail silently the
+                // way the old "swal is not defined" bug did.
+                @if (!string.IsNullOrEmpty(success)) { <text>alert(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(success)));</text> }
+                @if (!string.IsNullOrEmpty(error)) { <text>alert(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(error)));</text> }
+                @if (!string.IsNullOrEmpty(globalError)) { <text>alert(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(globalError)));</text> }
+                @if (!string.IsNullOrEmpty(warning)) { <text>alert(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(warning)));</text> }
+                @if (!string.IsNullOrEmpty(info)) { <text>alert(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(info)));</text> }
+                return;
+            }
 
-@if (TempData["GlobalError"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade in shadow-sm" role="alert">
-        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-        @TempData["GlobalError"]
-    </div>
-}
-
-@if (TempData["Warning"] != null)
-{
-    <div class="alert alert-warning alert-dismissible fade in shadow-sm" role="alert">
-        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-        <i class="bi bi-exclamation-circle-fill me-2"></i>
-        @TempData["Warning"]
-    </div>
-}
-
-@if (TempData["Info"] != null)
-{
-    <div class="alert alert-info alert-dismissible fade in shadow-sm" role="alert">
-        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-        <i class="bi bi-info-circle-fill me-2"></i>
-        @TempData["Info"]
-    </div>
+            @if (!string.IsNullOrEmpty(success))
+            {
+                <text>swal({ title: "Success", text: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(success)), type: "success", confirmButtonColor: "#2196F3" });</text>
+            }
+            else if (!string.IsNullOrEmpty(error))
+            {
+                <text>swal({ title: "Error", text: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(error)), type: "error", confirmButtonColor: "#DD6B55" });</text>
+            }
+            else if (!string.IsNullOrEmpty(globalError))
+            {
+                <text>swal({ title: "Error", text: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(globalError)), type: "error", confirmButtonColor: "#DD6B55" });</text>
+            }
+            else if (!string.IsNullOrEmpty(warning))
+            {
+                <text>swal({ title: "Warning", text: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(warning)), type: "warning", confirmButtonColor: "#f8ac59" });</text>
+            }
+            else if (!string.IsNullOrEmpty(info))
+            {
+                <text>swal({ title: "Info", text: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(info)), type: "info", confirmButtonColor: "#2196F3" });</text>
+            }
+        })();
+    </script>
 }

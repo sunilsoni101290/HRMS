@@ -90,7 +90,7 @@
                                 </form>
 
                                 <a asp-action="Delete" asp-route-id="@item.Id"
-                                   onclick="return confirm('Delete this user?');"
+                                   onclick="return confirmSweetDelete(event, this, 'Delete this user?');"
                                    class="btn btn-danger btn-icon" title="Delete"><i class="icon-trash"></i></a>
                             </td>
                         </tr>

@@ -16,7 +16,7 @@ namespace Domain.Entities
         public string FirstName { get; set; }
 
         [MaxLength(100)]
-        public string LastName { get; set; }
+        public string? LastName { get; set; }
 
         // Multi-Tenant
         [Required]
@@ -30,10 +30,14 @@ namespace Domain.Entities
         public string? BranchId { get; set; }
         public virtual Branch Branch { get; set; }
 
-        public string DepartmentId { get; set; }
+        // Optional on the Add/Edit Employee form - only Employee Code,
+        // First Name, Gender, Role and Company are required inputs.
+        // See EF Core migration 20260913130000_MakeSomeEmployeeFieldsOptional
+        // for the matching database change (nullable columns).
+        public string? DepartmentId { get; set; }
         public virtual Department Department { get; set; }
 
-        public string DesignationId { get; set; }
+        public string? DesignationId { get; set; }
         public virtual Designation Designation { get; set; }
 
         // Reporting Manager (Self Reference)
@@ -43,21 +47,23 @@ namespace Domain.Entities
         // Personal Info
         public DateTime? DateOfBirth { get; set; }
         public Gender Gender { get; set; }
-        public MaritalStatus MaritalStatus { get; set; }
+        public MaritalStatus MaritalStatus { get; set; } = MaritalStatus.Unmarried;
 
         // Contact Info
         [MaxLength(150)]
         public string? Email { get; set; }
 
+        // Optional on the Add/Edit Employee form - see DepartmentId above.
         [MaxLength(15)]
-        public string Phone { get; set; }
+        public string? Phone { get; set; }
 
         [MaxLength(15)]
         public string? EmergencyContact { get; set; }
 
-        // Address
-        public string Address { get; set; }
-        public string Pincode { get; set; }
+        // Address - optional on the Add/Edit Employee form, see
+        // DepartmentId above.
+        public string? Address { get; set; }
+        public string? Pincode { get; set; }
 
         // KYC (India Specific)
         [MaxLength(10)]
@@ -66,7 +72,16 @@ namespace Domain.Entities
         [MaxLength(12)]
         public string? AadharNumber { get; set; }
         public string? FilePath { get; set; } // Image upload
-        public string? ShiftId { get; set; }
+
+        // Mandatory - see EF Core migration
+        // 20260913120000_MakeEmployeeShiftMandatory (NOT NULL at the
+        // database level too, matching CompanyId/DepartmentId/
+        // DesignationId's existing pattern on this entity). A brand-new
+        // Employee defaults to the Shift master's IsDefaultShift record
+        // ("General Shift" - see DbSeeder.cs), resolved at the
+        // controller/service layer, never hard-coded here.
+        [Required]
+        public string ShiftId { get; set; }
         public virtual Shift DefaultShift { get; set; }
 
         // Employment Details

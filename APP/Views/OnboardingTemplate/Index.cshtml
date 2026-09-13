@@ -111,7 +111,7 @@
                                         </button>
 
                                         <form asp-controller="OnboardingTemplate" asp-action="Delete" method="post" style="display:inline;"
-                                              onsubmit="return confirm('Delete this template item?');">
+                                              onsubmit="return confirmSweetDeleteForm(event, this, 'Delete this template item?');">
                                             <input type="hidden" name="id" value="@item.Id" />
                                             <button type="submit" class="btn btn-danger btn-xs" title="Delete">
                                                 <i class="icon-trash"></i>

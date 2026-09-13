@@ -125,8 +125,12 @@ namespace Application.Services.EmployeeServices
             if (string.IsNullOrWhiteSpace(dto.FirstName))
                 throw new Exception("First name is required");
 
-            if (string.IsNullOrWhiteSpace(dto.Phone))
-                throw new Exception("Phone number is required");
+            // Phone is optional on the Add/Edit Employee form (only
+            // Employee Code, First Name, Gender, Role and Company are
+            // required) - so it's no longer rejected when blank, only
+            // format-validated when the caller actually provided one.
+            if (!string.IsNullOrWhiteSpace(dto.Phone) && !Regex.IsMatch(dto.Phone, @"^[0-9]{10}$"))
+                throw new Exception("Invalid phone number");
 
             if (string.IsNullOrWhiteSpace(dto.Email))
                 throw new Exception("Email is required");
@@ -134,20 +138,23 @@ namespace Application.Services.EmployeeServices
             if (!new EmailAddressAttribute().IsValid(dto.Email))
                 throw new Exception("Invalid email format");
 
-            if (!Regex.IsMatch(dto.Phone, @"^[0-9]{10}$"))
-                throw new Exception("Invalid phone number");
-
             try
             {
                 // =========================================
                 // DUPLICATE CHECK
                 // =========================================
 
-                bool phoneExists = await _db.Employees
-                    .AnyAsync(x => x.Phone == dto.Phone && !x.IsDeleted);
+                // Skipped when blank - Phone is now optional, and without
+                // this guard every employee with no phone on file would
+                // incorrectly collide with each other (NULL = NULL).
+                if (!string.IsNullOrWhiteSpace(dto.Phone))
+                {
+                    bool phoneExists = await _db.Employees
+                        .AnyAsync(x => x.Phone == dto.Phone && !x.IsDeleted);
 
-                if (phoneExists)
-                    throw new Exception("Employee already exists with same phone number");
+                    if (phoneExists)
+                        throw new Exception("Employee already exists with same phone number");
+                }
 
                 bool emailExists = await _db.Users
                     .AnyAsync(x => x.Email == dto.Email && !x.IsDeleted);
@@ -668,20 +675,20 @@ namespace Application.Services.EmployeeServices
         }
 
         #region GENERATE UNIQUE USERNAME
-        private async Task<string> GenerateUsername(string email)
+        private async Task<string> GenerateUsername(string empCode)
         {
-            // Take only part before @
-            string baseUsername = email
-                                    .Split('@')[0]
-                                    .Trim()
-                                    .Replace(" ", "")
-                                    .ToLower();
+            //// Take only part before @
+            //string baseUsername = email
+            //                        .Split('@')[0]
+            //                        .Trim()
+            //                        .Replace(" ", "")
+            //                        .ToLower();
 
-            string username = baseUsername;
+            string username = empCode;
 
             if (await _db.Users.AnyAsync(x => x.Username == username))
             {
-                username = baseUsername + PasswordGenerator.GenerateRandomNumber(3);
+                username = empCode; //+ PasswordGenerator.GenerateRandomNumber(3);
             }
 
             return username;

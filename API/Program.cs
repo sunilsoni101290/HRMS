@@ -27,6 +27,7 @@ using Infrastructure.Data;
 using Infrastructure.Interfaces;
 using Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -74,7 +75,22 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // EsslAttendanceDataSource and EsslAttendanceSyncService create an
 // IDataProtector with the exact same purpose string
 // ("EsslIntegration.DatabasePassword.v1") so Protect/Unprotect round-trip.
-builder.Services.AddDataProtection();
+//
+// PersistKeysToFileSystem is required under IIS: the default key storage
+// location depends on a loaded user profile, which the ApplicationPoolIdentity
+// IIS runs this app as does NOT have. Without this, a new key ring is
+// silently generated on every app pool recycle/restart - which doesn't just
+// invalidate cookies, it makes every eSSL password already encrypted with
+// the OLD key permanently undecryptable (Unprotect throws). Keys are stored
+// under App_Data\Keys, next to the app, so the IIS Application Pool
+// identity needs Modify rights there (see deployment guide's folder
+// permissions section) - same folder survives publishes since dotnet
+// publish doesn't delete existing files by default (DeleteExistingFiles=false
+// in the LocalIIS profile).
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(
+        Path.Combine(builder.Environment.ContentRootPath, "App_Data", "Keys")))
+    .SetApplicationName("HRMS-ERP-API");
 
 /*
  // ======================================================
@@ -92,11 +108,20 @@ builder.Services.AddCors(options =>
 });
  */
 
+// IIS deployment: the APP site's real origin is read from
+// Cors:AllowedOrigins in appsettings (set to http://localhost:8080 in
+// appsettings.Production.json to match the IIS "ERP" site) so this never
+// silently points at a dev-only port again. Falls back to the original
+// dev value if the key is absent, so local `dotnet run` behavior is
+// unchanged.
+var corsAllowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? new[] { "http://localhost:8081" };
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowMVC", policy =>
     {
-        policy.WithOrigins("http://localhost:8081")
+        policy.WithOrigins(corsAllowedOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
@@ -180,6 +205,13 @@ builder.Services.AddScoped<IErrorLogService, ErrorLogService>();
 builder.Services.AddScoped<ISequenceService, SequenceService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
+// TenantMiddleware removed (was hard-blocking every non-/api/auth request
+// with "Tenant not provided" 400 whenever the JWT's TenantId claim was
+// empty - see TenantService's remarks). TenantService now resolves TenantId
+// itself, on demand, from the current HttpContext via IHttpContextAccessor -
+// no middleware needed, and a request is never rejected outright just for
+// not carrying a tenant.
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<ITenantBusinessService, TenantBusinessService>();
 builder.Services.AddScoped<IAppFeatureService, AppFeatureService>();
@@ -362,18 +394,35 @@ var app = builder.Build();
 // Global Exception Middleware
 app.UseGlobalExceptionMiddleware();
 
-// Swagger
-app.UseSwagger();
+// Swagger - controlled by EnableSwagger (defaults to true, so local/dev
+// behavior is unchanged unless a config sets it explicitly). Set to
+// false in appsettings.Production.json so the IIS deployment doesn't
+// expose the API surface/docs at the site root by default; flip it back
+// to true there if you want Swagger reachable in production too.
+var enableSwagger = builder.Configuration.GetValue<bool>("EnableSwagger", true);
 
-app.UseSwaggerUI(c =>
+if (enableSwagger)
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "ERP API V1");
+    app.UseSwagger();
 
-    c.RoutePrefix = string.Empty;
-});
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "ERP API V1");
 
-// HTTPS
-app.UseHttpsRedirection();
+        c.RoutePrefix = string.Empty;
+    });
+}
+
+// HTTPS - the IIS site (see deployment guide) is bound to HTTP only
+// (http://localhost:81), so forcing a redirect to HTTPS in Production
+// would send every request to a binding that doesn't exist and break the
+// API. Kept for Development, where the "https" launchSettings profile
+// provides a real HTTPS endpoint to redirect to. If you later add an
+// HTTPS binding in IIS, move this back outside the check.
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 // Routing
 app.UseRouting();
@@ -386,8 +435,18 @@ app.UseCors("AllowMVC");
 // Authentication
 app.UseAuthentication();
 
-// Custom Tenant Middleware
-app.UseMiddleware<TenantMiddleware>();
+// REMOVED: app.UseMiddleware<TenantMiddleware>(). This used to hard-reject
+// (HTTP 400 "Tenant not provided") EVERY request outside /api/auth whenever
+// the caller's JWT had an empty "TenantId" claim (e.g. a user row whose
+// TenantId was never seeded) - which broke every endpoint in the API, not
+// just tenant-aware ones, and most of the API doesn't even read TenantId.
+// TenantService now resolves TenantId lazily, per-request, straight from
+// IHttpContextAccessor (X-Tenant-ID header first, then the JWT claim) and
+// simply returns "" if neither is present - never blocks the pipeline. See
+// Infrastructure/Services/TenantService.cs. TenantMiddleware.cs itself is
+// left in API/Middleware/ but is no longer registered/used anywhere; delete
+// it directly on disk if you want it gone entirely (this session couldn't
+// remove the file itself - see chat).
 
 // Authorization
 app.UseAuthorization();
@@ -404,6 +463,66 @@ using (var scope = app.Services.CreateScope())
                   .GetRequiredService<ApplicationDbContext>();
 
     await DbSeeder.SeedAsync(db);
+}
+
+// ======================================================
+// eSSL SYNC LOCK RECOVERY (startup)
+// ======================================================
+// ROOT-CAUSE FIX: EsslAttendanceSyncService.IsSyncRunning is a persisted
+// (DB-row) lock, cleared in a `finally` block when a sync run finishes
+// normally - see EsslAttendanceSyncService.SyncAsync's remarks. That
+// `finally` never gets a chance to run if the process hosting it dies
+// mid-run instead of throwing a normal .NET exception: an IIS app pool
+// recycle/stop (exactly what happens on every `dotnet publish` to this
+// site), a server reboot, or the worker process being killed. The next
+// person to click "Sync Now"/"Historical Import" then hits "A sync is
+// already in progress for this tenant" - forever, since nothing is
+// actually running to ever finish and clear it - until the UI's 30-minute
+// stale-lock timer (EsslAttendanceSyncService.DefaultStaleLockMinutes)
+// finally allows Reset Stuck Sync.
+//
+// This process just started. By definition, no eSSL sync from a PREVIOUS
+// process instance can still be genuinely running - it died with that
+// process. So any row still marked IsSyncRunning = true at this exact
+// point is unconditionally stale, and it is always safe to clear it here
+// rather than making an admin wait out the 30-minute timer (or use Reset
+// Stuck Sync) after every redeploy/restart.
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    try
+    {
+        var staleLocks = await db.EsslAttendanceSyncStates
+            .Where(s => s.IsSyncRunning)
+            .ToListAsync();
+
+        if (staleLocks.Count > 0)
+        {
+            foreach (var state in staleLocks)
+            {
+                state.IsSyncRunning = false;
+                state.LastSyncStatus = "Interrupted";
+                state.LastError = "Sync was interrupted by an application restart (IIS recycle/redeploy/server restart) before it could finish or record a result. The lock has been automatically cleared - you can safely click Sync Now / Historical Import again.";
+                state.LastSyncCompletedAt = DateTime.Now;
+            }
+
+            await db.SaveChangesAsync();
+
+            logger.LogWarning(
+                "eSSL startup recovery: cleared {Count} stale IsSyncRunning lock(s) left over from before this application instance started (tenant IDs: {TenantIds}).",
+                staleLocks.Count,
+                string.Join(", ", staleLocks.Select(s => s.TenantId)));
+        }
+    }
+    catch (Exception ex)
+    {
+        // Never let this best-effort cleanup stop the app from starting -
+        // worst case, an admin still has the existing 30-minute stale-lock
+        // fallback/Reset Stuck Sync button available.
+        logger.LogError(ex, "eSSL startup recovery: failed to clear stale IsSyncRunning locks (non-fatal - continuing startup).");
+    }
 }
 
 app.Run();

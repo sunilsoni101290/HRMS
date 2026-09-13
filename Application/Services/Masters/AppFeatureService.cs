@@ -221,6 +221,14 @@ namespace Application.Services.Masters
             entity.ControllerName = dto.ControllerName;
             entity.ActionName = dto.ActionName;
             entity.AreaName = dto.AreaName;
+            // entity.Url is intentionally not set here - it is a [NotMapped],
+            // get-only computed property on AppFeature (Domain/Entities/
+            // AppFeature.cs), always derived from AreaName/ControllerName/
+            // ActionName. There is no column to persist it to; it has no
+            // setter at all. The Url <input> on Create.cshtml editing it
+            // does nothing today and never has - see the Views/AppFeatures/
+            // Create.cshtml TODO for the actual fix (make that field
+            // read-only/computed in the UI instead of implying it's saved).
 
             entity.IsVisible = dto.IsVisible;
             entity.IsMenu = dto.IsMenu;

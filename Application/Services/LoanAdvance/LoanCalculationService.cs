@@ -183,7 +183,7 @@ namespace Application.Services.LoanAdvance
                     CurrentActiveLoanCount = activeLoanCount
                 };
 
-            var serviceMonths = ((DateTime.UtcNow.Year - employee.JoiningDate.Year) * 12) + DateTime.UtcNow.Month - employee.JoiningDate.Month;
+            var serviceMonths = ((DateTime.UtcNow.Year - ((DateTime)employee.JoiningDate).Year) * 12) + DateTime.UtcNow.Month - ((DateTime)employee.JoiningDate).Month;
             if (serviceMonths < policy.MinServiceMonthsRequired)
                 return new LoanEligibilityDto
                 {

@@ -6,8 +6,8 @@ namespace Application.Interfaces.Dashboard
 {
     public interface IEmployeeDashboardService
     {
-        Task<EmployeeDashboardDto> GetAsync(string userId);
-        Task<EmployeeProfileDto> GetProfileAsync(string employeeId);
+        Task<EmployeeDashboardDto?> GetAsync(string userId);
+        Task<EmployeeProfileDto?> GetProfileAsync(string employeeId);
 
         Task<List<AttendanceDto>> GetAttendanceAsync(string employeeId);
 

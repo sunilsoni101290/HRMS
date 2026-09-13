@@ -225,8 +225,8 @@ namespace Application.Services.EmployeeServices
 
             return await _context.Employees
                 .CountAsync(x =>
-                    x.JoiningDate.Month == today.Month &&
-                    x.JoiningDate.Day == today.Day);
+                    ((DateTime)x.JoiningDate).Month == today.Month &&
+                    ((DateTime)x.JoiningDate).Day == today.Day);
             }
             catch (Exception)
             {

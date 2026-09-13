@@ -84,7 +84,7 @@
                                 {
                                     <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-default btn-icon" title="Edit"><i class="icon-pencil"></i></a>
                                     <a asp-action="Delete" asp-route-id="@item.Id"
-                                       onclick="return confirm('Delete this task?');"
+                                       onclick="return confirmSweetDelete(event, this, 'Delete this task?');"
                                        class="btn btn-danger btn-icon" title="Delete"><i class="icon-trash"></i></a>
                                 }
                             </td>
