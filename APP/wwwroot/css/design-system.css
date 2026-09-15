@@ -1,0 +1,432 @@
+/* ==========================================================================
+   HRMS Enterprise Design System
+   ==========================================================================
+   Centralized tokens + reusable component classes shared across every
+   module. Layers ON TOP of Bootstrap (assets/css/*.min.css) and the
+   existing Limitless-based theme - nothing here overrides Bootstrap's own
+   classes, it only adds new "ent-*" utility/component classes so pages can
+   opt in without any risk to existing markup, business logic or scripts.
+
+   Rollout: applied to Views/Dashboard/Index.cshtml first (proof, no visual
+   change). Every other module adopts these same classes as it's migrated -
+   see the design system section of the redesign plan for the module order.
+   ========================================================================== */
+
+:root {
+    /* ---- Color tokens ---- */
+    --ent-navy-900: #16233f;
+    --ent-navy-800: #1b2a4a;
+    --ent-navy-700: #22365f;
+    --ent-navy-600: #2b4270;
+    --ent-blue: #4e9cff;
+    --ent-blue-dark: #2b6fd9;
+    --ent-green: #4cd39b;
+    --ent-green-dark: #1fa876;
+    --ent-indigo: #8a7bff;
+    --ent-indigo-dark: #5c4de0;
+    --ent-red: #ff8a8a;
+    --ent-red-dark: #e5484d;
+    --ent-teal: #3ecbc8;
+    --ent-teal-dark: #1f9d9a;
+    --ent-orange: #ffb04e;
+    --ent-orange-dark: #e08b1f;
+    --ent-purple: #c084fc;
+    --ent-purple-dark: #9333ea;
+    --ent-pink: #ff7bb0;
+    --ent-pink-dark: #e0447e;
+    --ent-gold: #f5c542;
+    --ent-gold-dark: #d99a1f;
+
+    --ent-text-heading: #1b2a4a;
+    --ent-text-body: #45526b;
+    --ent-text-muted: #8896ad;
+    --ent-border: #edf0f5;
+    --ent-border-soft: #f4f6f9;
+    --ent-surface: #ffffff;
+    --ent-surface-alt: #f7f9fc;
+
+    /* ---- Spacing scale (4px base) ---- */
+    --ent-space-1: 4px;
+    --ent-space-2: 8px;
+    --ent-space-3: 12px;
+    --ent-space-4: 16px;
+    --ent-space-5: 20px;
+    --ent-space-6: 24px;
+    --ent-space-8: 32px;
+
+    /* ---- Radius / shadow ---- */
+    --ent-radius-sm: 6px;
+    --ent-radius: 8px;
+    --ent-radius-lg: 10px;
+    --ent-shadow-sm: 0 1px 3px rgba(20, 30, 60, .08);
+    --ent-shadow: 0 4px 14px rgba(27, 42, 74, .12);
+    --ent-shadow-lg: 0 8px 20px rgba(20, 30, 60, .12);
+
+    /* ---- Typography ---- */
+    --ent-font: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ==========================================================================
+   Welcome / overview strip (dashboards)
+   ========================================================================== */
+.ent-welcome-strip {
+    background: linear-gradient(120deg, var(--ent-navy-800), var(--ent-navy-700) 60%, var(--ent-navy-600));
+    border-radius: var(--ent-radius);
+    padding: 22px 26px;
+    margin-bottom: var(--ent-space-5);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--ent-space-4);
+    box-shadow: var(--ent-shadow);
+}
+.ent-welcome-text h4 { color: #fff; margin: 0 0 4px; font-weight: 600; }
+.ent-welcome-text p { color: #b9c4dc; margin: 0; font-size: 13px; }
+.ent-welcome-chips { display: flex; gap: 14px; flex-wrap: wrap; }
+.ent-chip {
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
+    border-radius: var(--ent-radius); padding: 8px 18px; text-align: center; min-width: 92px;
+}
+.ent-chip-value { display: block; color: #fff; font-size: 19px; font-weight: 700; }
+.ent-chip-label { display: block; color: #9fb0d1; font-size: 10.5px; text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+
+/* ==========================================================================
+   KPI cards - reusable across every dashboard (main, Attendance,
+   Recruitment, Loan/Advance, Employee self-service, etc.)
+   ========================================================================== */
+.ent-kpi-row { margin-bottom: 4px; }
+.ent-kpi-card {
+    background: var(--ent-surface); border-radius: var(--ent-radius); padding: 18px;
+    display: flex; align-items: center; gap: var(--ent-space-4);
+    box-shadow: var(--ent-shadow-sm);
+    border: 1px solid var(--ent-border);
+    margin-bottom: var(--ent-space-5);
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+.ent-kpi-card:hover { transform: translateY(-2px); box-shadow: var(--ent-shadow-lg); }
+.ent-kpi-icon {
+    width: 48px; height: 48px; border-radius: var(--ent-radius-lg); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 20px; color: #fff;
+}
+.ent-icon-blue   { background: linear-gradient(135deg, var(--ent-blue), var(--ent-blue-dark)); }
+.ent-icon-green  { background: linear-gradient(135deg, var(--ent-green), var(--ent-green-dark)); }
+.ent-icon-indigo { background: linear-gradient(135deg, var(--ent-indigo), var(--ent-indigo-dark)); }
+.ent-icon-red    { background: linear-gradient(135deg, var(--ent-red), var(--ent-red-dark)); }
+.ent-icon-teal   { background: linear-gradient(135deg, var(--ent-teal), var(--ent-teal-dark)); }
+.ent-icon-orange { background: linear-gradient(135deg, var(--ent-orange), var(--ent-orange-dark)); }
+.ent-icon-purple { background: linear-gradient(135deg, var(--ent-purple), var(--ent-purple-dark)); }
+.ent-icon-pink   { background: linear-gradient(135deg, var(--ent-pink), var(--ent-pink-dark)); }
+.ent-icon-gold   { background: linear-gradient(135deg, var(--ent-gold), var(--ent-gold-dark)); }
+.ent-kpi-body h3 { margin: 0; font-size: 24px; font-weight: 700; color: var(--ent-text-heading); line-height: 1; }
+.ent-kpi-body span { color: var(--ent-text-muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .4px; }
+
+/* ==========================================================================
+   Panels - a light wrapper over the theme's existing .panel.panel-flat,
+   NOT a replacement. Every existing .panel-heading / .panel-body /
+   .panel-footer keeps working unchanged; this class only adds the
+   consistent radius + shadow.
+   ========================================================================== */
+.ent-panel { border-radius: var(--ent-radius); overflow: hidden; box-shadow: var(--ent-shadow-sm); }
+
+/* Department / breakdown legend rows (progress-bar style lists) */
+.ent-dept-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; }
+.ent-dept-label { flex: 0 0 130px; font-size: 12.5px; color: var(--ent-text-body); display: flex; align-items: center; }
+.ent-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 7px; }
+.ent-dept-progress { flex: 1; }
+.ent-dept-progress .progress { height: 8px; margin: 0; border-radius: 4px; }
+.ent-dept-count { flex: 0 0 80px; text-align: right; font-size: 12.5px; font-weight: 600; color: var(--ent-text-heading); }
+.ent-dept-count small { font-weight: 400; color: var(--ent-text-muted); }
+
+/* Stat strip - inline mini KPI row inside a panel */
+.ent-stat-strip { display: flex; border-top: 1px solid var(--ent-border-soft); border-bottom: 1px solid var(--ent-border-soft); flex-wrap: wrap; }
+.ent-stat { flex: 1 1 25%; min-width: 70px; text-align: center; padding: 14px 8px; border-right: 1px solid var(--ent-border-soft); }
+.ent-stat:last-child { border-right: none; }
+.ent-stat h5 { margin: 0 0 2px; font-size: 20px; font-weight: 700; }
+.ent-stat span { font-size: 11px; text-transform: uppercase; letter-spacing: .4px; color: var(--ent-text-muted); }
+
+/* Feed lists (announcements / events / birthdays / activity / notifications) */
+.ent-feed-list { list-style: none; margin: 0; padding: 4px 0; }
+.ent-feed-list > li {
+    display: flex; align-items: center; gap: 12px; padding: 10px 18px;
+    border-bottom: 1px solid var(--ent-border-soft);
+}
+.ent-feed-list > li:last-child { border-bottom: none; }
+.ent-feed-icon {
+    width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px;
+}
+.ent-feed-avatar { width: 34px; height: 34px; object-fit: cover; flex-shrink: 0; border-radius: 50%; }
+.ent-feed-body { flex: 1; min-width: 0; }
+.ent-feed-body .text-semibold { font-size: 13px; }
+.ent-feed-right { flex-shrink: 0; }
+
+/* ==========================================================================
+   Empty / loading / error states - use on any list, feed, or panel with
+   no data instead of a bare "No records" text node.
+   ========================================================================== */
+.ent-empty-state {
+    text-align: center; padding: var(--ent-space-8) var(--ent-space-4); color: var(--ent-text-muted);
+}
+.ent-empty-state i { font-size: 32px; display: block; margin-bottom: var(--ent-space-2); opacity: .5; }
+.ent-empty-state p { margin: 0; font-size: 13px; }
+
+.ent-loading-state { text-align: center; padding: var(--ent-space-6) var(--ent-space-4); color: var(--ent-text-muted); }
+.ent-spinner {
+    width: 28px; height: 28px; border-radius: 50%; margin: 0 auto var(--ent-space-2);
+    border: 3px solid var(--ent-border); border-top-color: var(--ent-blue);
+    animation: ent-spin .7s linear infinite;
+}
+@keyframes ent-spin { to { transform: rotate(360deg); } }
+
+.ent-error-state { text-align: center; padding: var(--ent-space-6) var(--ent-space-4); color: var(--ent-red-dark); }
+.ent-error-state i { font-size: 28px; display: block; margin-bottom: var(--ent-space-2); }
+
+/* ==========================================================================
+   Data table polish - applies on top of the theme's existing .table
+   classes. Sticky header + tighter row rhythm for list/index pages.
+   ========================================================================== */
+.ent-table-wrap { border-radius: var(--ent-radius); overflow: hidden; border: 1px solid var(--ent-border); }
+.ent-table-toolbar {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--ent-space-3);
+    padding: var(--ent-space-3) var(--ent-space-4); flex-wrap: wrap; background: var(--ent-surface-alt);
+    border-bottom: 1px solid var(--ent-border);
+}
+.ent-table-search { position: relative; flex: 1 1 240px; max-width: 320px; }
+.ent-table-search input { padding-left: 32px; }
+.ent-table-search i {
+    position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--ent-text-muted); font-size: 13px;
+}
+.ent-table-actions { display: flex; gap: var(--ent-space-2); flex-wrap: wrap; }
+
+/* Responsive tables: below tablet width, prefer horizontal scroll inside
+   its own wrapper (never the page) - .table-responsive already does this
+   in Bootstrap; this only styles the scrollbar/edge fade for clarity. */
+@media (max-width: 767px) {
+    .ent-table-wrap .table-responsive { -webkit-overflow-scrolling: touch; }
+}
+
+/* ==========================================================================
+   Badges / status pills - consistent status coloring wherever a
+   label/badge represents Approved/Pending/Rejected/Active/Inactive etc.
+   Reuses the theme's existing bg-* color classes rather than new ones.
+   ========================================================================== */
+.ent-status-pill {
+    display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px;
+    border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: .2px;
+}
+.ent-status-pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+/* Named status-pill color variants - covers the common statuses across
+   modules (Employee active/relieved, Leave/Loan/Advance approved/pending/
+   rejected, device online/offline, etc.) so pages don't hand-roll their
+   own background/color pair per status. */
+.ent-badge-success  { background: #e7f7ee; color: #1e8e4e; }
+.ent-badge-danger   { background: #fdecea; color: #c62828; }
+.ent-badge-warning  { background: #fff6e5; color: #b6790a; }
+.ent-badge-info     { background: #e8f4fd; color: #1d6fa5; }
+.ent-badge-neutral  { background: #eef0f4; color: #5a6472; }
+
+/* ==========================================================================
+   List/index page primitives - row avatar, name+subtitle cell, and the
+   small rounded "N results" count badge next to a page title. Shared by
+   every module's Index.cshtml (Employee, Department, Branch, Asset, ...).
+   ========================================================================== */
+.ent-avatar {
+    width: 38px; height: 38px; border-radius: 50%; object-fit: cover;
+    background: #eaf2ff; flex-shrink: 0;
+}
+.ent-avatar-initials {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--ent-blue), var(--ent-blue-dark));
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; flex-shrink: 0;
+}
+.ent-name-cell { display: flex; align-items: center; gap: 10px; }
+.ent-name-cell .ent-name-primary { font-weight: 600; color: var(--ent-text-heading); white-space: nowrap; }
+.ent-name-cell .ent-name-secondary { font-size: 11.5px; color: var(--ent-text-muted); }
+.ent-count-badge {
+    background: #eaf2ff; color: var(--ent-blue-dark); border-radius: 999px;
+    padding: 2px 10px; font-size: 12px; font-weight: 600; margin-left: 8px;
+}
+
+/* Page header row - title + description on the left, action buttons on
+   the right, wrapping cleanly at mobile width. Used at the top of every
+   Index.cshtml above the filter toolbar. */
+.ent-page-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    flex-wrap: wrap; gap: 14px; margin-bottom: var(--ent-space-5);
+}
+.ent-page-header h4 { margin: 0 0 4px; font-weight: 700; color: var(--ent-text-heading); }
+.ent-page-header p { margin: 0; color: var(--ent-text-muted); font-size: 13px; }
+.ent-page-header-actions { display: flex; gap: var(--ent-space-2); flex-wrap: wrap; }
+
+/* Filter toolbar card - sits above the ent-table-wrap on list pages. */
+.ent-filter-card {
+    background: var(--ent-surface); border: 1px solid var(--ent-border); border-radius: var(--ent-radius-lg);
+    padding: var(--ent-space-4) var(--ent-space-5); margin-bottom: var(--ent-space-5); box-shadow: var(--ent-shadow-sm);
+}
+.ent-filter-card label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .4px; color: var(--ent-text-muted);
+    font-weight: 600; margin-bottom: 4px; display: block;
+}
+
+/* List-page data card + table - the card wrapper + header row styling
+   used around a module's main results table. */
+.ent-list-card { background: var(--ent-surface); border: 1px solid var(--ent-border); border-radius: var(--ent-radius-lg); box-shadow: var(--ent-shadow-sm); overflow: hidden; }
+.ent-list-table { margin-bottom: 0; }
+.ent-list-table thead th {
+    background: var(--ent-surface-alt); color: #6b7488; font-size: 11.5px; text-transform: uppercase;
+    letter-spacing: .4px; font-weight: 700; border-bottom: 1px solid var(--ent-border); white-space: nowrap; vertical-align: middle;
+}
+.ent-list-table tbody td { vertical-align: middle; font-size: 13.5px; color: #2c3548; }
+.ent-list-table tbody tr:hover { background: var(--ent-surface-alt); }
+.ent-row-actions .btn { padding: 5px 9px; }
+
+/* ==========================================================================
+   Form section grouping - clear visual separation between field groups
+   on long Create/Edit forms, without changing any input/validation markup.
+   ========================================================================== */
+.ent-form-section {
+    background: var(--ent-surface); border: 1px solid var(--ent-border); border-radius: var(--ent-radius);
+    padding: var(--ent-space-5); margin-bottom: var(--ent-space-5);
+}
+.ent-form-section-title {
+    font-size: 13px; font-weight: 700; color: var(--ent-text-heading); text-transform: uppercase;
+    letter-spacing: .4px; margin: 0 0 var(--ent-space-4); padding-bottom: var(--ent-space-2);
+    border-bottom: 1px solid var(--ent-border-soft);
+}
+.ent-required-mark { color: var(--ent-red-dark); margin-left: 2px; }
+
+/* ==========================================================================
+   Create/Edit form pattern (moved verbatim from Employee/Create.cshtml,
+   class names unchanged) - sectioned form card with icon header, sticky
+   action bar, photo-upload card, and required-field marker. Any module's
+   Create/Edit view can adopt these same "empform-*" classes as-is; this is
+   just centralizing what was previously duplicated per page, not a
+   rename, so nothing already using them needed to change.
+   ========================================================================== */
+.empform-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px; margin-bottom: 18px;
+}
+.empform-header h4 { margin: 0 0 4px; font-weight: 700; color: #263047; }
+.empform-header p { margin: 0; color: #8a93a6; font-size: 13px; }
+
+.empform-section {
+    background: #fff; border: 1px solid #eef0f4; border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05); margin-bottom: 20px; overflow: hidden;
+}
+.empform-section-header {
+    display: flex; align-items: center; gap: 10px; padding: 15px 20px;
+    border-bottom: 1px solid #f0f2f6; background: #fafbfd;
+}
+.empform-section-header i {
+    font-size: 16px; color: #4e9cff; background: #eaf2ff;
+    width: 34px; height: 34px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+}
+.empform-section-header h6 { margin: 0; font-size: 14px; font-weight: 700; color: #263047; }
+.empform-section-body { padding: 20px 22px 8px; }
+
+.empform-collapsible .empform-section-header { cursor: pointer; user-select: none; }
+.empform-collapsible .empform-section-header .toggle-icon {
+    margin-left: auto; color: #9aa5b8; font-size: 12px; background: none; width: auto; height: auto;
+}
+
+.empform-photo-card {
+    background: #fff; border: 1px solid #eef0f4; border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05); padding: 22px; text-align: center; margin-bottom: 20px;
+}
+.empform-photo-frame {
+    width: 128px; height: 128px; border-radius: 50%; margin: 0 auto 14px; overflow: hidden;
+    border: 3px solid #eef0f4; background: #f4f6fa;
+    display: flex; align-items: center; justify-content: center; position: relative;
+}
+.empform-photo-frame img { width: 100%; height: 100%; object-fit: cover; }
+.empform-photo-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.empform-photo-actions .btn { font-size: 12.5px; padding: 6px 14px; border-radius: 20px; }
+.empform-photo-hint { font-size: 11.5px; color: #9aa5b8; margin-top: 10px; }
+
+.empform-required::after { content: " *"; color: #e53935; }
+
+.empform-actions-bar {
+    position: sticky; bottom: 0; background: #fff; border: 1px solid #eef0f4; border-radius: 10px;
+    padding: 14px 20px; display: flex; justify-content: flex-end; gap: 10px;
+    box-shadow: 0 -2px 10px rgba(0,0,0,.04); margin-top: 6px;
+}
+
+.empform-section .form-control.is-invalid,
+.empform-section .form-control.input-validation-error { border-color: #e53935; background-color: #fff6f6; }
+.empform-section .text-danger { display: block; font-size: 12px; margin-top: 3px; }
+
+/* ==========================================================================
+   Details-page hero pattern (moved verbatim from Employee/Details.cshtml,
+   class names unchanged) - gradient hero card with photo/status, tabbed
+   section nav, and icon+label+value field rows. Reusable as-is by any
+   other module's Details view ("empdetail-*").
+   ========================================================================== */
+.empdetail-hero {
+    background: linear-gradient(120deg, #1b2a4a, #22365f 60%, #2b4270);
+    border-radius: 12px; padding: 28px 28px 24px; color: #fff;
+    box-shadow: 0 8px 24px rgba(20,30,60,.16); margin-bottom: 20px;
+}
+.empdetail-toolbar { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 14px; }
+.empdetail-photo {
+    width: 96px; height: 96px; border-radius: 50%; object-fit: cover;
+    border: 3px solid rgba(255,255,255,.85); box-shadow: 0 4px 14px rgba(0,0,0,.25); background: #fff;
+}
+.empdetail-name { font-size: 20px; font-weight: 700; margin: 0 0 2px; }
+.empdetail-role { color: #c7d3ea; font-size: 13px; margin-bottom: 10px; }
+.empdetail-code {
+    display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.25); padding: 3px 12px; border-radius: 20px;
+    font-size: 12px; font-weight: 600;
+}
+.empdetail-quickinfo { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+.empdetail-quickinfo .qi-pill {
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18); border-radius: 8px;
+    padding: 7px 14px; font-size: 12px; display: flex; align-items: center; gap: 7px; color: #e8edf7;
+}
+.empdetail-quickinfo .qi-pill i { font-size: 14px; opacity: .85; }
+
+.empdetail-tabs { border: none; gap: 6px; margin-bottom: 0; }
+.empdetail-tabs > li { margin-bottom: 0; }
+.empdetail-tabs > li > a {
+    border: 1px solid #e5e9f2 !important; border-radius: 8px !important; margin-right: 6px;
+    color: #5b6680; font-size: 13px; font-weight: 500; padding: 9px 16px;
+    display: flex; align-items: center; gap: 7px;
+}
+.empdetail-tabs > li.active > a,
+.empdetail-tabs > li.active > a:hover,
+.empdetail-tabs > li.active > a:focus {
+    background: #4e9cff !important; border-color: #4e9cff !important; color: #fff !important;
+}
+.empdetail-section-body {
+    background: #fff; border: 1px solid #eef0f4; border-top: none; border-radius: 0 0 10px 10px;
+    padding: 20px 22px 6px;
+}
+.empdetail-field { display: flex; gap: 12px; margin-bottom: 18px; }
+.empdetail-field-icon {
+    flex-shrink: 0; width: 32px; height: 32px; border-radius: 8px; background: #eaf2ff; color: #4e9cff;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+}
+.empdetail-field-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .4px; color: #9aa5b8;
+    font-weight: 600; margin-bottom: 2px;
+}
+.empdetail-field-value { font-size: 13.5px; color: #2c3548; font-weight: 500; word-break: break-word; }
+.empdetail-status {
+    display: inline-flex; align-items: center; gap: 5px; padding: 3px 12px; border-radius: 20px;
+    font-size: 11.5px; font-weight: 600; margin-left: 8px;
+}
+.empdetail-status.active { background: rgba(102,187,106,.18); color: #a5e8ac; }
+.empdetail-status.relieved { background: rgba(239,83,80,.18); color: #ffb0ad; }
+
+/* ==========================================================================
+   Responsive helpers
+   ========================================================================== */
+@media (max-width: 767px) {
+    .ent-welcome-strip { padding: 16px 18px; }
+    .ent-kpi-card { padding: 14px; }
+}

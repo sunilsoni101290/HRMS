@@ -33,7 +33,7 @@
     </div>
 
     <div class="table-responsive">
-        <table class="table table-hover table-striped">
+        <table class="table table-hover table-striped datatable-basic">
             <thead>
                 <tr>
                     <th width="60">#</th>
@@ -105,4 +105,34 @@
         .label { font-size: 11px; }
         .btn-icon { width: 34px; }
     </style>
+
+    <script>
+        // Auto-added: client-side pagination for this Index page's listing
+        // table (DataTables). Safe to run even if this page already
+        // initializes '.datatable-basic' itself above - 'retrieve: true'
+        // makes DataTables return the existing instance instead of
+        // re-initializing (and throwing) when that's the case.
+        $(document).ready(function () {
+            if ($.fn.DataTable) {
+                var __indexDataTable = $('.datatable-basic').DataTable({
+                    autoWidth: false,
+                    paging: true,
+                    ordering: true,
+                    searching: false,
+                    pageLength: 10,
+                    lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                    language: { search: "_INPUT_", searchPlaceholder: "Search..." },
+                    retrieve: true
+                });
+
+            // Rewire the page's existing search box to drive DataTables'
+            // own filtering pipeline (instead of any legacy row .toggle()
+            // logic still bound above), so search results stay correct once
+            // rows are split across pages.
+            $('#searchInput').on('keyup', function () {
+                __indexDataTable.search($(this).val() || '').draw();
+            });
+            }
+        });
+    </script>
 }

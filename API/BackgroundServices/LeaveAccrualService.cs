@@ -1,4 +1,5 @@
 using Application.DTOs.Leaves;
+using Application.Interfaces.ErrorLog;
 using Application.Interfaces.Leaves;
 using Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -73,8 +74,31 @@ namespace API.BackgroundServices
                 catch (Exception ex)
                 {
                     // A failed run must never crash the host - just log and
-                    // try again on the next tick.
+                    // try again on the next tick. Also recorded in the
+                    // shared ErrorLog table (fresh scope - the cycle's own
+                    // scope is already gone by the time this runs) so it
+                    // shows up on the Error Log admin screen, not just in
+                    // server logs.
                     _logger.LogError(ex, "Leave accrual/carry-forward cycle failed.");
+
+                    try
+                    {
+                        using var errorScope = _scopeFactory.CreateScope();
+                        var errorLogService = errorScope.ServiceProvider.GetRequiredService<IErrorLogService>();
+
+                        await errorLogService.LogAsync(
+                            ex,
+                            module: "HRMS",
+                            feature: "Leave Accrual",
+                            controller: "LeaveAccrualService",
+                            action: nameof(RunCycleAsync),
+                            userId: "System",
+                            userName: "System");
+                    }
+                    catch
+                    {
+                        // Logging must never itself take down the host.
+                    }
                 }
 
                 try

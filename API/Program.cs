@@ -217,6 +217,7 @@ builder.Services.AddScoped<ITenantBusinessService, TenantBusinessService>();
 builder.Services.AddScoped<IAppFeatureService, AppFeatureService>();
 builder.Services.AddScoped<IFinancialYearService, FinancialYearService>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
+builder.Services.AddScoped<IEmployeeImportExportService, EmployeeImportExportService>();
 builder.Services.AddScoped<IEmployeeDocumentService, EmployeeDocumentService>();
 builder.Services.AddScoped<IEmployeeBankDetailService, EmployeeBankDetailService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
@@ -227,12 +228,23 @@ builder.Services.AddScoped<IBiometricAgentService, BiometricAgentService>();
 builder.Services.AddScoped<IAttendanceProcessorService,AttendanceProcessorService>();
 builder.Services.AddScoped<IEmployeeBiometricMappingService, EmployeeBiometricMappingService>();
 builder.Services.AddScoped<IEsslAttendanceDataSource, EsslAttendanceDataSource>();
+// SQL Server stored-procedure-based bulk staging write path for
+// BiometricAttendanceLogs - see EsslBulkAttendanceLogWriter.cs and
+// EsslBulkStaging.sql (run that script once against this database before
+// this path can succeed; EsslAttendanceSyncService falls back to its
+// existing EF insert path automatically until then).
+builder.Services.AddScoped<IEsslBulkAttendanceLogWriter, EsslBulkAttendanceLogWriter>();
 builder.Services.AddScoped<IEsslAttendanceSyncService, EsslAttendanceSyncService>();
 // Singleton in-process queue for manual eSSL sync requests (Sync Now /
 // Historical Import / Retry Failed Sync) - consumed by the ALREADY-
 // registered EsslAttendanceSyncBackgroundService below, instead of a
 // detached Task.Run per request. See IEsslSyncJobQueue's remarks.
 builder.Services.AddSingleton<IEsslSyncJobQueue, EsslSyncJobQueue>();
+// Singleton in-process queue for "drain the biometric attendance backlog
+// now" requests from the LAN-agent path (BiometricSyncController), also
+// consumed by EsslAttendanceSyncBackgroundService. See
+// IAttendanceProcessingJobQueue's remarks.
+builder.Services.AddSingleton<IAttendanceProcessingJobQueue, AttendanceProcessingJobQueue>();
 builder.Services.AddScoped<IBiometricSimulatorService, BiometricSimulatorService>();
 builder.Services.AddScoped<ILeaveTypeService, LeaveTypeService>();
 builder.Services.AddScoped<ILeaveBalanceService, LeaveBalanceService>();

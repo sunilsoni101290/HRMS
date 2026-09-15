@@ -1,5 +1,6 @@
 using Application.DTOs.Attendances;
 using Application.Interfaces.Attendances;
+using Application.Interfaces.ErrorLog;
 using Domain.Entities;
 using Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -39,17 +40,27 @@ namespace API.BackgroundServices
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly IConfiguration _configuration;
         private readonly IEsslSyncJobQueue _jobQueue;
+
+        // Second, independent queue: "just drain the biometric attendance
+        // backlog" requests from BiometricSyncController (the LAN-agent
+        // path), consumed by this same BackgroundService instead of that
+        // controller calling IAttendanceProcessorService inline and
+        // blocking the HTTP response - see IAttendanceProcessingJobQueue's
+        // remarks.
+        private readonly IAttendanceProcessingJobQueue _processingQueue;
         private readonly ILogger<EsslAttendanceSyncBackgroundService> _logger;
 
         public EsslAttendanceSyncBackgroundService(
             IServiceScopeFactory scopeFactory,
             IConfiguration configuration,
             IEsslSyncJobQueue jobQueue,
+            IAttendanceProcessingJobQueue processingQueue,
             ILogger<EsslAttendanceSyncBackgroundService> logger)
         {
             _scopeFactory = scopeFactory;
             _configuration = configuration;
             _jobQueue = jobQueue;
+            _processingQueue = processingQueue;
             _logger = logger;
         }
 
@@ -87,7 +98,66 @@ namespace API.BackgroundServices
             // this whole service down cleanly on stoppingToken.
             await Task.WhenAll(
                 PeriodicAutoSyncLoopAsync(stoppingToken),
-                ConsumeManualJobsAsync(stoppingToken));
+                ConsumeManualJobsAsync(stoppingToken),
+                ConsumeAttendanceProcessingJobsAsync(stoppingToken));
+        }
+
+        /// <summary>
+        /// Drains IAttendanceProcessingJobQueue - the LAN-agent path's
+        /// "please run the biometric attendance processor now" requests
+        /// (BiometricSyncController.Ingest/Sync/SyncAll), so those API
+        /// actions can enqueue and return immediately instead of blocking
+        /// on AttendanceProcessorService draining the whole backlog inline.
+        /// Sequential and a fresh DI scope per job, same shape as
+        /// ConsumeManualJobsAsync - AttendanceProcessorService has no
+        /// per-tenant locking of its own (unlike SyncAsync), but the
+        /// queue's own coalescing (see AttendanceProcessingJobQueue) already
+        /// keeps this from running more than one drain at a time in
+        /// practice, and running two drains back-to-back is harmless anyway
+        /// (the second simply finds nothing left to do).
+        /// </summary>
+        private async Task ConsumeAttendanceProcessingJobsAsync(CancellationToken stoppingToken)
+        {
+            try
+            {
+                await foreach (var job in _processingQueue.ReadAllAsync(stoppingToken))
+                {
+                    try
+                    {
+                        // IAttendanceProcessorService.ProcessAttendanceWithResultAsync
+                        // takes no CancellationToken - unlike SyncAsync, its own
+                        // MaxBatchesPerRun * batchSize ceiling (see
+                        // AttendanceProcessorService) is what bounds one run, so
+                        // there is no per-job timeout to apply here.
+                        using var scope = _scopeFactory.CreateScope();
+                        var processor = scope.ServiceProvider.GetRequiredService<IAttendanceProcessorService>();
+
+                        var result = await processor.ProcessAttendanceWithResultAsync();
+
+                        _logger.LogInformation(
+                            "Attendance processing job {JobId} (triggered by {TriggeredBy}) finished: " +
+                            "found={Found}, applied={Applied}, unmapped={Unmapped}, skipped={Skipped}, failed={Failed}.",
+                            job.JobId, job.TriggeredBy, result.TotalRawRecords, result.SuccessfullyProcessed,
+                            result.UnmappedRecords, result.Skipped, result.Failed);
+                    }
+                    catch (Exception ex)
+                    {
+                        // ProcessAttendanceWithResultAsync already catches
+                        // everything internally and always returns a result
+                        // rather than throwing - this is only a backstop
+                        // (e.g. DI resolution itself failing) so one bad job
+                        // can never take this consumer loop down.
+                        _logger.LogError(ex,
+                            "Attendance processing job {JobId} (triggered by {TriggeredBy}) failed to run.",
+                            job.JobId, job.TriggeredBy);
+                        await TryLogToErrorLogAsync(ex, nameof(ConsumeAttendanceProcessingJobsAsync));
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Host is shutting down - ReadAllAsync ends cleanly.
+            }
         }
 
         /// <summary>
@@ -128,6 +198,34 @@ namespace API.BackgroundServices
             catch (Exception ex)
             {
                 _logger.LogError(ex, "eSSL sync: failed to reconcile stale sync locks on startup.");
+                await TryLogToErrorLogAsync(ex, nameof(ReconcileStaleLocksOnStartupAsync));
+            }
+        }
+
+        // Shared helper for every backstop catch in this file - a fresh
+        // scope per call (this class's own scope may already be gone by the
+        // time an exception unwinds up to a caller), and itself wrapped so
+        // a logging failure can never cascade into a second unhandled
+        // exception or take down whichever loop called it.
+        private async Task TryLogToErrorLogAsync(Exception ex, string action, string? userId = null)
+        {
+            try
+            {
+                using var errorScope = _scopeFactory.CreateScope();
+                var errorLogService = errorScope.ServiceProvider.GetRequiredService<IErrorLogService>();
+
+                await errorLogService.LogAsync(
+                    ex,
+                    module: "Biometric Device Integration",
+                    feature: "eSSL Attendance Sync",
+                    controller: "EsslAttendanceSyncBackgroundService",
+                    action: action,
+                    userId: userId ?? "System",
+                    userName: "System");
+            }
+            catch
+            {
+                // Logging must never itself take down the host.
             }
         }
 
@@ -154,6 +252,7 @@ namespace API.BackgroundServices
                 {
                     // A failed cycle must never crash the host.
                     _logger.LogError(ex, "eSSL attendance sync cycle failed.");
+                    await TryLogToErrorLogAsync(ex, nameof(RunCycleAsync));
                 }
 
                 if (intervalMinutes < 1) intervalMinutes = 5;
@@ -237,6 +336,7 @@ namespace API.BackgroundServices
                         _logger.LogError(ex,
                             "eSSL manual sync job {JobId} (tenant {TenantId}) failed to run.",
                             job.JobId, job.TenantId);
+                        await TryLogToErrorLogAsync(ex, nameof(ConsumeManualJobsAsync), userId: job.TriggeredBy);
                     }
                 }
             }
@@ -298,6 +398,7 @@ namespace API.BackgroundServices
                 {
                     // One tenant's failure must never stop the others.
                     _logger.LogError(ex, "eSSL sync failed for tenant {TenantId}.", tenantId);
+                    await TryLogToErrorLogAsync(ex, nameof(RunCycleAsync));
                 }
             }
 

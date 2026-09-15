@@ -316,6 +316,90 @@ namespace APP.Models.DTOs
     }
 
     // ==============================
+    // Employee Import/Export DTOs (v2 - Template -> Upload -> Preview ->
+    // Validate -> Import -> Summary). Mirrors Application.DTOs.Employee's
+    // EmployeeImportExportDto.cs field-for-field - these cross the wire as
+    // JSON to/from the API's api/Employee/import/validate and
+    // api/Employee/import/commit endpoints, which own all real validation
+    // (this layer only reads Excel cells and renders results).
+    // ==============================
+
+    public class EmployeeImportRowInputDto
+    {
+        public int RowNumber { get; set; }
+
+        public string? EmployeeCode { get; set; }
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+
+        public string? Gender { get; set; }
+        public string? MaritalStatus { get; set; }
+        public string? DateOfBirth { get; set; }
+
+        public string? Email { get; set; }
+        public string? Phone { get; set; }
+        public string? EmergencyContact { get; set; }
+
+        public string? CompanyName { get; set; }
+        public string? BranchName { get; set; }
+        public string? DepartmentName { get; set; }
+        public string? DesignationName { get; set; }
+        public string? RoleName { get; set; }
+        public string? ReportingManagerCode { get; set; }
+        public string? ShiftName { get; set; }
+
+        public string? EmploymentType { get; set; }
+        public string? JoiningDate { get; set; }
+
+        public string? Address { get; set; }
+        public string? Pincode { get; set; }
+
+        public string? PANNumber { get; set; }
+        public string? AadharNumber { get; set; }
+    }
+
+    public class ImportFieldError
+    {
+        public string Field { get; set; } = "";
+        public string Value { get; set; } = "";
+        public string Error { get; set; } = "";
+    }
+
+    public class EmployeeImportRowValidationDto
+    {
+        public int RowNumber { get; set; }
+        public string? EmployeeCode { get; set; }
+        public string? EmployeeName { get; set; }
+        public string? CompanyName { get; set; }
+        public string? RoleName { get; set; }
+        public string? ShiftName { get; set; }
+        public string? EmploymentType { get; set; }
+        public string? Email { get; set; }
+        public string? Phone { get; set; }
+        public bool IsValid { get; set; }
+        public List<ImportFieldError> Errors { get; set; } = new();
+        public string? Message { get; set; }
+    }
+
+    public class EmployeeImportPreviewResultDto
+    {
+        public int TotalRows { get; set; }
+        public int ValidCount { get; set; }
+        public int InvalidCount { get; set; }
+        public List<EmployeeImportRowValidationDto> Rows { get; set; } = new();
+    }
+
+    public class EmployeeImportCommitResultDto
+    {
+        public bool Success { get; set; }
+        public int TotalRows { get; set; }
+        public int SuccessCount { get; set; }
+        public int FailureCount { get; set; }
+        public string Message { get; set; } = "";
+        public List<EmployeeImportRowValidationDto> Rows { get; set; } = new();
+    }
+
+    // ==============================
     // Department DTOs
     // ==============================
 

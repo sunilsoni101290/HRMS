@@ -221,6 +221,82 @@ namespace Application.Services.ErrorLogs
             }
         }
 
+        // Reported by APP's ClientErrorLoggingFilter (POST api/ClientErrorLog)
+        // for exceptions that occur entirely inside the MVC layer and never
+        // reach the API - APP has no direct database access, so without this
+        // endpoint those exceptions would never be logged anywhere but the
+        // console/ILogger. There is no HttpContext on the API side that
+        // corresponds to the APP request that actually failed (this request
+        // IS the report, not the failure), so the raw strings supplied by
+        // the filter are trusted as-is - same swallow-on-failure contract as
+        // LogAsync/LogExceptionAsync.
+        public async Task LogClientErrorAsync(
+            ClientErrorLogDto dto,
+            string? userId = null,
+            string? userName = null,
+            string? tenantId = null)
+        {
+            try
+            {
+                if (dto == null)
+                    return;
+
+                var (inferredModule, inferredFeature) = InferModuleAndFeature(dto.Controller);
+
+                var log = new ErrorLog
+                {
+                    Id = IDManager.GetNewId(new ErrorLog()),
+
+                    RequestId = "",
+                    CorrelationId = Guid.NewGuid().ToString(),
+
+                    ErrorMessage = dto.Message ?? "",
+                    ExceptionType = dto.ExceptionType ?? "",
+                    StackTrace = dto.StackTrace ?? "",
+                    InnerException = dto.InnerException ?? "No Inner Exception",
+
+                    Endpoint = dto.Url ?? "",
+                    Controller = dto.Controller ?? "",
+                    Action = dto.Action ?? "",
+                    Method = "",
+
+                    ModuleName = inferredModule ?? "HRMS",
+                    FeatureName = inferredFeature ?? dto.Controller ?? "",
+
+                    RequestBody = "",
+                    QueryParams = "",
+
+                    UserId = userId ?? "",
+                    UserName = userName ?? "",
+                    CompanyId = tenantId ?? "",
+
+                    IPAddress = "",
+                    UserAgent = "",
+
+                    LogLevel = "Error",
+                    ErrorTime = DateTime.UtcNow,
+
+                    IsResolved = false,
+                    ResolvedOn = null,
+                    ResolvedBy = "",
+
+                    // Distinguishes these rows on the ErrorLog admin screen -
+                    // they originated on the APP (MVC) side and never touched
+                    // the API, so there's no matching API-side log entry for
+                    // the same failure to cross-reference.
+                    Remarks = "Reported by APP (MVC) layer - originated outside any API call."
+                };
+
+                _db.ErrorLogs.Add(log);
+
+                await _db.SaveChangesAsync();
+            }
+            catch
+            {
+                // Never let logging failure crash the caller.
+            }
+        }
+
         // ==================================================================
         // ERROR LOG MANAGEMENT SCREEN (System Configurator / Super Admin)
         // ==================================================================

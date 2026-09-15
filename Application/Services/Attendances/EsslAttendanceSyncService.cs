@@ -61,6 +61,17 @@ namespace Application.Services.Attendances
         private readonly IDataProtector _protector;
         private readonly ILogger<EsslAttendanceSyncService> _logger;
 
+        // SQL Server stored-procedure-based bulk staging path (see
+        // EsslBulkAttendanceLogWriter.cs / EsslBulkStaging.sql) - the
+        // preferred, faster way to write a batch into BiometricAttendanceLogs.
+        // The existing EF AddRange/SaveChangesAsync logic below is kept
+        // completely unchanged as the automatic fallback whenever this
+        // throws (bulk-copy failure, the SQL objects not yet deployed to
+        // this environment, a genuine whole-batch DB error, etc.) -
+        // correctness first, then performance: a bulk-staging failure never
+        // loses a batch, it only makes that one batch slower.
+        private readonly IEsslBulkAttendanceLogWriter _bulkWriter;
+
         // How far back an automatic (incremental) run re-scans past its last
         // watermark, to safely pick up late-arriving/corrected rows
         // (requirement #8: "do not implement a fragile synchronization
@@ -81,6 +92,7 @@ namespace Application.Services.Attendances
             IErrorLogService errorLogService,
             IConfiguration configuration,
             IDataProtectionProvider dataProtectionProvider,
+            IEsslBulkAttendanceLogWriter bulkWriter,
             ILogger<EsslAttendanceSyncService> logger)
         {
             _db = db;
@@ -91,6 +103,7 @@ namespace Application.Services.Attendances
             // Same purpose string as EsslAttendanceDataSource's protector -
             // both must match exactly for Protect/Unprotect to round-trip.
             _protector = dataProtectionProvider.CreateProtector("EsslIntegration.DatabasePassword.v1");
+            _bulkWriter = bulkWriter;
             _logger = logger;
         }
 
@@ -229,11 +242,21 @@ namespace Application.Services.Attendances
                 // "Essl260123" (as the device actually sends it) were
                 // treated as different keys and NEVER matched, silently
                 // stranding those punches as permanently unmapped.
-                var mappingByCode = await _db.EmployeeBiometricMappings
+                // BiometricEmployeeCodeNormalizer.Normalize is plain C# (not
+                // a SQL-translatable expression), so the GroupBy on it has to
+                // run in memory - fetch the (small) active-mappings table
+                // first via ToListAsync, then group/normalize client-side.
+                // Same pattern EmployeeBiometricMappingService.CreateAsync/
+                // UpdateAsync already use for their own normalized-duplicate
+                // checks.
+                var activeMappings = await _db.EmployeeBiometricMappings
                     .AsNoTracking()
                     .Where(x => x.IsActive)
+                    .ToListAsync(ct);
+
+                var mappingByCode = activeMappings
                     .GroupBy(x => BiometricEmployeeCodeNormalizer.Normalize(x.BiometricEmployeeCode))
-                    .ToDictionaryAsync(g => g.Key, g => g.First(), ct);
+                    .ToDictionary(g => g.Key, g => g.First());
 
                 // Tracks the last resolved direction per (EmployeeCode,
                 // calendar date) purely as a last-resort fallback for rows
@@ -424,12 +447,78 @@ namespace Application.Services.Attendances
                         }
                     }
 
-                    // ...then write the whole batch in ONE round-trip
-                    // (fast path - this is the case for every normal run,
-                    // since the pre-check above already filtered out
-                    // already-imported rows; the IsSyncRunning lock means a
-                    // genuine unique-index race is rare).
+                    // ...then write the whole batch. Preferred path: SQL
+                    // Server stored-procedure-based bulk staging (one TDS
+                    // bulk-copy into dbo.EsslDeviceLogStaging + one set-based
+                    // merge via dbo.usp_EsslStaging_MergeAttendanceLogs - see
+                    // EsslBulkAttendanceLogWriter.cs / EsslBulkStaging.sql).
+                    // On ANY failure here (SQL objects not deployed yet to
+                    // this environment, a genuine whole-batch DB error, bulk
+                    // copy failure) this falls straight through to the
+                    // existing EF AddRange/SaveChangesAsync logic below,
+                    // completely unchanged - correctness first, performance
+                    // second.
+                    bool bulkStagingSucceeded = false;
+
                     if (toInsert.Count > 0)
+                    {
+                        try
+                        {
+                            var connectionString = _db.Database.GetConnectionString();
+
+                            var stageRows = toInsert
+                                .Select(x => new EsslBulkStageRow
+                                {
+                                    Entity = x.Entity,
+                                    SourceDeviceLogId = x.Raw.DeviceLogId,
+                                    IsUnmapped = !mappingByCode.ContainsKey(
+                                        BiometricEmployeeCodeNormalizer.Normalize(x.Raw.UserId))
+                                })
+                                .ToList();
+
+                            var stageResult = await _bulkWriter.StageAndMergeAsync(
+                                connectionString, tenantId, stageRows, ct);
+
+                            // Reconciliation: StagedCount == InsertedCount +
+                            // DuplicateCount is guaranteed by the stored
+                            // procedure itself (DB-verified, not a C#
+                            // running count) - see EsslBulkStaging.sql.
+                            // DuplicateCount here catches a genuinely
+                            // concurrent writer that inserted the same
+                            // DeviceTransactionId between this batch's
+                            // alreadyImported pre-check and the merge -
+                            // extremely rare given the IsSyncRunning lock,
+                            // but still counted correctly rather than
+                            // silently dropped.
+                            result.RecordsImported += stageResult.InsertedCount;
+                            result.DuplicateCount += stageResult.DuplicateCount;
+                            result.RecordsSkipped += stageResult.DuplicateCount;
+                            result.UnknownEmployeeCount += stageResult.UnmappedInsertedCount;
+
+                            syncLog.RecordsInserted += stageResult.InsertedCount;
+                            syncLog.DuplicateCount += stageResult.DuplicateCount;
+                            syncLog.RecordsSkipped += stageResult.DuplicateCount;
+
+                            foreach (var (raw, _) in toInsert)
+                                AdvanceWatermark(raw);
+
+                            bulkStagingSucceeded = true;
+                        }
+                        catch (Exception bulkStageEx)
+                        {
+                            _logger.LogWarning(bulkStageEx,
+                                "eSSL sync: bulk staging failed for a batch of {Count} rows - falling back to the existing EF insert path for this batch only.",
+                                toInsert.Count);
+                        }
+                    }
+
+                    // Fallback path - identical to the logic that ran
+                    // unconditionally before bulk staging was added above.
+                    // Untouched: still the safety net for a bulk-staging
+                    // failure, exactly as it already was the safety net for
+                    // an EF bulk-insert failure (see its own inner
+                    // try/catch below).
+                    if (!bulkStagingSucceeded && toInsert.Count > 0)
                     {
                         _db.BiometricAttendanceLogs.AddRange(toInsert.Select(x => x.Entity));
 
@@ -598,11 +687,74 @@ namespace Application.Services.Attendances
                 // runs next).
                 try
                 {
-                    await _attendanceProcessor.ProcessAttendanceAsync();
+                    // Uses the richer "WithResult" call instead of the
+                    // plain bool ProcessAttendanceAsync() so the full
+                    // reconciliation (found/mapped/unmapped/applied/
+                    // rejected/failed, and the exact reason for every row
+                    // that did NOT become an AttendanceLog) is visible here
+                    // - previously this call's outcome was entirely opaque
+                    // (a raw-row-count vs AttendanceLog-count gap with no
+                    // way to see why short of manual SQL). Still
+                    // best-effort exactly as before: a processing problem
+                    // must not make this SYNC run look failed - the raw
+                    // punches are already safely persisted and IsProcessed
+                    // stays false for retry on the next pass, by this
+                    // service or the existing manual "Process Attendance"
+                    // action, whichever runs next.
+                    var processResult = await _attendanceProcessor.ProcessAttendanceWithResultAsync();
+
+                    _logger.LogInformation(
+                        "eSSL sync: attendance processing after import - TotalRawRecords={TotalRawRecords}, PendingBeforeRun={PendingRecords}, MappedRecords={MappedRecords}, UnmappedRecords={UnmappedRecords}, AlreadyProcessed={AlreadyProcessed}, AttendanceCreated={AttendanceCreated}, AttendanceUpdated={AttendanceUpdated}, AttendanceLogsCreated={AttendanceLogsCreated}, Skipped={Skipped}, Failed={Failed}, SuccessfullyProcessed={SuccessfullyProcessed}.",
+                        processResult.TotalRawRecords, processResult.PendingRecords, processResult.MappedRecords,
+                        processResult.UnmappedRecords, processResult.AlreadyProcessed, processResult.AttendanceCreated,
+                        processResult.AttendanceUpdated, processResult.AttendanceLogsCreated, processResult.Skipped,
+                        processResult.Failed, processResult.SuccessfullyProcessed);
+
+                    // Requirement: a processing failure must be visible in
+                    // Sync Logs/ErrorLog, not just the console/file
+                    // ILogger. The run itself never throws upward from
+                    // here (still best-effort per the remark above), but
+                    // a hard failure (processResult.Success == false, the
+                    // outer try/catch in ProcessAttendanceWithResultAsync
+                    // caught something) or a meaningfully high per-row
+                    // failure count both get their own ErrorLog entry so
+                    // they surface on the Error Log admin screen instead
+                    // of only in a log file nobody is tailing.
+                    if (!processResult.Success)
+                    {
+                        await _errorLogService.LogAsync(
+                            new Exception($"AttendanceProcessorService run reported failure: {processResult.ErrorMessage}"),
+                            module: "Biometric Device Integration",
+                            feature: "eSSL Attendance Processing",
+                            controller: "EsslAttendanceSyncService",
+                            action: "SyncAsync",
+                            tenantId: tenantId);
+                    }
+                    else if (processResult.Failed > 0)
+                    {
+                        await _errorLogService.LogAsync(
+                            new Exception(
+                                $"AttendanceProcessorService left {processResult.Failed} row(s) unprocessed due to unexpected per-row exceptions " +
+                                $"out of {processResult.TotalRawRecords} found this run (Unmapped={processResult.UnmappedRecords}, " +
+                                $"RejectedOutOfSequence={processResult.Skipped}). Raw BiometricAttendanceLogs rows remain IsProcessed=false and will be retried on the next sync/Process Attendance run."),
+                            module: "Biometric Device Integration",
+                            feature: "eSSL Attendance Processing",
+                            controller: "EsslAttendanceSyncService",
+                            action: "SyncAsync",
+                            tenantId: tenantId);
+                    }
                 }
                 catch (Exception procEx)
                 {
-                    _logger.LogError(procEx, "eSSL sync: AttendanceProcessorService.ProcessAttendanceAsync failed after import.");
+                    _logger.LogError(procEx, "eSSL sync: AttendanceProcessorService.ProcessAttendanceWithResultAsync failed after import.");
+
+                    await _errorLogService.LogAsync(
+                        procEx,
+                        module: "Biometric Device Integration",
+                        feature: "eSSL Attendance Processing",
+                        controller: "EsslAttendanceSyncService",
+                        action: "SyncAsync",
+                        tenantId: tenantId);
                 }
 
                 state.LastProcessedDeviceLogId = maxProcessedDeviceLogId;

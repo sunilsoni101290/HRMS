@@ -4,206 +4,19 @@
     ViewData["Title"] = "Employees";
 }
 
-<style>
-    /* ===== Employee List - Enterprise redesign =====
-       Namespaced (emplist-*) so nothing here leaks into other screens,
-       same convention as empdetail-*/myprofile-* in Details.cshtml. */
+@* Page-local styling removed - now uses the shared design system
+   (wwwroot/css/design-system.css, loaded once in _LayoutMain.cshtml).
+   .emplist-* classes below map 1:1 to .ent-* equivalents, so this is a
+   pure rename with identical visual result - no markup, JS, or behavior
+   changed. *@
 
-    .emplist-header {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 14px;
-        margin-bottom: 18px;
-    }
-
-    .emplist-header h4 {
-        margin: 0 0 4px;
-        font-weight: 700;
-        color: #263047;
-    }
-
-    .emplist-header p {
-        margin: 0;
-        color: #8a93a6;
-        font-size: 13px;
-    }
-
-    .emplist-header-actions {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-    }
-
-    .emplist-toolbar {
-        background: #fff;
-        border: 1px solid #eef0f4;
-        border-radius: 10px;
-        padding: 16px 18px;
-        margin-bottom: 18px;
-        box-shadow: 0 1px 4px rgba(0,0,0,.04);
-    }
-
-    .emplist-toolbar .form-group {
-        margin-bottom: 10px;
-    }
-
-    .emplist-toolbar label {
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: .4px;
-        color: #9aa5b8;
-        font-weight: 600;
-        margin-bottom: 4px;
-    }
-
-    .emplist-card {
-        background: #fff;
-        border: 1px solid #eef0f4;
-        border-radius: 10px;
-        box-shadow: 0 1px 4px rgba(0,0,0,.04);
-        overflow: hidden;
-    }
-
-    .emplist-table {
-        margin-bottom: 0;
-    }
-
-    .emplist-table thead th {
-        background: #fafbfd;
-        color: #6b7488;
-        font-size: 11.5px;
-        text-transform: uppercase;
-        letter-spacing: .4px;
-        font-weight: 700;
-        border-bottom: 1px solid #eef0f4;
-        white-space: nowrap;
-        vertical-align: middle;
-    }
-
-    .emplist-table tbody td {
-        vertical-align: middle;
-        font-size: 13.5px;
-        color: #2c3548;
-    }
-
-    .emplist-table tbody tr:hover {
-        background: #f7f9fc;
-    }
-
-    .emplist-avatar {
-        width: 38px;
-        height: 38px;
-        border-radius: 50%;
-        object-fit: cover;
-        background: #eaf2ff;
-        flex-shrink: 0;
-    }
-
-    .emplist-avatar-initials {
-        width: 38px;
-        height: 38px;
-        border-radius: 50%;
-        background: linear-gradient(135deg,#4e9cff,#2b6fd9);
-        color: #fff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 13px;
-        font-weight: 700;
-        flex-shrink: 0;
-    }
-
-    .emplist-name-cell {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .emplist-name-cell .emp-name {
-        font-weight: 600;
-        color: #263047;
-        white-space: nowrap;
-    }
-
-    .emplist-name-cell .emp-code {
-        font-size: 11.5px;
-        color: #9aa5b8;
-    }
-
-    .emplist-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        padding: 3px 10px;
-        border-radius: 20px;
-        font-size: 11.5px;
-        font-weight: 600;
-        white-space: nowrap;
-    }
-
-    .emplist-badge.active {
-        background: #e7f7ee;
-        color: #1e8e4e;
-    }
-
-    .emplist-badge.relieved {
-        background: #fdecea;
-        color: #c62828;
-    }
-
-    .emplist-badge i {
-        font-size: 8px;
-    }
-
-    .emplist-actions .btn {
-        padding: 5px 9px;
-    }
-
-    .emplist-empty {
-        text-align: center;
-        padding: 60px 20px;
-        color: #9aa5b8;
-    }
-
-    .emplist-empty i {
-        font-size: 46px;
-        opacity: .35;
-        margin-bottom: 12px;
-        display: block;
-    }
-
-    .emplist-empty h6 {
-        color: #4a5568;
-        font-weight: 600;
-        margin-bottom: 4px;
-    }
-
-    .emplist-loading {
-        text-align: center;
-        padding: 50px 20px;
-        color: #9aa5b8;
-    }
-
-    .emplist-count-badge {
-        background: #eaf2ff;
-        color: #2b6fd9;
-        border-radius: 20px;
-        padding: 2px 10px;
-        font-size: 12px;
-        font-weight: 600;
-        margin-left: 8px;
-    }
-</style>
-
-<div class="emplist-header">
+<div class="ent-page-header">
     <div>
-        <h4>Employees <span class="emplist-count-badge" id="employeeCount">@(Model?.Count() ?? 0)</span></h4>
+        <h4>Employees <span class="ent-count-badge" id="employeeCount">@(Model?.Count() ?? 0)</span></h4>
         <p>Manage employee records, personal information and employment details</p>
     </div>
 
-    <div class="emplist-header-actions">
+    <div class="ent-page-header-actions">
         <a asp-controller="SalaryTemplate" asp-action="Assign" class="btn btn-default" title="Apply a reusable salary structure to one or more employees">
             <i class="icon-cash position-left"></i>
             Assign Salary Structure
@@ -214,6 +27,11 @@
             Import
         </a>
 
+        <a id="btnExport" href="#" class="btn btn-default" title="Export the employees currently shown below (respects Search/Department/Designation/Status filters)">
+            <i class="icon-file-download position-left"></i>
+            Export
+        </a>
+
         <a asp-action="Create" class="btn bg-primary">
             <i class="icon-plus22 position-left"></i>
             Add Employee
@@ -221,7 +39,7 @@
     </div>
 </div>
 
-<div class="emplist-toolbar">
+<div class="ent-filter-card">
     <div class="row">
         <div class="col-md-3">
             <div class="form-group">
@@ -272,10 +90,10 @@
     </div>
 </div>
 
-<div class="emplist-card">
+<div class="ent-list-card">
 
     <div class="table-responsive">
-        <table class="table emplist-table" id="employeeDataTable">
+        <table class="table ent-list-table datatable-basic" id="employeeDataTable">
             <thead>
                 <tr>
                     <th>Employee</th>
@@ -308,20 +126,20 @@
                             data-status="@(isActive ? "active" : "relieved")">
 
                             <td>
-                                <div class="emplist-name-cell">
+                                <div class="ent-name-cell">
 
                                     @if (!string.IsNullOrEmpty(item.FilePath))
                                     {
-                                        <img src="@item.FilePath" class="emplist-avatar" alt="@fullName" />
+                                        <img src="@item.FilePath" class="ent-avatar" alt="@fullName" />
                                     }
                                     else
                                     {
-                                        <span class="emplist-avatar-initials">@(string.IsNullOrWhiteSpace(initials) ? "?" : initials)</span>
+                                        <span class="ent-avatar-initials">@(string.IsNullOrWhiteSpace(initials) ? "?" : initials)</span>
                                     }
 
                                     <div>
-                                        <div class="emp-name">@fullName</div>
-                                        <div class="emp-code">@item.EmployeeCode</div>
+                                        <div class="ent-name-primary">@fullName</div>
+                                        <div class="ent-name-secondary">@item.EmployeeCode</div>
                                     </div>
 
                                 </div>
@@ -336,15 +154,15 @@
                             <td>
                                 @if (isActive)
                                 {
-                                    <span class="emplist-badge active"><i class="icon-checkmark3"></i> Active</span>
+                                    <span class="ent-status-pill ent-badge-success"><i class="icon-checkmark3"></i> Active</span>
                                 }
                                 else
                                 {
-                                    <span class="emplist-badge relieved"><i class="icon-cross2"></i> Relieved</span>
+                                    <span class="ent-status-pill ent-badge-danger"><i class="icon-cross2"></i> Relieved</span>
                                 }
                             </td>
 
-                            <td class="emplist-actions">
+                            <td class="ent-row-actions">
                                 <div class="btn-group">
 
                                     <a asp-action="Details" asp-route-id="@item.Id"
@@ -378,7 +196,7 @@
 
     @if (Model == null || !Model.Any())
     {
-        <div class="emplist-empty">
+        <div class="ent-empty-state">
             <i class="icon-users"></i>
             <h6>No Employees Found</h6>
             <p>Get started by adding your first employee record.</p>
@@ -389,7 +207,7 @@
         </div>
     }
 
-    <div id="noResultsRow" class="emplist-empty" style="display:none;">
+    <div id="noResultsRow" class="ent-empty-state" style="display:none;">
         <i class="icon-search4"></i>
         <h6>No Matching Employees</h6>
         <p>Try adjusting your search or filters.</p>
@@ -449,8 +267,30 @@
                 $('#noResultsRow').toggle(visibleCount === 0 && $('#employeeTableBody .employee-row').length > 0);
             }
 
-            $('#filterSearch').on('keyup', applyFilters);
-            $('#filterDepartment, #filterDesignation, #filterStatus').on('change', applyFilters);
+            // Export always reflects whatever the admin currently sees -
+            // the link's querystring is rebuilt from the same four filter
+            // inputs applyFilters() reads, and EmployeeController.Export
+            // applies the identical matching rules server-side so the
+            // downloaded file and the on-screen list can never disagree.
+            function updateExportLink() {
+                var params = new URLSearchParams();
+
+                var search = $('#filterSearch').val().trim();
+                var dept = $('#filterDepartment').val();
+                var desig = $('#filterDesignation').val();
+                var status = $('#filterStatus').val();
+
+                if (search) params.set('search', search);
+                if (dept) params.set('department', dept);
+                if (desig) params.set('designation', desig);
+                if (status) params.set('status', status);
+
+                var qs = params.toString();
+                $('#btnExport').attr('href', '@Url.Action("Export")' + (qs ? '?' + qs : ''));
+            }
+
+            $('#filterSearch').on('keyup', function () { applyFilters(); updateExportLink(); });
+            $('#filterDepartment, #filterDesignation, #filterStatus').on('change', function () { applyFilters(); updateExportLink(); });
 
             $('#btnClearFilters').on('click', function () {
                 $('#filterSearch').val('');
@@ -458,7 +298,10 @@
                 $('#filterDesignation').val('');
                 $('#filterStatus').val('');
                 applyFilters();
+                updateExportLink();
             });
+
+            updateExportLink();
 
             // Delete - confirmation before any destructive action, no
             // immediate navigation on click.
@@ -509,4 +352,26 @@
         });
     </script>
 
+
+    <script>
+        // Auto-added: client-side pagination for this Index page's listing
+        // table (DataTables). Safe to run even if this page already
+        // initializes '.datatable-basic' itself above - 'retrieve: true'
+        // makes DataTables return the existing instance instead of
+        // re-initializing (and throwing) when that's the case.
+        $(document).ready(function () {
+            if ($.fn.DataTable) {
+                var __indexDataTable = $('.datatable-basic').DataTable({
+                    autoWidth: false,
+                    paging: true,
+                    ordering: true,
+                    searching: true,
+                    pageLength: 10,
+                    lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                    language: { search: "_INPUT_", searchPlaceholder: "Search..." },
+                    retrieve: true
+                });
+            }
+        });
+    </script>
 }

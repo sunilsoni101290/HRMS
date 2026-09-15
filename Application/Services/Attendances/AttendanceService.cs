@@ -29,6 +29,23 @@ namespace Application.Services.Attendances
         // =========================
         public async Task<bool> PunchInAsync(PunchRequestDto dto)
         {
+            var (success, _, _) = await PunchInCoreAsync(dto);
+            return success;
+        }
+
+        public Task<(bool Success, string? Reason, bool AttendanceCreated)> PunchInWithReasonAsync(PunchRequestDto dto)
+            => PunchInCoreAsync(dto);
+
+        // Same exact logic PunchInAsync always ran - only the failure path
+        // changed: instead of swallowing every exception into a bare
+        // `false` (see the class-wide remark this replaces), it now
+        // returns the exception's own message as Reason, and whether a
+        // brand-new Attendance row was created (Step 6 below) vs an
+        // existing one from earlier today/this shift was reused.
+        private async Task<(bool Success, string? Reason, bool AttendanceCreated)> PunchInCoreAsync(PunchRequestDto dto)
+        {
+            bool attendanceCreated = false;
+
             try
             {
             var now = dto.PunchTime;
@@ -134,6 +151,7 @@ namespace Application.Services.Attendances
                 };
 
                 await _db.Attendances.AddAsync(attendance);
+                attendanceCreated = true;
             }
 
             // =====================================================
@@ -208,11 +226,11 @@ namespace Application.Services.Attendances
 
             await _db.SaveChangesAsync();
 
-            return true;
+            return (true, null, attendanceCreated);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return false;
+                return (false, ex.Message, attendanceCreated);
             }
         }
         //public async Task<bool> PunchInAsync(PunchRequestDto dto)
@@ -348,6 +366,19 @@ namespace Application.Services.Attendances
         //}
 
         public async Task<bool> PunchOutAsync(PunchRequestDto dto)
+        {
+            var (success, _, _) = await PunchOutCoreAsync(dto);
+            return success;
+        }
+
+        public Task<(bool Success, string? Reason, bool AttendanceCreated)> PunchOutWithReasonAsync(PunchRequestDto dto)
+            => PunchOutCoreAsync(dto);
+
+        // Same exact logic PunchOutAsync always ran - only the failure
+        // path changed, see PunchInCoreAsync's remark. Never creates a new
+        // Attendance row (Step 5 requires one to already exist), so
+        // AttendanceCreated is always false here.
+        private async Task<(bool Success, string? Reason, bool AttendanceCreated)> PunchOutCoreAsync(PunchRequestDto dto)
         {
             try
             {
@@ -538,11 +569,11 @@ namespace Application.Services.Attendances
 
             await _db.SaveChangesAsync();
 
-            return true;
+            return (true, null, false);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return false;
+                return (false, ex.Message, false);
             }
         }
 
@@ -550,6 +581,18 @@ namespace Application.Services.Attendances
         // 🟢 BREAK IN
         // =========================
         public async Task<bool> BreakInAsync(PunchRequestDto dto)
+        {
+            var (success, _, _) = await BreakInCoreAsync(dto);
+            return success;
+        }
+
+        public Task<(bool Success, string? Reason, bool AttendanceCreated)> BreakInWithReasonAsync(PunchRequestDto dto)
+            => BreakInCoreAsync(dto);
+
+        // Same exact logic BreakInAsync always ran - only the failure path
+        // changed, see PunchInCoreAsync's remark. Never creates a new
+        // Attendance row, so AttendanceCreated is always false here.
+        private async Task<(bool Success, string? Reason, bool AttendanceCreated)> BreakInCoreAsync(PunchRequestDto dto)
         {
             try
             {
@@ -625,11 +668,11 @@ namespace Application.Services.Attendances
 
             await _db.SaveChangesAsync();
 
-            return true;
+            return (true, null, false);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return false;
+                return (false, ex.Message, false);
             }
         }
 
@@ -637,6 +680,18 @@ namespace Application.Services.Attendances
         // 🟢 BREAK OUT
         // =========================
         public async Task<bool> BreakOutAsync(PunchRequestDto dto)
+        {
+            var (success, _, _) = await BreakOutCoreAsync(dto);
+            return success;
+        }
+
+        public Task<(bool Success, string? Reason, bool AttendanceCreated)> BreakOutWithReasonAsync(PunchRequestDto dto)
+            => BreakOutCoreAsync(dto);
+
+        // Same exact logic BreakOutAsync always ran - only the failure path
+        // changed, see PunchInCoreAsync's remark. Never creates a new
+        // Attendance row, so AttendanceCreated is always false here.
+        private async Task<(bool Success, string? Reason, bool AttendanceCreated)> BreakOutCoreAsync(PunchRequestDto dto)
         {
             try
             {
@@ -713,11 +768,11 @@ namespace Application.Services.Attendances
 
             await _db.SaveChangesAsync();
 
-            return true;
+            return (true, null, false);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return false;
+                return (false, ex.Message, false);
             }
         }
 

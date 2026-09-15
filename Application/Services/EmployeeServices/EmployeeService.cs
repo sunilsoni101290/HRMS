@@ -129,14 +129,14 @@ namespace Application.Services.EmployeeServices
             // Employee Code, First Name, Gender, Role and Company are
             // required) - so it's no longer rejected when blank, only
             // format-validated when the caller actually provided one.
-            if (!string.IsNullOrWhiteSpace(dto.Phone) && !Regex.IsMatch(dto.Phone, @"^[0-9]{10}$"))
-                throw new Exception("Invalid phone number");
+            //if (!string.IsNullOrWhiteSpace(dto.Phone) && !Regex.IsMatch(dto.Phone, @"^[0-9]{10}$"))
+            //    throw new Exception("Invalid phone number");
 
-            if (string.IsNullOrWhiteSpace(dto.Email))
-                throw new Exception("Email is required");
+            //if (string.IsNullOrWhiteSpace(dto.Email))
+            //    throw new Exception("Email is required");
 
-            if (!new EmailAddressAttribute().IsValid(dto.Email))
-                throw new Exception("Invalid email format");
+            //if (!new EmailAddressAttribute().IsValid(dto.Email))
+            //    throw new Exception("Invalid email format");
 
             try
             {
@@ -156,11 +156,21 @@ namespace Application.Services.EmployeeServices
                         throw new Exception("Employee already exists with same phone number");
                 }
 
-                bool emailExists = await _db.Users
-                    .AnyAsync(x => x.Email == dto.Email && !x.IsDeleted);
+                // Skipped when blank - Email is required on the Add/Edit
+                // Employee form but is optional for bulk Import (see
+                // EmployeeImportExportService), so this can no longer assume
+                // dto.Email is always populated. Without this guard, two
+                // employees both left with no email would incorrectly
+                // collide (NULL = NULL), exactly like the existing Phone
+                // check above already guards against.
+                if (!string.IsNullOrWhiteSpace(dto.Email))
+                {
+                    bool emailExists = await _db.Users
+                        .AnyAsync(x => x.Email == dto.Email && !x.IsDeleted);
 
-                if (emailExists)
-                    throw new Exception("User already exists with same email");
+                    if (emailExists)
+                        throw new Exception("User already exists with same email");
+                }
 
                 // Employee Code duplicate check (defect fix - previously
                 // never validated at all, relying only on the database's
@@ -222,7 +232,7 @@ namespace Application.Services.EmployeeServices
                 // GENERATE USERNAME
                 // =========================================
 
-                string username = await GenerateUsername(dto.Email);
+                string username = await GenerateUsername(dto.EmployeeCode);
 
                 // =========================================
                 // GENERATE PASSWORD
@@ -246,7 +256,11 @@ namespace Application.Services.EmployeeServices
 
                     Username = username,
 
-                    Email = dto.Email.Trim().ToLower(),
+                    // Email is optional for bulk Import (see
+                    // EmployeeImportExportService) - dto.Email can now
+                    // genuinely be null, which .Trim().ToLower() would throw
+                    // on, so it's only normalized when actually provided.
+                    Email = string.IsNullOrWhiteSpace(dto.Email) ? null : dto.Email.Trim().ToLower(),
 
                     PhoneNumber = dto.Phone,
 

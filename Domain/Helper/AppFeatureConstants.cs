@@ -126,7 +126,7 @@ namespace Domain.Helper
         public const string EMPLOYEE_DOCUMENT_ACTION = ACTION_INDEX;
 
         public const string EMPLOYEE_SHIFT = "EMPLOYEE_SHIFT";
-        public const string EMPLOYEE_SHIFT_CONTROLLER = "EmployeeShift";
+        public const string EMPLOYEE_SHIFT_CONTROLLER = "EmployeeShiftMapping";
         public const string EMPLOYEE_SHIFT_ACTION = ACTION_INDEX;
 
         public const string EMPLOYEE_BANK = "EMPLOYEE_BANK";
@@ -295,7 +295,7 @@ namespace Domain.Helper
         public const string LEAVE_BALANCE_ACTION = ACTION_INDEX;
 
         public const string LEAVE_APPROVAL = "LEAVE_APPROVAL";
-        public const string LEAVE_APPROVAL_CONTROLLER = "LeaveApproval";
+        public const string LEAVE_APPROVAL_CONTROLLER = "LeaveApprovalHistory";
         public const string LEAVE_APPROVAL_ACTION = ACTION_INDEX;
 
         public const string LEAVE_CALENDAR = "LEAVE_CALENDAR";

@@ -50,5 +50,21 @@
             // into the ESS restriction filter alongside plain employees.
             return r.Contains("admin") || r.Contains("manager") || r.Contains("configurator");
         }
+
+        // Narrower than IsAdminRole (which also passes any "manager" or
+        // "configurator" role) - used to gate the User Management "Set
+        // Password" action to Admin/Super Admin and HR Manager/HR
+        // Executive only, per explicit requirement. Same loose
+        // substring-match convention as IsAdminRole/
+        // SystemConfiguratorOnlyAttribute - this is only the "don't even
+        // show/allow the action" UI convenience gate, not a data-driven
+        // Permission check (there is no granular Permission/RolePermission
+        // entry for this specific action in this codebase yet).
+        public static bool IsAdminOrHrRole(string? roleName = null)
+        {
+            var r = (roleName ?? GetActiveRoleName ?? "").Trim().ToLowerInvariant();
+            if (string.IsNullOrEmpty(r)) return false;
+            return r.Contains("admin") || r.Contains("hr");
+        }
     }
 }

@@ -14,6 +14,24 @@ namespace Application.Interfaces.Attendances
         Task<bool> PunchOutAsync(PunchRequestDto dto);
         Task<bool> BreakInAsync(PunchRequestDto dto);
         Task<bool> BreakOutAsync(PunchRequestDto dto);
+
+        // "WithReason" variants of the four methods above - same exact
+        // business logic (each public method above just delegates to the
+        // same private *CoreAsync as these), but instead of swallowing the
+        // exception into a bare `false`, they surface the exact reason
+        // ("Already punched in", "Shift not assigned", "Punch in not
+        // found", a DB error message, etc.) and, for PunchIn, whether a
+        // brand-new Attendance row was created vs an existing one reused.
+        // Added for AttendanceProcessorService's biometric batch processing
+        // (see requirement: per-row diagnostics/reconciliation must show
+        // the EXACT reason a raw punch did not become an AttendanceLog) -
+        // the plain bool-returning methods above are unchanged and every
+        // other existing caller (AttendanceController's live self-service
+        // punch endpoints, etc.) keeps working exactly as before.
+        Task<(bool Success, string? Reason, bool AttendanceCreated)> PunchInWithReasonAsync(PunchRequestDto dto);
+        Task<(bool Success, string? Reason, bool AttendanceCreated)> PunchOutWithReasonAsync(PunchRequestDto dto);
+        Task<(bool Success, string? Reason, bool AttendanceCreated)> BreakInWithReasonAsync(PunchRequestDto dto);
+        Task<(bool Success, string? Reason, bool AttendanceCreated)> BreakOutWithReasonAsync(PunchRequestDto dto);
         Task<AttendanceCurrentStatusDto>GetCurrentStatusAsync(string employeeId);
         Task ProcessMonthlyAttendance(int year, int month);
         Task<List<Attendance>> GetMonthlyAsync(string employeeId, int month, int year);

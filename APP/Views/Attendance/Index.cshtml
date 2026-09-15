@@ -1,4 +1,4 @@
-﻿
+
 @model IEnumerable<AttendanceDto>
 
 
@@ -18,234 +18,244 @@
     var totalOtText = $"{otHoursPart:00}:{otMinutesPart:00}";
 }
 
-<div class="panel panel-flat">
+@* Uses the shared design system (wwwroot/css/design-system.css) - same
+   "ent-*" classes as Dashboard/Employee List, so this list page matches
+   the rest of the app instead of the old plain Bootstrap panel/label
+   markup it had before. No data, route, or business logic changed. *@
 
-    <div class="panel-heading">
-
-        <h5 class="panel-title">
-            <i class="icon-calendar3 position-left"></i>
-            @(ViewBag.ListTitle ?? "Attendance History")
-        </h5>
-
-        @if (isAdmin)
-        {
-            <div class="heading-elements">
-
-                <a asp-action="Create"
-                   class="btn bg-primary btn-sm">
-
-                    <i class="icon-plus22 position-left"></i>
-                    Add Attendance
-
-                </a>
-
-            </div>
-        }
-
+<div class="ent-page-header">
+    <div>
+        <h4><i class="icon-calendar3 position-left"></i> @(ViewBag.ListTitle ?? "Attendance History") <span class="ent-count-badge">@records.Count</span></h4>
+        <p>Daily attendance records, working hours and overtime</p>
     </div>
 
-    <!-- Attendance Summary -->
-
-    <div class="panel-body">
-
-        <div class="row">
-
-            <div class="col-md-3">
-
-                <div class="panel bg-success-400">
-                    <div class="panel-body text-center">
-                        <h3 class="no-margin">@totalPresent</h3>
-                        <span>Total Present</span>
-                    </div>
-                </div>
-
-            </div>
-
-            <div class="col-md-3">
-
-                <div class="panel bg-danger-400">
-                    <div class="panel-body text-center">
-                        <h3 class="no-margin">@totalAbsent</h3>
-                        <span>Absent</span>
-                    </div>
-                </div>
-
-            </div>
-
-            <div class="col-md-3">
-
-                <div class="panel bg-warning-400">
-                    <div class="panel-body text-center">
-                        <h3 class="no-margin">@totalHalfDay</h3>
-                        <span>Half Day</span>
-                    </div>
-                </div>
-
-            </div>
-
-            <div class="col-md-3">
-
-                <div class="panel bg-info-400">
-                    <div class="panel-body text-center">
-                        <h3 class="no-margin">@totalOtText</h3>
-                        <span>Total OT Hours</span>
-                    </div>
-                </div>
-
-            </div>
-
+    @if (isAdmin)
+    {
+        <div class="ent-page-header-actions">
+            <a asp-action="Create" class="btn bg-primary">
+                <i class="icon-plus22 position-left"></i>
+                Add Attendance
+            </a>
         </div>
+    }
+</div>
 
+<!-- Attendance summary KPIs -->
+<div class="row ent-kpi-row">
+    <div class="col-md-3 col-sm-6">
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-green"><i class="icon-checkmark-circle"></i></div>
+            <div class="ent-kpi-body">
+                <h3>@totalPresent</h3>
+                <span>Total Present</span>
+            </div>
+        </div>
     </div>
 
-    <table class="table datatable-scroll-y table-hover">
+    <div class="col-md-3 col-sm-6">
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-red"><i class="icon-cross2"></i></div>
+            <div class="ent-kpi-body">
+                <h3>@totalAbsent</h3>
+                <span>Absent</span>
+            </div>
+        </div>
+    </div>
 
-        <thead>
+    <div class="col-md-3 col-sm-6">
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-orange"><i class="icon-hour-glass"></i></div>
+            <div class="ent-kpi-body">
+                <h3>@totalHalfDay</h3>
+                <span>Half Day</span>
+            </div>
+        </div>
+    </div>
 
-            <tr>
+    <div class="col-md-3 col-sm-6">
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-indigo"><i class="icon-clock2"></i></div>
+            <div class="ent-kpi-body">
+                <h3>@totalOtText</h3>
+                <span>Total OT Hours</span>
+            </div>
+        </div>
+    </div>
+</div>
 
-                <th>Employee</th>
-                <th>Date</th>
-                <th>Shift</th>
-                <th>First In</th>
-                <th>Last Out</th>
-                <th>Working</th>
-                <th>Break</th>
-                <th>OT</th>
-                <th>Status</th>
-                <th class="text-center">Actions</th>
-            </tr>
+<!-- Quick search - client-side only, filters the rendered rows already on
+     the page (same pattern as Employee/Index.cshtml's filter toolbar). -->
+<div class="ent-filter-card">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="ent-table-search">
+                <i class="bi bi-search"></i>
+                <input type="text" id="attendanceSearchInput" class="form-control" placeholder="Search employee, shift, status..." autocomplete="off" />
+            </div>
+        </div>
+    </div>
+</div>
 
-        </thead>
+<div class="ent-list-card">
+    <div class="table-responsive">
+        <table class="table ent-list-table table-hover datatable-basic">
 
-        <tbody>
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Date</th>
+                    <th>Shift</th>
+                    <th>First In</th>
+                    <th>Last Out</th>
+                    <th>Working</th>
+                    <th>Break</th>
+                    <th>OT</th>
+                    <th>Status</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
 
-            @if (Model != null && Model.Any())
-            {
-                foreach (var item in Model)
+            <tbody id="attendanceTableBody">
+
+                @if (Model != null && Model.Any())
                 {
-                    <tr>
+                    foreach (var item in Model)
+                    {
+                        <tr class="attendance-row">
 
-                        <td>
+                            <td>
+                                <div class="text-semibold">
+                                    @item.EmployeeName
+                                </div>
 
-                            <div class="text-semibold">
-                                @item.EmployeeName
-                            </div>
-
-                            <span class="text-muted">
-                                @item.CompanyName
-                            </span>
-
-                        </td>
-
-                        <td>
-                            @item.Date.ToString("dd MMM yyyy")
-                        </td>
-
-                        <td>
-                            @item.ShiftName
-                        </td>
-
-                        <td>
-                            @(item.FirstIn?.ToString("hh:mm tt") ?? "-")
-                        </td>
-
-                        <td>
-                            @(item.LastOut?.ToString("hh:mm tt") ?? "-")
-                        </td>
-
-                        <td>
-                            <span class="label label-success">
-                                @item.WorkingHoursText
-                            </span>
-                        </td>
-
-                        <td>
-                            @item.BreakHours
-                        </td>
-
-                        <td>
-                            @item.OvertimeHours
-                        </td>
-
-                        <td>
-
-                            @if (item.StatusText == "Present")
-                            {
-                                <span class="label label-success">
-                                    Present
+                                <span class="text-muted">
+                                    @item.CompanyName
                                 </span>
-                            }
-                            else if (item.StatusText == "HalfDay")
-                            {
-                                <span class="label label-warning">
-                                    Half Day
+                            </td>
+
+                            <td>
+                                @item.Date.ToString("dd MMM yyyy")
+                            </td>
+
+                            <td>
+                                @item.ShiftName
+                            </td>
+
+                            <td>
+                                @(item.FirstIn?.ToString("hh:mm tt") ?? "-")
+                            </td>
+
+                            <td>
+                                @(item.LastOut?.ToString("hh:mm tt") ?? "-")
+                            </td>
+
+                            <td>
+                                <span class="ent-status-pill ent-badge-success">
+                                    @item.WorkingHoursText
                                 </span>
-                            }
-                            else
-                            {
-                                <span class="label label-danger">
-                                    Absent
-                                </span>
-                            }
+                            </td>
 
-                        </td>
-                        <td class="text-center">
+                            <td>
+                                @item.BreakHours
+                            </td>
 
-                            <ul class="icons-list">
+                            <td>
+                                @item.OvertimeHours
+                            </td>
 
-                                <li>
-                                    <a asp-action="Details"
-                                       asp-route-id="@item.Id"
-                                       title="View">
+                            <td>
+                                @if (item.StatusText == "Present")
+                                {
+                                    <span class="ent-status-pill ent-badge-success">Present</span>
+                                }
+                                else if (item.StatusText == "HalfDay")
+                                {
+                                    <span class="ent-status-pill ent-badge-warning">Half Day</span>
+                                }
+                                else
+                                {
+                                    <span class="ent-status-pill ent-badge-danger">Absent</span>
+                                }
+                            </td>
+
+                            <td class="text-center ent-row-actions">
+                                <div class="btn-group">
+                                    <a asp-action="Details" asp-route-id="@item.Id"
+                                       class="btn btn-default btn-icon" data-popup="tooltip" title="View Details">
                                         <i class="icon-eye"></i>
                                     </a>
-                                </li>
-                            </ul>
-
-                        </td>
-                    </tr>
+                                </div>
+                            </td>
+                        </tr>
+                    }
                 }
-            }
 
-        </tbody>
+            </tbody>
 
-    </table>
+        </table>
+    </div>
 
+    @if (Model == null || !Model.Any())
+    {
+        <div class="ent-empty-state">
+            <i class="icon-calendar3"></i>
+            <p>No attendance records found.</p>
+        </div>
+    }
+
+    <div id="attendanceNoResults" class="ent-empty-state" style="display:none;">
+        <i class="icon-search4"></i>
+        <p>No matching attendance records.</p>
+    </div>
 </div>
 
 @section Scripts {
-   
+
     <script>
+        // Quick client-side search over the rows already rendered on this
+        // page - filters by any visible text in the row (employee name,
+        // shift, status, etc.). Replaces the previous script, which
+        // referenced #searchInput / #attendancelist / #liveClock elements
+        // that did not exist anywhere in this view and threw a JS error
+        // in the console on every page load without ever doing anything.
+        $(function () {
+            var $rows = $('#attendanceTableBody .attendance-row');
 
-         setInterval(function () {
+            $('#attendanceSearchInput').on('keyup', function () {
+                var value = $(this).val().toLowerCase().trim();
+                var visibleCount = 0;
 
-            document.getElementById("liveClock")
-                .innerHTML =
-                new Date().toLocaleTimeString();
-
-        }, 1000);
-
-        // Search Table
-
-        document.getElementById("searchInput")
-            .addEventListener("keyup", function () {
-
-                let value = this.value.toLowerCase();
-
-                let rows = document.querySelectorAll("#attendancelist tr");
-
-                rows.forEach(function (row) {
-
-                    let text = row.innerText.toLowerCase();
-
-                    row.style.display =
-                        text.includes(value) ? "" : "none";
-
+                $rows.each(function () {
+                    var match = !value || $(this).text().toLowerCase().indexOf(value) !== -1;
+                    $(this).toggle(match);
+                    if (match) visibleCount++;
                 });
 
+                $('#attendanceNoResults').toggle(visibleCount === 0 && $rows.length > 0);
             });
-
+        });
     </script>
 
+
+    <script>
+        // Auto-added: client-side pagination for this Index page's listing
+        // table (DataTables). Safe to run even if this page already
+        // initializes '.datatable-basic' itself above - 'retrieve: true'
+        // makes DataTables return the existing instance instead of
+        // re-initializing (and throwing) when that's the case.
+        $(document).ready(function () {
+            if ($.fn.DataTable) {
+                var __indexDataTable = $('.datatable-basic').DataTable({
+                    autoWidth: false,
+                    paging: true,
+                    ordering: true,
+                    searching: true,
+                    pageLength: 10,
+                    lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                    language: { search: "_INPUT_", searchPlaceholder: "Search..." },
+                    retrieve: true
+                });
+            }
+        });
+    </script>
 }

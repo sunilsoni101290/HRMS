@@ -138,6 +138,13 @@
 	<link href="~/assets/css/components.min.css" rel="stylesheet" type="text/css">
 	<link href="~/assets/css/colors.min.css" rel="stylesheet" type="text/css">
 
+	<!-- Enterprise design system - centralized tokens + reusable component
+	     classes (KPI cards, panels, feed lists, empty/loading states, table
+	     toolbar, form sections, status pills) shared across every module.
+	     Loaded once here so any view can use the "ent-*" classes without
+	     re-declaring them in a page-local <style> block. -->
+	<link href="~/css/design-system.css" rel="stylesheet" type="text/css" asp-append-version="true">
+
 	<!-- Sidebar redesign -->
 	<style>
 		.sidebar-main .sidebar-content { background: #1b2a4a; }
@@ -329,7 +336,10 @@
 	<script src="~/global_assets/js/demo_pages/general_widgets_stats.js"></script>
 	<!-- /theme JS files -->
 
-	@* <script src="~/global_assets/js/plugins/tables/datatables/datatables.min.js"></script> *@
+	<!-- Enables client-side pagination (DataTables) on Index/list pages
+	     via the '.datatable-basic' convention - see each Index.cshtml's
+	     own DataTable() init in its Scripts section. -->
+	<script src="~/global_assets/js/plugins/tables/datatables/datatables.min.js"></script>
 
 	<!-- Project-wide SweetAlert delete-confirmation handler (js-swal-delete /
 	     js-swal-delete-form) - see wwwroot/js/site.js's header comment. Was

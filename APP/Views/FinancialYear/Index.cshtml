@@ -815,4 +815,69 @@
 
     </style>
 
+
+    <script>
+        // Auto-added: client-side pagination for this Index page's listing
+        // table (DataTables). Safe to run even if this page already
+        // initializes '.datatable-basic' itself above - 'retrieve: true'
+        // makes DataTables return the existing instance instead of
+        // re-initializing (and throwing) when that's the case.
+        //
+        // This page also has its own Company/Status dropdown filters
+        // (see filterTable() above) that used to hide rows directly via
+        // .toggle() - that only affects whatever rows are currently in the
+        // DOM, which is just the current page once DataTables is paging.
+        // So instead of leaving that legacy filterTable() as the source of
+        // truth, we register a DataTables custom search plugin that
+        // re-implements the same column-based match (columns 1/3/5) and
+        // drive it from the same Company/Status controls, then have
+        // filterTable() simply redraw the table.
+        $(document).ready(function () {
+            if ($.fn.DataTable) {
+                var __indexDataTable = $('.datatable-basic').DataTable({
+                    autoWidth: false,
+                    paging: true,
+                    ordering: true,
+                    searching: false,
+                    pageLength: 10,
+                    lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                    language: { search: "_INPUT_", searchPlaceholder: "Search..." },
+                    retrieve: true
+                });
+
+                // Rewire the page's existing search box to drive DataTables'
+                // own filtering pipeline (instead of any legacy row .toggle()
+                // logic still bound above), so search results stay correct once
+                // rows are split across pages.
+                $('#searchInput').on('keyup', function () {
+                    __indexDataTable.search($(this).val() || '').draw();
+                });
+
+                // Re-implement filterTable()'s Company/Status column match as
+                // a DataTables search plugin, scoped to just this table, so
+                // it applies across every page of results, not just the
+                // rows currently rendered in the DOM.
+                $.fn.dataTable.ext.search.push(function (settings, data) {
+                    if (settings.nTable !== __indexDataTable.table().node()) {
+                        return true;
+                    }
+
+                    var company = $("#CompanyFilter").val() ? $("#CompanyFilter").val().toLowerCase() : "";
+                    var status = $("#StatusFilter").val() ? $("#StatusFilter").val().toLowerCase() : "";
+
+                    var companyName = (data[3] || "").toLowerCase();
+                    var fyStatus = (data[5] || "").toLowerCase();
+
+                    var companyMatch = company === "" || companyName.indexOf(company) > -1;
+                    var statusMatch = status === "" || fyStatus.indexOf(status) > -1;
+
+                    return companyMatch && statusMatch;
+                });
+
+                $("#CompanyFilter, #StatusFilter").on("change", function () {
+                    __indexDataTable.draw();
+                });
+            }
+        });
+    </script>
 }
