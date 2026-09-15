@@ -21,6 +21,23 @@
     .bem-section-title { font-weight:700; text-transform:uppercase; font-size:12.5px; letter-spacing:.3px; color:#3b3f47; margin:22px 0 10px; }
     .bem-empty { text-align:center; color:#9aa0ac; padding:24px; }
     #bemSaveResult { margin-top:14px; }
+
+    /* Row/Select-All checkboxes + the bottom bulk-selection bar. Namespaced
+       the same way as the rest of this page - reuses existing panel/btn/
+       text-muted styling, no new framework. */
+    .bem-select-col { width:40px; }
+    .bem-bulkbar {
+        display:flex; align-items:center; flex-wrap:wrap; gap:10px;
+        margin-top:12px; padding:10px 14px;
+        background:#eef4fc; border:1px solid #d3e3fb; border-radius:4px;
+    }
+    .bem-bulkbar .bem-selected-count { font-weight:700; }
+    .bem-bulkbar .spacer { flex:1 1 auto; }
+    .bem-bulkbar small { white-space:nowrap; }
+    @@media (max-width: 640px) {
+        .bem-bulkbar { justify-content:flex-start; }
+        .bem-bulkbar small { white-space:normal; width:100%; }
+    }
 </style>
 
 <div class="panel panel-flat">
@@ -62,16 +79,15 @@
             </button>
             <div class="spacer"></div>
             <input type="text" id="bemSearch" class="form-control input-sm bem-search" placeholder="Search employee, code, department..." />
-            <button type="button" id="btnSaveAll" class="btn bg-primary btn-sm" disabled>
-                <i class="icon-checkmark3 position-left"></i>
-                <span id="btnSaveAllText">Save All Changes</span>
-            </button>
         </div>
 
         <div class="bem-table-wrap">
             <table class="table table-bordered table-hover" id="bemGrid">
                 <thead>
                     <tr>
+                        <th class="bem-select-col text-center">
+                            <input type="checkbox" id="bemSelectAll" class="bem-select-all" title="Select All" />
+                        </th>
                         <th>Employee</th>
                         <th>Department</th>
                         <th style="width:200px;">Biometric Employee Code</th>
@@ -83,7 +99,7 @@
                 <tbody>
                     @if (Model.Rows.Count == 0)
                     {
-                        <tr><td colspan="6" class="bem-empty">No active employees found.</td></tr>
+                        <tr><td colspan="7" class="bem-empty">No active employees found.</td></tr>
                     }
                     else
                     {
@@ -92,7 +108,11 @@
                             <tr class="bem-row"
                                 data-employee-id="@row.EmployeeId"
                                 data-mapping-id="@row.MappingId"
+                                data-employee-code="@row.EmployeeCode"
                                 data-search="@($"{row.EmployeeCode} {row.EmployeeName} {row.Department}".ToLowerInvariant())">
+                                <td class="text-center">
+                                    <input type="checkbox" class="bem-select" />
+                                </td>
                                 <td>
                                     <strong>@row.EmployeeName</strong><br />
                                     <small class="text-muted">@row.EmployeeCode</small>
@@ -124,6 +144,20 @@
                     }
                 </tbody>
             </table>
+        </div>
+
+        <div class="bem-bulkbar" id="bemBulkBar">
+            <input type="checkbox" class="bem-select-all" id="bemBulkBarSelectAll" title="Select All" />
+            <span><span class="bem-selected-count" id="bemSelectedCount">0</span> employee(s) selected</span>
+            <button type="button" id="btnInsertSelected" class="btn bg-primary btn-sm" disabled>
+                <i class="icon-file-plus2 position-left"></i>
+                <span id="btnInsertSelectedText">Insert Selected</span>
+            </button>
+            <button type="button" id="btnClearSelection" class="btn btn-default btn-sm">
+                <i class="icon-cross2 position-left"></i> Clear Selection
+            </button>
+            <div class="spacer"></div>
+            <small class="text-muted"><i class="icon-info22 position-left"></i> Only selected employees will be inserted/updated with their biometric details.</small>
         </div>
 
         <div id="bemSaveResult"></div>
@@ -188,17 +222,98 @@
 
         function markDirty($row) {
             $row.addClass("bem-row-dirty").data("dirty", true);
-            $("#btnSaveAll").prop("disabled", false);
+        }
+
+        function updateRowStatus($row) {
+            var hasCode = $.trim($row.find(".bem-code").val()) !== "";
+            var $status = $row.find(".bem-status");
+            $status.attr("class", "bem-status " + (hasCode ? "mapped" : "unmapped")).text(hasCode ? "Mapped" : "Unmapped");
         }
 
         $(document).on("input change", ".bem-code, .bem-card, .bem-active", function () {
             var $row = $(this).closest(".bem-row");
             markDirty($row);
-
-            var hasCode = $.trim($row.find(".bem-code").val()) !== "";
-            var $status = $row.find(".bem-status");
-            $status.attr("class", "bem-status " + (hasCode ? "mapped" : "unmapped")).text(hasCode ? "Mapped" : "Unmapped");
+            updateRowStatus($row);
         });
+
+        // Typing directly into the code field means the user has taken
+        // ownership of whatever is there - unchecking the row afterward
+        // must NOT wipe out a value they typed themselves, only one that
+        // was auto-filled by checking the row and never touched since.
+        $(document).on("input", ".bem-code", function () {
+            $(this).data("auto", false);
+        });
+
+        // ==============================================================
+        // ROW SELECTION - checking a row auto-fills its Biometric Employee
+        // Code with the employee's own Employee Code (only when that field
+        // is currently blank, so an already-mapped or manually-typed value
+        // is never clobbered); unchecking clears it again ONLY if it's
+        // still exactly the auto-filled value (i.e. untouched since).
+        // ==============================================================
+        function applyRowSelection($row, checked) {
+            $row.find(".bem-select").prop("checked", checked);
+
+            var $code = $row.find(".bem-code");
+
+            if (checked) {
+                if ($.trim($code.val()) === "") {
+                    $code.val($row.data("employee-code") || "").data("auto", true);
+                    markDirty($row);
+                    updateRowStatus($row);
+                }
+            } else {
+                if ($code.data("auto") === true) {
+                    $code.val("").data("auto", false);
+                    updateRowStatus($row);
+                }
+            }
+        }
+
+        function updateSelectionUI() {
+            var $rows = $("#bemGrid tbody tr.bem-row");
+            var total = $rows.length;
+            var selected = $rows.filter(function () { return $(this).find(".bem-select").is(":checked"); }).length;
+
+            $("#bemSelectedCount").text(selected);
+            $("#btnInsertSelected").prop("disabled", selected === 0);
+
+            $(".bem-select-all").each(function () {
+                if (selected === 0) {
+                    $(this).prop("checked", false).prop("indeterminate", false);
+                } else if (selected === total) {
+                    $(this).prop("checked", true).prop("indeterminate", false);
+                } else {
+                    $(this).prop("checked", false).prop("indeterminate", true);
+                }
+            });
+        }
+
+        $(document).on("change", ".bem-select", function () {
+            applyRowSelection($(this).closest(".bem-row"), $(this).is(":checked"));
+            updateSelectionUI();
+        });
+
+        $(document).on("change", ".bem-select-all", function () {
+            var checked = $(this).is(":checked");
+
+            // Only the rows the search box is currently showing - matches
+            // how a person reads "Select All" while filtered to a subset.
+            $("#bemGrid tbody tr.bem-row:visible").each(function () {
+                applyRowSelection($(this), checked);
+            });
+
+            updateSelectionUI();
+        });
+
+        $("#btnClearSelection").on("click", function () {
+            $("#bemGrid tbody tr.bem-row").each(function () {
+                applyRowSelection($(this), false);
+            });
+            updateSelectionUI();
+        });
+
+        updateSelectionUI();
 
         $("#bemSearch").on("input", function () {
             var q = $(this).val().trim().toLowerCase();
@@ -208,75 +323,165 @@
             });
         });
 
+        // NOTE: APP's Program.cs sets JsonSerializerOptions.PropertyNamingPolicy
+        // = null (see AddJsonOptions), so Controller.Json(result) here
+        // serializes SaveBulk's strongly-typed BulkMappingSaveResult AS-IS -
+        // PascalCase, not camelCase. (AutoMap below returns anonymous
+        // objects whose C# field names are already lowercase, so those stay
+        // untouched.)
         function renderSaveResult(result) {
-            if (!result || !result.results || !result.results.length) {
+            if (!result || !result.Results || !result.Results.length) {
                 $("#bemSaveResult").html("");
                 return;
             }
 
-            var rowsHtml = result.results.map(function (r) {
-                return "<tr><td>" + r.employeeCode + "</td><td>" + r.employeeName + "</td>" +
-                    "<td>" + (r.success ? '<span class="label bg-success">Success</span>' : '<span class="label bg-danger">Failed</span>') + "</td>" +
-                    "<td>" + r.message + "</td></tr>";
+            var rowsHtml = result.Results.map(function (r) {
+                return "<tr><td>" + r.EmployeeCode + "</td><td>" + r.EmployeeName + "</td>" +
+                    "<td>" + (r.Success ? '<span class="label bg-success">Success</span>' : '<span class="label bg-danger">Failed</span>') + "</td>" +
+                    "<td>" + r.Message + "</td></tr>";
             }).join("");
 
             var html = '<div class="row text-center">' +
-                '<div class="col-md-4"><div class="panel panel-body bg-slate-400"><h3 class="no-margin">' + result.totalRows + '</h3><span class="text-uppercase text-size-mini">Total Rows</span></div></div>' +
-                '<div class="col-md-4"><div class="panel panel-body bg-success-400"><h3 class="no-margin">' + result.successCount + '</h3><span class="text-uppercase text-size-mini">Saved</span></div></div>' +
-                '<div class="col-md-4"><div class="panel panel-body bg-danger-400"><h3 class="no-margin">' + result.failureCount + '</h3><span class="text-uppercase text-size-mini">Failed</span></div></div>' +
+                '<div class="col-md-4"><div class="panel panel-body bg-slate-400"><h3 class="no-margin">' + result.TotalRows + '</h3><span class="text-uppercase text-size-mini">Total Rows</span></div></div>' +
+                '<div class="col-md-4"><div class="panel panel-body bg-success-400"><h3 class="no-margin">' + result.SuccessCount + '</h3><span class="text-uppercase text-size-mini">Saved</span></div></div>' +
+                '<div class="col-md-4"><div class="panel panel-body bg-danger-400"><h3 class="no-margin">' + result.FailureCount + '</h3><span class="text-uppercase text-size-mini">Failed</span></div></div>' +
                 '</div>' +
                 '<table class="table table-bordered table-striped"><thead><tr><th>Employee Code</th><th>Employee Name</th><th>Status</th><th>Message</th></tr></thead><tbody>' + rowsHtml + '</tbody></table>';
 
             $("#bemSaveResult").html(html);
         }
 
-        $("#btnSaveAll").on("click", function () {
+        // ==============================================================
+        // BULK SAVE - "Insert Selected" (bottom bar) is the single save
+        // action: it saves whichever rows are currently checked. Nothing
+        // unchecked is ever sent, however much text was typed into it.
+        // ==============================================================
+        function collectSelectedRows() {
             var rows = [];
+
             $("#bemGrid tbody tr.bem-row").each(function () {
                 var $row = $(this);
-                if (!$row.data("dirty")) return;
+                if (!$row.find(".bem-select").is(":checked")) return;
 
                 rows.push({
-                    EmployeeId: $row.data("employee-id"),
-                    MappingId: $row.data("mapping-id") || null,
-                    BiometricEmployeeCode: $.trim($row.find(".bem-code").val()),
-                    CardNumber: $.trim($row.find(".bem-card").val()) || null,
-                    IsActive: $row.find(".bem-active").is(":checked")
+                    employeeId: $row.data("employee-id"),
+                    employeeCode: $row.data("employee-code") || "",
+                    employeeName: $row.find("strong").first().text(),
+                    mappingId: $row.data("mapping-id") || null,
+                    biometricEmployeeCode: $.trim($row.find(".bem-code").val()),
+                    cardNumber: $.trim($row.find(".bem-card").val()) || null,
+                    isActive: $row.find(".bem-active").is(":checked")
                 });
             });
 
+            return rows;
+        }
+
+        // Client-side validation before insertion - required fields and
+        // duplicate Biometric Employee Codes, both within the batch being
+        // submitted and against codes already assigned to a DIFFERENT
+        // employee elsewhere in the grid. The API's own Create/Update still
+        // enforces this authoritatively (per-employee, against the
+        // database) - this just avoids sending an obviously-bad batch and
+        // gives one clear message instead of a row-by-row failure list.
+        function validateSelectedRows(rows) {
+            var errors = [];
+
+            var missing = rows.filter(function (r) { return r.biometricEmployeeCode === ""; });
+            if (missing.length) {
+                errors.push("Biometric Employee Code is required for: " +
+                    missing.map(function (r) { return r.employeeName || r.employeeCode; }).join(", ") + ".");
+            }
+
+            var byCode = {};
+            rows.forEach(function (r) {
+                if (r.biometricEmployeeCode === "") return;
+                var key = r.biometricEmployeeCode.toLowerCase();
+                (byCode[key] = byCode[key] || []).push(r.employeeName || r.employeeCode);
+            });
+            Object.keys(byCode).forEach(function (key) {
+                if (byCode[key].length > 1) {
+                    errors.push("Biometric Employee Code '" + key + "' is used by more than one selected employee: " + byCode[key].join(", ") + ".");
+                }
+            });
+
+            var codeOwners = {};
+            $("#bemGrid tbody tr.bem-row").each(function () {
+                var $row = $(this);
+                var code = $.trim($row.find(".bem-code").val());
+                if (code === "") return;
+                codeOwners[code.toLowerCase()] = {
+                    employeeId: $row.data("employee-id"),
+                    name: $row.find("strong").first().text()
+                };
+            });
+
+            rows.forEach(function (r) {
+                if (r.biometricEmployeeCode === "") return;
+                var owner = codeOwners[r.biometricEmployeeCode.toLowerCase()];
+                if (owner && owner.employeeId !== r.employeeId) {
+                    errors.push("Biometric Employee Code '" + r.biometricEmployeeCode + "' is already assigned to " + owner.name + ".");
+                }
+            });
+
+            return errors;
+        }
+
+        function runBulkSave($btnText, defaultLabel) {
+            var rows = collectSelectedRows();
+
             if (!rows.length) {
-                swal("Nothing to Save", "No rows have been changed.", "info");
+                swal("Nothing Selected", "Select at least one employee to save.", "info");
                 return;
             }
 
-            $("#btnSaveAll").prop("disabled", true);
-            $("#btnSaveAllText").text("Saving...");
+            var errors = validateSelectedRows(rows);
+            if (errors.length) {
+                swal("Fix the Following", errors.join("\n"), "warning");
+                return;
+            }
+
+            $("#btnInsertSelected").prop("disabled", true);
+            $btnText.text("Saving...");
+
+            var payload = rows.map(function (r) {
+                return {
+                    EmployeeId: r.employeeId,
+                    MappingId: r.mappingId,
+                    BiometricEmployeeCode: r.biometricEmployeeCode,
+                    CardNumber: r.cardNumber,
+                    IsActive: r.isActive
+                };
+            });
 
             $.ajax({
                 url: "@Url.Action("SaveBulk")",
                 type: "POST",
                 contentType: "application/json",
-                data: JSON.stringify(rows),
+                data: JSON.stringify(payload),
                 success: function (result) {
-                    $("#btnSaveAllText").text("Save All Changes");
+                    $btnText.text(defaultLabel);
                     renderSaveResult(result);
 
-                    if (result.failureCount === 0) {
-                        swal({ title: "Saved", text: result.successCount + " mapping(s) saved successfully.", type: "success" }, function () {
+                    if (result.FailureCount === 0) {
+                        swal({ title: "Saved", text: result.SuccessCount + " mapping(s) saved successfully.", type: "success" }, function () {
                             location.reload();
                         });
                     } else {
-                        swal("Partially Saved", result.successCount + " succeeded, " + result.failureCount + " failed. See details below.", "warning");
-                        $("#btnSaveAll").prop("disabled", false);
+                        swal("Partially Saved", result.SuccessCount + " succeeded, " + result.FailureCount + " failed. See details below.", "warning");
+                        updateSelectionUI();
                     }
                 },
                 error: function () {
-                    $("#btnSaveAll").prop("disabled", false);
-                    $("#btnSaveAllText").text("Save All Changes");
+                    $btnText.text(defaultLabel);
                     swal("Something Went Wrong", "Unable to reach the server. Please try again.", "error");
+                    updateSelectionUI();
                 }
             });
+        }
+
+        $("#btnInsertSelected").on("click", function () {
+            runBulkSave($("#btnInsertSelectedText"), "Insert Selected");
         });
 
         $("#btnAutoMap").on("click", function () {
@@ -325,14 +530,14 @@
                 contentType: "application/json",
                 data: JSON.stringify([{ EmployeeId: employeeId, MappingId: null, BiometricEmployeeCode: code, CardNumber: null, IsActive: true }]),
                 success: function (result) {
-                    var r = result.results && result.results[0];
-                    if (r && r.success) {
+                    var r = result.Results && result.Results[0];
+                    if (r && r.Success) {
                         swal({ title: "Mapped", text: code + " mapped successfully.", type: "success" }, function () {
                             location.reload();
                         });
                     } else {
                         $btn.prop("disabled", false);
-                        swal("Mapping Failed", (r && r.message) || "Unable to map this employee.", "error");
+                        swal("Mapping Failed", (r && r.Message) || "Unable to map this employee.", "error");
                     }
                 },
                 error: function () {
@@ -343,7 +548,7 @@
         });
 
         window.onbeforeunload = function () {
-            if ($("#btnSaveAll").length && !$("#btnSaveAll").prop("disabled")) {
+            if ($("#btnInsertSelected").length && !$("#btnInsertSelected").prop("disabled")) {
                 return "You have unsaved mapping changes.";
             }
         };

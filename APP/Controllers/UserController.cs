@@ -150,6 +150,72 @@ namespace APP.Controllers
 
             return RedirectToAction(nameof(Index));
         }
+        // Separate action from ResetPassword above - same underlying
+        // capability (the API only ever supports setting a brand-new
+        // password and returning it once; there is no way to retrieve an
+        // existing password, since only a one-way PasswordHash is ever
+        // stored - see Domain.Entities.User), but exposed as its own
+        // distinct "Set Password" button/action restricted to Admin/HR
+        // only, per explicit requirement. [AdminOrHrOnly] blocks any other
+        // logged-in role from reaching this action at all (not just hiding
+        // the button), independent of who can reach the plain
+        // ResetPassword action above.
+        [HttpPost]
+        [AdminOrHrOnly]
+        public async Task<IActionResult> SetPassword(string id, string newPassword)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    TempData["GlobalError"] = "User ID is required.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                if (string.IsNullOrWhiteSpace(newPassword))
+                {
+                    TempData["GlobalError"] = "New password is required.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                dynamic result = await _apiService.PutAsync<dynamic>(
+                    $"user/reset-password/{id}",
+                    new ResetPasswordRequest
+                    {
+                        UserId = id,
+                        NewPassword = newPassword
+                    });
+
+                string resultPassword =
+                    result?.newPassword ?? result?.NewPassword;
+
+                TempData["Success"] = "Password set successfully.";
+                TempData["NewPassword"] = resultPassword;
+            }
+            catch (ApiException ex)
+            {
+                TempData["GlobalError"] =
+                    GetErrorMessage(ex.ResponseContent);
+            }
+            catch (ApplicationException ex)
+            {
+                const string prefix = "Bad Request (400): ";
+
+                var json = ex.Message.StartsWith(prefix)
+                    ? ex.Message.Substring(prefix.Length)
+                    : ex.Message;
+
+                TempData["GlobalError"] = GetErrorMessage(json);
+            }
+            catch (Exception)
+            {
+                TempData["GlobalError"] =
+                    "Failed to set password.";
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
         [HttpPost]
         public async Task<IActionResult> ToggleActive(string id)
         {

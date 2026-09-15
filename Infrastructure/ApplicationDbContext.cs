@@ -1229,11 +1229,31 @@ namespace Infrastructure
                     .HasDatabaseName("IX_BiometricAttendanceLogs_Device_TransactionId");
 
                 // AttendanceProcessorService's main query is
-                // "Where(x => !x.IsProcessed)" across the whole table -
-                // without this, that becomes a full table scan once the
-                // table grows past a trivial size.
-                entity.HasIndex(e => new { e.TenantId, e.IsProcessed })
+                // "Where(x => !x.IsProcessed).OrderBy(x => x.PunchTime)"
+                // across the whole table - PunchTime is included here (not
+                // just TenantId+IsProcessed) so that ORDER BY is satisfied
+                // by the index itself instead of a separate sort once the
+                // table grows past a trivial size. Applied to the live
+                // database via "add attendance processing performance
+                // indexes.sql" (same DROP+CREATE-if-different-definition
+                // pattern as this project's other standalone index scripts)
+                // rather than a new EF migration, since the schema was just
+                // consolidated into a single InitialMigration.
+                entity.HasIndex(e => new { e.TenantId, e.IsProcessed, e.PunchTime })
                     .HasDatabaseName("IX_BiometricAttendanceLogs_Tenant_IsProcessed");
+            });
+
+            modelBuilder.Entity<EmployeeBiometricMapping>(entity =>
+            {
+                // AttendanceProcessorService and EsslAttendanceSyncService
+                // both preload "every active mapping" once per run
+                // (WHERE IsActive = 1) rather than querying per punch - this
+                // index makes that preload itself, and any future
+                // by-BiometricEmployeeCode lookup, index-seek instead of a
+                // full scan. See "add attendance processing performance
+                // indexes.sql".
+                entity.HasIndex(e => new { e.BiometricEmployeeCode, e.IsActive })
+                    .HasDatabaseName("IX_EmployeeBiometricMappings_Code_IsActive");
             });
 
             modelBuilder.Entity<BiometricSyncLog>(entity =>

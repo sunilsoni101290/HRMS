@@ -1,5 +1,6 @@
 using Application.Interfaces;
 using Application.Interfaces.Communication;
+using Application.Interfaces.ErrorLog;
 using Application.Interfaces.Leaves;
 using Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -77,8 +78,33 @@ namespace API.BackgroundServices
                 catch (Exception ex)
                 {
                     // A failed sweep must never crash the host - just log
-                    // and try again on the next tick.
+                    // and try again on the next tick. Logged both ways: the
+                    // ILogger line for local/console diagnostics, plus the
+                    // shared ErrorLog table (via a fresh scope - the sweep's
+                    // own scope is already gone by the time an exception
+                    // unwinds up to here) so this shows up on the Error Log
+                    // admin screen like every other logged failure in the
+                    // app, not just in server logs nobody is watching.
                     _logger.LogError(ex, "Leave escalation sweep failed.");
+
+                    try
+                    {
+                        using var errorScope = _scopeFactory.CreateScope();
+                        var errorLogService = errorScope.ServiceProvider.GetRequiredService<IErrorLogService>();
+
+                        await errorLogService.LogAsync(
+                            ex,
+                            module: "HRMS",
+                            feature: "Leave Escalation",
+                            controller: "LeaveEscalationService",
+                            action: nameof(RunSweepAsync),
+                            userId: "System",
+                            userName: "System");
+                    }
+                    catch
+                    {
+                        // Logging must never itself take down the host.
+                    }
                 }
 
                 try

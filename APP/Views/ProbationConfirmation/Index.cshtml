@@ -99,7 +99,7 @@
 
     <div class="table-responsive">
 
-        <table class="table table-bordered table-striped">
+        <table class="table table-bordered table-striped datatable-basic">
 
             <thead>
                 <tr>
@@ -214,4 +214,26 @@
 
     </script>
 
+
+    <script>
+        // Auto-added: client-side pagination for this Index page's listing
+        // table (DataTables). Safe to run even if this page already
+        // initializes '.datatable-basic' itself above - 'retrieve: true'
+        // makes DataTables return the existing instance instead of
+        // re-initializing (and throwing) when that's the case.
+        $(document).ready(function () {
+            if ($.fn.DataTable) {
+                var __indexDataTable = $('.datatable-basic').DataTable({
+                    autoWidth: false,
+                    paging: true,
+                    ordering: true,
+                    searching: true,
+                    pageLength: 10,
+                    lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                    language: { search: "_INPUT_", searchPlaceholder: "Search..." },
+                    retrieve: true
+                });
+            }
+        });
+    </script>
 }

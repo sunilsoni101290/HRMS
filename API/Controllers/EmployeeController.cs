@@ -14,10 +14,12 @@ namespace API.Controllers
     public class EmployeeController : ControllerBase
     {
         private readonly IEmployeeService _service;
+        private readonly IEmployeeImportExportService _importExportService;
 
-        public EmployeeController(IEmployeeService service)
+        public EmployeeController(IEmployeeService service, IEmployeeImportExportService importExportService)
         {
             _service = service;
+            _importExportService = importExportService;
         }
 
         // ==============================
@@ -215,6 +217,41 @@ namespace API.Controllers
             var data = await _service.GetHierarchyAsync(tenantId);
 
             return Ok(data);
+        }
+
+        // ==============================
+        // BULK IMPORT - VALIDATE (preview only, nothing written)
+        // ==============================
+        // rows are the raw, unresolved cell values the APP layer parsed out
+        // of the uploaded .xlsx with ClosedXML - all validation (required
+        // fields, formats, master-data lookups, duplicate checks) happens
+        // here, against the live database, so Preview and Commit can never
+        // disagree about what is/isn't valid. See EmployeeImportExportService.
+        [HttpPost("import/validate")]
+        public async Task<IActionResult> ValidateImport([FromBody] List<EmployeeImportRowInputDto> rows)
+        {
+            var tenantId = User.FindFirst("TenantId")?.Value ?? "";
+            var userId = User.FindFirst("UserId")?.Value ?? "";
+            var userName = User.Identity?.Name ?? "";
+
+            var result = await _importExportService.ValidateImportAsync(rows ?? new(), tenantId, userId, userName);
+
+            return Ok(result);
+        }
+
+        // ==============================
+        // BULK IMPORT - COMMIT (validate again, then all-or-nothing insert)
+        // ==============================
+        [HttpPost("import/commit")]
+        public async Task<IActionResult> CommitImport([FromBody] List<EmployeeImportRowInputDto> rows)
+        {
+            var tenantId = User.FindFirst("TenantId")?.Value ?? "";
+            var userId = User.FindFirst("UserId")?.Value ?? "";
+            var userName = User.Identity?.Name ?? "";
+
+            var result = await _importExportService.CommitImportAsync(rows ?? new(), tenantId, userId, userName);
+
+            return Ok(result);
         }
     }
 }

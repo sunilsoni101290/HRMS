@@ -35,6 +35,20 @@ namespace Application.Interfaces.ErrorLog
             string? tenantId = null,
             string? correlationId = null);
 
+        /// <summary>
+        /// For exceptions reported by the APP (MVC) layer that never touch
+        /// the API at all - APP has no direct database access, so without
+        /// this they'd never land in ErrorLog. Posted by APP's
+        /// ClientErrorLoggingFilter via POST api/ClientErrorLog. Never
+        /// throws - same swallow-on-failure contract as LogAsync/
+        /// LogExceptionAsync.
+        /// </summary>
+        Task LogClientErrorAsync(
+            ClientErrorLogDto dto,
+            string? userId = null,
+            string? userName = null,
+            string? tenantId = null);
+
         /// <summary>Server-side filtered/paginated listing for the Error Log management screen (requirement #5). Permission-checked (System Configurator/Super Admin, or any role explicitly granted View on AppFeatureConstants.ERROR_LOG).</summary>
         Task<PagedResult<ErrorLogDto>> GetAllAsync(ErrorLogFilterDto filter, string actingUserId);
 

@@ -22,6 +22,14 @@ builder.Services.AddControllersWithViews(options =>
     // page an unhandled UnauthorizedAccessException from ApiService would
     // otherwise hit - see ApiSessionExpiredFilter.
     options.Filters.Add<ApiSessionExpiredFilter>();
+
+    // Global reporting-only safety net so exceptions that occur entirely
+    // inside APP (MVC) - which has no direct database access - still reach
+    // the shared ErrorLog table via a small API endpoint, instead of only
+    // ever showing up in server console/ILogger output. Never changes
+    // existing error-handling behavior (doesn't set ExceptionHandled) -
+    // see ClientErrorLoggingFilter.
+    options.Filters.Add<ClientErrorLoggingFilter>();
 })
     .AddJsonOptions(options =>
     {

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialMigration : Migration
+    public partial class InitalMigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -1763,25 +1763,25 @@ namespace Infrastructure.Migrations
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     EmployeeCode = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     FirstName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    LastName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    LastName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     TenantId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     CompanyId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     BranchId = table.Column<string>(type: "nvarchar(450)", nullable: true),
-                    DepartmentId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    DesignationId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    DepartmentId = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    DesignationId = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     ReportingManagerId = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     DateOfBirth = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Gender = table.Column<int>(type: "int", nullable: false),
                     MaritalStatus = table.Column<int>(type: "int", nullable: false),
                     Email = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
-                    Phone = table.Column<string>(type: "nvarchar(15)", maxLength: 15, nullable: false),
+                    Phone = table.Column<string>(type: "nvarchar(15)", maxLength: 15, nullable: true),
                     EmergencyContact = table.Column<string>(type: "nvarchar(15)", maxLength: 15, nullable: true),
-                    Address = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Pincode = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Address = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Pincode = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     PANNumber = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
                     AadharNumber = table.Column<string>(type: "nvarchar(12)", maxLength: 12, nullable: true),
                     FilePath = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ShiftId = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    ShiftId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     JoiningDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ConfirmationDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     RelievingDate = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -2908,8 +2908,8 @@ namespace Infrastructure.Migrations
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     Username = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Email = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
-                    PhoneNumber = table.Column<string>(type: "nvarchar(15)", maxLength: 15, nullable: false),
+                    Email = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
+                    PhoneNumber = table.Column<string>(type: "nvarchar(15)", maxLength: 15, nullable: true),
                     PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     PasswordChangedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
                     EmailConfirmed = table.Column<bool>(type: "bit", nullable: false),
@@ -5570,7 +5570,8 @@ namespace Infrastructure.Migrations
                 name: "IX_Users_Email",
                 table: "Users",
                 column: "Email",
-                unique: true);
+                unique: true,
+                filter: "[Email] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Users_EmployeeId",

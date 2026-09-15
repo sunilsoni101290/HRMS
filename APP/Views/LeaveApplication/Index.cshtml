@@ -25,54 +25,57 @@
     bool hasPendingLeave = !isAdmin && Model.Any(x => x.Status == EnumExtensions.ApprovalStatus.Pending);
 }
 
-<div class="panel panel-flat">
+@* Visual layer only, migrated onto the shared design system - the
+   approve/reject/send-back/cancel modals, CanAct() permission logic, and
+   all filter/search behavior below are unchanged. *@
 
-    <div class="panel-heading">
-
-        <h5 class="panel-title">
-            <i class="icon-calendar3 position-left"></i>
-            @(ViewBag.ListTitle ?? "Leave Application Management")
-        </h5>
-
-        <div class="heading-elements">
-
-            <a asp-action="Calendar" class="btn btn-default">
-                <i class="icon-calendar3"></i>
-                Leave Calendar
-            </a>
-
-            <a asp-action="MyApprovals" class="btn btn-default">
-                <i class="icon-checkmark4"></i>
-                Pending My Approval
-            </a>
-
-            @if (hasPendingLeave)
-            {
-                <button type="button"
-                        class="btn bg-primary disabled"
-                        disabled
-                        data-popup="tooltip"
-                        title="You already have a leave request awaiting approval.">
-                    <i class="icon-plus22"></i>
-                    Apply Leave
-                </button>
-            }
-            else
-            {
-                <a asp-action="Create" class="btn bg-primary">
-                    <i class="icon-plus22"></i>
-                    Apply Leave
-                </a>
-            }
-        </div>
-
+<div class="ent-page-header">
+    <div>
+        <h4><i class="icon-calendar3 position-left"></i> @(ViewBag.ListTitle ?? "Leave Application Management")</h4>
+        <p>Apply, review and track leave requests and approvals</p>
     </div>
 
-    <div class="panel-body">
-        @await Html.PartialAsync("_Filter", new LeaveApplicationFilterRequestDto())
+    <div class="ent-page-header-actions">
+
+        <a asp-action="Calendar" class="btn btn-default">
+            <i class="icon-calendar3"></i>
+            Leave Calendar
+        </a>
+
+        <a asp-action="MyApprovals" class="btn btn-default">
+            <i class="icon-checkmark4"></i>
+            Pending My Approval
+        </a>
+
+        @if (hasPendingLeave)
+        {
+            <button type="button"
+                    class="btn bg-primary disabled"
+                    disabled
+                    data-popup="tooltip"
+                    title="You already have a leave request awaiting approval.">
+                <i class="icon-plus22"></i>
+                Apply Leave
+            </button>
+        }
+        else
+        {
+            <a asp-action="Create" class="btn bg-primary">
+                <i class="icon-plus22"></i>
+                Apply Leave
+            </a>
+        }
     </div>
 
-    <table id="leaveApplicationTable" class="table table-bordered table-striped">
+</div>
+
+<div class="ent-filter-card">
+    @await Html.PartialAsync("_Filter", new LeaveApplicationFilterRequestDto())
+</div>
+
+<div class="ent-list-card">
+<div class="table-responsive">
+<table id="leaveApplicationTable" class="table ent-list-table table-hover datatable-basic">
 
         <thead>
             <tr>
@@ -96,7 +99,7 @@
                     <td>@item.EmployeeName</td>
 
                     <td>
-                        <span class="label bg-primary">
+                        <span class="ent-status-pill ent-badge-info">
                             @item.LeaveTypeName
                         </span>
                     </td>
@@ -111,27 +114,27 @@
 
                         @if (item.Status == EnumExtensions.ApprovalStatus.Pending)
                         {
-                            <span class="label bg-warning">Pending</span>
+                            <span class="ent-status-pill ent-badge-warning">Pending</span>
                         }
                         else if (item.Status == EnumExtensions.ApprovalStatus.Approved)
                         {
-                            <span class="label bg-success">Approved</span>
+                            <span class="ent-status-pill ent-badge-success">Approved</span>
                         }
                         else if (item.Status == EnumExtensions.ApprovalStatus.Rejected)
                         {
-                            <span class="label bg-danger">Rejected</span>
+                            <span class="ent-status-pill ent-badge-danger">Rejected</span>
                         }
                         else if (item.Status == EnumExtensions.ApprovalStatus.ReturnedToEmployee)
                         {
-                            <span class="label bg-orange">Sent Back</span>
+                            <span class="ent-status-pill ent-badge-warning">Sent Back</span>
                         }
                         else if (item.Status == EnumExtensions.ApprovalStatus.Cancelled)
                         {
-                            <span class="label bg-grey">Cancelled</span>
+                            <span class="ent-status-pill ent-badge-neutral">Cancelled</span>
                         }
                         else
                         {
-                            <span class="label bg-grey">@item.Status</span>
+                            <span class="ent-status-pill ent-badge-neutral">@item.Status</span>
                         }
 
                     </td>
@@ -140,7 +143,7 @@
 
                         @if (item.Status == EnumExtensions.ApprovalStatus.Pending)
                         {
-                            <span class="label bg-slate-300">@item.CurrentLevelName</span>
+                            <span class="ent-status-pill ent-badge-neutral">@item.CurrentLevelName</span>
                         }
                         else if (item.Status == EnumExtensions.ApprovalStatus.ReturnedToEmployee)
                         {
@@ -266,7 +269,7 @@
         </tbody>
 
     </table>
-    
+</div>
 </div>
 
 <partial name="_ApproveModal"
@@ -341,7 +344,6 @@
 
             // Approve
             $(document).on('click', '.btnApprove', function () {
-                debugger;
                 var id = $(this).data('id');
 
                 $('#ApproveLeaveId').val(id);
@@ -352,7 +354,6 @@
 
             // Reject
             $(document).on('click', '.btnReject', function () {
-                debugger;
                 var id = $(this).data('id');
 
                 $('#RejectLeaveId').val(id);
@@ -373,7 +374,6 @@
 
             // Cancel
             $(document).on('click', '.btnCancel', function () {
-                debugger;
                 var id = $(this).data('id');
 
                 $('#CancelLeaveId').val(id);
@@ -387,4 +387,26 @@
     </script>
 
 
+
+    <script>
+        // Auto-added: client-side pagination for this Index page's listing
+        // table (DataTables). Safe to run even if this page already
+        // initializes '.datatable-basic' itself above - 'retrieve: true'
+        // makes DataTables return the existing instance instead of
+        // re-initializing (and throwing) when that's the case.
+        $(document).ready(function () {
+            if ($.fn.DataTable) {
+                var __indexDataTable = $('.datatable-basic').DataTable({
+                    autoWidth: false,
+                    paging: true,
+                    ordering: true,
+                    searching: true,
+                    pageLength: 10,
+                    lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                    language: { search: "_INPUT_", searchPlaceholder: "Search..." },
+                    retrieve: true
+                });
+            }
+        });
+    </script>
 }

@@ -916,9 +916,15 @@ namespace APP.Controllers
         }
 
         // Builds a ready-to-fill .xlsx: an "Employees" sheet with headers +
-        // one sample row, and a "Reference Data" sheet listing this tenant's
-        // real Company/Department/Role names (and the fixed enum choices)
-        // so the client knows exactly what text to type in each column.
+        // one sample row (mandatory columns marked with *, matching the
+        // Import spec's 7 mandatory fields - Employee Code, First Name,
+        // Gender, Role, Company, Employment Type, Shift - everything else is
+        // optional), an in-cell dropdown (Excel Data Validation) on every
+        // column that maps to a flat master list or a fixed enum, and a
+        // "Reference Data" sheet backing those dropdowns and listing the
+        // department-scoped Designation/Branch names for reference (those
+        // two are typed free-text since a static Excel file can't cascade a
+        // dropdown by another cell's value).
         [HttpGet]
         public async Task<IActionResult> DownloadImportTemplate()
         {
@@ -929,6 +935,7 @@ namespace APP.Controllers
             var departments = await _apiService.GetAsync<List<DropdownDto>>("dropdown/department") ?? new();
             var designations = await _apiService.GetAsync<List<DesignationListDto>>("designation") ?? new();
             var roles = await _apiService.GetAsync<List<DropdownDto>>("dropdown/role") ?? new();
+            var shifts = await _apiService.GetAsync<List<DropdownDto>>("dropdown/shift") ?? new();
 
             using var workbook = new XLWorkbook();
 
@@ -937,12 +944,13 @@ namespace APP.Controllers
 
             string[] headers =
             {
-                "First Name*", "Last Name", "Employee Code*", "Email", "Phone*",
-                "Gender*", "Marital Status*", "Date Of Birth (yyyy-mm-dd)",
-                "Address*", "Pincode*", "Company*", "Branch", "Department*",
-                "Designation*", "Role*", "Reporting Manager (Employee Code)",
-                "Employment Type*", "Joining Date* (yyyy-mm-dd)",
-                "PAN Number", "Aadhaar Number", "Emergency Contact"
+                "Employee Code*", "First Name*", "Last Name",
+                "Gender*", "Marital Status", "Date Of Birth (yyyy-mm-dd)",
+                "Email", "Phone", "Emergency Contact",
+                "Company*", "Branch", "Department", "Designation",
+                "Role*", "Reporting Manager (Employee Code)", "Shift*",
+                "Employment Type*", "Joining Date (yyyy-mm-dd)",
+                "Address", "Pincode", "PAN Number", "Aadhaar Number"
             };
 
             for (int i = 0; i < headers.Length; i++)
@@ -956,16 +964,18 @@ namespace APP.Controllers
 
             var sample = new[]
             {
-                "John", "Doe", "EMP1001", "john.doe@example.com", "9876543210",
+                "EMP1001", "John", "Doe",
                 "Male", "Married", "1995-06-15",
-                "12, MG Road, Pune", "411001",
+                "john.doe@example.com", "9876543210", "9123456780",
                 companies.FirstOrDefault()?.Text ?? "Company Name",
                 "",
-                departments.FirstOrDefault()?.Text ?? "Department Name",
-                "Designation Name",
+                departments.FirstOrDefault()?.Text ?? "",
+                "",
                 roles.FirstOrDefault()?.Text ?? "Role Name",
-                "", "Permanent", DateTime.Today.ToString("yyyy-MM-dd"),
-                "ABCDE1234F", "123456789012", "9123456780"
+                "",
+                shifts.FirstOrDefault()?.Text ?? "Shift Name",
+                "Permanent", DateTime.Today.ToString("yyyy-MM-dd"),
+                "12, MG Road, Pune", "411001", "ABCDE1234F", "123456789012"
             };
 
             for (int i = 0; i < sample.Length; i++)
@@ -977,30 +987,58 @@ namespace APP.Controllers
             // ----- Reference Data sheet -----
             var refSheet = workbook.Worksheets.Add("Reference Data");
 
-            void WriteList(int col, string title, IEnumerable<string> values)
+            IXLRange WriteList(int col, string title, IReadOnlyList<string> values)
             {
                 var header = refSheet.Cell(1, col);
                 header.Value = title;
                 header.Style.Font.Bold = true;
 
-                int row = 2;
+                for (int i = 0; i < values.Count; i++)
+                    refSheet.Cell(i + 2, col).Value = values[i];
 
-                foreach (var v in values)
-                {
-                    refSheet.Cell(row, col).Value = v;
-                    row++;
-                }
+                // At least one (blank) row so the dropdown range is always valid.
+                var lastRow = Math.Max(2, values.Count + 1);
+                return refSheet.Range(2, col, lastRow, col);
             }
 
-            WriteList(1, "Company", companies.Select(x => x.Text));
-            WriteList(2, "Department", departments.Select(x => x.Text));
-            WriteList(3, "Role", roles.Select(x => x.Text));
-            WriteList(4, "Gender", Enum.GetNames(typeof(EnumExtensions.Gender)));
-            WriteList(5, "Marital Status", Enum.GetNames(typeof(EnumExtensions.MaritalStatus)));
-            WriteList(6, "Employment Type", Enum.GetNames(typeof(EnumExtensions.EmploymentType)));
-            WriteList(7, "Designation", designations.Select(x => $"{x.Name} ({x.DepartmentName})"));
+            var companyNames = companies.Select(x => x.Text).ToList();
+            var departmentNames = departments.Select(x => x.Text).ToList();
+            var roleNames = roles.Select(x => x.Text).ToList();
+            var shiftNames = shifts.Select(x => x.Text).ToList();
+            var genderNames = Enum.GetNames(typeof(EnumExtensions.Gender)).ToList();
+            var maritalStatusNames = Enum.GetNames(typeof(EnumExtensions.MaritalStatus)).ToList();
+            var employmentTypeNames = Enum.GetNames(typeof(EnumExtensions.EmploymentType))
+                .Where(x => x != nameof(EnumExtensions.EmploymentType.Unknown)).ToList();
+
+            var companyRange = WriteList(1, "Company", companyNames);
+            var departmentRange = WriteList(2, "Department", departmentNames);
+            var roleRange = WriteList(3, "Role", roleNames);
+            var shiftRange = WriteList(4, "Shift", shiftNames);
+            var genderRange = WriteList(5, "Gender", genderNames);
+            var maritalStatusRange = WriteList(6, "Marital Status", maritalStatusNames);
+            var employmentTypeRange = WriteList(7, "Employment Type", employmentTypeNames);
+            WriteList(8, "Designation (reference only - type the name)", designations.Select(x => $"{x.Name} ({x.DepartmentName})").ToList());
+            WriteList(9, "Branch (reference only - type the name)", new List<string>());
 
             refSheet.Columns().AdjustToContents();
+
+            // ----- In-cell dropdowns on the Employees sheet, rows 2-1000 -----
+            void ApplyDropdown(int col, IXLRange source)
+            {
+                var validation = sheet.Range(2, col, 1000, col).SetDataValidation();
+                validation.List(source);
+                validation.ErrorTitle = "Invalid value";
+                validation.ErrorMessage = "Please pick a value from the dropdown list.";
+                validation.InputTitle = "Choose from list";
+            }
+
+            ApplyDropdown(4, genderRange);          // Gender*
+            ApplyDropdown(5, maritalStatusRange);   // Marital Status
+            ApplyDropdown(10, companyRange);        // Company*
+            ApplyDropdown(12, departmentRange);     // Department
+            ApplyDropdown(14, roleRange);           // Role*
+            ApplyDropdown(16, shiftRange);          // Shift*
+            ApplyDropdown(17, employmentTypeRange); // Employment Type*
 
             using var stream = new MemoryStream();
             workbook.SaveAs(stream);
@@ -1011,61 +1049,85 @@ namespace APP.Controllers
                 "Employee_Import_Template.xlsx");
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Import(IFormFile file)
+        // Reads every used data row (row 1 is the header) out of the
+        // uploaded workbook into raw, unresolved EmployeeImportRowInputDto
+        // rows - column order matches DownloadImportTemplate's headers
+        // exactly. No validation happens here; that is entirely owned by
+        // the API (EmployeeImportExportService), the single source of truth
+        // shared by Preview and Commit.
+        private static List<EmployeeImportRowInputDto> ParseImportRows(IXLWorksheet worksheet)
         {
-            if (!_isAdmin)
-                return Forbid();
+            var rows = new List<EmployeeImportRowInputDto>();
 
-            var result = new EmployeeImportResultDto();
-
-            if (file == null || file.Length == 0)
+            foreach (var row in worksheet.RowsUsed().Skip(1))
             {
-                TempData["GlobalError"] = "Please choose an Excel file to import.";
-                return View(result);
+                string? Cell(int col)
+                {
+                    var text = row.Cell(col).GetString().Trim();
+                    return string.IsNullOrWhiteSpace(text) ? null : text;
+                }
+
+                string? CellDateText(int col)
+                {
+                    var c = row.Cell(col);
+
+                    if (c.IsEmpty())
+                        return null;
+
+                    if (c.DataType == XLDataType.DateTime)
+                        return c.GetDateTime().ToString("yyyy-MM-dd");
+
+                    var text = c.GetString().Trim();
+                    return string.IsNullOrWhiteSpace(text) ? null : text;
+                }
+
+                var employeeCode = Cell(1);
+                var firstName = Cell(2);
+
+                // Skip fully blank trailing rows.
+                if (string.IsNullOrWhiteSpace(employeeCode) && string.IsNullOrWhiteSpace(firstName))
+                    continue;
+
+                rows.Add(new EmployeeImportRowInputDto
+                {
+                    RowNumber = row.RowNumber(),
+                    EmployeeCode = employeeCode,
+                    FirstName = firstName,
+                    LastName = Cell(3),
+                    Gender = Cell(4),
+                    MaritalStatus = Cell(5),
+                    DateOfBirth = CellDateText(6),
+                    Email = Cell(7),
+                    Phone = Cell(8),
+                    EmergencyContact = Cell(9),
+                    CompanyName = Cell(10),
+                    BranchName = Cell(11),
+                    DepartmentName = Cell(12),
+                    DesignationName = Cell(13),
+                    RoleName = Cell(14),
+                    ReportingManagerCode = Cell(15),
+                    ShiftName = Cell(16),
+                    EmploymentType = Cell(17),
+                    JoiningDate = CellDateText(18),
+                    Address = Cell(19),
+                    Pincode = Cell(20),
+                    PANNumber = Cell(21),
+                    AadharNumber = Cell(22)
+                });
             }
+
+            return rows;
+        }
+
+        private async Task<(bool Ok, List<EmployeeImportRowInputDto> Rows, string? Error)> ReadUploadedRowsAsync(IFormFile? file)
+        {
+            if (file == null || file.Length == 0)
+                return (false, new(), "Please choose an Excel file to import.");
 
             var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
 
             if (extension != ".xlsx" && extension != ".xls")
-            {
-                TempData["GlobalError"] = "Only .xlsx or .xls files are supported.";
-                return View(result);
-            }
-
-            // Reference lookups fetched once - names typed in the sheet are
-            // resolved case-insensitively against this tenant's real
-            // records, so the client never has to know internal IDs.
-            var companies = await _apiService.GetAsync<List<DropdownDto>>("dropdown/company") ?? new();
-            var companyMap = companies.ToDictionary(x => x.Text.Trim(), x => x.Value, StringComparer.OrdinalIgnoreCase);
-
-            var departments = await _apiService.GetAsync<List<DropdownDto>>("dropdown/department") ?? new();
-            var departmentMap = departments.ToDictionary(x => x.Text.Trim(), x => x.Value, StringComparer.OrdinalIgnoreCase);
-
-            var roles = await _apiService.GetAsync<List<DropdownDto>>("dropdown/role") ?? new();
-            var roleMap = roles.ToDictionary(x => x.Text.Trim(), x => x.Value, StringComparer.OrdinalIgnoreCase);
-
-            var existingEmployees = await _apiService.GetAsync<List<EmployeeListDto>>("Employee/employee-list") ?? new();
-            var employeeCodeMap = existingEmployees
-                .Where(x => !string.IsNullOrWhiteSpace(x.EmployeeCode))
-                .GroupBy(x => x.EmployeeCode.Trim(), StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(g => g.Key, g => g.First().Id, StringComparer.OrdinalIgnoreCase);
-
-            // Branch/Designation lists are scoped to a company/department,
-            // so they're only fetched once per company/department actually
-            // seen in the file, not once per row.
-            var branchCache = new Dictionary<string, Dictionary<string, string>>();
-            var designationCache = new Dictionary<string, Dictionary<string, string>>();
-
-            // ROOT-CAUSE FIX (Shift now mandatory - see EmployeeDto.ShiftId):
-            // the import template has no Shift column, so every row built
-            // below defaults to the same Shift master's IsDefaultShift
-            // record ("General Shift" - see GetDefaultShiftIdAsync) rather
-            // than leaving ShiftId null, which would now fail server-side
-            // validation on every single imported row. Fetched once, not
-            // per row.
-            var defaultShiftId = await GetDefaultShiftIdAsync() ?? string.Empty;
+                return (false, new(), "Only .xlsx or .xls files are supported.");
 
             try
             {
@@ -1073,205 +1135,158 @@ namespace APP.Controllers
                 using var workbook = new XLWorkbook(stream);
                 var worksheet = workbook.Worksheet(1);
 
-                var dataRows = worksheet.RowsUsed().Skip(1).ToList();
-
-                foreach (var row in dataRows)
-                {
-                    string Cell(int col) => row.Cell(col).GetString().Trim();
-
-                    DateTime? CellDate(int col)
-                    {
-                        var c = row.Cell(col);
-
-                        if (c.IsEmpty())
-                            return null;
-
-                        if (c.DataType == XLDataType.DateTime)
-                            return c.GetDateTime();
-
-                        var text = c.GetString().Trim();
-
-                        return !string.IsNullOrWhiteSpace(text) && DateTime.TryParse(text, out var parsed)
-                            ? parsed
-                            : (DateTime?)null;
-                    }
-
-                    var firstName = Cell(1);
-                    var employeeCode = Cell(3);
-
-                    // Skip fully blank trailing rows
-                    if (string.IsNullOrWhiteSpace(firstName) && string.IsNullOrWhiteSpace(employeeCode))
-                        continue;
-
-                    var rowResult = new EmployeeImportRowResult
-                    {
-                        RowNumber = row.RowNumber(),
-                        EmployeeCode = employeeCode
-                    };
-
-                    try
-                    {
-                        if (string.IsNullOrWhiteSpace(firstName))
-                            throw new Exception("First Name is required.");
-
-                        if (string.IsNullOrWhiteSpace(employeeCode))
-                            throw new Exception("Employee Code is required.");
-
-                        var phone = Cell(5);
-                        if (string.IsNullOrWhiteSpace(phone))
-                            throw new Exception("Phone Number is required.");
-
-                        var address = Cell(9);
-                        if (string.IsNullOrWhiteSpace(address))
-                            throw new Exception("Address is required.");
-
-                        var pincode = Cell(10);
-                        if (string.IsNullOrWhiteSpace(pincode))
-                            throw new Exception("Pincode is required.");
-
-                        var companyName = Cell(11);
-                        if (!companyMap.TryGetValue(companyName, out var companyId))
-                            throw new Exception($"Company '{companyName}' not found.");
-
-                        string? branchId = null;
-                        var branchName = Cell(12);
-
-                        if (!string.IsNullOrWhiteSpace(branchName))
-                        {
-                            if (!branchCache.TryGetValue(companyId, out var branchMap))
-                            {
-                                var branches = await _apiService.GetAsync<List<DropdownDto>>($"dropdown/branch/{companyId}") ?? new();
-                                branchMap = branches.ToDictionary(x => x.Text.Trim(), x => x.Value, StringComparer.OrdinalIgnoreCase);
-                                branchCache[companyId] = branchMap;
-                            }
-
-                            if (!branchMap.TryGetValue(branchName, out branchId))
-                                throw new Exception($"Branch '{branchName}' not found under company '{companyName}'.");
-                        }
-
-                        var departmentName = Cell(13);
-                        if (!departmentMap.TryGetValue(departmentName, out var departmentId))
-                            throw new Exception($"Department '{departmentName}' not found.");
-
-                        var designationName = Cell(14);
-
-                        if (!designationCache.TryGetValue(departmentId, out var designationMap))
-                        {
-                            var designations = await _apiService.GetAsync<List<DropdownDto>>($"dropdown/designation/{departmentId}") ?? new();
-                            designationMap = designations.ToDictionary(x => x.Text.Trim(), x => x.Value, StringComparer.OrdinalIgnoreCase);
-                            designationCache[departmentId] = designationMap;
-                        }
-
-                        if (!designationMap.TryGetValue(designationName, out var designationId))
-                            throw new Exception($"Designation '{designationName}' not found under department '{departmentName}'.");
-
-                        var roleName = Cell(15);
-                        if (!roleMap.TryGetValue(roleName, out var roleId))
-                            throw new Exception($"Role '{roleName}' not found.");
-
-                        var genderText = Cell(6);
-                        if (!Enum.TryParse<EnumExtensions.Gender>(genderText, true, out var gender))
-                            throw new Exception($"Invalid Gender '{genderText}'. Use Male, Female or Other.");
-
-                        var maritalStatusText = Cell(7);
-                        if (!Enum.TryParse<EnumExtensions.MaritalStatus>(maritalStatusText, true, out var maritalStatus))
-                            throw new Exception($"Invalid Marital Status '{maritalStatusText}'. Use Married, Unmarried or Divorced.");
-
-                        var employmentTypeText = Cell(17);
-                        if (!Enum.TryParse<EnumExtensions.EmploymentType>(employmentTypeText, true, out var employmentType))
-                            throw new Exception($"Invalid Employment Type '{employmentTypeText}'.");
-
-                        var joiningDate = CellDate(18);
-                        if (joiningDate == null)
-                            throw new Exception("Joining Date is required and must be a valid date.");
-
-                        string? reportingManagerId = null;
-                        var managerCode = Cell(16);
-
-                        if (!string.IsNullOrWhiteSpace(managerCode))
-                        {
-                            if (!employeeCodeMap.TryGetValue(managerCode, out reportingManagerId))
-                                throw new Exception($"Reporting Manager with Employee Code '{managerCode}' not found. The manager must already exist in the system.");
-                        }
-
-                        var dto = new EmployeeDto
-                        {
-                            FirstName = firstName,
-                            LastName = Cell(2),
-                            EmployeeCode = employeeCode,
-                            Email = string.IsNullOrWhiteSpace(Cell(4)) ? null : Cell(4),
-                            Phone = phone,
-                            Gender = gender,
-                            MaritalStatus = maritalStatus,
-                            DateOfBirth = CellDate(8),
-                            Address = address,
-                            Pincode = pincode,
-                            CompanyId = companyId,
-                            BranchId = branchId,
-                            DepartmentId = departmentId,
-                            DesignationId = designationId,
-                            RoleId = roleId,
-                            ReportingManagerId = reportingManagerId,
-                            ShiftId = defaultShiftId,
-                            EmploymentType = employmentType,
-                            JoiningDate = joiningDate.Value,
-                            PANNumber = string.IsNullOrWhiteSpace(Cell(19)) ? null : Cell(19),
-                            AadharNumber = string.IsNullOrWhiteSpace(Cell(20)) ? null : Cell(20),
-                            EmergencyContact = string.IsNullOrWhiteSpace(Cell(21)) ? null : Cell(21),
-                            TenantId = _tenantId,
-                            CreatedBy = _userId
-                        };
-
-                        rowResult.EmployeeName = string.Join(
-                            " ",
-                            new[] { dto.FirstName, dto.LastName }.Where(x => !string.IsNullOrWhiteSpace(x)));
-
-                        var response = await _apiService
-                            .PostAsync<EmployeeDto, ApiResponse<EmployeeDto>>("Employee/add-employee", dto);
-
-                        if (response != null && response.Success)
-                        {
-                            rowResult.Success = true;
-                            rowResult.Message = "Imported successfully.";
-                        }
-                        else
-                        {
-                            rowResult.Success = false;
-                            rowResult.Message = response?.Message ?? "Import failed.";
-                        }
-                    }
-                    catch (ApiException apiEx)
-                    {
-                        rowResult.Success = false;
-                        rowResult.Message = GetErrorMessage(apiEx.ResponseContent);
-                    }
-                    catch (Exception ex)
-                    {
-                        rowResult.Success = false;
-                        rowResult.Message = ex.Message;
-                    }
-
-                    result.Rows.Add(rowResult);
-                }
+                return (true, ParseImportRows(worksheet), null);
             }
             catch (Exception ex)
             {
-                TempData["GlobalError"] = $"Unable to read the uploaded file: {ex.Message}";
-                return View(result);
+                return (false, new(), $"Unable to read the uploaded file: {ex.Message}");
+            }
+        }
+
+        // ==============================
+        // PREVIEW (Upload -> Preview -> Validate step) - AJAX, nothing written.
+        // ==============================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> PreviewImport(IFormFile file)
+        {
+            if (!_isAdmin)
+                return Forbid();
+
+            var (ok, rows, error) = await ReadUploadedRowsAsync(file);
+
+            if (!ok)
+                return BadRequest(new { message = error });
+
+            if (rows.Count == 0)
+                return BadRequest(new { message = "The uploaded file didn't contain any employee rows." });
+
+            try
+            {
+                var result = await _apiService
+                    .PostAsync<List<EmployeeImportRowInputDto>, EmployeeImportPreviewResultDto>(
+                        "Employee/import/validate", rows);
+
+                return Json(result);
+            }
+            catch (ApiException apiEx)
+            {
+                return BadRequest(new { message = GetErrorMessage(apiEx.ResponseContent) });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // ==============================
+        // COMMIT (Import step) - AJAX. Re-uploads the SAME file; the API
+        // re-validates everything and only inserts if 100% valid, so this
+        // is safe to call even if the admin waited a while after Preview.
+        // ==============================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CommitImport(IFormFile file)
+        {
+            if (!_isAdmin)
+                return Forbid();
+
+            var (ok, rows, error) = await ReadUploadedRowsAsync(file);
+
+            if (!ok)
+                return BadRequest(new { message = error });
+
+            try
+            {
+                var result = await _apiService
+                    .PostAsync<List<EmployeeImportRowInputDto>, EmployeeImportCommitResultDto>(
+                        "Employee/import/commit", rows);
+
+                return Json(result);
+            }
+            catch (ApiException apiEx)
+            {
+                return BadRequest(new { message = GetErrorMessage(apiEx.ResponseContent) });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // ==============================
+        // DOWNLOAD ERROR EXCEL - re-validates the same file and returns
+        // only the invalid rows, one line per error (Row / Field / Value /
+        // Error), so a large file's failures can be reviewed/fixed outside
+        // the browser.
+        // ==============================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DownloadImportErrors(IFormFile file)
+        {
+            if (!_isAdmin)
+                return Forbid();
+
+            var (ok, rows, error) = await ReadUploadedRowsAsync(file);
+
+            if (!ok)
+            {
+                TempData["GlobalError"] = error;
+                return RedirectToAction(nameof(Import));
             }
 
-            result.TotalRows = result.Rows.Count;
-            result.SuccessCount = result.Rows.Count(x => x.Success);
-            result.FailureCount = result.TotalRows - result.SuccessCount;
+            EmployeeImportPreviewResultDto preview;
 
-            if (result.TotalRows == 0)
-                TempData["GlobalError"] = "The uploaded file didn't contain any employee rows.";
-            else if (result.FailureCount == 0)
-                TempData["Success"] = $"All {result.SuccessCount} employee(s) imported successfully.";
-            else
-                TempData["Info"] = $"{result.SuccessCount} of {result.TotalRows} employee(s) imported. {result.FailureCount} failed - see details below.";
+            try
+            {
+                preview = await _apiService
+                    .PostAsync<List<EmployeeImportRowInputDto>, EmployeeImportPreviewResultDto>(
+                        "Employee/import/validate", rows);
+            }
+            catch (ApiException apiEx)
+            {
+                TempData["GlobalError"] = GetErrorMessage(apiEx.ResponseContent);
+                return RedirectToAction(nameof(Import));
+            }
 
-            return View(result);
+            var invalidRows = preview.Rows.Where(x => !x.IsValid).ToList();
+
+            using var workbook = new XLWorkbook();
+            var sheet = workbook.Worksheets.Add("Import Errors");
+
+            string[] headers = { "Row", "Field", "Value", "Error" };
+            for (int i = 0; i < headers.Length; i++)
+            {
+                var cell = sheet.Cell(1, i + 1);
+                cell.Value = headers[i];
+                cell.Style.Font.Bold = true;
+                cell.Style.Font.FontColor = XLColor.White;
+                cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#C62828");
+            }
+
+            int line = 2;
+            foreach (var row in invalidRows)
+            {
+                foreach (var err in row.Errors)
+                {
+                    sheet.Cell(line, 1).Value = row.RowNumber;
+                    sheet.Cell(line, 2).Value = err.Field;
+                    sheet.Cell(line, 3).Value = err.Value;
+                    sheet.Cell(line, 4).Value = err.Error;
+                    line++;
+                }
+            }
+
+            sheet.SheetView.FreezeRows(1);
+            sheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+
+            return File(
+                stream.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "Employee_Import_Errors.xlsx");
         }
 
         // General-purpose counterpart to GetErrorMessage(json) below (which
@@ -1347,6 +1362,126 @@ namespace APP.Controllers
             {
                 return "Import failed.";
             }
+        }
+
+        #endregion
+
+        #region Export
+
+        // Rebuilt Export: reuses the existing Employee/employee-list API
+        // contract unchanged (no new endpoint needed - that response
+        // already carries every latest Employee field with readable master
+        // names instead of IDs, courtesy of EmployeeMapper.ToDto), applies
+        // the SAME search/department/designation/status filter the Index
+        // page's client-side JS applies (kept in one place here so the
+        // exported file always matches what the admin is currently looking
+        // at), and writes a fully-formatted .xlsx with every field.
+        [HttpGet]
+        public async Task<IActionResult> Export(string? search, string? department, string? designation, string? status)
+        {
+            var data = await _apiService.GetAsync<List<EmployeeListDto>>("Employee/employee-list") ?? new();
+
+            IEnumerable<EmployeeListDto> filtered = data;
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim().ToLowerInvariant();
+                filtered = filtered.Where(x =>
+                    $"{x.FirstName} {x.LastName} {x.EmployeeCode} {x.Phone} {x.Email}"
+                        .ToLowerInvariant()
+                        .Contains(term));
+            }
+
+            if (!string.IsNullOrWhiteSpace(department))
+                filtered = filtered.Where(x => string.Equals(x.DepartmentName, department, StringComparison.OrdinalIgnoreCase));
+
+            if (!string.IsNullOrWhiteSpace(designation))
+                filtered = filtered.Where(x => string.Equals(x.DesignationName, designation, StringComparison.OrdinalIgnoreCase));
+
+            if (string.Equals(status, "active", StringComparison.OrdinalIgnoreCase))
+                filtered = filtered.Where(x => !x.RelievingDate.HasValue);
+            else if (string.Equals(status, "relieved", StringComparison.OrdinalIgnoreCase))
+                filtered = filtered.Where(x => x.RelievingDate.HasValue);
+
+            var rows = filtered
+                .OrderBy(x => x.EmployeeCode)
+                .ToList();
+
+            using var workbook = new XLWorkbook();
+            var sheet = workbook.Worksheets.Add("Employees");
+
+            string[] headers =
+            {
+                "Employee Code", "First Name", "Last Name", "Gender", "Marital Status",
+                "Date Of Birth", "Email", "Phone", "Emergency Contact",
+                "Company", "Branch", "Department", "Designation", "Shift",
+                "Reporting Manager", "Employment Type",
+                "Joining Date", "Confirmation Date", "Relieving Date", "Status",
+                "Address", "Pincode", "PAN Number", "Aadhaar Number",
+                "Nationality", "Passport Number", "Passport Status",
+                "Passport Issuing Country", "Passport Issue Date", "Passport Expiry Date"
+            };
+
+            for (int i = 0; i < headers.Length; i++)
+            {
+                var cell = sheet.Cell(1, i + 1);
+                cell.Value = headers[i];
+                cell.Style.Font.Bold = true;
+                cell.Style.Font.FontColor = XLColor.White;
+                cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1B2A4A");
+            }
+
+            static string DateText(DateTime? d) => d.HasValue ? d.Value.ToString("dd-MMM-yyyy") : "";
+
+            int r = 2;
+            foreach (var e in rows)
+            {
+                var col = 1;
+                sheet.Cell(r, col++).Value = e.EmployeeCode;
+                sheet.Cell(r, col++).Value = e.FirstName;
+                sheet.Cell(r, col++).Value = e.LastName ?? "";
+                sheet.Cell(r, col++).Value = e.Gender ?? "";
+                sheet.Cell(r, col++).Value = e.MaritalStatus ?? "";
+                sheet.Cell(r, col++).Value = DateText(e.DateOfBirth);
+                sheet.Cell(r, col++).Value = e.Email ?? "";
+                sheet.Cell(r, col++).Value = e.Phone ?? "";
+                sheet.Cell(r, col++).Value = e.EmergencyContact ?? "";
+                sheet.Cell(r, col++).Value = e.CompanyName ?? "";
+                sheet.Cell(r, col++).Value = e.BrnachName ?? "";
+                sheet.Cell(r, col++).Value = e.DepartmentName ?? "";
+                sheet.Cell(r, col++).Value = e.DesignationName ?? "";
+                sheet.Cell(r, col++).Value = e.ShiftName ?? "";
+                sheet.Cell(r, col++).Value = e.ReportingManagerName ?? "";
+                sheet.Cell(r, col++).Value = e.EmploymentType ?? "";
+                sheet.Cell(r, col++).Value = DateText(e.JoiningDate);
+                sheet.Cell(r, col++).Value = DateText(e.ConfirmationDate);
+                sheet.Cell(r, col++).Value = DateText(e.RelievingDate);
+                sheet.Cell(r, col++).Value = e.RelievingDate.HasValue ? "Relieved" : "Active";
+                sheet.Cell(r, col++).Value = e.Address ?? "";
+                sheet.Cell(r, col++).Value = e.Pincode ?? "";
+                sheet.Cell(r, col++).Value = e.PANNumber ?? "";
+                sheet.Cell(r, col++).Value = e.AadharNumber ?? "";
+                sheet.Cell(r, col++).Value = e.Nationality.ToString();
+                sheet.Cell(r, col++).Value = e.PassportNumber ?? "";
+                sheet.Cell(r, col++).Value = e.PassportStatus.ToString();
+                sheet.Cell(r, col++).Value = e.CountryName ?? "";
+                sheet.Cell(r, col++).Value = DateText(e.IssueDate);
+                sheet.Cell(r, col++).Value = DateText(e.ExpiryDate);
+                r++;
+            }
+
+            sheet.SheetView.FreezeRows(1);
+            sheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+
+            var fileName = $"Employees_Export_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+
+            return File(
+                stream.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileName);
         }
 
         #endregion

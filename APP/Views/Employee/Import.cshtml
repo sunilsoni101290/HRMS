@@ -1,139 +1,396 @@
-@model EmployeeImportResultDto
-
 @{
     ViewData["Title"] = "Import Employees";
-    bool hasRows = Model != null && Model.Rows != null && Model.Rows.Any();
 }
 
-<div class="panel panel-flat">
+@* Template -> Upload -> Preview -> Validate -> Import -> Summary, all on one
+   page via AJAX (no full-page reloads between steps). Uses the shared
+   design system (wwwroot/css/design-system.css, .ent-* classes) already in
+   place for the rest of the Employee module. *@
 
-    <div class="panel-heading">
-
-        <h5 class="panel-title">
-            <i class="icon-file-excel position-left"></i>
-            Import Employees
-        </h5>
-
-        <div class="heading-elements">
-            <a asp-action="Index" class="btn btn-default">
-                <i class="icon-arrow-left13"></i>
-                Back
-            </a>
-        </div>
-
+<div class="ent-page-header">
+    <div>
+        <h4>Import Employees</h4>
+        <p>Bulk-create employees from an Excel file, with full validation before anything is saved.</p>
     </div>
+    <div class="ent-page-header-actions">
+        <a asp-action="Index" class="btn btn-default">
+            <i class="icon-arrow-left13 position-left"></i>
+            Back to Employees
+        </a>
+    </div>
+</div>
 
+<div class="panel panel-flat">
+    <div class="panel-heading">
+        <h6 class="panel-title"><span class="ent-count-badge" style="margin-right:8px;">1</span> Download the template</h6>
+    </div>
     <div class="panel-body">
-
-        <ol class="text-size-small">
-            <li>Download the template below and fill one row per employee. Columns marked with * are required.</li>
-            <li>Use the exact Company / Department / Designation / Role names shown on the "Reference Data" sheet of the template.</li>
-            <li>The Reporting Manager column (optional) expects an existing employee's Employee Code, not a name.</li>
+        <ol class="text-size-small" style="padding-left:18px; margin-bottom:14px;">
+            <li>Columns marked with * are mandatory: Employee Code, First Name, Gender, Company, Role, Shift and Employment Type. Every other column is optional.</li>
+            <li>Company / Department / Role / Shift / Gender / Marital Status / Employment Type have in-cell dropdowns on the "Employees" sheet - pick from the list rather than typing, to avoid typos.</li>
+            <li>Branch and Designation are typed free-text - see the "Reference Data" sheet for the exact names on file (Designation is listed as "Name (Department)" for reference only).</li>
+            <li>Reporting Manager expects an existing employee's Employee Code, not a name.</li>
         </ol>
 
         <a asp-action="DownloadImportTemplate" class="btn bg-info">
             <i class="icon-file-download position-left"></i>
             Download Excel Template
         </a>
+    </div>
+</div>
 
-        <hr />
-
-        <form asp-action="Import" method="post" enctype="multipart/form-data">
-
+<div class="panel panel-flat">
+    <div class="panel-heading">
+        <h6 class="panel-title"><span class="ent-count-badge" style="margin-right:8px;">2</span> Upload &amp; preview</h6>
+    </div>
+    <div class="panel-body">
+        <form id="importForm" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
             <div class="row">
-
                 <div class="col-md-6">
-
                     <div class="form-group">
                         <label>Select filled Excel file (.xlsx)</label>
-                        <input type="file" name="file" class="file-input" accept=".xlsx,.xls" required />
+                        <input type="file" id="importFile" name="file" class="form-control" accept=".xlsx,.xls" />
                     </div>
-
                 </div>
-
             </div>
 
-            <button type="submit" class="btn bg-primary">
-                <i class="icon-upload3 position-left"></i>
-                Upload &amp; Import
+            <button type="button" id="btnPreview" class="btn bg-primary">
+                <i class="icon-eye position-left"></i>
+                Preview &amp; Validate
             </button>
-
+            <span id="previewSpinner" class="import-spinner-inline" style="display:none; margin-left:10px;">
+                <i class="icon-spinner4 spinner"></i> Validating...
+            </span>
         </form>
+    </div>
+</div>
 
+<div id="previewSection" style="display:none;">
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="ent-kpi-card">
+                <div class="ent-kpi-icon ent-icon-blue"><i class="icon-file-text2"></i></div>
+                <div>
+                    <h3 class="no-margin" id="kpiTotal">0</h3>
+                    <span>Total Rows</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="ent-kpi-card">
+                <div class="ent-kpi-icon ent-icon-green"><i class="icon-checkmark3"></i></div>
+                <div>
+                    <h3 class="no-margin" id="kpiValid">0</h3>
+                    <span>Valid</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="ent-kpi-card">
+                <div class="ent-kpi-icon ent-icon-red"><i class="icon-cross2"></i></div>
+                <div>
+                    <h3 class="no-margin" id="kpiInvalid">0</h3>
+                    <span>Invalid</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="ent-list-card">
+        <div class="panel-heading">
+            <h6 class="panel-title">Row-wise preview</h6>
+            <div class="heading-elements">
+                <button type="button" id="btnDownloadErrors" class="btn btn-default btn-sm" style="display:none;">
+                    <i class="icon-file-download position-left"></i>
+                    Download Error Excel
+                </button>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table ent-list-table">
+                <thead>
+                    <tr>
+                        <th width="60">Row</th>
+                        <th>Employee Code</th>
+                        <th>Name</th>
+                        <th>Company</th>
+                        <th>Role</th>
+                        <th>Shift</th>
+                        <th width="110">Status</th>
+                        <th>Errors</th>
+                    </tr>
+                </thead>
+                <tbody id="previewTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="panel panel-flat">
+        <div class="panel-body" style="display:flex; gap:10px; align-items:center;">
+            <button type="button" id="btnConfirmImport" class="btn bg-success" disabled>
+                <i class="icon-cloud-upload position-left"></i>
+                Confirm Import
+            </button>
+            <span id="confirmHint" class="text-muted text-size-small"></span>
+            <span id="commitSpinner" class="import-spinner-inline" style="display:none;">
+                <i class="icon-spinner4 spinner"></i> Importing...
+            </span>
+        </div>
     </div>
 
 </div>
 
-@if (hasRows)
-{
+<div id="summarySection" style="display:none;">
+
     <div class="row">
-
         <div class="col-md-4">
-            <div class="panel panel-body bg-primary-400 text-center">
-                <h3 class="no-margin">@Model.TotalRows</h3>
-                <span>Total Rows</span>
+            <div class="ent-kpi-card">
+                <div class="ent-kpi-icon ent-icon-blue"><i class="icon-file-text2"></i></div>
+                <div>
+                    <h3 class="no-margin" id="sumTotal">0</h3>
+                    <span>Total Rows</span>
+                </div>
             </div>
         </div>
-
         <div class="col-md-4">
-            <div class="panel panel-body bg-success-400 text-center">
-                <h3 class="no-margin">@Model.SuccessCount</h3>
-                <span>Imported Successfully</span>
+            <div class="ent-kpi-card">
+                <div class="ent-kpi-icon ent-icon-green"><i class="icon-checkmark3"></i></div>
+                <div>
+                    <h3 class="no-margin" id="sumSuccess">0</h3>
+                    <span>Imported</span>
+                </div>
             </div>
         </div>
-
         <div class="col-md-4">
-            <div class="panel panel-body bg-danger-400 text-center">
-                <h3 class="no-margin">@Model.FailureCount</h3>
-                <span>Failed</span>
+            <div class="ent-kpi-card">
+                <div class="ent-kpi-icon ent-icon-red"><i class="icon-cross2"></i></div>
+                <div>
+                    <h3 class="no-margin" id="sumFailure">0</h3>
+                    <span>Failed</span>
+                </div>
             </div>
         </div>
-
     </div>
 
     <div class="panel panel-flat">
-
-        <div class="panel-heading">
-            <h5 class="panel-title">Import Details</h5>
+        <div class="panel-body" style="display:flex; gap:10px; align-items:center;">
+            <a asp-action="Index" class="btn bg-primary">
+                <i class="icon-users position-left"></i>
+                Go to Employees
+            </a>
+            <button type="button" id="btnImportMore" class="btn btn-default">
+                <i class="icon-redo2 position-left"></i>
+                Import Another File
+            </button>
         </div>
+    </div>
 
-        <table class="table table-bordered table-striped">
+</div>
 
-            <thead>
-                <tr>
-                    <th width="70">Row #</th>
-                    <th>Employee Code</th>
-                    <th>Employee Name</th>
-                    <th width="110">Status</th>
-                    <th>Message</th>
-                </tr>
-            </thead>
+<form id="errorExcelForm" method="post" asp-action="DownloadImportErrors" enctype="multipart/form-data" style="display:none;">
+    @Html.AntiForgeryToken()
+    <input type="file" id="hiddenErrorFile" name="file" />
+</form>
 
-            <tbody>
+@section Scripts {
+    <style>
+        .import-spinner-inline { display: inline-flex; align-items: center; gap: 6px; color: var(--ent-text-muted, #6b7280); font-size: 13px; }
+        #previewTableBody .row-invalid { background: #FFF5F5; }
+        .import-error-list { margin: 0; padding-left: 16px; font-size: 12px; color: #C62828; }
+    </style>
 
-                @foreach (var row in Model.Rows)
-                {
-                    <tr>
-                        <td>@row.RowNumber</td>
-                        <td>@row.EmployeeCode</td>
-                        <td>@row.EmployeeName</td>
-                        <td>
-                            @if (row.Success)
-                            {
-                                <span class="label bg-success">Success</span>
-                            }
-                            else
-                            {
-                                <span class="label bg-danger">Failed</span>
-                            }
-                        </td>
-                        <td>@row.Message</td>
-                    </tr>
+    <script>
+        $(function () {
+            var lastPreview = null;
+
+            function token() {
+                return $('#importForm input[name="__RequestVerificationToken"]').val();
+            }
+
+            function selectedFile() {
+                var files = $('#importFile')[0].files;
+                return files && files.length ? files[0] : null;
+            }
+
+            // NOTE: APP's Program.cs sets JsonSerializerOptions.PropertyNamingPolicy
+            // = null (see AddJsonOptions), so Controller.Json(...) here serializes
+            // C# properties AS-IS - PascalCase, not camelCase. Every property
+            // read below therefore matches the C# DTO's exact casing
+            // (EmployeeImportPreviewResultDto / EmployeeImportCommitResultDto /
+            // EmployeeImportRowValidationDto / ImportFieldError).
+            function renderPreview(result) {
+                lastPreview = result;
+
+                $('#kpiTotal').text(result.TotalRows);
+                $('#kpiValid').text(result.ValidCount);
+                $('#kpiInvalid').text(result.InvalidCount);
+
+                var rows = result.Rows || [];
+                var html = '';
+
+                rows.forEach(function (r) {
+                    var errorsHtml = '';
+                    if (r.Errors && r.Errors.length) {
+                        errorsHtml = '<ul class="import-error-list">' +
+                            r.Errors.map(function (e) {
+                                return '<li><strong>' + e.Field + ':</strong> ' + e.Error + '</li>';
+                            }).join('') +
+                            '</ul>';
+                    }
+
+                    html += '<tr class="' + (r.IsValid ? '' : 'row-invalid') + '">' +
+                        '<td>' + r.RowNumber + '</td>' +
+                        '<td>' + (r.EmployeeCode || '-') + '</td>' +
+                        '<td>' + (r.EmployeeName || '-') + '</td>' +
+                        '<td>' + (r.CompanyName || '-') + '</td>' +
+                        '<td>' + (r.RoleName || '-') + '</td>' +
+                        '<td>' + (r.ShiftName || '-') + '</td>' +
+                        '<td>' + (r.IsValid
+                            ? '<span class="ent-status-pill ent-badge-success">Valid</span>'
+                            : '<span class="ent-status-pill ent-badge-danger">Invalid</span>') + '</td>' +
+                        '<td>' + (errorsHtml || '<span class="text-muted">-</span>') + '</td>' +
+                        '</tr>';
+                });
+
+                $('#previewTableBody').html(html || '<tr><td colspan="8" class="text-center text-muted">No rows found.</td></tr>');
+
+                $('#btnDownloadErrors').toggle(result.InvalidCount > 0);
+
+                if (result.InvalidCount > 0) {
+                    $('#btnConfirmImport').prop('disabled', true);
+                    $('#confirmHint').text('Fix the ' + result.InvalidCount + ' invalid row(s) above (or download the Error Excel), then re-upload and preview again before importing.');
+                } else if (result.TotalRows === 0) {
+                    $('#btnConfirmImport').prop('disabled', true);
+                    $('#confirmHint').text('');
+                } else {
+                    $('#btnConfirmImport').prop('disabled', false);
+                    $('#confirmHint').text('All ' + result.TotalRows + ' row(s) are valid and ready to import.');
                 }
 
-            </tbody>
+                $('#previewSection').show();
+                $('#summarySection').hide();
+            }
 
-        </table>
+            function showError(message) {
+                swal({
+                    title: 'Something went wrong',
+                    text: message || 'Please try again.',
+                    type: 'error',
+                    confirmButtonColor: '#EF5350'
+                });
+            }
 
-    </div>
+            $('#btnPreview').on('click', function () {
+                var file = selectedFile();
+
+                if (!file) {
+                    showError('Please choose an Excel file first.');
+                    return;
+                }
+
+                var fd = new FormData();
+                fd.append('file', file);
+                fd.append('__RequestVerificationToken', token());
+
+                $('#previewSpinner').show();
+                $('#btnPreview').prop('disabled', true);
+
+                $.ajax({
+                    url: '@Url.Action("PreviewImport")',
+                    type: 'POST',
+                    data: fd,
+                    processData: false,
+                    contentType: false
+                }).done(function (result) {
+                    renderPreview(result);
+                }).fail(function (xhr) {
+                    var msg = (xhr.responseJSON && xhr.responseJSON.message) || 'Unable to validate the file.';
+                    showError(msg);
+                }).always(function () {
+                    $('#previewSpinner').hide();
+                    $('#btnPreview').prop('disabled', false);
+                });
+            });
+
+            $('#btnConfirmImport').on('click', function () {
+                var file = selectedFile();
+
+                if (!file) {
+                    showError('Please choose an Excel file first.');
+                    return;
+                }
+
+                var fd = new FormData();
+                fd.append('file', file);
+                fd.append('__RequestVerificationToken', token());
+
+                $('#commitSpinner').show();
+                $('#btnConfirmImport').prop('disabled', true);
+
+                $.ajax({
+                    url: '@Url.Action("CommitImport")',
+                    type: 'POST',
+                    data: fd,
+                    processData: false,
+                    contentType: false
+                }).done(function (result) {
+                    $('#sumTotal').text(result.TotalRows);
+                    $('#sumSuccess').text(result.SuccessCount);
+                    $('#sumFailure').text(result.FailureCount);
+
+                    $('#previewSection').hide();
+                    $('#summarySection').show();
+
+                    if (result.Success) {
+                        swal({ title: 'Success', text: result.Message, type: 'success', confirmButtonColor: '#66BB6A' });
+                    } else {
+                        // Re-render the (now re-validated) rows so the admin
+                        // can see exactly why the commit was rejected -
+                        // nothing was written, so re-uploading after a fix
+                        // still works with no extra steps.
+                        renderPreview({
+                            TotalRows: result.TotalRows,
+                            ValidCount: result.TotalRows - result.FailureCount,
+                            InvalidCount: result.FailureCount,
+                            Rows: result.Rows
+                        });
+                        showError(result.Message);
+                    }
+                }).fail(function (xhr) {
+                    var msg = (xhr.responseJSON && xhr.responseJSON.message) || 'Import failed.';
+                    showError(msg);
+                }).always(function () {
+                    $('#commitSpinner').hide();
+                    $('#btnConfirmImport').prop('disabled', false);
+                });
+            });
+
+            $('#btnDownloadErrors').on('click', function () {
+                var file = selectedFile();
+
+                if (!file) {
+                    showError('Please choose an Excel file first.');
+                    return;
+                }
+
+                document.getElementById('hiddenErrorFile').files = document.getElementById('importFile').files;
+                document.getElementById('errorExcelForm').submit();
+            });
+
+            $('#btnImportMore').on('click', function () {
+                $('#importFile').val('');
+                $('#previewSection').hide();
+                $('#summarySection').hide();
+                lastPreview = null;
+            });
+
+            @if (TempData["GlobalError"] != null)
+            {
+                <text>showError('@Html.Raw(TempData["GlobalError"])');</text>
+            }
+        });
+    </script>
 }

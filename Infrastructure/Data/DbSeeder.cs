@@ -214,22 +214,22 @@ namespace Infrastructure.Data
                 {
 
                     Id = IDManager.GetNewId(new Company()),
-                    Name = "ABC Pvt Ltd",
-                    Code = "C001",
+                    Name = "Prosaec Total Pvt Ltd",
+                    Code = "PROSAEC_TOTAL",
 
-                    GSTNumber = "27ABCDE1234F1Z5",
-                    PANNumber = "ABCDE1234F",
-                    CINNumber = "U12345MH2024PTC123456",
+                    GSTNumber = "",
+                    PANNumber = "",
+                    CINNumber = "",
 
-                    Email = "info@abc.com",
+                    Email = "sales@prosaectotal.com",
                     Phone = "9000000000",
-                    AlternatePhone = "9000000001",
+                    AlternatePhone = "",
 
                     Address = "Mumbai, Maharashtra",
-                    Pincode = "400001",
+                    Pincode = "400093",
 
                     OwnershipType = BusinessOwnershipType.PrivateLimited,
-                    BusinessCategory = BusinessCategory.Construction,
+                    BusinessCategory = BusinessCategory.Engineering,
 
                     TenantId = tenantId,
 
@@ -239,7 +239,7 @@ namespace Infrastructure.Data
 
                     IncorporationDate = new DateTime(2024, 01, 01),
 
-                    WebsiteUrl = "https://abc.com",
+                    WebsiteUrl = "https://www.prosaectotal.com/",
                     CreatedBy = "System"
                 };
 
@@ -558,121 +558,121 @@ namespace Infrastructure.Data
             // No sample HR/developer employees are seeded - the client adds
             // their real workforce after go-live via the Employee module
             // (or the bulk Excel import).
-            if (!context.Employees.Any())
-            {
-                var hrDept = await context.Departments.FirstOrDefaultAsync(x => x.Code == "HR");
-                var itDept = await context.Departments.FirstOrDefaultAsync(x => x.Code == "IT");
+            //if (!context.Employees.Any())
+            //{
+            //    var hrDept = await context.Departments.FirstOrDefaultAsync(x => x.Code == "HR");
+            //    var itDept = await context.Departments.FirstOrDefaultAsync(x => x.Code == "IT");
 
-                var ceoDesg = await context.Designations.FirstOrDefaultAsync(x => x.Code == "CEO");
-                var sysCfgDesg = await context.Designations.FirstOrDefaultAsync(x => x.Code == "SYS-CFG");
+            //    var ceoDesg = await context.Designations.FirstOrDefaultAsync(x => x.Code == "CEO");
+            //    var sysCfgDesg = await context.Designations.FirstOrDefaultAsync(x => x.Code == "SYS-CFG");
 
-                var defaultShift = await context.Shifts.FirstOrDefaultAsync();
-                var india = await context.Countries.FirstOrDefaultAsync(x => x.Name == "India");
+            //    var defaultShift = await context.Shifts.FirstOrDefaultAsync();
+            //    var india = await context.Countries.FirstOrDefaultAsync(x => x.Name == "India");
 
-                if (tenantId == null ||
-                    companyId == null ||
-                    hrDept == null ||
-                    itDept == null ||
-                    ceoDesg == null ||
-                    sysCfgDesg == null ||
-                    defaultShift == null)
-                {
-                    throw new Exception("Required master data not found.");
-                }
+            //    if (tenantId == null ||
+            //        companyId == null ||
+            //        hrDept == null ||
+            //        itDept == null ||
+            //        ceoDesg == null ||
+            //        sysCfgDesg == null ||
+            //        defaultShift == null)
+            //    {
+            //        throw new Exception("Required master data not found.");
+            //    }
 
-                // ================= Admin =================
-                // NOTE FOR DEPLOYMENT: update Email/Phone to the client's
-                // real administrator details, and change the default
-                // password (see the Admin user below) immediately after
-                // first login.
+            //    // ================= Admin =================
+            //    // NOTE FOR DEPLOYMENT: update Email/Phone to the client's
+            //    // real administrator details, and change the default
+            //    // password (see the Admin user below) immediately after
+            //    // first login.
 
-                var admin = new Employee
-                {
-                    Id = IDManager.GetNewId(new Employee()),
-                    EmployeeCode = "EMP001",
+            //    var admin = new Employee
+            //    {
+            //        Id = IDManager.GetNewId(new Employee()),
+            //        EmployeeCode = "EMP001",
 
-                    FirstName = "Admin",
-                    LastName = "User",
+            //        FirstName = "Admin",
+            //        LastName = "User",
 
-                    TenantId = tenantId,
-                    CompanyId = companyId,
-                    BranchId = null,
+            //        TenantId = tenantId,
+            //        CompanyId = companyId,
+            //        BranchId = null,
 
-                    DepartmentId = hrDept.Id,
-                    DesignationId = ceoDesg.Id,
+            //        DepartmentId = hrDept.Id,
+            //        DesignationId = ceoDesg.Id,
 
-                    ReportingManagerId = null,
+            //        ReportingManagerId = null,
 
-                    ShiftId = defaultShift.Id,
+            //        ShiftId = defaultShift.Id,
 
-                    Gender = Gender.Male,
-                    MaritalStatus = MaritalStatus.Unmarried,
+            //        Gender = Gender.Male,
+            //        MaritalStatus = MaritalStatus.Unmarried,
 
-                    Phone = "9000000001",
-                    Email = "admin@yourcompany.com",
+            //        Phone = "9000000001",
+            //        Email = "admin@yourcompany.com",
 
-                    Address = "Mumbai",
-                    Pincode = "400001",
+            //        Address = "Mumbai",
+            //        Pincode = "400001",
 
-                    JoiningDate = DateTime.UtcNow,
+            //        JoiningDate = DateTime.UtcNow,
 
-                    EmploymentType = EmploymentType.Permanent,
+            //        EmploymentType = EmploymentType.Permanent,
 
-                    Nationality = Nationality.Indian,
+            //        Nationality = Nationality.Indian,
 
-                    CountryId = india?.Id,
+            //        CountryId = india?.Id,
 
-                    CreatedBy = "System"
-                };
+            //        CreatedBy = "System"
+            //    };
 
-                // ================= System Configurator =================
-                // Owns application/master-data setup (roles, app features,
-                // company/branch/department structure, salary components,
-                // etc.) - kept separate from the Admin account so day-to-day
-                // configuration work is auditable under its own login.
+            //    // ================= System Configurator =================
+            //    // Owns application/master-data setup (roles, app features,
+            //    // company/branch/department structure, salary components,
+            //    // etc.) - kept separate from the Admin account so day-to-day
+            //    // configuration work is auditable under its own login.
 
-                var systemConfigurator = new Employee
-                {
-                    Id = IDManager.GetNewId(new Employee()),
-                    EmployeeCode = "EMP002",
+            //    var systemConfigurator = new Employee
+            //    {
+            //        Id = IDManager.GetNewId(new Employee()),
+            //        EmployeeCode = "EMP002",
 
-                    FirstName = "System",
-                    LastName = "Configurator",
+            //        FirstName = "System",
+            //        LastName = "Configurator",
 
-                    TenantId = tenantId,
-                    CompanyId = companyId,
-                    BranchId = null,
+            //        TenantId = tenantId,
+            //        CompanyId = companyId,
+            //        BranchId = null,
 
-                    DepartmentId = itDept.Id,
-                    DesignationId = sysCfgDesg.Id,
+            //        DepartmentId = itDept.Id,
+            //        DesignationId = sysCfgDesg.Id,
 
-                    ReportingManagerId = null,
+            //        ReportingManagerId = null,
 
-                    ShiftId = defaultShift.Id,
+            //        ShiftId = defaultShift.Id,
 
-                    Gender = Gender.Male,
-                    MaritalStatus = MaritalStatus.Unmarried,
+            //        Gender = Gender.Male,
+            //        MaritalStatus = MaritalStatus.Unmarried,
 
-                    Phone = "9000000002",
-                    Email = "sysconfig@yourcompany.com",
+            //        Phone = "9000000002",
+            //        Email = "sysconfig@yourcompany.com",
 
-                    Address = "Mumbai",
-                    Pincode = "400001",
+            //        Address = "Mumbai",
+            //        Pincode = "400001",
 
-                    JoiningDate = DateTime.UtcNow,
+            //        JoiningDate = DateTime.UtcNow,
 
-                    EmploymentType = EmploymentType.Permanent,
+            //        EmploymentType = EmploymentType.Permanent,
 
-                    Nationality = Nationality.Indian,
+            //        Nationality = Nationality.Indian,
 
-                    CountryId = india?.Id,
+            //        CountryId = india?.Id,
 
-                    CreatedBy = "System"
-                };
+            //        CreatedBy = "System"
+            //    };
 
-                await context.Employees.AddRangeAsync(admin, systemConfigurator);
-                await context.SaveChangesAsync();
-            }
+            //    await context.Employees.AddRangeAsync(admin, systemConfigurator);
+            //    await context.SaveChangesAsync();
+            //}
 
             // =========================
             // 12. PERMISSIONS
@@ -841,11 +841,11 @@ namespace Infrastructure.Data
             // after first login - these are placeholder credentials only.
             if (!context.Users.Any())
             {
-                var adminEmp = await context.Employees.FirstOrDefaultAsync(x => x.EmployeeCode == "EMP001");
-                var sysCfgEmp = await context.Employees.FirstOrDefaultAsync(x => x.EmployeeCode == "EMP002");
+                //var adminEmp = await context.Employees.FirstOrDefaultAsync(x => x.EmployeeCode == "EMP001");
+                //var sysCfgEmp = await context.Employees.FirstOrDefaultAsync(x => x.EmployeeCode == "EMP002");
 
-                if (adminEmp == null || sysCfgEmp == null)
-                    throw new Exception("Default employees not found");
+                //if (adminEmp == null || sysCfgEmp == null)
+                //    throw new Exception("Default employees not found");
 
                 var users = new List<User>
                 {
@@ -858,7 +858,7 @@ namespace Infrastructure.Data
 
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"),
 
-                        EmployeeId = adminEmp.Id,
+                        EmployeeId = null,
 
                         EmailConfirmed = true,
                         PhoneConfirmed = true,
@@ -883,7 +883,7 @@ namespace Infrastructure.Data
 
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword("SysConfig@123"),
 
-                        EmployeeId = sysCfgEmp.Id,
+                        EmployeeId = null,
 
                         EmailConfirmed = true,
                         PhoneConfirmed = true,

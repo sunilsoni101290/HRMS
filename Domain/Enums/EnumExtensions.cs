@@ -413,7 +413,8 @@ namespace Domain.Enums
             ITSoftware = 16,       // IT / Software company
 
             Agriculture = 17,      // Farming / Agro business
-            Hospitality = 18       // Hotel / Restaurant
+            Hospitality = 18 ,
+            Engineering=19// Hotel / Restaurant
         }
 
         public enum DocumentType

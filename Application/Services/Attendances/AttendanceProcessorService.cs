@@ -95,19 +95,76 @@ namespace Application.Services.Attendances
             _logger = logger;
         }
 
+        // Caps how many per-row failure/skip/unmapped details
+        // ProcessAttendanceWithResultAsync collects into
+        // AttendanceProcessingResultDto.PerRowFailures - the COUNTERS
+        // (UnmappedRecords/Skipped/Failed/etc.) are always complete and
+        // exact regardless of this cap; only the itemized detail list is
+        // bounded, so a backlog with thousands of failures can't blow up
+        // memory or the log line size. PerRowFailuresTruncated on the
+        // result tells the caller when this cap was hit.
+        private const int MaxPerRowFailureDetails = 500;
+
         public Task<bool> ProcessAttendanceAsync() => ProcessAttendanceAsync(DefaultBatchSize);
 
-        /// <summary>Overload exposing the batch size for tests/tuning - the interface keeps the parameterless signature every existing caller (eSSL sync, BiometricSyncController) already uses unchanged.</summary>
+        /// <summary>Overload exposing the batch size for tests/tuning - the interface keeps the parameterless signature every existing caller (eSSL sync, BiometricSyncController) already uses unchanged. Thin wrapper over ProcessAttendanceWithResultAsync - identical processing, just discards the detailed counters down to a bool for callers that don't need them.</summary>
         public async Task<bool> ProcessAttendanceAsync(int batchSize)
+        {
+            var result = await ProcessAttendanceWithResultAsync(batchSize);
+            return result.Success;
+        }
+
+        /// <summary>
+        /// Same processing as ProcessAttendanceAsync, with the full
+        /// reconciliation breakdown the plain bool return can't carry -
+        /// see AttendanceProcessingResultDto's remarks for exactly what
+        /// each counter means and how they reconcile against
+        /// TotalRawRecords. Callers that need to surface a real
+        /// "3595 found, 50 applied, X unmapped, Y rejected (reason...),
+        /// Z failed" picture (eSSL sync logging, a manual "Process
+        /// Attendance" admin action) should call this instead of the plain
+        /// bool overloads.
+        /// </summary>
+        public async Task<AttendanceProcessingResultDto> ProcessAttendanceWithResultAsync(int batchSize = 0)
         {
             if (batchSize < 1) batchSize = DefaultBatchSize;
 
             _logger.LogInformation("Biometric attendance processing started (batchSize={BatchSize}).", batchSize);
 
+            var result = new AttendanceProcessingResultDto();
+
             int totalFound = 0, totalApplied = 0, totalSkippedUnmapped = 0, totalHealed = 0, totalFailed = 0, totalRejectedSequence = 0;
+            int mappedCount = 0, attendanceCreatedCount = 0, attendanceUpdatedCount = 0, attendanceLogsCreatedCount = 0;
+
+            void AddDetail(BiometricAttendanceLog raw, string reason, DateTime? attendanceDate = null)
+            {
+                if (result.PerRowFailures.Count >= MaxPerRowFailureDetails)
+                {
+                    result.PerRowFailuresTruncated = true;
+                    return;
+                }
+
+                result.PerRowFailures.Add(new AttendanceProcessingRowDetailDto
+                {
+                    RawId = raw.Id,
+                    EmployeeCode = raw.EmployeeCode,
+                    PunchTime = raw.PunchTime,
+                    PunchType = raw.PunchType.ToString(),
+                    AttendanceDate = attendanceDate,
+                    Reason = reason
+                });
+            }
 
             try
             {
+                // Snapshot of the backlog BEFORE this run touches anything -
+                // "PendingRecords" per the requested reconciliation report.
+                // May be larger than TotalRawRecords below if the backlog
+                // exceeds MaxBatchesPerRun * batchSize in one call (the
+                // remainder is picked up by the next run, never lost).
+                result.PendingRecords = await _db.BiometricAttendanceLogs
+                    .CountAsync(x => !x.IsProcessed);
+
                 // Active mappings rarely change and are small relative to
                 // the punch backlog - load once for the whole run rather
                 // than once per punch (was: one query per raw log).
@@ -121,11 +178,25 @@ namespace Application.Services.Attendances
                 // record - which is exactly the shape of "many raw eSSL
                 // rows, far fewer Attendance rows" reported gaps like this
                 // one.
-                var mappingByCode = await _db.EmployeeBiometricMappings
+                // BiometricEmployeeCodeNormalizer.Normalize is plain C# (not
+                // a SQL-translatable expression), so GroupBy on it can't run
+                // as part of the database query - EF Core throws
+                // InvalidOperationException ("could not be translated") the
+                // moment GroupBy references it directly against
+                // DbSet<EmployeeBiometricMapping>. Fetch the (small,
+                // already IsActive-filtered - active mappings are small
+                // relative to the punch backlog, see the comment above)
+                // list of mappings first via ToListAsync, then group/
+                // normalize client-side - identical fix already applied to
+                // the same pattern in EsslAttendanceSyncService.SyncAsync.
+                var activeMappings = await _db.EmployeeBiometricMappings
                     .AsNoTracking()
                     .Where(x => x.IsActive)
+                    .ToListAsync();
+
+                var mappingByCode = activeMappings
                     .GroupBy(x => BiometricEmployeeCodeNormalizer.Normalize(x.BiometricEmployeeCode))
-                    .ToDictionaryAsync(g => g.Key, g => g.First());
+                    .ToDictionary(g => g.Key, g => g.First());
 
                 for (int batchNo = 0; batchNo < MaxBatchesPerRun; batchNo++)
                 {
@@ -192,18 +263,22 @@ namespace Application.Services.Attendances
                                 // (LogDate) are on BiometricAttendanceLog
                                 // itself, so no extra lookup is needed.
                                 _logger.LogWarning(
-                                    "Biometric punch skipped - no active Employee Biometric Mapping for device code {Code} (raw log {RawId}, SourceTable={SourceTable}, DeviceTransactionId={DeviceTransactionId}, LogDate={LogDate:o}, device {DeviceId}). Create a mapping so future syncs pick this up.",
-                                    raw.EmployeeCode, raw.Id, raw.SourceTable, raw.DeviceTransactionId, raw.PunchTime, raw.DeviceId);
+                                    "Biometric punch skipped - no active Employee Biometric Mapping for device code/Biometric UserId {Code} (raw log {RawId}, SourceTable={SourceTable}, DeviceTransactionId={DeviceTransactionId}, PunchTime={PunchTime:o}, PunchType={PunchType}, device {DeviceId}). Create a mapping so future syncs pick this up.",
+                                    raw.EmployeeCode, raw.Id, raw.SourceTable, raw.DeviceTransactionId, raw.PunchTime, raw.PunchType, raw.DeviceId);
                                 totalSkippedUnmapped++;
+                                AddDetail(raw, "No active EmployeeBiometricMapping for this device code.");
                                 continue; // left unprocessed for retry, per spec section 12
                             }
+
+                            mappedCount++;
 
                             if (!employeesById.TryGetValue(mapping.EmployeeId, out var employee))
                             {
                                 _logger.LogWarning(
-                                    "Biometric punch skipped - mapped employee {EmployeeId} no longer exists (raw log {RawId}).",
-                                    mapping.EmployeeId, raw.Id);
+                                    "Biometric punch skipped - mapped employee {EmployeeId} no longer exists (Biometric UserId={Code}, raw log {RawId}, PunchTime={PunchTime:o}, PunchType={PunchType}).",
+                                    mapping.EmployeeId, raw.EmployeeCode, raw.Id, raw.PunchTime, raw.PunchType);
                                 totalSkippedUnmapped++;
+                                AddDetail(raw, $"Mapped EmployeeId {mapping.EmployeeId} no longer exists.");
                                 continue;
                             }
 
@@ -238,23 +313,35 @@ namespace Application.Services.Attendances
                             };
 
                             bool applied;
+                            string? failureReason = null;
+                            bool attendanceCreatedThisRow = false;
 
+                            // Calls the "WithReason" variants (see
+                            // IAttendanceService remarks) instead of the
+                            // plain bool-returning Punch*/Break*Async - same
+                            // exact business logic, but AttendanceService no
+                            // longer swallows its own exception silently, so
+                            // the REAL reason a punch was rejected
+                            // ("Already punched in", "Shift not assigned",
+                            // "Punch in not found", a DB error, etc.) is
+                            // finally visible here instead of a generic
+                            // "could not be applied" with no explanation.
                             switch (raw.PunchType)
                             {
                                 case PunchType.In:
-                                    applied = await _attendanceService.PunchInAsync(dto);
+                                    (applied, failureReason, attendanceCreatedThisRow) = await _attendanceService.PunchInWithReasonAsync(dto);
                                     break;
 
                                 case PunchType.Out:
-                                    applied = await _attendanceService.PunchOutAsync(dto);
+                                    (applied, failureReason, attendanceCreatedThisRow) = await _attendanceService.PunchOutWithReasonAsync(dto);
                                     break;
 
                                 case PunchType.BreakOut:
-                                    applied = await _attendanceService.BreakOutAsync(dto);
+                                    (applied, failureReason, attendanceCreatedThisRow) = await _attendanceService.BreakOutWithReasonAsync(dto);
                                     break;
 
                                 case PunchType.BreakIn:
-                                    applied = await _attendanceService.BreakInAsync(dto);
+                                    (applied, failureReason, attendanceCreatedThisRow) = await _attendanceService.BreakInWithReasonAsync(dto);
                                     break;
 
                                 default:
@@ -262,6 +349,7 @@ namespace Application.Services.Attendances
                                         "Biometric punch skipped - unrecognised PunchType {PunchType} (raw log {RawId}).",
                                         raw.PunchType, raw.Id);
                                     applied = false;
+                                    failureReason = $"Unrecognised PunchType '{raw.PunchType}'.";
                                     break;
                             }
 
@@ -293,11 +381,15 @@ namespace Application.Services.Attendances
                                 // summary line distinguishes "stuck because
                                 // of a mapping problem" from "stuck because
                                 // the device sent an out-of-sequence punch"
-                                // - they need different fixes.
+                                // - they need different fixes. failureReason
+                                // (now non-null thanks to the WithReason
+                                // call above) is the exact reason - no more
+                                // guessing.
                                 totalRejectedSequence++;
                                 _logger.LogWarning(
-                                    "Biometric punch could not be applied to attendance - Employee {EmployeeId}, PunchType {PunchType}, PunchTime {PunchTime:o} (raw log {RawId}, SourceTable={SourceTable}, DeviceTransactionId={DeviceTransactionId}). Left unprocessed for retry.",
-                                    employee.Id, raw.PunchType, raw.PunchTime, raw.Id, raw.SourceTable, raw.DeviceTransactionId);
+                                    "Biometric punch could not be applied to attendance - Employee {EmployeeId}, EmployeeCode/BiometricUserId={Code}, PunchType {PunchType}, PunchTime {PunchTime:o} (raw log {RawId}, SourceTable={SourceTable}, DeviceTransactionId={DeviceTransactionId}). Reason: {Reason}. Left unprocessed for retry.",
+                                    employee.Id, raw.EmployeeCode, raw.PunchType, raw.PunchTime, raw.Id, raw.SourceTable, raw.DeviceTransactionId, failureReason);
+                                AddDetail(raw, failureReason ?? "Rejected by AttendanceService (unknown reason).");
                                 continue;
                             }
 
@@ -324,9 +416,10 @@ namespace Application.Services.Attendances
                                 // rather than silently marking processed
                                 // with nothing to show for it.
                                 _logger.LogError(
-                                    "Biometric punch reported as applied but no matching AttendanceLog was found - Employee {EmployeeId}, PunchType {PunchType}, PunchTime {PunchTime:o} (raw log {RawId}). Left unprocessed for investigation.",
-                                    employee.Id, raw.PunchType, raw.PunchTime, raw.Id);
+                                    "Biometric punch reported as applied but no matching AttendanceLog was found - Employee {EmployeeId}, EmployeeCode/BiometricUserId={Code}, PunchType {PunchType}, PunchTime {PunchTime:o} (raw log {RawId}). Left unprocessed for investigation.",
+                                    employee.Id, raw.EmployeeCode, raw.PunchType, raw.PunchTime, raw.Id);
                                 totalFailed++;
+                                AddDetail(raw, "AttendanceService reported success but no matching AttendanceLog was found afterward (unexpected).");
                                 continue;
                             }
 
@@ -356,6 +449,12 @@ namespace Application.Services.Attendances
                             await _db.SaveChangesAsync();
 
                             totalApplied++;
+                            attendanceLogsCreatedCount++;
+
+                            if (attendanceCreatedThisRow)
+                                attendanceCreatedCount++;
+                            else
+                                attendanceUpdatedCount++;
                         }
                         catch (Exception rowEx)
                         {
@@ -368,8 +467,10 @@ namespace Application.Services.Attendances
                             totalFailed++;
 
                             _logger.LogError(rowEx,
-                                "Biometric attendance processing failed for raw log {RawId} (EmployeeCode {EmployeeCode}, PunchTime {PunchTime:o}, PunchType {PunchType}).",
+                                "Biometric attendance processing failed for raw log {RawId} (EmployeeCode/BiometricUserId {EmployeeCode}, PunchTime {PunchTime:o}, PunchType {PunchType}).",
                                 raw.Id, raw.EmployeeCode, raw.PunchTime, raw.PunchType);
+
+                            AddDetail(raw, $"Unhandled exception: {rowEx.Message}");
 
                             await _errorLogService.LogAsync(
                                 rowEx,
@@ -389,10 +490,23 @@ namespace Application.Services.Attendances
 
                 var reconciles = totalFound == (totalApplied + totalHealed + totalSkippedUnmapped + totalRejectedSequence + totalFailed);
                 _logger.LogInformation(
-                    "Biometric attendance processing completed. Found={Found}, Applied={Applied}, Healed={Healed}, SkippedUnmapped={SkippedUnmapped}, RejectedOutOfSequence={RejectedSequence}, Failed={Failed}, reconciles={Reconciles} (Found should == Applied+Healed+SkippedUnmapped+RejectedOutOfSequence+Failed).",
-                    totalFound, totalApplied, totalHealed, totalSkippedUnmapped, totalRejectedSequence, totalFailed, reconciles);
+                    "Biometric attendance processing completed. Found={Found}, Pending(BeforeRun)={Pending}, Mapped={Mapped}, Applied={Applied}, AttendanceCreated={AttendanceCreated}, AttendanceUpdated={AttendanceUpdated}, AttendanceLogsCreated={AttendanceLogsCreated}, Healed={Healed}, SkippedUnmapped={SkippedUnmapped}, RejectedOutOfSequence={RejectedSequence}, Failed={Failed}, reconciles={Reconciles} (Found should == Applied+Healed+SkippedUnmapped+RejectedOutOfSequence+Failed).",
+                    totalFound, result.PendingRecords, mappedCount, totalApplied, attendanceCreatedCount, attendanceUpdatedCount, attendanceLogsCreatedCount, totalHealed, totalSkippedUnmapped, totalRejectedSequence, totalFailed, reconciles);
 
-                return true;
+                result.Success = true;
+                result.TotalRawRecords = totalFound;
+                result.MappedRecords = mappedCount;
+                result.UnmappedRecords = totalSkippedUnmapped;
+                result.AlreadyProcessed = totalHealed;
+                result.Duplicates = totalHealed; // same source bucket - see AttendanceProcessingResultDto remarks
+                result.AttendanceCreated = attendanceCreatedCount;
+                result.AttendanceUpdated = attendanceUpdatedCount;
+                result.AttendanceLogsCreated = attendanceLogsCreatedCount;
+                result.Skipped = totalRejectedSequence;
+                result.Failed = totalFailed;
+                result.SuccessfullyProcessed = totalApplied;
+
+                return result;
             }
             catch (Exception ex)
             {
@@ -405,7 +519,21 @@ namespace Application.Services.Attendances
                     controller: "AttendanceProcessorService",
                     action: "ProcessAttendanceAsync");
 
-                return false;
+                result.Success = false;
+                result.ErrorMessage = ex.Message;
+                result.TotalRawRecords = totalFound;
+                result.MappedRecords = mappedCount;
+                result.UnmappedRecords = totalSkippedUnmapped;
+                result.AlreadyProcessed = totalHealed;
+                result.Duplicates = totalHealed;
+                result.AttendanceCreated = attendanceCreatedCount;
+                result.AttendanceUpdated = attendanceUpdatedCount;
+                result.AttendanceLogsCreated = attendanceLogsCreatedCount;
+                result.Skipped = totalRejectedSequence;
+                result.Failed = totalFailed;
+                result.SuccessfullyProcessed = totalApplied;
+
+                return result;
             }
         }
 

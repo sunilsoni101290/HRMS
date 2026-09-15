@@ -14,12 +14,20 @@ namespace API.Controllers
     {
         private readonly  IBiometricSyncService _service;
 
-        private readonly IAttendanceProcessorService _processor;
+        // Enqueues onto the same background-worker pipeline eSSL sync
+        // already uses (IEsslSyncJobQueue -> EsslAttendanceSyncBackgroundService),
+        // instead of calling IAttendanceProcessorService directly and
+        // blocking this HTTP request on it. AttendanceProcessorService now
+        // drains the WHOLE unprocessed backlog every time it runs (not just
+        // what this one request imported), so keeping that call inline here
+        // would mean a routine agent push could block on tens of thousands
+        // of unrelated rows - see IAttendanceProcessingJobQueue's remarks.
+        private readonly IAttendanceProcessingJobQueue _processingQueue;
 
-        public BiometricSyncController(IBiometricSyncService service,IAttendanceProcessorService processor)
+        public BiometricSyncController(IBiometricSyncService service, IAttendanceProcessingJobQueue processingQueue)
         {
             _service = service;
-            _processor = processor;
+            _processingQueue = processingQueue;
         }
 
         /// <summary>
@@ -40,7 +48,7 @@ namespace API.Controllers
                 return Unauthorized(result);
 
             if (result.InsertedCount > 0)
-                await _processor.ProcessAttendanceAsync();
+                _processingQueue.Enqueue(new AttendanceProcessingJobRequest { JobId = Guid.NewGuid().ToString(), TriggeredBy = "BiometricSyncController.Ingest" });
 
             return Ok(result);
         }
@@ -51,10 +59,9 @@ namespace API.Controllers
             await _service
                 .SyncDeviceLogsAsync(deviceId);
 
-            await _processor
-                .ProcessAttendanceAsync();
+            _processingQueue.Enqueue(new AttendanceProcessingJobRequest { JobId = Guid.NewGuid().ToString(), TriggeredBy = $"BiometricSyncController.Sync({deviceId})" });
 
-            return Ok("Attendance Synced");
+            return Ok("Attendance sync queued.");
         }
 
         [HttpPost("sync-all")]
@@ -63,10 +70,9 @@ namespace API.Controllers
             await _service
                 .SyncAllDevicesAsync();
 
-            await _processor
-                .ProcessAttendanceAsync();
+            _processingQueue.Enqueue(new AttendanceProcessingJobRequest { JobId = Guid.NewGuid().ToString(), TriggeredBy = "BiometricSyncController.SyncAll" });
 
-            return Ok("All Devices Synced");
+            return Ok("All devices synced; attendance processing queued.");
         }
 
         [HttpGet("logs/{deviceId}")]

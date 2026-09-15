@@ -1,5 +1,6 @@
 using Application.Interfaces;
 using Application.Interfaces.Communication;
+using Application.Interfaces.ErrorLog;
 using Application.Interfaces.LoanAdvance;
 using Domain.Helper;
 using Infrastructure;
@@ -65,7 +66,32 @@ namespace API.BackgroundServices
                 }
                 catch (Exception ex)
                 {
+                    // A failed sweep must never crash the host - just log
+                    // and try again on the next tick. Also recorded in the
+                    // shared ErrorLog table (fresh scope - the sweep's own
+                    // scope is already gone by the time this runs) so it
+                    // shows up on the Error Log admin screen, not just in
+                    // server logs.
                     _logger.LogError(ex, "Loan & Advance reminder sweep failed.");
+
+                    try
+                    {
+                        using var errorScope = _scopeFactory.CreateScope();
+                        var errorLogService = errorScope.ServiceProvider.GetRequiredService<IErrorLogService>();
+
+                        await errorLogService.LogAsync(
+                            ex,
+                            module: "HRMS",
+                            feature: "Loan & Advance Reminders",
+                            controller: "LoanAdvanceReminderService",
+                            action: nameof(RunSweepAsync),
+                            userId: "System",
+                            userName: "System");
+                    }
+                    catch
+                    {
+                        // Logging must never itself take down the host.
+                    }
                 }
 
                 try

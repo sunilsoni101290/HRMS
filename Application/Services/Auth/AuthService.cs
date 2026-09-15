@@ -561,14 +561,10 @@ namespace Application.Services.Auth
         }
         private async Task<string> GetDesignationName(string employeeId)
         {
-            var emp = await _db.Employees.Include(x=>x.Designation).FirstOrDefaultAsync(x=>x.Id==employeeId);
-
-            if (emp == null) 
-            {
-                return "";
-            }
-
-            return emp.Designation.Name;
+            return await _db.Employees
+                .Where(x => x.Id == employeeId)
+                .Select(x => x.Designation != null ? x.Designation.Name : string.Empty)
+                .FirstOrDefaultAsync() ?? string.Empty;
         }
 
         public async Task<List<UserListDto>> GetAllAsync()
