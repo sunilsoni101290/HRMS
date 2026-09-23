@@ -24,11 +24,32 @@ namespace Infrastructure.Data
             if (context == null)
                 return;
 
-            // Database accessible?
+            // Database accessible? CanConnectAsync() swallows the real
+            // SqlException and just returns false, so the exception this
+            // throws used to give zero diagnostic detail (every possible
+            // cause - server unreachable, named instance not found, login
+            // failed, database missing - produced the exact same generic
+            // message). Now attempts an explicit OpenAsync() first so a
+            // genuine connection failure surfaces its real SqlException
+            // (error number, "Login failed for user...", "cannot open
+            // database...", "network-related...instance-specific error",
+            // etc.) as the InnerException instead of being discarded.
             if (!await context.Database.CanConnectAsync())
             {
+                Exception? inner = null;
+                try
+                {
+                    await context.Database.GetDbConnection().OpenAsync();
+                }
+                catch (Exception connEx)
+                {
+                    inner = connEx;
+                }
+
                 throw new Exception(
-                    "Cannot connect to SQL Server. Please verify the connection string and ensure the database already exists.");
+                    "Cannot connect to SQL Server. Please verify the connection string and ensure the database already exists." +
+                    (inner != null ? $" Underlying error: {inner.Message}" : " (No further detail available - a direct OpenAsync() attempt unexpectedly succeeded right after CanConnectAsync() reported failure; this may be a transient connection-pool issue.)"),
+                    inner);
             }
 
             // Apply pending migrations only.
@@ -1809,37 +1830,6 @@ namespace Infrastructure.Data
                 AppFeatureConstants.PROBATION_CONFIRMATION_MANAGEMENT, "bi bi-arrow-repeat", AppFeatureType.Transaction, 125,
                 canAdd: true);
 
-            // ---------------- TAXATION (Income Tax / TDS - India) ----------------
-            // New top-level module (sibling of Probation & Confirmation/
-            // Payroll above) - see AppFeatureConstants.TAXATION_MANAGEMENT.
-            Def("Taxation", AppFeatureConstants.TAXATION_MANAGEMENT, "", "",
-                null, "bi bi-cash-coin", AppFeatureType.Transaction, 126);
-
-            // Tax Slabs - Admin-only master data, plain CRUD.
-            Def("Tax Slabs", AppFeatureConstants.TAX_SLAB,
-                AppFeatureConstants.TAX_SLAB_CONTROLLER, AppFeatureConstants.TAX_SLAB_ACTION,
-                AppFeatureConstants.TAXATION_MANAGEMENT, "bi bi-bar-chart-steps", AppFeatureType.Master, 127,
-                canAdd: true, canEdit: true, canDelete: true);
-
-            // Tax Declaration - BROADER audience than most Probation &
-            // Confirmation siblings (like Employee Feedback): every
-            // Employee needs Create/View on their OWN declaration in
-            // addition to the HR Manager's full View/Create/Approve grant
-            // below - see the dual RolePermission grant blocks.
-            //Def("Tax Declaration", AppFeatureConstants.TAX_DECLARATION,
-            //    AppFeatureConstants.TAX_DECLARATION_CONTROLLER, AppFeatureConstants.TAX_DECLARATION_ACTION,
-            //    AppFeatureConstants.TAXATION_MANAGEMENT, "bi bi-file-earmark-text", AppFeatureType.Transaction, 128,
-            //    canAdd: true, canApprove: true);
-
-            // Tax Computation - HR/Payroll-only (View only; the actual
-            // compute-trigger action is gated by TAX_DECLARATION's Approve
-            // permission inside TaxComputationService, not a separate
-            // permission check - this feature entry exists for menu/
-            // routing purposes on the APP side).
-            Def("Tax Computation", AppFeatureConstants.TAX_COMPUTATION,
-                AppFeatureConstants.TAX_COMPUTATION_CONTROLLER, AppFeatureConstants.TAX_COMPUTATION_ACTION,
-                AppFeatureConstants.TAXATION_MANAGEMENT, "bi bi-calculator", AppFeatureType.Transaction, 129);
-
             // ---------------- COMMUNICATION ----------------
             Def("Communication", AppFeatureConstants.COMMUNICATION, "", "",
                 null, "bi bi-megaphone-fill", AppFeatureType.Transaction, 100);
@@ -1906,7 +1896,21 @@ namespace Infrastructure.Data
             // this codebase using CanEdit rather than CanApprove).
             Def("Error Log", AppFeatureConstants.ERROR_LOG,
                 AppFeatureConstants.ERROR_LOG_CONTROLLER, AppFeatureConstants.ERROR_LOG_ACTION,
-                AppFeatureConstants.SECURITY, "bi bi-bug-fill", AppFeatureType.Report, 26,
+                AppFeatureConstants.SYSTEM_MANAGEMENT, "bi bi-bug-fill", AppFeatureType.Report, 26,
+                canEdit: true);
+
+            // Database Management (Phase A) - System Configurator ONLY, same
+            // carve-out as Error Log above (see the DATABASE_MANAGEMENT
+            // exclusion further down in ReconcilePermissionsAsync's
+            // fullAccessRoles loop). A single leaf menu item - the module's
+            // Update/Backup/Restore/Swap/Settings screens are all tabs
+            // inside one view (DatabaseManagement/Index.cshtml), not
+            // separate AppFeature rows, matching every other tabbed module
+            // in this codebase. CanEdit backs the Settings tab's Save
+            // action.
+            Def("Database Management", AppFeatureConstants.DATABASE_MANAGEMENT,
+                AppFeatureConstants.DATABASE_MANAGEMENT_CONTROLLER, AppFeatureConstants.DATABASE_MANAGEMENT_ACTION,
+                AppFeatureConstants.SYSTEM_MANAGEMENT, "bi bi-hdd-network-fill", AppFeatureType.Setting, 27,
                 canEdit: true);
 
 
@@ -1917,6 +1921,16 @@ namespace Infrastructure.Data
             // Parent Menu
             Def("Taxation", AppFeatureConstants.TAXATION, "", "",
                 null, "bi bi-cash-stack", AppFeatureType.Transaction, 70);
+
+            // Tax Slabs - Admin-only master data, plain CRUD.
+            Def("Tax Slabs", AppFeatureConstants.TAX_SLAB,
+                AppFeatureConstants.TAX_SLAB_CONTROLLER, AppFeatureConstants.TAX_SLAB_ACTION,
+                AppFeatureConstants.TAXATION, "bi bi-bar-chart-steps", AppFeatureType.Master, 127,
+                canAdd: true, canEdit: true, canDelete: true);
+
+            Def("Tax Computation", AppFeatureConstants.TAX_COMPUTATION,
+                AppFeatureConstants.TAX_COMPUTATION_CONTROLLER, AppFeatureConstants.TAX_COMPUTATION_ACTION,
+                AppFeatureConstants.TAXATION, "bi bi-calculator", AppFeatureType.Transaction, 129);
 
             // Income Tax
             Def("Income Tax", AppFeatureConstants.INCOME_TAX,
@@ -2206,8 +2220,38 @@ namespace Infrastructure.Data
                 // this loop, so it must be carved out here rather than relying
                 // solely on the [Authorize(Roles="System Configurator")]
                 // attribute; this keeps the Permission table itself accurate.
+                //
+                // Database Management (Phase A) is carved out the same way -
+                // System Configurator ONLY, Super Admin deliberately excluded
+                // (see AppFeatureConstants.DATABASE_MANAGEMENT's remarks).
+                //
+                // Role / Permission / Feature Maintenance (Security
+                // administration screens) join the same carve-out for the
+                // same reason - System Configurator ONLY, Super Admin
+                // deliberately excluded, so Admin/HR cannot grant
+                // themselves (or anyone else) permissions, redefine what a
+                // permission means, or edit the menu/feature catalog
+                // itself. See API/Controllers/RoleController.cs,
+                // PermissionController.cs, AppFeaturesController.cs and
+                // their Application/Services counterparts'
+                // EnsurePermissionAsync. NOTE: this carve-out only affects
+                // permissions granted from here on (new links) - any
+                // ROLE/PERMISSION/APP_FEATURE RolePermission rows Super
+                // Admin already holds from a prior startup are NOT revoked
+                // by this loop and must be removed once via a one-time SQL
+                // script (see "remove SuperAdmin Role-Permission-Feature
+                // grants.sql" at the repo root).
+                var systemConfiguratorOnlyFeatureIds = new[]
+                {
+                    AppFeatureConstants.ERROR_LOG,
+                    AppFeatureConstants.DATABASE_MANAGEMENT,
+                    AppFeatureConstants.ROLE,
+                    AppFeatureConstants.PERMISSION,
+                    AppFeatureConstants.APP_FEATURE
+                };
+
                 var errorLogPermissionIds = allPermissions
-                    .Where(p => p.FeatureId == AppFeatureConstants.ERROR_LOG)
+                    .Where(p => systemConfiguratorOnlyFeatureIds.Contains(p.FeatureId))
                     .Select(p => p.Id)
                     .ToHashSet();
 

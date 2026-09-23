@@ -76,7 +76,7 @@ namespace Domain.Helper
         // SECURITY
         // =====================================================
 
-        public const string SECURITY = "SECURITY";
+        public const string SECURITY = "SECURITY"; //Module
 
         public const string ROLE = "ROLE";
         public const string ROLE_CONTROLLER = "Role";
@@ -110,6 +110,19 @@ namespace Domain.Helper
         public const string ERROR_LOG = "ERROR_LOG";
         public const string ERROR_LOG_CONTROLLER = "ErrorLog";
         public const string ERROR_LOG_ACTION = ACTION_INDEX;
+
+        // Database Management module (Phase A - scaffold, Settings CRUD,
+        // read-only Database Info panel, Execution History reader; later
+        // phases add the actual Backup/Execute/Restore/Swap logic behind
+        // this same feature). System Configurator ONLY - same carve-out
+        // reasoning as ERROR_LOG above (see the DATABASE_MANAGEMENT
+        // exclusion in AppFeatureSeeder.ReconcilePermissionsAsync): Super
+        // Admin does NOT get this feature auto-granted by the
+        // fullAccessRoles loop, only System Configurator does.
+        public const string SYSTEM_MANAGEMENT = "SYSTEM_MANAGEMENT";
+        public const string DATABASE_MANAGEMENT = "DATABASE_MANAGEMENT";
+        public const string DATABASE_MANAGEMENT_CONTROLLER = "DatabaseManagement";
+        public const string DATABASE_MANAGEMENT_ACTION = ACTION_INDEX;
 
         // =====================================================
         // EMPLOYEE MANAGEMENT
@@ -503,40 +516,6 @@ namespace Domain.Helper
         public const string REJOINING_CONTROLLER = "Rejoining";
         public const string REJOINING_ACTION = ACTION_INDEX;
 
-        // =====================================================
-        // TAXATION (Income Tax / TDS - India)
-        // =====================================================
-        // New top-level module (sibling of Probation & Confirmation/
-        // Onboarding/Payroll above) - see Domain/Entities/TaxSlab.cs,
-        // TaxDeclaration.cs, EmployeeTaxComputation.cs and
-        // Application/Services/Taxation/*.
-        public const string TAXATION_MANAGEMENT = "TAXATION_MANAGEMENT";
-
-        // Tax Slabs - Admin-only master data (income slab rates per
-        // Financial Year + Regime), plain CRUD, no maker-checker/self-
-        // service concept.
-        public const string TAX_SLAB = "TAX_SLAB";
-        public const string TAX_SLAB_CONTROLLER = "TaxSlab";
-        public const string TAX_SLAB_ACTION = ACTION_INDEX;
-
-        // Tax Declaration - employee self-service annual investment
-        // declaration (Draft -> Submitted by the employee), verified or
-        // rejected by HR/Payroll (holding Approve permission on this
-        // feature) - see TaxDeclarationService. Broader audience than
-        // Probation & Confirmation: every Employee needs Create/View on
-        // their OWN declaration in addition to the HR/Admin grant below.
-        public const string TAX_DECLARATION = "TAX_DECLARATION";
-        public const string TAX_DECLARATION_CONTROLLER = "TaxDeclaration";
-        public const string TAX_DECLARATION_ACTION = ACTION_INDEX;
-
-        // Tax Computation - HR/Payroll-only read+trigger surface over
-        // EmployeeTaxComputation (annual tax liability / TDS projection)
-        // - see TaxComputationService. No employee self-service grant;
-        // employees view their own numbers through Tax Declaration
-        // Details instead, not this feature directly.
-        public const string TAX_COMPUTATION = "TAX_COMPUTATION";
-        public const string TAX_COMPUTATION_CONTROLLER = "TaxComputation";
-        public const string TAX_COMPUTATION_ACTION = ACTION_INDEX;
 
         // =====================================================
         // COMMUNICATION
@@ -592,7 +571,15 @@ namespace Domain.Helper
         // =====================================================
 
         public const string TAXATION = "TAXATION";
-
+        public const string TAX_SLAB = "TAX_SLAB";
+        public const string TAX_SLAB_CONTROLLER = "TaxSlab";
+        public const string TAX_SLAB_ACTION = ACTION_INDEX;
+        public const string TAX_DECLARATION = "TAX_DECLARATION";
+        public const string TAX_DECLARATION_CONTROLLER = "TaxDeclaration";
+        public const string TAX_DECLARATION_ACTION = ACTION_INDEX;
+        public const string TAX_COMPUTATION = "TAX_COMPUTATION";
+        public const string TAX_COMPUTATION_CONTROLLER = "TaxComputation";
+        public const string TAX_COMPUTATION_ACTION = ACTION_INDEX;
         public const string INCOME_TAX = "INCOME_TAX";
         public const string INCOME_TAX_CONTROLLER = "IncomeTax";
         public const string INCOME_TAX_ACTION = ACTION_INDEX;

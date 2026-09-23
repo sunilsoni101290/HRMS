@@ -1,0 +1,14 @@
+@model (string Title, string Icon, string Description)
+@*
+    Honest "not built yet" empty state for the Backup / Restore / Database
+    Swap tabs - Phase A ships only the scaffold/shell + Settings + the
+    Database Update tab's Database Info/Execution History. No forms, no
+    buttons that would silently do nothing - see this module's explicit
+    "do not mark incomplete functionality as implemented" rule.
+*@
+<div class="dbm-planned">
+    <i class="bi @Model.Icon"></i>
+    <h6>@Model.Title</h6>
+    <p>@Model.Description</p>
+    <span class="dbm-badge dbm-badge-amber">Planned for a later phase</span>
+</div>

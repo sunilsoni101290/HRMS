@@ -1,479 +1,281 @@
-﻿@model IEnumerable<HolidayGroupDto>
+@model IEnumerable<HolidayGroupDto>
 
 @{
     ViewData["Title"] = "Holiday Group Management";
+    var list = (Model ?? Enumerable.Empty<HolidayGroupDto>()).ToList();
 }
 
-<div class="panel panel-flat">
+@*
+    This project ships Bootstrap 3.3.7 (jQuery-based), not 4/5 - see
+    Views/EsslAttendance/Index.cshtml's <style> block for the full
+    explanation. This view reuses the same plain-CSS "ent-panel" card style
+    + small Bootstrap 4/5 utility-class shim (kept local to this view, same
+    as every other redesigned view in this codebase - see
+    Views/WeekOff/Index.cshtml) and uses real Bootstrap 3 markup throughout.
+*@
 
-    <!-- Header -->
+<div class="ent-page">
+    <div class="ent-panel">
 
-    <div class="panel-heading">
-
-        <h5 class="panel-title">
-
-            <i class="icon-calendar3 position-left"></i>
-
-            Holiday Group Management
-
-        </h5>
-
-        <div class="heading-elements">
-
-            <a asp-action="Export"
-               class="btn btn-default">
-
-                <i class="icon-file-download"></i>
-
-                Export
-
-            </a>
-
-            <a asp-action="DownloadImportTemplate"
-               class="btn bg-success">
-
-                <i class="icon-file-spreadsheet"></i>
-
-                Download Template
-
-            </a>
-
-            <a asp-action="Import"
-               class="btn bg-info">
-
-                <i class="icon-upload3"></i>
-
-                Import Holidays
-
-            </a>
-
-            <a asp-action="Create"
-               class="btn bg-primary">
-
-                <i class="icon-plus22 position-left"></i>
-
-                Add Holiday Group
-
-            </a>
-
+        <div class="d-flex align-items-center gap-2 mb-2 hg-header-row">
+            <span class="ent-icon-badge" style="background:#eaf0fe;color:#2b6fd9;"><i class="bi bi-calendar3"></i></span>
+            <div>
+                <h5 class="mb-0" style="font-weight:700;color:#1b2a4a;">Holiday Group Management</h5>
+                <div class="text-muted" style="font-size:12.5px;">Create holiday calendars and manage the holidays that belong to each group.</div>
+            </div>
+            <div style="margin-left:auto;" class="hg-header-actions">
+                <a asp-action="Export" class="btn btn-default" data-popup="tooltip" title="Export all holidays to Excel"><i class="bi bi-download"></i> Export</a>
+                <a asp-action="DownloadImportTemplate" class="btn btn-success"><i class="bi bi-file-earmark-spreadsheet"></i> Download Template</a>
+                <a asp-action="Import" class="btn btn-info"><i class="bi bi-upload"></i> Import Holidays</a>
+                <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Holiday Group</a>
+            </div>
         </div>
 
-    </div>
-
-    <!-- KPI Cards -->
-
-    <div class="panel-body">
-
-        <div class="row">
-
-            <!-- Total Groups -->
-
-            <div class="col-md-4">
-
-                <div class="panel bg-primary-400">
-
-                    <div class="panel-body">
-
-                        <div class="media">
-
-                            <div class="media-left">
-
-                                <i class="icon-calendar3 icon-3x"></i>
-
-                            </div>
-
-                            <div class="media-body text-right">
-
-                                <h3 class="no-margin">
-
-                                    @Model.Count()
-
-                                </h3>
-
-                                <span>
-
-                                    Total Holiday Groups
-
-                                </span>
-
-                            </div>
-
-                        </div>
-
+        <!-- Summary tiles -->
+        <div class="row hg-tiles">
+            <div class="col-md-4 col-sm-4">
+                <div class="hg-tile" style="background:#2b6fd9;">
+                    <i class="bi bi-calendar3"></i>
+                    <div>
+                        <h3>@list.Count</h3>
+                        <span>Total Holiday Groups</span>
                     </div>
-
                 </div>
-
             </div>
-
-            <!-- Active -->
-
-            <div class="col-md-4">
-
-                <div class="panel bg-success-400">
-
-                    <div class="panel-body">
-
-                        <div class="media">
-
-                            <div class="media-left">
-
-                                <i class="icon-checkmark-circle icon-3x"></i>
-
-                            </div>
-
-                            <div class="media-body text-right">
-
-                                <h3 class="no-margin">
-
-                                    @Model.Count()
-
-                                </h3>
-
-                                <span>
-
-                                    Active Groups
-
-                                </span>
-
-                            </div>
-
-                        </div>
-
+            <div class="col-md-4 col-sm-4">
+                <div class="hg-tile" style="background:#2e9e6c;">
+                    <i class="bi bi-check-circle"></i>
+                    <div>
+                        <h3>@list.Count</h3>
+                        <span>Active Groups</span>
                     </div>
-
                 </div>
-
             </div>
-
-            <!-- Holidays -->
-
-            <div class="col-md-4">
-
-                <div class="panel bg-warning-400">
-
-                    <div class="panel-body">
-
-                        <div class="media">
-
-                            <div class="media-left">
-
-                                <i class="icon-calendar52 icon-3x"></i>
-
-                            </div>
-
-                            <div class="media-body text-right">
-
-                                <h3 class="no-margin">
-
-                                    @Model.Count()
-
-                                </h3>
-
-                                <span>
-
-                                    Holiday Calendars
-
-                                </span>
-
-                            </div>
-
-                        </div>
-
+            <div class="col-md-4 col-sm-4">
+                <div class="hg-tile" style="background:#e0a12b;">
+                    <i class="bi bi-calendar2-week"></i>
+                    <div>
+                        <h3>@list.Count</h3>
+                        <span>Holiday Calendars</span>
                     </div>
-
                 </div>
-
             </div>
-
         </div>
 
         <hr />
 
         <!-- Search & Filter -->
-
         <div class="row">
-
-            <!-- Search -->
-
-            <div class="col-md-6">
-
+            <div class="col-md-6 col-sm-6">
                 <div class="form-group">
-
-                    <input type="text"
-                           id="searchInput"
-                           class="form-control"
-                           placeholder="Search Holiday Group..." />
-
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search Holiday Group..." />
                 </div>
-
             </div>
-
-            <!-- Status -->
-
-            <div class="col-md-4">
-
+            <div class="col-md-4 col-sm-4">
                 <div class="form-group">
-
-                    <select id="StatusFilter"
-                            class="form-control select-search">
-
-                        <option value="">
-
-                            All Status
-
-                        </option>
-
-                        <option>
-
-                            Active
-
-                        </option>
-
-                        <option>
-
-                            Inactive
-
-                        </option>
-
+                    <select id="StatusFilter" class="form-control select-search">
+                        <option value="">All Status</option>
+                        <option>Active</option>
+                        <option>Inactive</option>
                     </select>
-
                 </div>
-
             </div>
-
-            <!-- Search -->
-
-            <div class="col-md-2">
-
-                <button class="btn bg-primary btn-block">
-
-                    <i class="icon-search4 position-left"></i>
-
-                    Search
-
-                </button>
-
+            <div class="col-md-2 col-sm-2">
+                <button class="btn btn-primary btn-block" type="button"><i class="bi bi-search"></i> Search</button>
             </div>
-
         </div>
-
     </div>
 
-    <!-- Holiday Group Table -->
-
-    <table class="table table-hover table-striped datatable-basic">
-
-        <thead>
-
-            <tr>
-
-                <th width="60">
-
-                    #
-
-                </th>
-
-                <th>
-
-                    Holiday Group
-
-                </th>
-
-                <th>
-
-                    Description
-
-                </th>
-
-                <th width="120">
-
-                    Status
-
-                </th>
-
-                <th width="220"
-                    class="text-center">
-
-                    Actions
-
-                </th>
-
-            </tr>
-
-        </thead>
-
-        <tbody id="holidayGroupTable">
-            @{
-                int sr = 1;
-            }
-
-            @foreach (var item in Model)
-            {
+    <!-- Grid -->
+    <div class="ent-panel hg-grid-panel">
+        <table class="table table-hover table-striped datatable-basic">
+            <thead>
                 <tr>
-
-                    <!-- Sr No -->
-
-                    <td>
-
-                        @sr
-
-                    </td>
-
-                    <!-- Holiday Group -->
-
-                    <td>
-
-                        <div class="text-semibold">
-
-                            <i class="icon-calendar3 text-primary position-left"></i>
-
-                            @item.Name
-
-                        </div>
-
-                    </td>
-
-                    <!-- Description -->
-
-                    <td>
-
-                        @if (string.IsNullOrWhiteSpace(item.Description))
-                        {
-                            <span class="text-muted">
-
-                                No Description
-
-                            </span>
-                        }
-                        else
-                        {
-                            @item.Description
-                        }
-
-                    </td>
-
-                    <!-- Status -->
-
-                    <td>
-
-                        <span class="label bg-success">
-
-                            Active
-
-                        </span>
-
-                    </td>
-
-                    <!-- Actions -->
-
-                    <td class="text-center">
-
-                        <div class="btn-group">
-
-                            <!-- Manage Holidays -->
-
-                            <a asp-controller="HolidayGroup"
-                               asp-action="HolidayList"
-                               asp-route-holidayGroupId="@item.Id"
-                               class="btn bg-primary btn-icon"
-                               data-popup="tooltip"
-                               title="Manage Holidays">
-
-                                <i class="icon-calendar52"></i>
-
-                            </a>
-
-                            <!-- Details -->
-
-                            <a asp-action="Details"
-                               asp-route-id="@item.Id"
-                               class="btn btn-default btn-icon"
-                               data-popup="tooltip"
-                               title="View Details">
-
-                                <i class="icon-eye"></i>
-
-                            </a>
-
-                            <!-- Edit -->
-
-                            <a asp-action="Edit"
-                               asp-route-id="@item.Id"
-                               class="btn bg-success btn-icon"
-                               data-popup="tooltip"
-                               title="Edit">
-
-                                <i class="icon-pencil7"></i>
-
-                            </a>
-
-                            <!-- Delete -->
-
-                            <a asp-action="Delete"
-                               asp-route-id="@item.Id"
-                               onclick="return confirmSweetDelete(event, this, 'Are you sure you want to delete this Holiday Group?');"
-                               class="btn btn-danger btn-icon"
-                               data-popup="tooltip"
-                               title="Delete">
-
-                                <i class="icon-trash"></i>
-
-                            </a>
-
-                        </div>
-
-                    </td>
-
+                    <th width="60">#</th>
+                    <th>Holiday Group</th>
+                    <th>Description</th>
+                    <th width="120">Status</th>
+                    <th width="220" class="text-center">Actions</th>
                 </tr>
+            </thead>
+            <tbody id="holidayGroupTable">
+                @{
+                    int sr = 1;
+                }
 
-                sr++;
-            }
-
-        </tbody>
-
-    </table>
-
+                @foreach (var item in list)
+                {
+                    <tr>
+                        <td>@sr</td>
+                        <td>
+                            <div class="text-semibold"><i class="bi bi-calendar3 hg-row-icon"></i> @item.Name</div>
+                        </td>
+                        <td>
+                            @if (string.IsNullOrWhiteSpace(item.Description))
+                            {
+                                <span class="text-muted">No Description</span>
+                            }
+                            else
+                            {
+                                @item.Description
+                            }
+                        </td>
+                        <td>
+                            <span class="hg-badge hg-badge-green"><i class="bi bi-check-circle"></i> Active</span>
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group">
+                                <a asp-controller="HolidayGroup" asp-action="HolidayList" asp-route-holidayGroupId="@item.Id"
+                                   class="btn btn-primary btn-icon" data-popup="tooltip" title="Manage Holidays">
+                                    <i class="bi bi-calendar2-week"></i>
+                                </a>
+                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-default btn-icon" data-popup="tooltip" title="View Details">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-success btn-icon" data-popup="tooltip" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-danger btn-icon" data-popup="tooltip" title="Delete"
+                                   onclick="return confirmSweetDelete(event, this, 'Are you sure you want to delete this Holiday Group?');">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    sr++;
+                }
+            </tbody>
+        </table>
+    </div>
 </div>
+
 @section Scripts {
+    <script>
+        document.getElementById("searchInput").addEventListener("keyup", function () {
+            let value = this.value.toLowerCase();
+            let rows = document.querySelectorAll("#holidayGroupTable tr");
+            rows.forEach(function (row) {
+                let text = row.innerText.toLowerCase();
+                row.style.display = text.includes(value) ? "" : "none";
+            });
+        });
+    </script>
 
     <script>
+        $(document).ready(function () {
+            //=========================================
+            // Bootstrap Tooltip
+            //=========================================
+            $('[data-popup="tooltip"]').tooltip();
 
-        // Search Table
+            //=========================================
+            // Chosen Dropdown
+            //=========================================
+            if ($(".select-search").length) {
+                $(".select-search").chosen({
+                    width: "100%",
+                    search_contains: true,
+                    allow_single_deselect: true
+                });
+            }
 
-        document.getElementById("searchInput")
-            .addEventListener("keyup", function () {
+            //=========================================
+            // Filter Function
+            //=========================================
+            function filterTable() {
+                var keyword = $("#searchInput").val().toLowerCase();
+                var status = $("#StatusFilter").val().toLowerCase();
 
-                let value = this.value.toLowerCase();
+                $("#holidayGroupTable tr").each(function () {
+                    var row = $(this);
+                    var text = row.text().toLowerCase();
 
-                let rows = document.querySelectorAll("#holidayGroupTable tr");
+                    var searchMatch = keyword == "" || text.indexOf(keyword) > -1;
+                    var statusMatch = status == "" || text.indexOf(status) > -1;
 
-                rows.forEach(function (row) {
+                    row.toggle(searchMatch && statusMatch);
+                });
+            }
 
-                    let text = row.innerText.toLowerCase();
+            $("#StatusFilter").change(function () { filterTable(); });
 
-                    row.style.display =
-                        text.includes(value) ? "" : "none";
-
+            //=========================================
+            // DataTable
+            //=========================================
+            if ($.fn.DataTable) {
+                var __indexDataTable = $(".datatable-basic").DataTable({
+                    autoWidth: false,
+                    ordering: true,
+                    paging: true,
+                    searching: false,
+                    info: true,
+                    pageLength: 10,
+                    lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                    language: { search: "_INPUT_", searchPlaceholder: "Search..." },
+                    retrieve: true
                 });
 
-            });
-
+                $('#searchInput').on('keyup', function () {
+                    __indexDataTable.search($(this).val() || '').draw();
+                });
+            }
+        });
     </script>
 
     <style>
+        /* ===================================================================
+           Same enterprise card + Bootstrap 4/5 utility-class shim used on
+           Views/WeekOff/Index.cshtml / Views/EsslAttendance/Index.cshtml.
+           =================================================================== */
+        .ent-page { background:#f4f6fb; padding:18px; border-radius:10px; }
+        .ent-panel { background:#fff; border:1px solid #e7ebf3; border-radius:10px; padding:16px 18px; margin-bottom:18px; }
+        .ent-icon-badge { width:34px; height:34px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; font-size:16px; flex:none; }
 
-        .panel-heading {
-            padding: 18px 20px;
+        .d-flex { display: flex !important; }
+        .align-items-center { align-items: center !important; }
+        .gap-2 { gap: .5rem !important; }
+        .mb-0 { margin-bottom: 0 !important; }
+        .mb-2 { margin-bottom: .5rem !important; }
+
+        .hg-header-row { flex-wrap: wrap; }
+        .hg-header-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+        .hg-header-actions .btn { margin-left: 0; }
+
+        /*=========================================
+                    Tiles
+                =========================================*/
+        .hg-tiles { margin-top: 4px; }
+
+        .hg-tile {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin-bottom: 15px;
+            color: #fff;
         }
 
-        .panel-title {
-            font-weight: 600;
-        }
+            .hg-tile i {
+                font-size: 26px;
+                opacity: .9;
+            }
 
-        .panel-body {
-            padding: 20px;
-        }
+            .hg-tile h3 {
+                margin: 0;
+                font-weight: 700;
+                color: #fff;
+            }
+
+            .hg-tile span {
+                font-size: 12.5px;
+                opacity: .9;
+            }
+
+        /*=========================================
+                    Grid panel
+                =========================================*/
+        .hg-grid-panel { padding: 0; overflow: hidden; }
 
         .table > thead > tr > th {
             background: #fafafa;
@@ -495,11 +297,36 @@
             font-weight: 600;
         }
 
-        .label {
-            font-size: 11px;
-            padding: 5px 10px;
+        .hg-row-icon {
+            color: #2b6fd9;
+            margin-right: 6px;
         }
 
+        .text-muted {
+            color: #999;
+        }
+
+        /*=========================================
+                    Status badges
+                =========================================*/
+        .hg-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11.5px;
+            font-weight: 600;
+            padding: 5px 10px;
+            border-radius: 20px;
+        }
+
+        .hg-badge-green {
+            background: #e8f7ef;
+            color: #1e8a54;
+        }
+
+        /*=========================================
+                    Buttons
+                =========================================*/
         .btn-group .btn {
             margin-right: 2px;
         }
@@ -510,77 +337,38 @@
             padding: 7px;
         }
 
-        .media {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .media-left i {
-            opacity: .9;
-        }
-
-        .panel.bg-primary-400,
-        .panel.bg-success-400,
-        .panel.bg-warning-400 {
-            margin-bottom: 20px;
-            border-radius: 3px;
-        }
-
-            .panel.bg-primary-400 h3,
-            .panel.bg-success-400 h3,
-            .panel.bg-warning-400 h3 {
-                color: #fff;
-                font-weight: 600;
-            }
-
-        .datatable-basic tbody tr:hover {
-            background: #f5f5f5;
-        }
-
+        /*=========================================
+                    Chosen
+                =========================================*/
         .chosen-container {
             width: 100% !important;
         }
 
-        .chosen-single {
+        .chosen-container-single .chosen-single {
             height: 36px !important;
             line-height: 34px !important;
         }
 
-        .text-muted {
-            color: #999;
-        }
-
-    </style>
-
-
-    <script>
-        // Auto-added: client-side pagination for this Index page's listing
-        // table (DataTables). Safe to run even if this page already
-        // initializes '.datatable-basic' itself above - 'retrieve: true'
-        // makes DataTables return the existing instance instead of
-        // re-initializing (and throwing) when that's the case.
-        $(document).ready(function () {
-            if ($.fn.DataTable) {
-                var __indexDataTable = $('.datatable-basic').DataTable({
-                    autoWidth: false,
-                    paging: true,
-                    ordering: true,
-                    searching: false,
-                    pageLength: 10,
-                    lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
-                    language: { search: "_INPUT_", searchPlaceholder: "Search..." },
-                    retrieve: true
-                });
-
-            // Rewire the page's existing search box to drive DataTables'
-            // own filtering pipeline (instead of any legacy row .toggle()
-            // logic still bound above), so search results stay correct once
-            // rows are split across pages.
-            $('#searchInput').on('keyup', function () {
-                __indexDataTable.search($(this).val() || '').draw();
-            });
+        /*=========================================
+                    Responsive
+                =========================================*/
+        @@media (max-width:768px) {
+            .hg-header-row > div:last-child {
+                margin-top: 12px;
+                margin-left: 0 !important;
             }
-        });
-    </script>
+
+            .hg-header-actions {
+                width: 100%;
+            }
+
+                .hg-header-actions .btn {
+                    flex: 1 1 auto;
+                }
+
+            .btn-block {
+                margin-top: 10px;
+            }
+        }
+    </style>
 }

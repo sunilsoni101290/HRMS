@@ -9,7 +9,14 @@ namespace APP.Controllers
 {
     #region Permission Controller
 
+    // Permission Management is System Configurator ONLY (requirement: lock
+    // down Permission Management same as Error Log / Database
+    // Management). [SystemConfiguratorOnly] is the "don't even show the
+    // page" convenience gate for the whole controller; the real,
+    // data-driven check is still IPermissionService.EnsurePermissionAsync
+    // on the API side, so actingUserId is appended to every call below.
     [JwtAuthorize]
+    [SystemConfiguratorOnly]
     public class PermissionController : Controller
     {
         private readonly IApiService _apiService;
@@ -33,7 +40,7 @@ namespace APP.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var data = await _apiService.GetAsync<List<PermissionListDto>>("permission");
+            var data = await _apiService.GetAsync<List<PermissionListDto>>($"permission?actingUserId={Uri.EscapeDataString(_userId ?? "")}");
             return View(data ?? new List<PermissionListDto>());
         }
 
@@ -53,7 +60,7 @@ namespace APP.Controllers
 
                 try
                 {
-                    await _apiService.PostAsync<dynamic>("permission", dto);
+                    await _apiService.PostAsync<dynamic>($"permission?actingUserId={Uri.EscapeDataString(_userId ?? "")}", dto);
                     TempData["Success"] = "Permission created successfully.";
                     return RedirectToAction(nameof(Index));
                 }
@@ -70,7 +77,7 @@ namespace APP.Controllers
         [HttpGet]
         public async Task<IActionResult> Edit(string id)
         {
-            var data = await _apiService.GetAsync<PermissionDto>($"permission/{id}");
+            var data = await _apiService.GetAsync<PermissionDto>($"permission/{id}?actingUserId={Uri.EscapeDataString(_userId ?? "")}");
             if (data == null) return NotFound();
 
             await LoadDropdowns();
@@ -85,7 +92,7 @@ namespace APP.Controllers
                 dto.ModifiedBy = _userId;
                 dto.ModifiedOn = DateTime.UtcNow;
 
-                await _apiService.PutAsync<dynamic>($"permission/{id}", dto);
+                await _apiService.PutAsync<dynamic>($"permission/{id}?actingUserId={Uri.EscapeDataString(_userId ?? "")}", dto);
 
                 TempData["Success"] = "Permission updated successfully.";
                 return RedirectToAction(nameof(Index));
@@ -97,7 +104,7 @@ namespace APP.Controllers
 
         public async Task<IActionResult> Delete(string id)
         {
-            await _apiService.DeleteAsync($"permission/{id}");
+            await _apiService.DeleteAsync($"permission/{id}?actingUserId={Uri.EscapeDataString(_userId ?? "")}");
             TempData["Success"] = "Permission deleted successfully.";
             return RedirectToAction(nameof(Index));
         }

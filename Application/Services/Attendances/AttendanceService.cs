@@ -1596,11 +1596,17 @@ namespace Application.Services.Attendances
                     .ToListAsync())
                 .ToHashSet();
 
-            var weekOffSet = (await _db.WeekOffs.AsNoTracking()
-                    .Where(w => w.TenantId == tenantId)
-                    .Select(w => w.Day)
-                    .ToListAsync())
-                .ToHashSet();
+            // Pattern-aware (EveryWeek + NthWeekdayOfMonth, e.g. "2nd/4th
+            // Saturday") - see Domain/Helper/WeekOffCalculator.cs. Loads the
+            // raw configs once and resolves this specific month's concrete
+            // week-off dates, same as the pre-existing holidaySet approach
+            // above.
+            var weekOffConfigs = await _db.WeekOffs.AsNoTracking()
+                .Include(w => w.Occurrences)
+                .Where(w => w.TenantId == tenantId)
+                .ToListAsync();
+
+            var weekOffDateSet = WeekOffCalculator.GetWeekOffDatesForMonth(year, month, weekOffConfigs);
 
             var regularizedSet = (await _db.AttendanceRegularizations.AsNoTracking()
                     .Where(x => x.EmployeeId == employeeId
@@ -1619,7 +1625,7 @@ namespace Application.Services.Attendances
 
                 bool hasApprovedLeave = leaves.Any(l => l.FromDate.Date <= date && l.ToDate.Date >= date);
                 bool isHoliday = holidaySet.Contains(date);
-                bool isWeekOff = weekOffSet.Contains(date.DayOfWeek);
+                bool isWeekOff = weekOffDateSet.Contains(date);
 
                 var status = AttendanceStatusHelper.ClassifyDay(att?.Status, hasApprovedLeave, isHoliday, isWeekOff, date, today);
 
@@ -1715,12 +1721,13 @@ namespace Application.Services.Attendances
             bool isHoliday = await _db.HolidayGroupDetails.AsNoTracking()
                 .AnyAsync(h => h.TenantId == tenantId && h.HolidayDate.Date == dateOnly);
 
-            var weekOffDays = (await _db.WeekOffs.AsNoTracking()
-                    .Where(w => w.TenantId == tenantId)
-                    .Select(w => w.Day)
-                    .ToListAsync())
-                .ToHashSet();
-            bool isWeekOff = weekOffDays.Contains(dateOnly.DayOfWeek);
+            // Pattern-aware (EveryWeek + NthWeekdayOfMonth) - see
+            // Domain/Helper/WeekOffCalculator.cs.
+            var weekOffConfigs = await _db.WeekOffs.AsNoTracking()
+                .Include(w => w.Occurrences)
+                .Where(w => w.TenantId == tenantId)
+                .ToListAsync();
+            bool isWeekOff = WeekOffCalculator.IsWeekOffDate(dateOnly, weekOffConfigs);
 
             return employees.Select(e =>
             {
@@ -1792,11 +1799,14 @@ namespace Application.Services.Attendances
                     .ToListAsync())
                 .ToHashSet();
 
-            var weekOffSet = (await _db.WeekOffs.AsNoTracking()
-                    .Where(w => w.TenantId == tenantId)
-                    .Select(w => w.Day)
-                    .ToListAsync())
-                .ToHashSet();
+            // Pattern-aware (EveryWeek + NthWeekdayOfMonth) - see
+            // Domain/Helper/WeekOffCalculator.cs.
+            var weekOffConfigs = await _db.WeekOffs.AsNoTracking()
+                .Include(w => w.Occurrences)
+                .Where(w => w.TenantId == tenantId)
+                .ToListAsync();
+
+            var weekOffDateSet = WeekOffCalculator.GetWeekOffDatesForMonth(year, month, weekOffConfigs);
 
             var regCountMap = (await _db.AttendanceRegularizations.AsNoTracking()
                     .Where(x => employeeIds.Contains(x.EmployeeId) && x.Date >= monthStart && x.Date <= monthEnd)
@@ -1834,7 +1844,7 @@ namespace Application.Services.Attendances
                     var att = empAttendances.FirstOrDefault(a => a.Date.Date == date);
                     bool hasApprovedLeave = empLeaves.Any(l => l.FromDate.Date <= date && l.ToDate.Date >= date);
                     bool isHoliday = holidaySet.Contains(date);
-                    bool isWeekOff = weekOffSet.Contains(date.DayOfWeek);
+                    bool isWeekOff = weekOffDateSet.Contains(date);
 
                     var status = AttendanceStatusHelper.ClassifyDay(att?.Status, hasApprovedLeave, isHoliday, isWeekOff, date, today);
 
@@ -1903,11 +1913,15 @@ namespace Application.Services.Attendances
             var employeeIds = employees.Select(e => e.Id).ToList();
             int totalActive = employees.Count;
 
-            var weekOffSet = (await _db.WeekOffs.AsNoTracking()
-                    .Where(w => w.TenantId == tenantId)
-                    .Select(w => w.Day)
-                    .ToListAsync())
-                .ToHashSet();
+            // Pattern-aware (EveryWeek + NthWeekdayOfMonth) - see
+            // Domain/Helper/WeekOffCalculator.cs. Fetched once and reused
+            // below for both "today" and the 30-day trend (which resolves
+            // its own date set per-month, since occurrence numbering resets
+            // every month and the trend window can span two months).
+            var weekOffConfigs = await _db.WeekOffs.AsNoTracking()
+                .Include(w => w.Occurrences)
+                .Where(w => w.TenantId == tenantId)
+                .ToListAsync();
 
             // ---- Today snapshot ----
             var todayAttendances = await _db.Attendances.AsNoTracking()
@@ -1925,7 +1939,7 @@ namespace Application.Services.Attendances
             bool isHolidayToday = await _db.HolidayGroupDetails.AsNoTracking()
                 .AnyAsync(h => h.TenantId == tenantId && h.HolidayDate.Date == today);
 
-            bool isWeekOffToday = weekOffSet.Contains(today.DayOfWeek);
+            bool isWeekOffToday = WeekOffCalculator.IsWeekOffDate(today, weekOffConfigs);
 
             int presentToday = 0, absentToday = 0, lateToday = 0, onLeaveToday = 0;
 
@@ -1991,13 +2005,18 @@ namespace Application.Services.Attendances
                     .ToListAsync())
                 .ToHashSet();
 
+            // The 30-day window may span two calendar months, and
+            // "Nth occurrence" numbering resets each month, so this resolves
+            // per-month internally (see WeekOffCalculator.GetWeekOffDatesInRange).
+            var trendWeekOffDateSet = WeekOffCalculator.GetWeekOffDatesInRange(trendStart, today, weekOffConfigs);
+
             var trend = new List<AttendanceTrendPointDto>();
 
             for (int i = 29; i >= 0; i--)
             {
                 var d = today.AddDays(-i);
                 bool isHolidayDay = trendHolidaySet.Contains(d);
-                bool isWeekOffDay = weekOffSet.Contains(d.DayOfWeek);
+                bool isWeekOffDay = trendWeekOffDateSet.Contains(d);
 
                 int p = 0, a = 0, l = 0;
 

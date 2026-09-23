@@ -53,6 +53,14 @@ namespace APP.Models.DTOs
         [Display(Name = "Section / Module")]
         public string? AreaName { get; set; }
 
+        // Editable override; mirrors Application.DTOs.AppFeatureDto.Url.
+        // Optional; when blank the effective link falls back to
+        // Area/Controller/Action. Accepts a relative route
+        // ("/FeatureManagement/Index") or an absolute http(s) URL.
+        [MaxLength(500)]
+        [RegularExpression(@"^(/[^\s]*|https?://[^\s]+)$",
+            ErrorMessage = "URL must be a relative route starting with '/' (e.g. /FeatureManagement/Index) or an absolute http(s) URL.")]
+        [Display(Name = "URL")]
         public string? Url { get; set; }
 
         // =========================================

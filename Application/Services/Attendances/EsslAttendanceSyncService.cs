@@ -219,7 +219,9 @@ namespace Application.Services.Attendances
                     StartTime = startedAt,
                     FromDate = fromDateInclusive,
                     ToDate = toDateExclusive,
-                    TriggeredBy = triggeredBy
+                    TriggeredBy = triggeredBy,
+                    CreatedBy="System",
+                    CreatedOn=DateTime.UtcNow
                 };
 
                 // Phase 12 diagnostic: sync-start line - every field an

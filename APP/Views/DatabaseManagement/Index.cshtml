@@ -1,0 +1,688 @@
+@model APP.Models.DTOs.PagedResult<DatabaseOperationHistoryDto>
+@{
+    ViewData["Title"] = "Database Management";
+    var filter = ViewBag.Filter as DatabaseOperationHistoryFilterDto ?? new DatabaseOperationHistoryFilterDto();
+    var settings = ViewBag.Settings as DatabaseManagementSettingsDto ?? new DatabaseManagementSettingsDto();
+    var dbInfo = ViewBag.DatabaseInfo as DatabaseInfoDto ?? new DatabaseInfoDto { Available = false };
+    var totalPages = Model.PageSize > 0 ? (int)Math.Ceiling(Model.TotalRecords / (double)Model.PageSize) : 1;
+    if (totalPages < 1) totalPages = 1;
+}
+
+@*
+    This project ships Bootstrap 3.3.7, not 4/5 - see Views/WeekOff/Index.cshtml's
+    remark for the full explanation. Reuses that same "ent-page"/"ent-panel"
+    enterprise style + local Bootstrap 4/5 utility-class shim, plus this
+    view's own "dbm-*" classes for the mockup-specific pieces (step cards,
+    info grid, banners). Real Bootstrap 3 nav-tabs (data-toggle="tab") for
+    the 5 top-level tabs, same as Views/EsslAttendance/Index.cshtml.
+
+    PHASE A: only the Database Update tab's info panel + Execution History
+    + the Settings tab are real/functional. The 5 step-card buttons (Select
+    Script File / Backup Current DB / Preview & Validate / Execute on Local
+    DB) and the Backup / Restore / Database Swap tabs are intentionally
+    disabled/placeholder - their backing logic ships in later phases. See
+    each block's comment below.
+*@
+
+<div class="ent-page">
+    <div class="ent-panel">
+        <div class="d-flex align-items-center gap-2 mb-2 dbm-header-row">
+            <span class="ent-icon-badge" style="background:#eaf0fe;color:#2b6fd9;"><i class="bi bi-hdd-network-fill"></i></span>
+            <div>
+                <h5 class="mb-0" style="font-weight:700;color:#1b2a4a;">Database Management</h5>
+                <div class="text-muted" style="font-size:12.5px;">Manage database changes safely on Local IIS Server</div>
+            </div>
+            <div class="dbm-restricted-banner" style="margin-left:auto;">
+                <i class="bi bi-shield-lock-fill"></i>
+                <div>
+                    <strong>Access Restricted</strong>
+                    <div>This module is only available for System Configurator.</div>
+                </div>
+            </div>
+        </div>
+
+        <ul class="nav nav-tabs dbm-nav-tabs" style="margin-top:10px;">
+            <li class="active"><a href="#tab-update" data-toggle="tab"><i class="bi bi-arrow-repeat"></i> Database Update</a></li>
+            <li><a href="#tab-backup" data-toggle="tab"><i class="bi bi-cloud-arrow-up-fill"></i> Backup</a></li>
+            <li><a href="#tab-restore" data-toggle="tab"><i class="bi bi-cloud-arrow-down-fill"></i> Restore</a></li>
+            <li><a href="#tab-swap" data-toggle="tab"><i class="bi bi-arrow-left-right"></i> Database Swap</a></li>
+            <li><a href="#tab-settings" data-toggle="tab"><i class="bi bi-gear-fill"></i> Settings</a></li>
+        </ul>
+
+        <div class="tab-content" style="margin-top:16px;">
+
+            @* ============================================================
+               DATABASE UPDATE TAB
+               ============================================================ *@
+            <div class="tab-pane active" id="tab-update">
+
+                <div class="dbm-info-banner">
+                    <div>
+                        <i class="bi bi-info-circle-fill"></i>
+                        <div>
+                            <strong>Apply Database Changes (Development &rarr; Local IIS)</strong>
+                            <div class="text-muted" style="font-size:12.5px;">Run a hand-written idempotent .sql script against the Local IIS database, safely.</div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-default btn-sm" id="viewGuideBtn"><i class="bi bi-book"></i> View Guide</button>
+                </div>
+
+                @* Steps 1-4: no backing logic yet (later phases). Buttons
+                   are visibly disabled with a "Coming soon" tooltip rather
+                   than wired to a fake success state or left clickable but
+                   broken - see this view's top-of-file remark. *@
+                <div class="row dbm-steps">
+                    <div class="col-md-2-4 col-sm-6 dbm-step-col">
+                        <div class="dbm-step-card dbm-step-blue">
+                            <div class="dbm-step-number">1</div>
+                            <i class="bi bi-file-earmark-arrow-up-fill dbm-step-icon"></i>
+                            <h6>Select Script File</h6>
+                            <p>Choose the .sql script to apply.</p>
+                            <button type="button" class="btn btn-primary btn-sm dbm-step-btn" disabled data-popup="tooltip" title="Ships in a later phase - not yet implemented">
+                                <i class="bi bi-upload"></i> Select File
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-2-4 col-sm-6 dbm-step-col">
+                        <div class="dbm-step-card dbm-step-green">
+                            <div class="dbm-step-number">2</div>
+                            <i class="bi bi-cloud-arrow-up-fill dbm-step-icon"></i>
+                            <h6>Backup Current DB</h6>
+                            <p>Take a safety backup first.</p>
+                            <button type="button" class="btn btn-success btn-sm dbm-step-btn" disabled data-popup="tooltip" title="Ships in a later phase - not yet implemented">
+                                <i class="bi bi-shield-check"></i> Backup Now
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-2-4 col-sm-6 dbm-step-col">
+                        <div class="dbm-step-card dbm-step-amber">
+                            <div class="dbm-step-number">3</div>
+                            <i class="bi bi-search dbm-step-icon"></i>
+                            <h6>Preview &amp; Validate</h6>
+                            <p>Review statements before running.</p>
+                            <button type="button" class="btn btn-warning btn-sm dbm-step-btn" disabled data-popup="tooltip" title="Ships in a later phase - not yet implemented">
+                                <i class="bi bi-eye"></i> Preview
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-2-4 col-sm-6 dbm-step-col">
+                        <div class="dbm-step-card dbm-step-red">
+                            <div class="dbm-step-number">4</div>
+                            <i class="bi bi-play-circle-fill dbm-step-icon"></i>
+                            <h6>Execute on Local DB</h6>
+                            <p>Run the script on Local IIS.</p>
+                            <button type="button" class="btn btn-danger btn-sm dbm-step-btn" disabled data-popup="tooltip" title="Ships in a later phase - not yet implemented">
+                                <i class="bi bi-play-fill"></i> Execute
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-2-4 col-sm-6 dbm-step-col">
+                        <div class="dbm-step-card dbm-step-green">
+                            <div class="dbm-step-number">5</div>
+                            <i class="bi bi-check-circle-fill dbm-step-icon"></i>
+                            <h6>Verify &amp; Complete</h6>
+                            <p>Confirm the result below.</p>
+                            <a href="#tab-update" class="btn btn-success btn-sm dbm-step-btn" id="viewLogsBtn">
+                                <i class="bi bi-list-check"></i> View Logs
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row" style="margin-top:6px;">
+                    <div class="col-md-8">
+                        <div class="ent-panel dbm-subpanel">
+                            <h6 class="dbm-subpanel-title"><i class="bi bi-hdd-fill"></i> Database Information (Local IIS)</h6>
+                            <div id="dbInfoPanel">
+                                @await Html.PartialAsync("_DatabaseInfo", dbInfo)
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="ent-panel dbm-subpanel">
+                            <h6 class="dbm-subpanel-title"><i class="bi bi-lightning-fill"></i> Quick Actions</h6>
+                            <button type="button" class="btn btn-default btn-block" id="refreshBtn">
+                                <i class="bi bi-arrow-clockwise"></i> Refresh
+                            </button>
+                            <button type="button" class="btn btn-default btn-block" id="openSsmsBtn" style="margin-top:8px;">
+                                <i class="bi bi-database-fill-gear"></i> Open SSMS
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ent-panel dbm-grid-panel" style="margin-top:16px;">
+                    <div class="dbm-history-header">
+                        <h6 class="dbm-subpanel-title" style="margin:0;"><i class="bi bi-clock-history"></i> Execution History</h6>
+                        <button type="button" class="btn btn-default btn-sm" id="historyRefreshBtn"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+                    </div>
+
+                    <form asp-action="Index" method="get" class="row dbm-history-filter">
+                        <div class="col-md-3">
+                            <select name="OperationType" class="form-control input-sm">
+                                <option value="">-- All Actions --</option>
+                                <option value="ScriptUpdate" selected="@(filter.OperationType == "ScriptUpdate")">Script Update</option>
+                                <option value="Restore" selected="@(filter.OperationType == "Restore")">Restore</option>
+                                <option value="Swap" selected="@(filter.OperationType == "Swap")">Swap</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select name="Status" class="form-control input-sm">
+                                <option value="">-- All Status --</option>
+                                <option value="Success" selected="@(filter.Status == "Success")">Success</option>
+                                <option value="Failed" selected="@(filter.Status == "Failed")">Failed</option>
+                                <option value="Running" selected="@(filter.Status == "Running")">Running</option>
+                                <option value="Pending" selected="@(filter.Status == "Pending")">Pending</option>
+                                <option value="Cancelled" selected="@(filter.Status == "Cancelled")">Cancelled</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="date" name="DateFrom" class="form-control input-sm" value="@(filter.DateFrom?.ToString("yyyy-MM-dd"))" />
+                        </div>
+                        <div class="col-md-2">
+                            <input type="date" name="DateTo" class="form-control input-sm" value="@(filter.DateTo?.ToString("yyyy-MM-dd"))" />
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary btn-sm btn-block"><i class="bi bi-funnel"></i> Filter</button>
+                        </div>
+                    </form>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped">
+                            <thead>
+                                <tr>
+                                    <th width="45">#</th>
+                                    <th>Script File</th>
+                                    <th>Action</th>
+                                    <th>Executed On</th>
+                                    <th>Executed By</th>
+                                    <th>Status</th>
+                                    <th>Message</th>
+                                    <th width="50" class="text-center">View</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{ int sr = (Model.PageNumber - 1) * Model.PageSize + 1; }
+                                @if (Model.Data != null && Model.Data.Any())
+                                {
+                                    @foreach (var item in Model.Data)
+                                    {
+                                        <tr>
+                                            <td>@sr</td>
+                                            <td>@(item.ScriptFileName ?? "—")</td>
+                                            <td>@(item.Action ?? item.OperationType ?? "—")</td>
+                                            <td>@(item.CompletedAt?.ToString("dd-MMM-yyyy hh:mm tt") ?? item.StartedAt?.ToString("dd-MMM-yyyy hh:mm tt") ?? "—")</td>
+                                            <td>@(item.ExecutedBy ?? "—")</td>
+                                            <td>@Html.Raw(StatusBadge(item.Status))</td>
+                                            <td><span title="@item.Message">@(item.Message != null && item.Message.Length > 60 ? item.Message.Substring(0, 60) + "…" : item.Message)</span></td>
+                                            <td class="text-center"><a href="#" class="dbm-history-view" title="View"><i class="bi bi-eye"></i></a></td>
+                                        </tr>
+                                        sr++;
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="8" class="text-center text-muted" style="padding:28px 0;">
+                                            <i class="bi bi-inbox" style="font-size:22px;display:block;margin-bottom:6px;"></i>
+                                            No database operations recorded yet.
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="dbm-pager">
+                        <div class="text-muted">Showing page @Model.PageNumber of @totalPages (@Model.TotalRecords total)</div>
+                        <div>
+                            @if (Model.PageNumber > 1)
+                            {
+                                <a class="btn btn-default btn-sm" asp-action="Index" asp-all-route-data="@GetPageRouteData(filter, Model.PageNumber - 1)">
+                                    <i class="bi bi-chevron-left"></i> Previous
+                                </a>
+                            }
+                            @if (Model.PageNumber < totalPages)
+                            {
+                                <a class="btn btn-default btn-sm" asp-action="Index" asp-all-route-data="@GetPageRouteData(filter, Model.PageNumber + 1)">
+                                    Next <i class="bi bi-chevron-right"></i>
+                                </a>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @* ============================================================
+               BACKUP / RESTORE / SWAP TABS - shell only. No backing logic
+               exists in Phase A, so these are honest empty states, not
+               forms/buttons that would silently do nothing.
+               ============================================================ *@
+            <div class="tab-pane" id="tab-backup">
+                @await Html.PartialAsync("_PlannedFeature", ("Backup", "bi-cloud-arrow-up-fill", "Take an on-demand or scheduled backup of the Local IIS database before applying changes."))
+            </div>
+            <div class="tab-pane" id="tab-restore">
+                @await Html.PartialAsync("_PlannedFeature", ("Restore", "bi-cloud-arrow-down-fill", "Restore the Local IIS database from a previously taken backup."))
+            </div>
+            <div class="tab-pane" id="tab-swap">
+                @await Html.PartialAsync("_PlannedFeature", ("Database Swap", "bi-arrow-left-right", "Safely swap between two database instances (e.g. staging/production cut-over)."))
+            </div>
+
+            @* ============================================================
+               SETTINGS TAB - fully functional CRUD (Phase A).
+               ============================================================ *@
+            <div class="tab-pane" id="tab-settings">
+                <div class="ent-panel dbm-subpanel">
+                    <h6 class="dbm-subpanel-title"><i class="bi bi-gear-fill"></i> Database Management Settings</h6>
+
+                    <form id="settingsForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="checkbox">
+                                    <label><input type="checkbox" id="AutoBackupBeforeUpdate" @(settings.AutoBackupBeforeUpdate ? "checked" : "") /> Auto-Backup Before Update</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="checkbox">
+                                    <label><input type="checkbox" id="RequireConfirmationBeforeExecution" @(settings.RequireConfirmationBeforeExecution ? "checked" : "") /> Require Confirmation Before Execution</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Max Script File Size (MB)</label>
+                                    <input type="number" min="1" max="1024" step="1" class="form-control" id="MaxScriptFileSizeMb" value="@(settings.MaxScriptFileSizeBytes / (1024 * 1024))" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>SQL Command Timeout (seconds)</label>
+                                    <input type="number" min="5" max="600" step="1" class="form-control" id="SqlCommandTimeoutSeconds" value="@settings.SqlCommandTimeoutSeconds" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Allowed Environments (comma-separated)</label>
+                                    <input type="text" class="form-control" id="AllowedEnvironments" value="@settings.AllowedEnvironments" placeholder="e.g. Development,Local IIS" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Risky Statement Validation Policy</label>
+                                    <select class="form-control" id="RiskyStatementValidationPolicy">
+                                        <option value="Strict" selected="@(settings.RiskyStatementValidationPolicy == "Strict")">Strict (block DROP/TRUNCATE/unsafe DELETE)</option>
+                                        <option value="Warn" selected="@(settings.RiskyStatementValidationPolicy == "Warn")">Warn (allow with acknowledgement)</option>
+                                        <option value="Off" selected="@(settings.RiskyStatementValidationPolicy == "Off")">Off (no validation)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Backup Directory Path</label>
+                                    <input type="text" class="form-control" id="BackupDirectoryPath" value="@settings.BackupDirectoryPath" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Backup Retention (days)</label>
+                                    <input type="number" min="1" max="365" step="1" class="form-control" id="BackupRetentionDays" value="@settings.BackupRetentionDays" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Execution Log Retention (days)</label>
+                                    <input type="number" min="1" max="365" step="1" class="form-control" id="ExecutionLogRetentionDays" value="@settings.ExecutionLogRetentionDays" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="checkbox" style="margin-top:32px;">
+                                    <label>
+                                        <input type="checkbox" id="DatabaseSwapEnabled" @(settings.DatabaseSwapEnabled ? "checked" : "") />
+                                        Database Swap Enabled
+                                        <span class="text-muted" style="font-size:11.5px;"> (Database Swap tab ships in a later phase regardless of this flag)</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        @if (settings.ModifiedOn.HasValue)
+                        {
+                            <div class="text-muted" style="font-size:12px;margin-bottom:10px;">
+                                Last saved @settings.ModifiedOn.Value.ToLocalTime().ToString("dd-MMM-yyyy hh:mm tt") by @settings.ModifiedBy
+                            </div>
+                        }
+
+                        <button type="button" class="btn btn-primary" id="saveSettingsBtn"><i class="bi bi-save"></i> Save Settings</button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@functions {
+    private Dictionary<string, string> GetPageRouteData(DatabaseOperationHistoryFilterDto filter, int page)
+    {
+        var d = new Dictionary<string, string>
+        {
+            ["PageNumber"] = page.ToString(),
+            ["PageSize"] = filter.PageSize.ToString()
+        };
+        if (filter.DateFrom.HasValue) d["DateFrom"] = filter.DateFrom.Value.ToString("yyyy-MM-dd");
+        if (filter.DateTo.HasValue) d["DateTo"] = filter.DateTo.Value.ToString("yyyy-MM-dd");
+        if (!string.IsNullOrEmpty(filter.OperationType)) d["OperationType"] = filter.OperationType;
+        if (!string.IsNullOrEmpty(filter.Status)) d["Status"] = filter.Status;
+        return d;
+    }
+
+    private string StatusBadge(string status)
+    {
+        var cls = (status ?? "").ToLowerInvariant() switch
+        {
+            "success" => "dbm-badge-green",
+            "failed" => "dbm-badge-red",
+            "running" => "dbm-badge-blue",
+            "pending" => "dbm-badge-amber",
+            "cancelled" => "dbm-badge-gray",
+            _ => "dbm-badge-gray"
+        };
+        return $"<span class=\"dbm-badge {cls}\">{System.Net.WebUtility.HtmlEncode(status)}</span>";
+    }
+}
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('[data-popup="tooltip"]').tooltip();
+
+            //=========================================
+            // Refresh (Quick Actions + history) - REAL round trips
+            //=========================================
+            function refreshDatabaseInfo(btn) {
+                if (btn) btn.prop("disabled", true).html('<i class="bi bi-arrow-clockwise dbm-spin"></i> Refreshing...');
+                $.get("@Url.Action("RefreshDatabaseInfo")")
+                    .done(function (resp) {
+                        if (resp.success && resp.data) {
+                            renderDbInfo(resp.data);
+                        } else {
+                            swal("Error", "Unable to refresh database information.", "error");
+                        }
+                    })
+                    .fail(function () {
+                        swal("Error", "Unable to reach the ERP API.", "error");
+                    })
+                    .always(function () {
+                        if (btn) btn.prop("disabled", false).html('<i class="bi bi-arrow-clockwise"></i> Refresh');
+                    });
+            }
+
+            function renderDbInfo(d) {
+                var html;
+                if (d.available) {
+                    html = '<div class="row dbm-info-grid">' +
+                        '<div class="col-xs-6 col-md-3 dbm-info-cell"><div class="dbm-info-label">Server Name</div><div class="dbm-info-value">' + (d.serverName || '—') + '</div></div>' +
+                        '<div class="col-xs-6 col-md-3 dbm-info-cell"><div class="dbm-info-label">Database Name</div><div class="dbm-info-value">' + (d.databaseName || '—') + '</div></div>' +
+                        '<div class="col-xs-6 col-md-3 dbm-info-cell"><div class="dbm-info-label">Database Size</div><div class="dbm-info-value">' + (d.databaseSizeMb != null ? d.databaseSizeMb.toFixed(1) + ' MB' : '—') + '</div></div>' +
+                        '<div class="col-xs-6 col-md-3 dbm-info-cell"><div class="dbm-info-label">Last Backup</div><div class="dbm-info-value">' + (d.lastBackupOn ? new Date(d.lastBackupOn).toLocaleString() : 'Never') + '</div></div>' +
+                        '</div>';
+                } else {
+                    html = '<div class="alert alert-warning dbm-unavailable"><i class="bi bi-exclamation-triangle-fill"></i> ' +
+                        (d.unavailableReason || 'Database information is currently unavailable.') + '</div>';
+                }
+                $("#dbInfoPanel").html(html);
+            }
+
+            $("#refreshBtn").on("click", function () {
+                refreshDatabaseInfo($(this));
+            });
+
+            $("#historyRefreshBtn").on("click", function () {
+                location.reload();
+            });
+
+            //=========================================
+            // Open SSMS - connection-info workflow (server/database name
+            // only, never the password - see Phase A scope's remark).
+            //=========================================
+            $("#openSsmsBtn").on("click", function () {
+                $.get("@Url.Action("GetConnectionInfo")")
+                    .done(function (resp) {
+                        if (resp.success && resp.data) {
+                            $("#ssmsServerName").text(resp.data.serverName || "—");
+                            $("#ssmsDatabaseName").text(resp.data.databaseName || "—");
+                            $("#ssmsConnectionModal").modal("show");
+                        } else {
+                            swal("Error", resp.message || "Unable to load connection information.", "error");
+                        }
+                    })
+                    .fail(function () {
+                        swal("Error", "Unable to reach the ERP API.", "error");
+                    });
+            });
+
+            $(".dbm-copy-btn").on("click", function () {
+                var text = $("#" + $(this).data("target")).text();
+                if (navigator.clipboard && text) {
+                    navigator.clipboard.writeText(text);
+                    var btn = $(this);
+                    var original = btn.html();
+                    btn.html('<i class="bi bi-check-lg"></i> Copied');
+                    setTimeout(function () { btn.html(original); }, 1500);
+                }
+            });
+
+            $("#viewGuideBtn").on("click", function () {
+                swal("Database Update Guide",
+                    "1) Select the .sql script produced for this release.\n2) Take a backup of the target database.\n3) Preview the statements before running.\n4) Execute against Local IIS.\n5) Verify the result in Execution History.\n\nSteps 1-4 ship in a later phase of this module.",
+                    "info");
+            });
+
+            $("#viewLogsBtn").on("click", function (e) {
+                e.preventDefault();
+                $('a[href="#tab-update"]').first().tab('show');
+                $('html, body').animate({ scrollTop: $(".dbm-grid-panel").offset().top - 20 }, 300);
+            });
+
+            //=========================================
+            // Settings - real Save (Phase A)
+            //=========================================
+            $("#saveSettingsBtn").on("click", function () {
+                var btn = $(this);
+                var payload = {
+                    AutoBackupBeforeUpdate: $("#AutoBackupBeforeUpdate").is(":checked"),
+                    MaxScriptFileSizeBytes: (parseInt($("#MaxScriptFileSizeMb").val(), 10) || 0) * 1024 * 1024,
+                    AllowedEnvironments: $("#AllowedEnvironments").val(),
+                    SqlCommandTimeoutSeconds: parseInt($("#SqlCommandTimeoutSeconds").val(), 10) || 0,
+                    BackupDirectoryPath: $("#BackupDirectoryPath").val(),
+                    BackupRetentionDays: parseInt($("#BackupRetentionDays").val(), 10) || 0,
+                    RiskyStatementValidationPolicy: $("#RiskyStatementValidationPolicy").val(),
+                    RequireConfirmationBeforeExecution: $("#RequireConfirmationBeforeExecution").is(":checked"),
+                    DatabaseSwapEnabled: $("#DatabaseSwapEnabled").is(":checked"),
+                    ExecutionLogRetentionDays: parseInt($("#ExecutionLogRetentionDays").val(), 10) || 0
+                };
+
+                btn.prop("disabled", true).html('<i class="bi bi-arrow-clockwise dbm-spin"></i> Saving...');
+
+                $.ajax({
+                    url: "@Url.Action("SaveSettings")",
+                    type: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify(payload),
+                    success: function (resp) {
+                        btn.prop("disabled", false).html('<i class="bi bi-save"></i> Save Settings');
+                        if (resp.success) {
+                            swal({ title: "Saved", text: resp.message || "Settings saved successfully.", type: "success" }, function () {
+                                location.reload();
+                            });
+                        } else {
+                            swal("Error", resp.message || "Unable to save settings.", "error");
+                        }
+                    },
+                    error: function () {
+                        btn.prop("disabled", false).html('<i class="bi bi-save"></i> Save Settings');
+                        swal("Error", "Unable to reach the ERP API.", "error");
+                    }
+                });
+            });
+        });
+    </script>
+
+    <style>
+        /* ===================================================================
+           Same enterprise card + Bootstrap 4/5 utility-class shim used on
+           Views/WeekOff/Index.cshtml / Views/EsslAttendance/Index.cshtml.
+           =================================================================== */
+        .ent-page { background:#f4f6fb; padding:18px; border-radius:10px; }
+        .ent-panel { background:#fff; border:1px solid #e7ebf3; border-radius:10px; padding:16px 18px; margin-bottom:18px; }
+        .ent-icon-badge { width:34px; height:34px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; font-size:16px; flex:none; }
+
+        .d-flex { display: flex !important; }
+        .align-items-center { align-items: center !important; }
+        .gap-2 { gap: .5rem !important; }
+        .mb-0 { margin-bottom: 0 !important; }
+        .mb-2 { margin-bottom: .5rem !important; }
+
+        .dbm-header-row { flex-wrap: wrap; }
+
+        /* Access Restricted banner */
+        .dbm-restricted-banner {
+            display: flex; align-items: center; gap: 10px;
+            background: #e9f9f0; border: 1px solid #bdeed3; color: #1e8a54;
+            border-radius: 8px; padding: 8px 14px; font-size: 12px; max-width: 320px;
+        }
+        .dbm-restricted-banner i { font-size: 20px; }
+        .dbm-restricted-banner strong { display:block; font-size:12.5px; }
+
+        /* Nav tabs spacing (Bootstrap 3 tabs already work - just icon gap) */
+        .dbm-nav-tabs > li > a i { margin-right: 6px; }
+
+        /* Info banner */
+        .dbm-info-banner {
+            display: flex; align-items: center; justify-content: space-between; gap: 12px;
+            background: #eaf3ff; border: 1px solid #cfe4ff; border-radius: 8px;
+            padding: 12px 16px; margin-bottom: 16px;
+        }
+        .dbm-info-banner > div:first-child { display: flex; align-items: center; gap: 10px; }
+        .dbm-info-banner i { color: #2b6fd9; font-size: 20px; }
+
+        /* 5-up responsive column (Bootstrap 3 has no col-md-2-4) */
+        .col-md-2-4 { position: relative; min-height: 1px; padding-left: 10px; padding-right: 10px; }
+        @@media (min-width: 992px) {
+            .col-md-2-4 { width: 20%; float: left; }
+        }
+        .dbm-step-col { margin-bottom: 14px; }
+
+        .dbm-step-card {
+            background: #fff; border: 1px solid #e7ebf3; border-radius: 10px;
+            padding: 16px 14px; text-align: center; height: 100%; position: relative;
+        }
+        .dbm-step-number {
+            position: absolute; top: 10px; left: 10px; width: 22px; height: 22px;
+            border-radius: 50%; background: #eef1f7; color: #4a5a7a; font-size: 11px;
+            font-weight: 700; display: flex; align-items: center; justify-content: center;
+        }
+        .dbm-step-icon { font-size: 26px; margin: 10px 0 6px; display: block; }
+        .dbm-step-card h6 { font-weight: 700; margin: 4px 0; color: #1b2a4a; }
+        .dbm-step-card p { font-size: 11.5px; color: #7a8699; min-height: 30px; }
+        .dbm-step-btn { width: 100%; }
+        .dbm-step-btn[disabled] { cursor: not-allowed; opacity: .55; }
+
+        .dbm-step-blue .dbm-step-icon, .dbm-step-blue .dbm-step-number { color: #2b6fd9; }
+        .dbm-step-green .dbm-step-icon, .dbm-step-green .dbm-step-number { color: #2e9e6c; }
+        .dbm-step-amber .dbm-step-icon, .dbm-step-amber .dbm-step-number { color: #c98a1c; }
+        .dbm-step-red .dbm-step-icon, .dbm-step-red .dbm-step-number { color: #d9534f; }
+
+        .dbm-subpanel { height: 100%; }
+        .dbm-subpanel-title { font-weight: 700; color: #1b2a4a; margin: 0 0 12px; }
+        .dbm-subpanel-title i { margin-right: 6px; color: #2b6fd9; }
+
+        /* Database Info grid */
+        .dbm-info-grid { margin: 0 -6px; }
+        .dbm-info-cell { padding: 8px 10px; }
+        .dbm-info-label { font-size: 11px; color: #8993a4; text-transform: uppercase; letter-spacing: .03em; }
+        .dbm-info-value { font-size: 15px; font-weight: 700; color: #1b2a4a; margin-top: 2px; word-break: break-word; }
+        .dbm-unavailable { margin: 0; font-size: 12.5px; }
+        .dbm-unavailable i { margin-right: 6px; }
+
+        .btn-block + .btn-block { margin-top: 8px; }
+
+        /* Execution History */
+        .dbm-grid-panel { }
+        .dbm-history-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .dbm-history-filter { margin-bottom: 12px; }
+        .dbm-pager { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; font-size: 12.5px; }
+
+        .dbm-badge {
+            display: inline-block; font-size: 11px; font-weight: 700;
+            padding: 3px 9px; border-radius: 20px; text-transform: uppercase; letter-spacing: .02em;
+        }
+        .dbm-badge-green { background: #e8f7ef; color: #1e8a54; }
+        .dbm-badge-red { background: #fdecea; color: #c0392b; }
+        .dbm-badge-blue { background: #eaf3ff; color: #2b6fd9; }
+        .dbm-badge-amber { background: #fdf3e0; color: #c98a1c; }
+        .dbm-badge-gray { background: #eef1f5; color: #6b7686; }
+
+        .dbm-spin { animation: dbm-spin 0.9s linear infinite; display: inline-block; }
+        @@keyframes dbm-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* Planned-feature empty state */
+        .dbm-planned {
+            text-align: center; padding: 60px 20px; color: #7a8699;
+        }
+        .dbm-planned i { font-size: 40px; color: #b9c2d4; display: block; margin-bottom: 14px; }
+        .dbm-planned h6 { color: #1b2a4a; font-weight: 700; margin-bottom: 6px; }
+
+        @@media (max-width:768px) {
+            .dbm-header-row > div:last-child { margin-top: 12px; margin-left: 0 !important; max-width: none; }
+            .dbm-info-banner { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+}
+
+<!-- Open SSMS - connection information modal (server/database name only, never the password/connection string) -->
+<div class="modal fade" id="ssmsConnectionModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h5><i class="bi bi-database-fill-gear"></i> Connect in SSMS</h5>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted" style="font-size:12.5px;">This application cannot launch SQL Server Management Studio directly. Copy these details into SSMS's "Connect to Server" dialog - you will still need to supply your own SSMS login/credentials there.</p>
+                <div class="form-group">
+                    <label>Server Name</label>
+                    <div class="input-group">
+                        <span class="form-control" id="ssmsServerName">—</span>
+                        <span class="input-group-btn">
+                            <button class="btn btn-default dbm-copy-btn" type="button" data-target="ssmsServerName"><i class="bi bi-clipboard"></i> Copy</button>
+                        </span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Database Name</label>
+                    <div class="input-group">
+                        <span class="form-control" id="ssmsDatabaseName">—</span>
+                        <span class="input-group-btn">
+                            <button class="btn btn-default dbm-copy-btn" type="button" data-target="ssmsDatabaseName"><i class="bi bi-clipboard"></i> Copy</button>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>

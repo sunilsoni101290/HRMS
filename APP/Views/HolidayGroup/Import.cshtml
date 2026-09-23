@@ -4,31 +4,30 @@
     ViewData["Title"] = "Import Holidays";
 }
 
-<div class="panel panel-flat">
+@*
+    Bootstrap 3.3.7 markup, ent-page/ent-panel style - see
+    Views/WeekOff/Index.cshtml / Views/HolidayGroup/Index.cshtml.
+    The upload form (asp-action/enctype/input name="file") and the
+    _ExcelImportResult partial below are unchanged.
+*@
 
-    <div class="panel-heading">
+<div class="ent-page">
+    <div class="ent-panel">
 
-        <h5 class="panel-title">
-            <i class="icon-file-spreadsheet position-left"></i>
-            Import Holidays
-        </h5>
-
-        <div class="heading-elements">
-
-            <a asp-action="Index" class="btn btn-default">
-                <i class="icon-arrow-left13"></i>
-                Back
-            </a>
-
+        <div class="d-flex align-items-center gap-2 mb-2 hg-header-row">
+            <span class="ent-icon-badge" style="background:#eaf0fe;color:#2b6fd9;"><i class="bi bi-file-earmark-spreadsheet"></i></span>
+            <div>
+                <h5 class="mb-0" style="font-weight:700;color:#1b2a4a;">Import Holidays</h5>
+                <div class="text-muted" style="font-size:12.5px;">Bulk-load holiday rows into an existing holiday group from an Excel file.</div>
+            </div>
+            <div style="margin-left:auto;">
+                <a asp-action="Index" class="btn btn-default"><i class="bi bi-arrow-left"></i> Back</a>
+            </div>
         </div>
 
-    </div>
-
-    <div class="panel-body">
-
-        <div class="alert alert-info alert-styled-left">
-            <span class="text-semibold">How this works:</span>
-            <ol class="no-margin-bottom" style="padding-left:18px;margin-top:6px;">
+        <div class="hg-info-box">
+            <span class="text-semibold"><i class="bi bi-lightbulb"></i> How this works:</span>
+            <ol class="no-margin-bottom">
                 <li>The Holiday Group itself must already exist - create it first from the Holiday Group list if it doesn't. This import only adds holiday rows to an existing group.</li>
                 <li>Download the template below - it includes a "Reference Data" sheet listing your existing Holiday Group names.</li>
                 <li>Fill in one row per holiday - Holiday Group Name, Holiday Date and Holiday Name are required.</li>
@@ -36,34 +35,97 @@
             </ol>
         </div>
 
-        <a asp-action="DownloadImportTemplate" class="btn bg-success mb-15">
-            <i class="icon-file-download"></i>
-            Download Excel Template
+        <a asp-action="DownloadImportTemplate" class="btn btn-success hg-template-btn">
+            <i class="bi bi-download"></i> Download Excel Template
         </a>
 
-        <form asp-action="Import" method="post" enctype="multipart/form-data">
+        <div class="hg-upload-section">
+            <form asp-action="Import" method="post" enctype="multipart/form-data">
 
-            <div class="form-group">
+                <div class="form-group">
+                    <label class="text-semibold">Select Excel File</label>
+                    <input type="file"
+                           name="file"
+                           accept=".xlsx,.xls"
+                           class="form-control"
+                           required />
+                </div>
 
-                <label class="text-semibold">Select Excel File</label>
-
-                <input type="file"
-                       name="file"
-                       accept=".xlsx,.xls"
-                       class="form-control"
-                       required />
-
-            </div>
-
-            <button type="submit" class="btn bg-primary">
-                <i class="icon-upload3"></i>
-                Upload &amp; Import
-            </button>
-
-        </form>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-upload"></i> Upload &amp; Import
+                </button>
+            </form>
+        </div>
 
         <partial name="_ExcelImportResult" model="Model" />
-
     </div>
-
 </div>
+
+<style>
+    /* ===================================================================
+       Same enterprise card style used on Views/WeekOff/Index.cshtml /
+       Views/HolidayGroup/Index.cshtml.
+       =================================================================== */
+    .ent-page { background:#f4f6fb; padding:18px; border-radius:10px; }
+    .ent-panel { background:#fff; border:1px solid #e7ebf3; border-radius:10px; padding:16px 18px; margin-bottom:18px; }
+    .ent-icon-badge { width:34px; height:34px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; font-size:16px; flex:none; }
+
+    .d-flex { display: flex !important; }
+    .align-items-center { align-items: center !important; }
+    .gap-2 { gap: .5rem !important; }
+    .mb-0 { margin-bottom: 0 !important; }
+    .mb-2 { margin-bottom: .5rem !important; }
+
+    .hg-header-row { flex-wrap: wrap; }
+
+    /*=========================================
+                Instructions box
+            =========================================*/
+    .hg-info-box {
+        background: #eaf3ff;
+        border: 1px solid #d3e6ff;
+        border-left: 4px solid #2b6fd9;
+        border-radius: 6px;
+        padding: 14px 16px;
+        margin-bottom: 16px;
+    }
+
+        .hg-info-box .text-semibold {
+            font-weight: 600;
+            color: #1b2a4a;
+        }
+
+        .hg-info-box i {
+            color: #2b6fd9;
+            margin-right: 4px;
+        }
+
+        .hg-info-box ol {
+            padding-left: 18px;
+            margin-top: 8px;
+            margin-bottom: 0;
+            font-size: 13px;
+        }
+
+    .hg-template-btn {
+        margin-bottom: 18px;
+    }
+
+    /*=========================================
+                Upload section
+            =========================================*/
+    .hg-upload-section {
+        border: 1px solid #e7ebf3;
+        border-radius: 8px;
+        padding: 18px;
+        margin-bottom: 4px;
+    }
+
+    .form-group {
+        margin-bottom: 16px;
+    }
+
+    .text-semibold {
+        font-weight: 600;
+    }
+</style>

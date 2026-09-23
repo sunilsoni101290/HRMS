@@ -1,351 +1,216 @@
-﻿@model HolidayGroupDto
+@model HolidayGroupDto
 
 @{
     ViewData["Title"] = "Holiday Group";
+    var isEdit = !string.IsNullOrEmpty(Model?.Id);
 }
 
+@*
+    Shared by both Create and Edit (HolidayGroupController.Edit GET returns
+    View("Create", data)) - form action/fields/validation are unchanged,
+    only the markup/style is redesigned. Bootstrap 3.3.7, ent-page/ent-panel
+    style - see Views/WeekOff/Index.cshtml / Views/HolidayGroup/Index.cshtml.
+*@
+
 <form asp-controller="HolidayGroup"
-      asp-action="@(string.IsNullOrEmpty(Model?.Id) ? "Create" : "Edit")"
+      asp-action="@(isEdit ? "Edit" : "Create")"
       method="post">
 
     <!-- Hidden Fields -->
-
     <input asp-for="Id" type="hidden" />
     <input asp-for="TenantId" type="hidden" />
     <input asp-for="CreatedBy" type="hidden" />
     <input asp-for="ModifiedBy" type="hidden" />
     <input asp-for="ModifiedOn" type="hidden" />
 
-    <div class="panel panel-flat">
+    <div class="ent-page">
+        <div class="ent-panel">
 
-        <!-- Header -->
-
-        <div class="panel-heading">
-
-            <h5 class="panel-title">
-
-                <i class="icon-calendar3 position-left"></i>
-
-                @(string.IsNullOrEmpty(Model?.Id)
-                    ? "Create Holiday Group"
-                    : "Edit Holiday Group")
-
-            </h5>
-
-            <div class="heading-elements">
-
-                <a asp-action="Index"
-                   class="btn btn-default">
-
-                    <i class="icon-arrow-left13 position-left"></i>
-
-                    Back
-
-                </a>
-
+            <div class="d-flex align-items-center gap-2 mb-2 hg-header-row">
+                <span class="ent-icon-badge" style="background:#eaf0fe;color:#2b6fd9;"><i class="bi bi-calendar3"></i></span>
+                <div>
+                    <h5 class="mb-0" style="font-weight:700;color:#1b2a4a;">@(isEdit ? "Edit Holiday Group" : "Create Holiday Group")</h5>
+                    <div class="text-muted" style="font-size:12.5px;">@(isEdit ? "Update this holiday group's name and description." : "Set up a new holiday calendar group.")</div>
+                </div>
+                <div style="margin-left:auto;">
+                    <a asp-action="Index" class="btn btn-default"><i class="bi bi-arrow-left"></i> Back</a>
+                </div>
             </div>
 
-        </div>
-
-        <!-- Body -->
-
-        <div class="panel-body">
-
-            <div asp-validation-summary="ModelOnly"
-                 class="alert alert-danger">
-            </div>
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
             <!-- ====================================== -->
             <!-- Holiday Group Information -->
             <!-- ====================================== -->
-
-            <fieldset>
-
-                <legend class="text-semibold">
-
-                    <i class="icon-info22 position-left"></i>
-
-                    Holiday Group Information
-
-                </legend>
+            <div class="hg-section">
+                <div class="hg-section-title"><i class="bi bi-info-circle"></i> Holiday Group Information</div>
 
                 <div class="row">
-
-                    <!-- Holiday Group Name -->
-
-                    <div class="col-md-6">
-
+                    <div class="col-md-6 col-sm-6">
                         <div class="form-group">
-
                             <label asp-for="Name"></label>
-
-                            <input asp-for="Name"
-                                   class="form-control"
-                                   placeholder="Enter Holiday Group Name" />
-
-                            <span asp-validation-for="Name"
-                                  class="text-danger"></span>
-
+                            <input asp-for="Name" class="form-control" placeholder="Enter Holiday Group Name" />
+                            <span asp-validation-for="Name" class="text-danger"></span>
                         </div>
-
                     </div>
-
-                    <!-- Description -->
-
-                    <div class="col-md-6">
-
+                    <div class="col-md-6 col-sm-6">
                         <div class="form-group">
-
                             <label asp-for="Description"></label>
-
-                            <textarea asp-for="Description"
-                                      rows="4"
-                                      class="form-control"
-                                      placeholder="Enter Description"></textarea>
-
-                            <span asp-validation-for="Description"
-                                  class="text-danger"></span>
-
+                            <textarea asp-for="Description" rows="4" class="form-control" placeholder="Enter Description"></textarea>
+                            <span asp-validation-for="Description" class="text-danger"></span>
                         </div>
-
                     </div>
-
                 </div>
-
-            </fieldset>
+            </div>
 
             <!-- ====================================== -->
             <!-- Preview -->
             <!-- ====================================== -->
-
-            <fieldset>
-
-                <legend class="text-semibold">
-
-                    <i class="icon-display4 position-left"></i>
-
-                    Holiday Group Preview
-
-                </legend>
+            <div class="hg-section">
+                <div class="hg-section-title"><i class="bi bi-eye"></i> Holiday Group Preview</div>
 
                 <div class="row">
-
-                    <div class="col-md-6">
-
-                        <div class="panel bg-primary-400">
-
-                            <div class="panel-body">
-
-                                <h4 class="no-margin">
-
-                                    <span id="HolidayGroupPreview">
-
-                                        @(string.IsNullOrWhiteSpace(Model?.Name)
-                                            ? "-"
-                                            : Model.Name)
-
-                                    </span>
-
-                                </h4>
-
-                                Holiday Group Name
-
+                    <div class="col-md-6 col-sm-6">
+                        <div class="hg-tile" style="background:#2b6fd9;">
+                            <i class="bi bi-calendar3"></i>
+                            <div>
+                                <h3 id="HolidayGroupPreview">@(string.IsNullOrWhiteSpace(Model?.Name) ? "-" : Model.Name)</h3>
+                                <span>Holiday Group Name</span>
                             </div>
-
                         </div>
-
                     </div>
-
-                    <div class="col-md-6">
-
-                        <div class="panel bg-success-400">
-
-                            <div class="panel-body">
-
-                                <h4 class="no-margin">
-
-                                    Active
-
-                                </h4>
-
-                                Default Status
-
+                    <div class="col-md-6 col-sm-6">
+                        <div class="hg-tile" style="background:#2e9e6c;">
+                            <i class="bi bi-check-circle"></i>
+                            <div>
+                                <h3>Active</h3>
+                                <span>Default Status</span>
                             </div>
-
                         </div>
-
                     </div>
-
                 </div>
-
-            </fieldset>
-            <!-- ====================================== -->
-            <!-- Footer -->
-            <!-- ====================================== -->
-
+            </div>
         </div>
 
-        <div class="panel-footer text-right">
-
-            <a asp-action="Index"
-               class="btn btn-default">
-
-                <i class="icon-arrow-left13 position-left"></i>
-
-                Back
-
-            </a>
-
-            <button type="reset"
-                    class="btn btn-warning">
-
-                <i class="icon-reset position-left"></i>
-
-                Reset
-
-            </button>
-
-            <button type="submit"
-                    class="btn bg-primary">
-
-                <i class="icon-floppy-disk position-left"></i>
-
-                @(string.IsNullOrEmpty(Model?.Id)
-                    ? "Save Holiday Group"
-                    : "Update Holiday Group")
-
-            </button>
-
+        <div class="ent-panel hg-footer">
+            <a asp-action="Index" class="btn btn-default"><i class="bi bi-arrow-left"></i> Back</a>
+            <button type="reset" class="btn btn-warning"><i class="bi bi-arrow-counterclockwise"></i> Reset</button>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> @(isEdit ? "Update Holiday Group" : "Save Holiday Group")</button>
         </div>
-
     </div>
-
 </form>
-@section Scripts {
 
+@section Scripts {
     <partial name="_ValidationScriptsPartial" />
 
     <script>
-
         $(document).ready(function () {
-
             //=========================================
             // Chosen Dropdown
             //=========================================
-
             if ($(".select-search").length) {
-
                 $(".select-search").chosen({
-
                     width: "100%",
                     search_contains: true,
                     allow_single_deselect: true
-
                 });
-
             }
 
             //=========================================
             // Holiday Group Name Preview
             //=========================================
-
             $("#Name").keyup(function () {
-
                 var value = $(this).val();
-
-                if (value == "")
-                    value = "-";
-
+                if (value == "") value = "-";
                 $("#HolidayGroupPreview").text(value);
-
             });
 
             //=========================================
             // Form Validation
             //=========================================
-
             $("form").submit(function () {
-
                 if ($("#Name").val().trim() == "") {
-
                     alert("Please enter Holiday Group Name.");
-
                     $("#Name").focus();
-
                     return false;
-
                 }
-
                 return true;
-
             });
-
         });
-
     </script>
 
     <style>
+        /* ===================================================================
+           Same enterprise card style used on Views/WeekOff/Index.cshtml /
+           Views/HolidayGroup/Index.cshtml.
+           =================================================================== */
+        .ent-page { background:#f4f6fb; padding:18px; border-radius:10px; }
+        .ent-panel { background:#fff; border:1px solid #e7ebf3; border-radius:10px; padding:16px 18px; margin-bottom:18px; }
+        .ent-icon-badge { width:34px; height:34px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; font-size:16px; flex:none; }
 
-        /*-----------------------------------------
-                    Panel
-                ------------------------------------------*/
+        .d-flex { display: flex !important; }
+        .align-items-center { align-items: center !important; }
+        .gap-2 { gap: .5rem !important; }
+        .mb-0 { margin-bottom: 0 !important; }
+        .mb-2 { margin-bottom: .5rem !important; }
 
-        .panel-heading {
-            padding: 18px 20px;
+        .hg-header-row { flex-wrap: wrap; }
+
+        /*=========================================
+                    Section blocks (fieldset replacement)
+                =========================================*/
+        .hg-section {
+            border: 1px solid #e7ebf3;
+            border-radius: 8px;
+            padding: 18px;
+            margin-bottom: 18px;
         }
 
-        .panel-title {
+        .hg-section-title {
             font-weight: 600;
+            font-size: 13.5px;
+            color: #1b2a4a;
+            margin-bottom: 16px;
         }
 
-        .panel-body {
-            padding: 20px;
-        }
-
-        .panel-footer {
-            background: #fafafa;
-            padding: 15px 20px;
-        }
-
-        /*-----------------------------------------
-                    Fieldset
-                ------------------------------------------*/
-
-        fieldset {
-            border: 1px solid #e5e5e5;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-
-        legend {
-            width: auto;
-            border: none;
-            padding: 0 10px;
-            font-size: 15px;
-            font-weight: 600;
-        }
-
-        /*-----------------------------------------
-                    Summary Cards
-                ------------------------------------------*/
-
-        .panel.bg-primary-400,
-        .panel.bg-success-400 {
-            margin-bottom: 15px;
-            border-radius: 3px;
-        }
-
-            .panel.bg-primary-400 h4,
-            .panel.bg-success-400 h4 {
-                color: #fff;
-                font-weight: 600;
-                margin-bottom: 5px;
+            .hg-section-title i {
+                color: #2b6fd9;
+                margin-right: 6px;
             }
 
-        /*-----------------------------------------
-                    Form
-                ------------------------------------------*/
+        /*=========================================
+                    Preview tiles
+                =========================================*/
+        .hg-tile {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin-bottom: 10px;
+            color: #fff;
+        }
 
+            .hg-tile i {
+                font-size: 24px;
+                opacity: .9;
+            }
+
+            .hg-tile h3 {
+                margin: 0;
+                font-weight: 700;
+                color: #fff;
+                font-size: 18px;
+            }
+
+            .hg-tile span {
+                font-size: 12.5px;
+                opacity: .9;
+            }
+
+        /*=========================================
+                    Form
+                =========================================*/
         .form-group {
             margin-bottom: 18px;
         }
@@ -358,35 +223,54 @@
             font-size: 12px;
         }
 
-        /*-----------------------------------------
-                    Buttons
-                ------------------------------------------*/
-
-        .btn {
-            min-width: 110px;
+        /*=========================================
+                    Footer
+                =========================================*/
+        .hg-footer {
+            text-align: right;
         }
 
-        /*-----------------------------------------
-                    Chosen
-                ------------------------------------------*/
+            .hg-footer .btn {
+                min-width: 110px;
+                margin-left: 6px;
+            }
 
+        /*=========================================
+                    Chosen
+                =========================================*/
         .chosen-container {
             width: 100% !important;
         }
 
-        .chosen-single {
+        .chosen-container-single .chosen-single {
             height: 36px !important;
             line-height: 34px !important;
         }
 
-        /*-----------------------------------------
+        /*=========================================
                     Alert
-                ------------------------------------------*/
-
+                =========================================*/
         .alert {
             margin-bottom: 20px;
         }
 
-    </style>
+        /*=========================================
+                    Responsive
+                =========================================*/
+        @@media (max-width:768px) {
+            .hg-header-row > div:last-child {
+                margin-top: 12px;
+                margin-left: 0 !important;
+            }
 
+            .hg-footer {
+                text-align: center !important;
+            }
+
+                .hg-footer .btn {
+                    width: 100%;
+                    margin: 0 0 10px;
+                }
+        }
+    </style>
 }

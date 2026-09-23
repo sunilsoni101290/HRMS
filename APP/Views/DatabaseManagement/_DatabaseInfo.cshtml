@@ -1,0 +1,38 @@
+@model DatabaseInfoDto
+@*
+    Renders the Database Info panel's contents - shared between the initial
+    server-side render (Index.cshtml) and the client-side "Refresh" AJAX
+    call (see Index.cshtml's renderDbInfo() - kept in sync with this
+    markup by hand since jQuery builds that copy as an HTML string, not by
+    re-rendering this partial). Any SQL/connectivity failure on the API
+    side degrades to Available=false + a reason - rendered here as a plain
+    warning banner, never a broken/blank panel.
+*@
+@if (Model.Available)
+{
+    <div class="row dbm-info-grid">
+        <div class="col-xs-6 col-md-3 dbm-info-cell">
+            <div class="dbm-info-label">Server Name</div>
+            <div class="dbm-info-value">@(Model.ServerName ?? "—")</div>
+        </div>
+        <div class="col-xs-6 col-md-3 dbm-info-cell">
+            <div class="dbm-info-label">Database Name</div>
+            <div class="dbm-info-value">@(Model.DatabaseName ?? "—")</div>
+        </div>
+        <div class="col-xs-6 col-md-3 dbm-info-cell">
+            <div class="dbm-info-label">Database Size</div>
+            <div class="dbm-info-value">@(Model.DatabaseSizeMb.HasValue ? Model.DatabaseSizeMb.Value.ToString("N1") + " MB" : "—")</div>
+        </div>
+        <div class="col-xs-6 col-md-3 dbm-info-cell">
+            <div class="dbm-info-label">Last Backup</div>
+            <div class="dbm-info-value">@(Model.LastBackupOn.HasValue ? Model.LastBackupOn.Value.ToLocalTime().ToString("dd-MMM-yyyy hh:mm tt") : "Never")</div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="alert alert-warning dbm-unavailable">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        @(Model.UnavailableReason ?? "Database information is currently unavailable.")
+    </div>
+}

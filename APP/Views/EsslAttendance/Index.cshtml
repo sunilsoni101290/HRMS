@@ -1,340 +1,1335 @@
 @model EsslSettingsPageViewModel
 @{
-    ViewData["Title"] = "eSSL SQL Integration";
+    ViewData["Title"] = "Attendance Synchronization";
     var status = Model.Status;
     var config = Model.Config;
+    var lastSync = Model.LastSyncHistory;
+    var lastJob = Model.LastHistoricalJob;
 }
 
-<div class="panel panel-flat">
-    <div class="panel-heading">
-        <h5 class="panel-title">
-            <i class="bi bi-database-fill-gear position-left"></i>
-            eSSL eTimeTrackLite1 Integration
-        </h5>
-        <div class="heading-elements">
-            <span class="text-muted">Direct SQL Server read from eTimeTrackLite1.dbo.DeviceLogs - no eSSL Web API involved</span>
+@*
+    ==========================================================================
+    ATTENDANCE SYNCHRONIZATION - combined redesign of the eSSL Sync page.
+    ==========================================================================
+    This is a RESTYLE/RECOMPOSITION of this same Views/EsslAttendance/Index.cshtml
+    page only - the eSSL sync engine (Application/Services/Attendances/
+    EsslAttendanceSyncService.cs), its job queue and its background service are
+    UNCHANGED, and so is the standalone Historical Attendance Sync engine/SP.
+    This page simply presents both existing features - and everything the old
+    page already did - in one enterprise dashboard layout, wired to the SAME
+    API actions/DTOs both features already had:
+
+      - "Sync Now (Automatic)" card  -> EsslAttendanceController's existing
+        SyncNow / GetStatus / ResetStuckSync actions (unchanged).
+      - "Historical Sync (Manual)" card -> HistoricalAttendanceSyncController's
+        existing Preview / Start / GetStatus / History actions (unchanged).
+      - "Processing Log" -> new CombinedLog() action on THIS (APP) controller
+        only, which merely reads the two features' existing history/job
+        endpoints and merges them into readable lines - no new persistence,
+        no engine change (see EsslAttendanceController.cs's remarks).
+
+    LEGACY FUNCTIONALITY (nothing was deleted): the previous page's Database
+    Configuration form (Test Connection / Save / Cancel), Integration Status
+    table, Reset Stuck Sync, Sync Logs tab, Unmapped Employees tab, and the
+    OLD "Historical Import" panel (which re-fetches from the eSSL device for
+    a date range - a DIFFERENT, older feature than the new "Historical Sync"
+    card, which only re-processes rows already imported) all still exist,
+    unchanged in behavior, inside the collapsible "Settings & Advanced Tools"
+    section at the bottom of this page. Only the page's OWN duplicate
+    "Sync Now" trigger button was removed from that legacy panel, because the
+    new top card's "Sync Now" button now drives the exact same SyncNow
+    action/lock - keeping two separate "Sync Now" buttons on one page would
+    just be a confusing duplicate control, not a feature.
+*@
+
+<div class="ent-page">
+
+    <!-- ================= HEADER ================= -->
+    <div class="d-flex flex-wrap justify-content-between align-items-start mb-3 gap-2">
+        <div>
+            <h3 class="mb-0" style="font-weight:700;color:#1b2a4a;">Attendance Synchronization</h3>
+            <p class="text-muted mb-0">Sync eSSL biometric data with HRMS ERP</p>
+        </div>
+        <div id="serviceStatusBadge" class="d-flex align-items-center gap-2 px-3 py-2" style="background:#eaf7ef;border:1px solid #bfe6cc;border-radius:8px;">
+            <span id="serviceStatusDot" style="width:9px;height:9px;border-radius:50%;background:#28a745;display:inline-block;"></span>
+            <div style="line-height:1.25;">
+                <div style="font-weight:600;font-size:13px;color:#1c6b34;" id="serviceStatusText">eSSL Sync Service Running</div>
+                <div style="font-size:11.5px;color:#5c8a6c;">Last Sync: <span id="serviceLastSyncText">@(status.LastSyncCompletedAt?.ToString("dd-MM-yyyy HH:mm") ?? "—")</span></div>
+            </div>
         </div>
     </div>
 
-    <div class="panel-body">
-        <ul class="nav nav-tabs">
-            <li class="active"><a href="#tab-settings" data-toggle="tab">Settings</a></li>
-            <li><a href="#tab-synclogs" data-toggle="tab" id="tab-synclogs-link">Sync Logs</a></li>
-            <li><a href="#tab-unmapped" data-toggle="tab" id="tab-unmapped-link">Unmapped Employees</a></li>
-        </ul>
+    <!-- ================= FLOW DIAGRAM ================= -->
+    <div class="ent-panel mb-3" style="overflow-x:auto;">
+        <div style="display:flex;align-items:stretch;flex-wrap:nowrap;gap:6px;min-width:900px;">
 
-        <div class="tab-content">
+            <div class="flow-box" style="border-top:4px solid #6c757d;">
+                <div class="flow-icon" style="color:#6c757d;"><i class="bi bi-fingerprint"></i></div>
+                <div class="flow-title">eSSL Device</div>
+                <ul class="flow-list">
+                    <li>Capture IN/OUT</li>
+                    <li>Store in Device</li>
+                </ul>
+            </div>
+            <div class="flow-arrow"><i class="bi bi-arrow-right-circle-fill"></i></div>
 
-            <!-- SETTINGS TAB -->
-            <div class="tab-pane active" id="tab-settings">
+            <div class="flow-box" style="border-top:4px solid #2b6fd9;">
+                <div class="flow-icon" style="color:#2b6fd9;"><i class="bi bi-server"></i></div>
+                <div class="flow-title">eTimeTrackLite DB</div>
+                <ul class="flow-list">
+                    <li>DeviceLogs_*_2026</li>
+                    <li>Multiple Device Logs</li>
+                    <li>Raw Punch Data</li>
+                </ul>
+            </div>
+            <div class="flow-arrow"><i class="bi bi-arrow-right-circle-fill"></i></div>
 
-                <!-- CARD 1: INTEGRATION STATUS (read-only) -->
-                <div class="panel panel-bordered" style="margin-top:15px;">
-                    <div class="panel-heading">
-                        <h6 class="panel-title"><i class="icon-pulse position-left"></i> Integration Status</h6>
-                    </div>
-                    <div class="panel-body">
-                        <div class="table-responsive">
-                            <table class="table table-bordered" id="statusTable">
-                                <tbody>
-                                    <tr>
-                                        <th width="220">Integration Enabled</th>
-                                        <td id="statIntegrationEnabled">
-                                            @if (status.Enabled)
-                                            {
-                                                <span class="label label-success">Enabled</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="label label-default">Disabled</span>
-                                            }
-                                        </td>
-                                        <th width="220">Sync Status</th>
-                                        <td id="statSyncStatus">
-                                            @if (status.IsSyncRunning)
-                                            {
-                                                <span class="label label-warning">Sync in progress...</span>
-                                            }
-                                            else if (status.LastSyncStatus == "Success")
-                                            {
-                                                <span class="label label-success">Last sync: Success</span>
-                                            }
-                                            else if (status.LastSyncStatus == "PartialFailure")
-                                            {
-                                                <span class="label label-warning">Last sync: Partial Failure</span>
-                                            }
-                                            else if (status.LastSyncStatus == "Failed")
-                                            {
-                                                <span class="label label-danger">Last sync: Failed</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="label label-default">Never synced</span>
-                                            }
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <th>Last Sync Started</th>
-                                        <td id="statLastStarted">@(status.LastSyncStartedAt?.ToString("dd-MMM-yyyy hh:mm:ss tt") ?? "—")</td>
-                                        <th>Last Sync Completed</th>
-                                        <td id="statLastCompleted">@(status.LastSyncCompletedAt?.ToString("dd-MMM-yyyy hh:mm:ss tt") ?? "—")</td>
-                                    </tr>
-                                    <tr>
-                                        <th>Last Processed Punch</th>
-                                        <td colspan="3" id="statLastProcessed">
-                                            @if (status.LastProcessedDeviceLogId.HasValue)
-                                            {
-                                                @:DeviceLogId @status.LastProcessedDeviceLogId, @status.LastProcessedLogDate?.ToString("dd-MMM-yyyy hh:mm:ss tt")
-                                            }
-                                            else
-                                            {
-                                                @:—
-                                            }
-                                        </td>
-                                    </tr>
-                                    <tr id="statLastErrorRow" style="@(string.IsNullOrEmpty(status.LastError) ? "display:none;" : "")">
-                                        <th>Last Error</th>
-                                        <td colspan="3" class="text-danger" id="statLastError">@status.LastError</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+            <div class="flow-box" style="border-top:4px solid #28a745;">
+                <div class="flow-icon" style="color:#28a745;"><i class="bi bi-gear-fill"></i></div>
+                <div class="flow-title">Sync Now (Automatic)</div>
+                <ul class="flow-list">
+                    <li>Fetch new records</li>
+                    <li>Insert to BiometricAttendanceLogs</li>
+                    <li>Process to AttendanceLogs</li>
+                    <li>Update Attendances</li>
+                </ul>
+            </div>
+            <div class="flow-arrow"><i class="bi bi-arrow-right-circle-fill"></i></div>
+
+            <div class="flow-box" style="border-top:4px solid #d9534f;">
+                <div class="flow-icon" style="color:#d9534f;"><i class="bi bi-calendar-range-fill"></i></div>
+                <div class="flow-title">Historical Sync (Manual from UI)</div>
+                <ul class="flow-list">
+                    <li>Select date range</li>
+                    <li>Process existing records</li>
+                    <li>Use same business rules</li>
+                    <li>No impact on current sync</li>
+                </ul>
+            </div>
+            <div class="flow-arrow"><i class="bi bi-arrow-right-circle-fill"></i></div>
+
+            <div class="flow-box" style="border-top:4px solid #6f42c1;">
+                <div class="flow-icon" style="color:#6f42c1;"><i class="bi bi-building-fill-gear"></i></div>
+                <div class="flow-title">HRMS ERP</div>
+                <ul class="flow-list">
+                    <li>BiometricAttendanceLogs</li>
+                    <li>AttendanceLogs</li>
+                    <li>Attendances</li>
+                    <li>Employee, Shift, Leave etc.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= SYNC NOW + HISTORICAL SYNC CARDS ================= -->
+    <div class="row">
+        <!-- ---- Sync Now (Automatic) ---- -->
+        <div class="col-lg-6 mb-3">
+            <div class="ent-panel h-100">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="ent-icon-badge" style="background:#eaf7ef;color:#28a745;"><i class="bi bi-arrow-repeat"></i></span>
+                        <div>
+                            <div style="font-weight:700;">Sync Now (Automatic)</div>
+                            <div class="text-muted" style="font-size:12.5px;">Fetch new eSSL device logs and sync to HRMS ERP</div>
                         </div>
+                    </div>
+                    <span class="badge" id="autoRunModeBadge" style="background:#eaf7ef;color:#1c6b34;font-weight:600;">
+                        <i class="bi bi-check-circle-fill"></i> Running as Scheduled
+                    </span>
+                </div>
+
+                <div id="autoSyncingLine" class="mb-2" style="display:none;">
+                    <span class="text-primary" style="font-weight:600;">Syncing...</span>
+                    <span class="text-muted" id="autoCurrentStep">Fetching device logs and processing attendance...</span>
+                </div>
+
+                <div class="progress mb-2" style="height:8px;">
+                    <div id="autoProgressBar" class="progress-bar bg-success" role="progressbar" style="width:0%;"></div>
+                </div>
+                <div class="text-end text-muted mb-3" style="font-size:11.5px;" id="autoProgressPct">Idle</div>
+
+                <div class="row text-center g-2 mb-3">
+                    <div class="col">
+                        <div class="ent-counter"><i class="bi bi-download text-primary"></i><div class="ent-counter-val" id="autoFetched">0</div><div class="ent-counter-lbl">Fetched</div></div>
+                    </div>
+                    <div class="col">
+                        <div class="ent-counter"><i class="bi bi-database-check text-info"></i><div class="ent-counter-val" id="autoImported">0</div><div class="ent-counter-lbl">Imported</div></div>
+                    </div>
+                    <div class="col">
+                        <div class="ent-counter"><i class="bi bi-check-circle text-success"></i><div class="ent-counter-val" id="autoProcessed">0</div><div class="ent-counter-lbl">Processed</div></div>
+                    </div>
+                    <div class="col">
+                        <div class="ent-counter"><i class="bi bi-exclamation-triangle text-warning"></i><div class="ent-counter-val" id="autoUnmapped">0</div><div class="ent-counter-lbl">Unmapped</div></div>
+                    </div>
+                    <div class="col">
+                        <div class="ent-counter"><i class="bi bi-x-circle text-danger"></i><div class="ent-counter-val" id="autoFailed">0</div><div class="ent-counter-lbl">Failed</div></div>
                     </div>
                 </div>
 
-                <!-- CARD 2: DATABASE CONFIGURATION (editable) -->
-                <div class="panel panel-bordered">
-                    <div class="panel-heading">
-                        <h6 class="panel-title"><i class="icon-database position-left"></i> Database Configuration</h6>
+                <div class="row small text-muted mb-3">
+                    <div class="col-4"><strong>Start Time</strong><div id="autoStartTime">—</div></div>
+                    <div class="col-4"><strong>Elapsed Time</strong><div id="autoElapsedTime">—</div></div>
+                    <div class="col-4"><strong>Current Step</strong><div id="autoCurrentStepMini">Idle</div></div>
+                </div>
+
+                <div id="autoResetStuckContainer" style="display:none;" class="mb-2">
+                    <p class="text-warning small mb-1"><i class="bi bi-exclamation-triangle-fill"></i> This sync has been running unusually long and may be stuck.</p>
+                    <button type="button" class="btn btn-sm btn-outline-danger" id="autoResetStuckBtn"><i class="bi bi-x-circle"></i> Force Reset Stuck Sync</button>
+                </div>
+
+                <button type="button" class="btn btn-success" id="autoSyncNowBtn" style="min-width:140px;">
+                    <i class="bi bi-arrow-repeat"></i> Sync Now
+                </button>
+            </div>
+        </div>
+
+        <!-- ---- Historical Sync (Manual) ---- -->
+        <div class="col-lg-6 mb-3">
+            <div class="ent-panel h-100">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <span class="ent-icon-badge" style="background:#eaf2fd;color:#2b6fd9;"><i class="bi bi-calendar3"></i></span>
+                    <div>
+                        <div style="font-weight:700;">Historical Sync (Manual)</div>
+                        <div class="text-muted" style="font-size:12.5px;">Process existing biometric records from selected date range</div>
                     </div>
-                    <div class="panel-body">
+                </div>
 
-                        <div id="configValidationSummary" class="alert alert-danger alert-dismissible" style="display:none;">
-                            <button type="button" class="close" data-dismiss="alert">&times;</button>
-                            <span id="configValidationMessage"></span>
+                <div class="row g-2 mb-2">
+                    <div class="col-md-4">
+                        <label class="form-label small mb-1">From Date <span class="text-danger">*</span></label>
+                        <input type="date" id="histFromDate" class="form-control form-control-sm" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small mb-1">To Date <span class="text-danger">*</span></label>
+                        <input type="date" id="histToDate" class="form-control form-control-sm" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small mb-1">Employee (Optional)</label>
+                        <select id="histEmployeeId" class="form-control form-control-sm" asp-items="ViewBag.EmployeeList">
+                            <option value="">All Employees</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="histMode" id="histModeUnprocessed" value="unprocessed" checked>
+                        <label class="form-check-label small" for="histModeUnprocessed">
+                            Reprocess Unprocessed Only
+                            <i class="bi bi-question-circle text-muted" title="Only biometric logs in range that have not yet produced an AttendanceLog are processed."></i>
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="histMode" id="histModeSafe" value="safe">
+                        <label class="form-check-label small" for="histModeSafe">
+                            Include Already Processed (Safe Mode)
+                            <i class="bi bi-question-circle text-muted" title="Re-scans already-processed logs too. Existing links are never duplicated - safe to re-run."></i>
+                        </label>
+                    </div>
+                    <div class="text-muted" style="font-size:10.5px;">
+                        Note: the Historical Sync engine (unchanged) always skips already-linked/duplicate records on every run regardless of
+                        this choice - both options are therefore equally safe to re-run; this selector only changes which counts the Preview
+                        highlights above ("Will Process"). A distinct server-side "safe mode" would require changing the Historical Sync
+                        engine itself, which is out of scope for this UI-only change.
+                    </div>
+                </div>
+
+                <div id="histPreviewBox" class="mb-2" style="display:none;background:#f7f9fc;border-radius:6px;padding:10px;">
+                    <div class="row text-center g-2" id="histPreviewSummary"></div>
+                    <div id="histPreviewWarning" class="alert alert-warning py-1 px-2 mt-2 mb-0 small" style="display:none;"></div>
+                </div>
+
+                <div id="histStatusBox" class="mb-2" style="display:none;">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="badge" id="histStatusBadge">Queued</span>
+                        <span class="small text-muted" id="histElapsedTime"></span>
+                    </div>
+                    <div class="progress mb-2" style="height:8px;">
+                        <div id="histProgressBar" class="progress-bar bg-primary" role="progressbar" style="width:0%;"></div>
+                    </div>
+                    <div id="histStatusError" class="alert alert-danger py-1 px-2 small" style="display:none;white-space:pre-wrap;"></div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                    <button type="button" class="btn btn-success" id="histStartBtn"><i class="bi bi-play-fill"></i> Start Historical Sync</button>
+                    <button type="button" class="btn btn-outline-secondary" id="histPreviewBtn"><i class="bi bi-search"></i> Preview Records</button>
+                    <button type="button" class="btn btn-outline-secondary" id="histResetBtn"><i class="bi bi-arrow-counterclockwise"></i> Reset</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= SUMMARY + LOG ROW ================= -->
+    <div class="row">
+        <div class="col-lg-4 mb-3">
+            <div class="ent-panel h-100">
+                <div style="font-weight:700;" class="mb-2">Last Sync Summary (Auto)</div>
+                <table class="table table-sm mb-0" id="autoSummaryTable">
+                    <tbody>
+                        <tr><th class="text-muted" style="font-weight:500;">Sync Time</th><td class="text-end" id="sumSyncTime">@(lastSync?.StartTime.ToString("dd-MM-yyyy HH:mm") ?? "—")</td></tr>
+                        <tr><th class="text-muted" style="font-weight:500;">Fetched</th><td class="text-end" id="sumFetched">@(lastSync?.RecordsFetched.ToString() ?? "—")</td></tr>
+                        <tr><th class="text-muted" style="font-weight:500;">Imported</th><td class="text-end" id="sumImported">@(lastSync?.RecordsInserted.ToString() ?? "—")</td></tr>
+                        <tr><th class="text-muted" style="font-weight:500;">Processed</th><td class="text-end" id="sumProcessed">@(lastSync?.RecordsInserted.ToString() ?? "—")</td></tr>
+                        <tr><th class="text-muted" style="font-weight:500;">Unmapped</th><td class="text-end" id="sumUnmapped">—</td></tr>
+                        <tr><th class="text-muted" style="font-weight:500;">Failed</th><td class="text-end" id="sumFailed">@(lastSync?.RecordsFailed.ToString() ?? "—")</td></tr>
+                        <tr><th class="text-muted" style="font-weight:500;">Duration</th><td class="text-end" id="sumDuration">@(lastSync != null && lastSync.EndTime.HasValue ? (lastSync.EndTime.Value - lastSync.StartTime).ToString(@"hh\:mm\:ss") : "—")</td></tr>
+                        <tr>
+                            <th class="text-muted" style="font-weight:500;">Status</th>
+                            <td class="text-end" id="sumStatus">
+                                @if (lastSync == null)
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                                else if (lastSync.Status == "Success")
+                                {
+                                    <span class="badge bg-success">Completed</span>
+                                }
+                                else if (lastSync.Status == "PartialFailure")
+                                {
+                                    <span class="badge bg-warning text-dark">Partial</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">Failed</span>
+                                }
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="text-muted small mt-2" style="font-size:10.5px;">
+                    "Unmapped" reflects the most recent Sync Now run triggered from this page (the eSSL sync engine tracks Fetched/Imported/Skipped/Failed per run; Unmapped is only reported transiently in that run's own result).
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 mb-3">
+            <div class="ent-panel h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div style="font-weight:700;">Historical Sync Summary (Manual)</div>
+                    <a href="#" id="histViewDetailsLink" data-toggle="modal" data-target="#historyModal" data-bs-toggle="modal" data-bs-target="#historyModal" class="small">View Details</a>
+                </div>
+                <table class="table table-sm mb-0" id="histSummaryTable">
+                    <tbody>
+                        <tr><th class="text-muted" style="font-weight:500;">Date Range</th><td class="text-end" id="hSumRange">@(lastJob != null ? $"{lastJob.FromDate:dd-MM-yyyy} to {lastJob.ToDate:dd-MM-yyyy}" : "—")</td></tr>
+                        <tr><th class="text-muted" style="font-weight:500;">Total Records Found</th><td class="text-end" id="hSumTotal">@(lastJob?.TotalRecords.ToString() ?? "—")</td></tr>
+                        <tr><th class="text-muted" style="font-weight:500;">Processed</th><td class="text-end" id="hSumProcessed">@(lastJob?.ProcessedCount.ToString() ?? "—")</td></tr>
+                        <tr><th class="text-muted" style="font-weight:500;">AttendanceLogs Inserted</th><td class="text-end" id="hSumLogsInserted">@(lastJob?.AttendanceLogsCreated.ToString() ?? "—")</td></tr>
+                        <tr><th class="text-muted" style="font-weight:500;">Attendances Created</th><td class="text-end" id="hSumAttCreated">@(lastJob?.AttendancesCreated.ToString() ?? "—")</td></tr>
+                        <tr><th class="text-muted" style="font-weight:500;">Attendances Updated</th><td class="text-end" id="hSumAttUpdated">@(lastJob?.AttendancesUpdated.ToString() ?? "—")</td></tr>
+                        <tr><th class="text-muted" style="font-weight:500;">Unmapped</th><td class="text-end" id="hSumUnmapped">@(lastJob?.UnmappedCount.ToString() ?? "—")</td></tr>
+                        <tr><th class="text-muted" style="font-weight:500;">Failed</th><td class="text-end" id="hSumFailed">@(lastJob?.FailedCount.ToString() ?? "—")</td></tr>
+                        <tr><th class="text-muted" style="font-weight:500;">Duration</th><td class="text-end" id="hSumDuration">@(lastJob?.DurationSeconds != null ? TimeSpan.FromSeconds(lastJob.DurationSeconds.Value).ToString(@"hh\:mm\:ss") : "—")</td></tr>
+                        <tr>
+                            <th class="text-muted" style="font-weight:500;">Status</th>
+                            <td class="text-end" id="hSumStatus">
+                                @if (lastJob == null)
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                                else if (lastJob.Status == "Completed")
+                                {
+                                    <span class="badge bg-success">Completed</span>
+                                }
+                                else if (lastJob.Status == "PartiallyCompleted")
+                                {
+                                    <span class="badge bg-warning text-dark">Partial</span>
+                                }
+                                else if (lastJob.Status == "Failed")
+                                {
+                                    <span class="badge bg-danger">Failed</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-info text-dark">@lastJob.Status</span>
+                                }
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="col-lg-4 mb-3">
+            <div class="ent-panel h-100 d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div style="font-weight:700;">Processing Log (Last 50 Lines)</div>
+                    <button type="button" class="btn btn-light btn-sm" id="refreshLogBtn"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+                </div>
+                <div style="max-height:340px;overflow-y:auto;flex:1;">
+                    <table class="table table-sm table-striped mb-0" style="font-size:11.5px;">
+                        <thead style="position:sticky;top:0;background:#fff;">
+                            <tr><th style="width:24px;">#</th><th style="width:70px;">Time</th><th>Message</th></tr>
+                        </thead>
+                        <tbody id="processingLogBody">
+                            <tr><td colspan="3" class="text-center text-muted">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= SUCCESS BANNER ================= -->
+    <div id="successBanner" class="ent-panel d-flex flex-wrap justify-content-between align-items-center mb-3" style="background:#eaf7ef;border:1px solid #bfe6cc;display:none;">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-check-circle-fill text-success" style="font-size:20px;"></i>
+            <div>
+                <div style="font-weight:700;color:#1c6b34;" id="successBannerTitle">Attendance sync completed successfully!</div>
+                <div class="text-muted small">eSSL biometric data is now available in HRMS ERP.</div>
+            </div>
+        </div>
+        <a asp-controller="Attendance" asp-action="Index" class="btn btn-success">View Attendance <i class="bi bi-chevron-right"></i></a>
+    </div>
+
+    <!-- ================= SETTINGS & ADVANCED / LEGACY TOOLS ================= -->
+    @*
+        Everything the previous eSSL Sync page could do and is NOT shown above
+        (Database Configuration edit form, Integration Status detail table,
+        Test Connection, Save Settings, the OLD date-range "Historical Import"
+        that re-fetches from the eSSL device itself, Retry Failed Sync, Reset
+        Stuck Sync, Sync Logs, Unmapped Employees) lives here, collapsed by
+        default so the new dashboard above stays the primary view - nothing
+        was removed, only relocated and re-labelled to avoid confusion with
+        the new "Historical Sync (Manual)" card above (which reprocesses
+        records already imported, and never talks to the eSSL device).
+    *@
+    <div class="ent-panel mb-3">
+        <a href="#legacyToolsBody" data-toggle="collapse" data-bs-toggle="collapse" class="d-flex justify-content-between align-items-center text-decoration-none" style="color:#1b2a4a;">
+            <span style="font-weight:700;"><i class="bi bi-tools"></i> Settings &amp; Advanced Tools</span>
+            <span class="text-muted small">Database configuration, legacy device re-fetch, sync logs, unmapped employees <i class="bi bi-chevron-down"></i></span>
+        </a>
+
+        <div class="collapse" id="legacyToolsBody">
+            <hr />
+
+            <ul class="nav nav-tabs" style="margin-top:6px;">
+                <li class="active"><a href="#tab-settings" data-toggle="tab">Settings</a></li>
+                <li><a href="#tab-synclogs" data-toggle="tab" id="tab-synclogs-link">Sync Logs</a></li>
+                <li><a href="#tab-unmapped" data-toggle="tab" id="tab-unmapped-link">Unmapped Employees</a></li>
+            </ul>
+
+            <div class="tab-content">
+
+                <!-- SETTINGS TAB -->
+                <div class="tab-pane active" id="tab-settings">
+
+                    <!-- CARD 1: INTEGRATION STATUS (read-only) -->
+                    <div class="panel panel-bordered" style="margin-top:15px;">
+                        <div class="panel-heading">
+                            <h6 class="panel-title"><i class="icon-pulse position-left"></i> Integration Status</h6>
                         </div>
+                        <div class="panel-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered" id="statusTable">
+                                    <tbody>
+                                        <tr>
+                                            <th width="220">Integration Enabled</th>
+                                            <td id="statIntegrationEnabled">
+                                                @if (status.Enabled)
+                                                {
+                                                    <span class="label label-success">Enabled</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="label label-default">Disabled</span>
+                                                }
+                                            </td>
+                                            <th width="220">Sync Status</th>
+                                            <td id="statSyncStatus">
+                                                @if (status.IsSyncRunning)
+                                                {
+                                                    <span class="label label-warning">Sync in progress...</span>
+                                                }
+                                                else if (status.LastSyncStatus == "Success")
+                                                {
+                                                    <span class="label label-success">Last sync: Success</span>
+                                                }
+                                                else if (status.LastSyncStatus == "PartialFailure")
+                                                {
+                                                    <span class="label label-warning">Last sync: Partial Failure</span>
+                                                }
+                                                else if (status.LastSyncStatus == "Failed")
+                                                {
+                                                    <span class="label label-danger">Last sync: Failed</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="label label-default">Never synced</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th>Last Sync Started</th>
+                                            <td id="statLastStarted">@(status.LastSyncStartedAt?.ToString("dd-MMM-yyyy hh:mm:ss tt") ?? "—")</td>
+                                            <th>Last Sync Completed</th>
+                                            <td id="statLastCompleted">@(status.LastSyncCompletedAt?.ToString("dd-MMM-yyyy hh:mm:ss tt") ?? "—")</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Last Processed Punch</th>
+                                            <td colspan="3" id="statLastProcessed">
+                                                @if (status.LastProcessedDeviceLogId.HasValue)
+                                                {
+                                                    @:DeviceLogId @status.LastProcessedDeviceLogId, @status.LastProcessedLogDate?.ToString("dd-MMM-yyyy hh:mm:ss tt")
+                                                }
+                                                else
+                                                {
+                                                    @:—
+                                                }
+                                            </td>
+                                        </tr>
+                                        <tr id="statLastErrorRow" style="@(string.IsNullOrEmpty(status.LastError) ? "display:none;" : "")">
+                                            <th>Last Error</th>
+                                            <td colspan="3" class="text-danger" id="statLastError">@status.LastError</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
 
-                        <form id="esslConfigForm" novalidate>
+                    <!-- CARD 2: DATABASE CONFIGURATION (editable) -->
+                    <div class="panel panel-bordered">
+                        <div class="panel-heading">
+                            <h6 class="panel-title"><i class="icon-database position-left"></i> Database Configuration</h6>
+                        </div>
+                        <div class="panel-body">
 
-                            <div class="row">
-                                <div class="col-sm-6">
-                                    <div class="checkbox">
-                                        <label for="IntegrationEnabled">
-                                            <input type="checkbox" id="IntegrationEnabled" name="IntegrationEnabled"
-                                                   @(config.IntegrationEnabled ? "checked" : "") />
-                                            Integration Enabled
-                                        </label>
-                                    </div>
-                                </div>
+                            <div id="configValidationSummary" class="alert alert-danger alert-dismissible" style="display:none;">
+                                <button type="button" class="close" data-dismiss="alert">&times;</button>
+                                <span id="configValidationMessage"></span>
                             </div>
 
-                            <div class="row">
-                                <div class="col-sm-6">
-                                    <div class="form-group">
-                                        <label for="DatabaseServer">Database Server <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="DatabaseServer" name="DatabaseServer"
-                                               placeholder="e.g. DESKTOP-AAQM99\SQLEXPRESS01"
-                                               value="@config.DatabaseServer" required aria-required="true" />
-                                        <span class="help-block field-error" data-field="DatabaseServer"></span>
-                                    </div>
-                                </div>
-                                <div class="col-sm-6">
-                                    <div class="form-group">
-                                        <label for="DatabaseName">Database Name <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="DatabaseName" name="DatabaseName"
-                                               placeholder="etimetracklite1"
-                                               value="@config.DatabaseName" required aria-required="true" />
-                                        <span class="help-block field-error" data-field="DatabaseName"></span>
-                                    </div>
-                                </div>
-                            </div>
+                            <form id="esslConfigForm" novalidate>
 
-                            <div class="row">
-                                <div class="col-sm-6">
-                                    <div class="form-group">
-                                        <label for="AuthenticationType">Authentication Type <span class="text-danger">*</span></label>
-                                        <select class="form-control" id="AuthenticationType" name="AuthenticationType">
-                                            <option value="Sql" selected="@(config.AuthenticationType == "Sql")">SQL Server Authentication</option>
-                                            <option value="Windows" selected="@(config.AuthenticationType == "Windows")">Windows Authentication</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-sm-6">
-                                    <div class="form-group">
-                                        <label for="ConnectionTimeout">Connection Timeout (seconds)</label>
-                                        <input type="number" class="form-control" id="ConnectionTimeout" name="ConnectionTimeout"
-                                               min="1" max="300" value="@config.ConnectionTimeout" />
-                                        <span class="help-block field-error" data-field="ConnectionTimeout"></span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="row" id="credentialsRow">
-                                <div class="col-sm-6">
-                                    <div class="form-group">
-                                        <label for="Username">Username <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="Username" name="Username"
-                                               autocomplete="off"
-                                               value="@config.Username" />
-                                        <span class="help-block field-error" data-field="Username"></span>
-                                    </div>
-                                </div>
-                                <div class="col-sm-6">
-                                    <div class="form-group">
-                                        <label for="Password">
-                                            Password
-                                            @if (config.HasPasswordConfigured)
-                                            {
-                                                <span class="text-muted">(a password is already saved - leave blank to keep it)</span>
-                                            }
-                                        </label>
-                                        <div class="input-group">
-                                            <input type="password" class="form-control" id="Password" name="Password"
-                                                   autocomplete="new-password"
-                                                   placeholder="@(config.HasPasswordConfigured ? "•••••••• (leave blank to keep)" : "Enter password if changing")" />
-                                            <span class="input-group-btn">
-                                                <button class="btn btn-default" type="button" id="togglePasswordBtn"
-                                                        aria-pressed="false" aria-label="Show password" title="Show password">
-                                                    <i class="icon-eye8" id="togglePasswordIcon"></i>
-                                                </button>
-                                            </span>
+                                <div class="row">
+                                    <div class="col-sm-6">
+                                        <div class="checkbox">
+                                            <label for="IntegrationEnabled">
+                                                <input type="checkbox" id="IntegrationEnabled" name="IntegrationEnabled"
+                                                       @(config.IntegrationEnabled ? "checked" : "") />
+                                                Integration Enabled
+                                            </label>
                                         </div>
-                                        <span class="help-block field-error" data-field="Password"></span>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div class="row">
-                                <div class="col-sm-6">
-                                    <div class="form-group">
-                                        <label for="SyncIntervalMinutes">Sync Interval (minutes)</label>
-                                        <input type="number" class="form-control" id="SyncIntervalMinutes" name="SyncIntervalMinutes"
-                                               min="1" max="1440" value="@config.SyncIntervalMinutes" />
-                                        <span class="help-block field-error" data-field="SyncIntervalMinutes"></span>
+                                <div class="row">
+                                    <div class="col-sm-6">
+                                        <div class="form-group">
+                                            <label for="DatabaseServer">Database Server <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="DatabaseServer" name="DatabaseServer"
+                                                   placeholder="e.g. DESKTOP-AAQM99\SQLEXPRESS01"
+                                                   value="@config.DatabaseServer" required aria-required="true" />
+                                            <span class="help-block field-error" data-field="DatabaseServer"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <div class="form-group">
+                                            <label for="DatabaseName">Database Name <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="DatabaseName" name="DatabaseName"
+                                                   placeholder="etimetracklite1"
+                                                   value="@config.DatabaseName" required aria-required="true" />
+                                            <span class="help-block field-error" data-field="DatabaseName"></span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="col-sm-6">
-                                    <div class="form-group">
-                                        <label for="BatchSize">Batch Size (records)</label>
-                                        <input type="number" class="form-control" id="BatchSize" name="BatchSize"
-                                               min="1" max="5000" value="@config.BatchSize" />
-                                        <span class="help-block field-error" data-field="BatchSize"></span>
+
+                                <div class="row">
+                                    <div class="col-sm-6">
+                                        <div class="form-group">
+                                            <label for="AuthenticationType">Authentication Type <span class="text-danger">*</span></label>
+                                            <select class="form-control" id="AuthenticationType" name="AuthenticationType">
+                                                <option value="Sql" selected="@(config.AuthenticationType == "Sql")">SQL Server Authentication</option>
+                                                <option value="Windows" selected="@(config.AuthenticationType == "Windows")">Windows Authentication</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <div class="form-group">
+                                            <label for="ConnectionTimeout">Connection Timeout (seconds)</label>
+                                            <input type="number" class="form-control" id="ConnectionTimeout" name="ConnectionTimeout"
+                                                   min="1" max="300" value="@config.ConnectionTimeout" />
+                                            <span class="help-block field-error" data-field="ConnectionTimeout"></span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div class="row">
-                                <div class="col-sm-6">
-                                    <button type="button" class="btn btn-default" id="testConnectionBtn">
-                                        <i class="icon-plug2 position-left"></i> Test Connection
-                                    </button>
+                                <div class="row" id="credentialsRow">
+                                    <div class="col-sm-6">
+                                        <div class="form-group">
+                                            <label for="Username">Username <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="Username" name="Username"
+                                                   autocomplete="off"
+                                                   value="@config.Username" />
+                                            <span class="help-block field-error" data-field="Username"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <div class="form-group">
+                                            <label for="Password">
+                                                Password
+                                                @if (config.HasPasswordConfigured)
+                                                {
+                                                    <span class="text-muted">(a password is already saved - leave blank to keep it)</span>
+                                                }
+                                            </label>
+                                            <div class="input-group">
+                                                <input type="password" class="form-control" id="Password" name="Password"
+                                                       autocomplete="new-password"
+                                                       placeholder="@(config.HasPasswordConfigured ? "•••••••• (leave blank to keep)" : "Enter password if changing")" />
+                                                <span class="input-group-btn">
+                                                    <button class="btn btn-default" type="button" id="togglePasswordBtn"
+                                                            aria-pressed="false" aria-label="Show password" title="Show password">
+                                                        <i class="icon-eye8" id="togglePasswordIcon"></i>
+                                                    </button>
+                                                </span>
+                                            </div>
+                                            <span class="help-block field-error" data-field="Password"></span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="col-sm-6 text-right">
-                                    <button type="button" class="btn btn-link" id="cancelConfigBtn">
-                                        Cancel
-                                    </button>
-                                    <button type="button" class="btn bg-primary" id="saveConfigBtn">
-                                        <i class="icon-checkmark3 position-left"></i> Save Settings
-                                    </button>
-                                </div>
-                            </div>
 
-                        </form>
+                                <div class="row">
+                                    <div class="col-sm-6">
+                                        <div class="form-group">
+                                            <label for="SyncIntervalMinutes">Sync Interval (minutes)</label>
+                                            <input type="number" class="form-control" id="SyncIntervalMinutes" name="SyncIntervalMinutes"
+                                                   min="1" max="1440" value="@config.SyncIntervalMinutes" />
+                                            <span class="help-block field-error" data-field="SyncIntervalMinutes"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <div class="form-group">
+                                            <label for="BatchSize">Batch Size (records)</label>
+                                            <input type="number" class="form-control" id="BatchSize" name="BatchSize"
+                                                   min="1" max="5000" value="@config.BatchSize" />
+                                            <span class="help-block field-error" data-field="BatchSize"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-sm-6">
+                                        <button type="button" class="btn btn-default" id="testConnectionBtn">
+                                            <i class="icon-plug2 position-left"></i> Test Connection
+                                        </button>
+                                    </div>
+                                    <div class="col-sm-6 text-right">
+                                        <button type="button" class="btn btn-link" id="cancelConfigBtn">
+                                            Cancel
+                                        </button>
+                                        <button type="button" class="btn bg-primary" id="saveConfigBtn">
+                                            <i class="icon-checkmark3 position-left"></i> Save Settings
+                                        </button>
+                                    </div>
+                                </div>
+
+                            </form>
+                        </div>
                     </div>
-                </div>
 
-                <div class="mb-3">
-                    <button type="button" class="btn bg-primary" id="syncNowBtn">
-                        <i class="icon-sync position-left"></i> Sync Now
-                    </button>
-                    <button type="button" class="btn btn-default" id="retryFailedBtn" title="Re-runs the sync over the date range below (or the last 90 days if none is set). Safe to re-run - already-imported punches are skipped automatically, only what's still missing gets retried.">
-                        <i class="icon-repeat position-left"></i> Retry Failed Sync
-                    </button>
-                </div>
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-default" id="retryFailedBtn" title="Re-runs the sync over the date range below (or the last 90 days if none is set). Safe to re-run - already-imported punches are skipped automatically, only what's still missing gets retried.">
+                            <i class="icon-repeat position-left"></i> Retry Failed Sync
+                        </button>
+                    </div>
 
-                <div class="panel panel-bordered">
-                    <div class="panel-heading"><h6 class="panel-title">Historical Import</h6></div>
-                    <div class="panel-body">
-                        <p class="text-muted">Import punches for a specific date range (e.g. backfill before this integration was enabled). Uses the same sync engine and duplicate prevention as the automatic sync - safe to re-run.</p>
-                        <div class="row">
-                            <div class="col-md-3">
-                                <label for="historyFromDate">From Date</label>
-                                <input type="date" id="historyFromDate" class="form-control" />
-                            </div>
-                            <div class="col-md-3">
-                                <label for="historyToDate">To Date</label>
-                                <input type="date" id="historyToDate" class="form-control" />
-                            </div>
-                            <div class="col-md-3" style="margin-top:25px;">
-                                <button type="button" class="btn btn-primary" id="historicalSyncBtn">
-                                    <i class="icon-history position-left"></i> Import Historical Data
-                                </button>
+                    <div class="panel panel-bordered">
+                        <div class="panel-heading"><h6 class="panel-title">Historical Import <span class="text-muted" style="font-weight:normal;">(legacy - re-fetches from the eSSL device, different from the "Historical Sync (Manual)" card above)</span></h6></div>
+                        <div class="panel-body">
+                            <p class="text-muted">Import punches for a specific date range (e.g. backfill before this integration was enabled). Uses the same sync engine and duplicate prevention as the automatic sync - safe to re-run.</p>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <label for="historyFromDate">From Date</label>
+                                    <input type="date" id="historyFromDate" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="historyToDate">To Date</label>
+                                    <input type="date" id="historyToDate" class="form-control" />
+                                </div>
+                                <div class="col-md-3" style="margin-top:25px;">
+                                    <button type="button" class="btn btn-primary" id="historicalSyncBtn">
+                                        <i class="icon-history position-left"></i> Import Historical Data
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div id="syncProgressBox" style="display:none;" class="panel panel-bordered panel-info">
-                    <div class="panel-heading">
-                        <h6 class="panel-title"><i class="icon-spinner2 spinner position-left"></i> Sync In Progress...</h6>
-                    </div>
-                    <div class="panel-body">
-                        <p class="text-muted" style="margin-bottom:10px;">
-                            Running in the background - this page updates every couple of seconds. You can switch tabs or navigate away; the sync keeps running either way.
-                        </p>
-                        <table class="table table-condensed table-bordered">
-                            <tbody>
-                                <tr><th width="220">Total Found (so far)</th><td id="progRead">0</td></tr>
-                                <tr><th>Successfully Synced</th><td id="progImported">0</td></tr>
-                                <tr><th>Skipped / Duplicate</th><td id="progSkipped">0</td></tr>
-                                <tr><th>Failed</th><td id="progFailed">0</td></tr>
-                            </tbody>
-                        </table>
-                        <div id="resetStuckContainer" style="display:none; margin-top:10px;">
-                            <p class="text-warning" style="margin-bottom:6px;">
-                                <i class="icon-warning position-left"></i>
-                                This sync has been running for an unusually long time and may be stuck.
-                            </p>
-                            <button type="button" class="btn btn-sm btn-danger" id="resetStuckBtn">
-                                <i class="icon-cross2 position-left"></i> Force Reset Stuck Sync
-                            </button>
-                        </div>
+                    <div id="syncResultBox" style="display:none;" class="panel panel-bordered">
+                        <div class="panel-heading"><h6 class="panel-title">Last Sync Result</h6></div>
+                        <div class="panel-body" id="syncResultBody"></div>
                     </div>
                 </div>
 
-                <div id="syncResultBox" style="display:none;" class="panel panel-bordered">
-                    <div class="panel-heading"><h6 class="panel-title">Last Sync Result</h6></div>
-                    <div class="panel-body" id="syncResultBody"></div>
+                <!-- SYNC LOGS TAB -->
+                <div class="tab-pane" id="tab-synclogs">
+                    <div id="syncLogsContainer" style="margin-top:15px;">
+                        <div class="text-center text-muted">Loading...</div>
+                    </div>
                 </div>
-            </div>
 
-            <!-- SYNC LOGS TAB -->
-            <div class="tab-pane" id="tab-synclogs">
-                <div id="syncLogsContainer" style="margin-top:15px;">
-                    <div class="text-center text-muted">Loading...</div>
+                <!-- UNMAPPED EMPLOYEES TAB -->
+                <div class="tab-pane" id="tab-unmapped">
+                    <div id="unmappedContainer" style="margin-top:15px;">
+                        <div class="text-center text-muted">Loading...</div>
+                    </div>
                 </div>
-            </div>
 
-            <!-- UNMAPPED EMPLOYEES TAB -->
-            <div class="tab-pane" id="tab-unmapped">
-                <div id="unmappedContainer" style="margin-top:15px;">
-                    <div class="text-center text-muted">Loading...</div>
-                </div>
             </div>
-
         </div>
     </div>
+
+    <!-- Historical Sync job history modal (backs "View Details" link above) -->
+    <div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Historical Sync - Job History</h5>
+                    <button type="button" class="close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body" id="historyModalBody">
+                    <div class="text-center text-muted">Loading...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
+
+<style>
+    /* ===================================================================
+       Bootstrap 4/5 utility-class shim.
+
+       This project actually ships Bootstrap 3.3.7 (see
+       APP/wwwroot/global_assets/js/core/libraries/bootstrap.min.js's
+       header comment - "Bootstrap v3.3.7"), which has NO flexbox utility
+       classes (d-flex, justify-content-*, align-items-*, gap-*) and NO
+       spacing utility classes (mb-*, mt-*, px-*, py-*, etc. - those were
+       all introduced in Bootstrap 4). This page's markup uses those
+       Bootstrap 4/5 class names throughout (copied from modern Bootstrap
+       5 conventions during the redesign), so without this shim every one
+       of those classes is silently a no-op under the real BS3 stylesheet
+       - elements that were supposed to sit in a flex row instead just
+       stack as plain block divs (this is exactly what caused the flow
+       diagram's 5 boxes, and several other rows on this page, to render
+       stacked vertically instead of side by side), and every margin/
+       padding utility is simply ignored.
+
+       Rather than rewrite every element's markup back to Bootstrap-3-only
+       classes/inline styles, this shim defines the small subset of
+       Bootstrap 4/5 utility classes actually used on this page as plain
+       CSS, scoped to plain class selectors so they behave identically to
+       upstream Bootstrap 4/5. Safe to keep even if this project is ever
+       upgraded to a newer Bootstrap - these rules would simply become
+       redundant duplicates of the framework's own, not a conflict.
+       =================================================================== */
+    .d-flex { display: flex !important; }
+    .d-inline-flex { display: inline-flex !important; }
+    .d-block { display: block !important; }
+    .d-inline-block { display: inline-block !important; }
+    .d-none { display: none !important; }
+    .flex-row { flex-direction: row !important; }
+    .flex-column { flex-direction: column !important; }
+    .flex-wrap { flex-wrap: wrap !important; }
+    .flex-nowrap { flex-wrap: nowrap !important; }
+    .justify-content-start { justify-content: flex-start !important; }
+    .justify-content-end { justify-content: flex-end !important; }
+    .justify-content-center { justify-content: center !important; }
+    .justify-content-between { justify-content: space-between !important; }
+    .justify-content-around { justify-content: space-around !important; }
+    .align-items-start { align-items: flex-start !important; }
+    .align-items-end { align-items: flex-end !important; }
+    .align-items-center { align-items: center !important; }
+    .align-items-stretch { align-items: stretch !important; }
+    .gap-1 { gap: .25rem !important; }
+    .gap-2 { gap: .5rem !important; }
+    .gap-3 { gap: 1rem !important; }
+    .gap-4 { gap: 1.5rem !important; }
+    .h-100 { height: 100% !important; }
+    .w-100 { width: 100% !important; }
+    .text-end { text-align: right !important; }
+    .text-start { text-align: left !important; }
+    .text-decoration-none { text-decoration: none !important; }
+    .rounded { border-radius: .25rem !important; }
+    /* Bootstrap 4/5 spacing scale (0=0, 1=.25rem, 2=.5rem, 3=1rem, 4=1.5rem, 5=3rem) */
+    .m-0 { margin: 0 !important; } .m-1 { margin: .25rem !important; } .m-2 { margin: .5rem !important; } .m-3 { margin: 1rem !important; } .m-4 { margin: 1.5rem !important; } .m-5 { margin: 3rem !important; }
+    .mt-0 { margin-top: 0 !important; } .mt-1 { margin-top: .25rem !important; } .mt-2 { margin-top: .5rem !important; } .mt-3 { margin-top: 1rem !important; } .mt-4 { margin-top: 1.5rem !important; } .mt-5 { margin-top: 3rem !important; }
+    .mb-0 { margin-bottom: 0 !important; } .mb-1 { margin-bottom: .25rem !important; } .mb-2 { margin-bottom: .5rem !important; } .mb-3 { margin-bottom: 1rem !important; } .mb-4 { margin-bottom: 1.5rem !important; } .mb-5 { margin-bottom: 3rem !important; }
+    .ms-0 { margin-left: 0 !important; } .ms-1 { margin-left: .25rem !important; } .ms-2 { margin-left: .5rem !important; } .ms-3 { margin-left: 1rem !important; }
+    .me-0 { margin-right: 0 !important; } .me-1 { margin-right: .25rem !important; } .me-2 { margin-right: .5rem !important; } .me-3 { margin-right: 1rem !important; }
+    .mx-auto { margin-left: auto !important; margin-right: auto !important; }
+    .my-2 { margin-top: .5rem !important; margin-bottom: .5rem !important; }
+    .my-3 { margin-top: 1rem !important; margin-bottom: 1rem !important; }
+    .p-0 { padding: 0 !important; } .p-1 { padding: .25rem !important; } .p-2 { padding: .5rem !important; } .p-3 { padding: 1rem !important; } .p-4 { padding: 1.5rem !important; }
+    .pt-2 { padding-top: .5rem !important; } .pt-3 { padding-top: 1rem !important; }
+    .pb-2 { padding-bottom: .5rem !important; } .pb-3 { padding-bottom: 1rem !important; }
+    .px-1 { padding-left: .25rem !important; padding-right: .25rem !important; }
+    .px-2 { padding-left: .5rem !important; padding-right: .5rem !important; }
+    .px-3 { padding-left: 1rem !important; padding-right: 1rem !important; }
+    .py-1 { padding-top: .25rem !important; padding-bottom: .25rem !important; }
+    .py-2 { padding-top: .5rem !important; padding-bottom: .5rem !important; }
+    .py-3 { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+    /* Bootstrap 5 badge/background color utilities (this page's badges use
+       "badge bg-success" etc.; BS3's own .badge has no color variants -
+       its colored equivalent is .label.label-success, used only in the
+       untouched legacy panel below). Colors match Bootstrap's standard
+       success/warning/danger/info palette so they match the legacy
+       .label-* colors already on this page. */
+    .badge { display: inline-block; padding: .35em .65em; font-size: .75em; font-weight: 700; line-height: 1; color: #fff; text-align: center; white-space: nowrap; vertical-align: baseline; border-radius: .375rem; }
+    .badge.bg-success { background-color: #28a745 !important; }
+    .badge.bg-warning { background-color: #ffc107 !important; }
+    .badge.bg-danger { background-color: #d9534f !important; }
+    .badge.bg-info { background-color: #17a2b8 !important; }
+    .badge.text-dark { color: #212529 !important; }
+    /* Bootstrap 5 progress-bar color utilities (BS3 uses
+       .progress-bar-success/.progress-bar-danger instead of bg-*). */
+    .progress-bar.bg-success { background-color: #28a745; }
+    .progress-bar.bg-primary { background-color: #2b6fd9; }
+    .progress-bar.bg-danger { background-color: #d9534f; }
+    .progress-bar.bg-warning { background-color: #ffc107; }
+    /* Bootstrap 4/5 outline button variants (no equivalent in BS3). */
+    .btn-outline-secondary { color: #6c757d; background-color: transparent; border: 1px solid #6c757d; }
+    .btn-outline-secondary:hover { color: #fff; background-color: #6c757d; }
+    .btn-outline-danger { color: #d9534f; background-color: transparent; border: 1px solid #d9534f; }
+    .btn-outline-danger:hover { color: #fff; background-color: #d9534f; }
+    /* ================================================================ */
+
+    .ent-panel { background:#fff; border:1px solid #e7ebf3; border-radius:10px; padding:16px 18px; }
+    .flow-box { flex:1 1 0; min-width:150px; background:#fbfcfe; border:1px solid #e7ebf3; border-radius:8px; padding:12px; }
+    .flow-title { font-weight:700; font-size:13px; margin:6px 0 6px; color:#1b2a4a; }
+    .flow-icon { font-size:24px; }
+    .flow-list { list-style:none; padding-left:0; margin:0; font-size:11px; color:#66738f; }
+    .flow-list li:before { content:"• "; }
+    .flow-arrow { display:flex; align-items:center; color:#b7c1d6; font-size:18px; flex:0 0 auto; }
+    .ent-icon-badge { width:34px; height:34px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; font-size:16px; }
+    .ent-counter { background:#fbfcfe; border:1px solid #eef1f7; border-radius:8px; padding:8px 4px; }
+    .ent-counter-val { font-weight:700; font-size:17px; }
+    .ent-counter-lbl { font-size:10.5px; color:#66738f; }
+    #legacyToolsBody .font-size-sm { font-size:12px; }
+    #legacyToolsBody .field-error { color:#d9534f; }
+    @@media (max-width: 767px) {
+        #esslConfigForm .col-sm-6 { width:100%; }
+    }
+</style>
 
 @section Scripts {
     <script>
         $(function () {
 
             // ==============================================================
-            // ORIGINAL VALUES - for Cancel (requirement #8: "restore the
-            // currently persisted values, must not save partially edited
-            // values"). Captured once at load; refreshed after a successful
-            // Save so a second Cancel doesn't revert past what was just saved.
+            // Backend endpoints reused, unchanged, from both existing
+            // features - this page adds NO new API routes for either sync
+            // engine. Only CombinedLog below is new, and it lives on THIS
+            // (APP) controller as a thin read-only composition.
+            // ==============================================================
+            var AUTO_SYNC_NOW_URL   = '@Url.Action("SyncNow")';
+            var AUTO_GET_STATUS_URL = '@Url.Action("GetStatus")';
+            var AUTO_RESET_STUCK_URL= '@Url.Action("ResetStuckSync")';
+
+            var HIST_PREVIEW_URL = '@Url.Action("Preview", "HistoricalAttendanceSync")';
+            var HIST_START_URL   = '@Url.Action("Start", "HistoricalAttendanceSync")';
+            var HIST_STATUS_URL  = '@Url.Action("GetStatus", "HistoricalAttendanceSync")';
+            var HIST_HISTORY_URL = '@Url.Action("History", "HistoricalAttendanceSync")';
+
+            var COMBINED_LOG_URL = '@Url.Action("CombinedLog")';
+
+            function fmtNum(n) { return (n === null || n === undefined) ? '0' : n.toLocaleString(); }
+
+            function formatStatusDate(isoString) {
+                if (!isoString) return "—";
+                var dt = new Date(isoString);
+                if (isNaN(dt.getTime())) return isoString;
+                var pad = function (n) { return n < 10 ? "0" + n : "" + n; };
+                var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                var hours = dt.getHours();
+                var ampm = hours >= 12 ? "PM" : "AM";
+                var h12 = hours % 12; if (h12 === 0) h12 = 12;
+                return pad(dt.getDate()) + "-" + months[dt.getMonth()] + "-" + dt.getFullYear() + " " +
+                    pad(h12) + ":" + pad(dt.getMinutes()) + ":" + pad(dt.getSeconds()) + " " + ampm;
+            }
+
+            function fmtElapsed(ms) {
+                if (ms < 0) ms = 0;
+                var totalSec = Math.floor(ms / 1000);
+                var h = Math.floor(totalSec / 3600);
+                var m = Math.floor((totalSec % 3600) / 60);
+                var s = totalSec % 60;
+                var pad = function (n) { return n < 10 ? "0" + n : "" + n; };
+                return pad(h) + ":" + pad(m) + ":" + pad(s);
+            }
+
+            function showSuccessBanner(title) {
+                $('#successBannerTitle').text(title || 'Attendance sync completed successfully!');
+                $('#successBanner').slideDown(150);
+            }
+
+            // ==============================================================
+            // SYNC NOW (Automatic) - drives BOTH the new top card AND the
+            // legacy "Settings & Advanced Tools" status table, from the
+            // SAME poll response, since both are on this one page at once.
+            // Uses the exact same SyncNow/GetStatus/ResetStuckSync actions
+            // as the original page - nothing about the sync itself changed.
+            // ==============================================================
+            var autoPollTimer = null;
+            var autoElapsedTimer = null;
+            var autoStartedAtMs = null;
+
+            function setAutoBusy(isBusy) {
+                if (isBusy) {
+                    $('#autoSyncNowBtn').prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Syncing...');
+                    $('#retryFailedBtn, #historicalSyncBtn').prop('disabled', true);
+                    $('#autoSyncingLine').show();
+                } else {
+                    $('#autoSyncNowBtn').prop('disabled', false).html('<i class="bi bi-arrow-repeat"></i> Sync Now');
+                    $('#retryFailedBtn, #historicalSyncBtn').prop('disabled', false);
+                    $('#autoSyncingLine').hide();
+                }
+            }
+
+            function stopAutoElapsedTimer() {
+                if (autoElapsedTimer) { clearInterval(autoElapsedTimer); autoElapsedTimer = null; }
+            }
+
+            function startAutoElapsedTimer(startedAtIso) {
+                stopAutoElapsedTimer();
+                autoStartedAtMs = startedAtIso ? new Date(startedAtIso).getTime() : Date.now();
+                $('#autoStartTime').text(formatStatusDate(startedAtIso));
+                autoElapsedTimer = setInterval(function () {
+                    $('#autoElapsedTime').text(fmtElapsed(Date.now() - autoStartedAtMs));
+                }, 1000);
+            }
+
+            function renderAutoProgress(d) {
+                $('#autoFetched').text(fmtNum(d.recordsRead));
+                $('#autoImported').text(fmtNum(d.recordsImported));
+                // "Processed" mirrors Imported - the eSSL sync engine does not
+                // track a separate post-import "processed into Attendance"
+                // counter distinct from Imported (see summary card note).
+                $('#autoProcessed').text(fmtNum(d.recordsImported));
+                $('#autoFailed').text(fmtNum(d.recordsFailed));
+                // Unmapped has no LIVE counter on the engine's poll DTO
+                // (only Fetched/Imported/Skipped/Failed) - shown as "—"
+                // while running, filled in from the completion response.
+                if (!d.isSyncRunning) { /* left as-is; set by caller */ } else {
+                    $('#autoUnmapped').text('—');
+                }
+
+                if (d.canForceReset) { $('#autoResetStuckContainer').show(); } else { $('#autoResetStuckContainer').hide(); }
+            }
+
+            function applyAutoStatusToDom(d) {
+                // legacy status table (Settings & Advanced Tools)
+                var statusHtml;
+                if (d.isSyncRunning) statusHtml = '<span class="label label-warning">Sync in progress...</span>';
+                else if (d.lastSyncStatus === "Success") statusHtml = '<span class="label label-success">Last sync: Success</span>';
+                else if (d.lastSyncStatus === "PartialFailure") statusHtml = '<span class="label label-warning">Last sync: Partial Failure</span>';
+                else if (d.lastSyncStatus === "Failed") statusHtml = '<span class="label label-danger">Last sync: Failed</span>';
+                else if (d.lastSyncStatus === "Cancelled") statusHtml = '<span class="label label-default">Last sync: Cancelled</span>';
+                else statusHtml = '<span class="label label-default">Never synced</span>';
+
+                $('#statSyncStatus').html(statusHtml);
+                $('#statLastStarted').text(formatStatusDate(d.lastSyncStartedAt));
+                $('#statLastCompleted').text(formatStatusDate(d.lastSyncCompletedAt));
+
+                if (d.lastProcessedDeviceLogId) {
+                    $('#statLastProcessed').text("DeviceLogId " + d.lastProcessedDeviceLogId + (d.lastProcessedLogDate ? (", " + formatStatusDate(d.lastProcessedLogDate)) : ""));
+                } else {
+                    $('#statLastProcessed').text("—");
+                }
+
+                if (d.lastError) { $('#statLastError').text(d.lastError); $('#statLastErrorRow').show(); }
+                else { $('#statLastErrorRow').hide(); }
+
+                // top-right service status badge
+                $('#serviceLastSyncText').text(d.lastSyncCompletedAt ? formatStatusDate(d.lastSyncCompletedAt) : '—');
+                if (d.isSyncRunning) {
+                    $('#serviceStatusText').text('eSSL Sync Running Now');
+                    $('#serviceStatusDot').css('background', '#f0ad4e');
+                } else {
+                    $('#serviceStatusText').text('eSSL Sync Service Running');
+                    $('#serviceStatusDot').css('background', '#28a745');
+                }
+            }
+
+            function stopAutoPoll() { if (autoPollTimer) { clearInterval(autoPollTimer); autoPollTimer = null; } }
+
+            function pollAutoStatus(showCompletionAlert) {
+                stopAutoPoll();
+                autoPollTimer = setInterval(function () {
+                    $.ajax({
+                        url: AUTO_GET_STATUS_URL, type: 'GET',
+                        success: function (resp) {
+                            if (!resp || !resp.success || !resp.data) return;
+                            var d = resp.data;
+                            renderAutoProgress(d);
+
+                            if (!d.isSyncRunning) {
+                                stopAutoPoll();
+                                stopAutoElapsedTimer();
+                                setAutoBusy(false);
+                                applyAutoStatusToDom(d);
+                                $('#autoProgressBar').removeClass('progress-bar-striped progress-bar-animated').css('width', '100%');
+                                $('#autoProgressPct').text('Idle');
+                                $('#autoCurrentStepMini').text('Idle');
+
+                                // Refresh the "Last Sync Summary (Auto)" card from this
+                                // same completed-status payload (its Fetched/Imported/
+                                // Failed/StartedAt/CompletedAt fields are exactly the
+                                // just-finished run's final totals).
+                                applyAutoSummaryFromStatus(d);
+
+                                if (showCompletionAlert) {
+                                    var swalType = d.lastSyncStatus === "Failed" ? "error" : d.lastSyncStatus === "PartialFailure" ? "warning" : "success";
+                                    if (typeof swal === 'function') {
+                                        swal({
+                                            title: "Sync Complete",
+                                            text: "Found " + (d.recordsRead || 0) + ", synced " + (d.recordsImported || 0) +
+                                                ", skipped " + (d.recordsSkipped || 0) + ", failed " + (d.recordsFailed || 0) +
+                                                (d.lastError ? (". " + d.lastError) : "."),
+                                            type: swalType
+                                        });
+                                    }
+                                    if (d.lastSyncStatus === 'Success' || d.lastSyncStatus === 'PartialFailure') {
+                                        showSuccessBanner('Attendance sync completed successfully!');
+                                    }
+                                }
+                                loadProcessingLog();
+                            } else {
+                                $('#autoProgressBar').addClass('progress-bar-striped progress-bar-animated').css('width', '100%');
+                                $('#autoProgressPct').text('In Progress');
+                                $('#autoCurrentStepMini').text('Fetching / processing attendance...');
+                            }
+                        }
+                    });
+                }, 2000);
+            }
+
+            function runAutoSync(payload, resultDataCallback) {
+                setAutoBusy(true);
+                renderAutoProgress({ recordsRead: 0, recordsImported: 0, recordsFailed: 0, isSyncRunning: true });
+                $('#autoUnmapped').text('—');
+                $('#autoProgressBar').addClass('progress-bar-striped progress-bar-animated').css('width', '100%');
+                $('#autoProgressPct').text('In Progress');
+                startAutoElapsedTimer(new Date().toISOString());
+
+                $('#syncProgressBox').show(); // legacy container id kept for backward compatibility if referenced elsewhere
+
+                $.ajax({
+                    url: AUTO_SYNC_NOW_URL, type: 'POST', contentType: 'application/json', data: JSON.stringify(payload || {}),
+                    success: function (resp) {
+                        if (!resp.success) {
+                            setAutoBusy(false);
+                            stopAutoElapsedTimer();
+                            if (typeof swal === 'function') swal("Sync Not Started", resp.message || "Unable to start sync.", "warning");
+                            else alert(resp.message || "Unable to start sync.");
+                            return;
+                        }
+                        if (resp.data && typeof resultDataCallback === 'function') resultDataCallback(resp.data);
+                        pollAutoStatus(true);
+                    },
+                    error: function () {
+                        setAutoBusy(false);
+                        stopAutoElapsedTimer();
+                        if (typeof swal === 'function') swal("Error", "Unable to reach the ERP API.", "error");
+                        else alert("Unable to reach the ERP API.");
+                    }
+                });
+            }
+
+            $('#autoSyncNowBtn').on('click', function () {
+                runAutoSync({}, function (result) {
+                    // SyncNow's own result DOES carry unknownEmployeeCount for
+                    // THIS run - surfaced here since the live poll DTO doesn't
+                    // carry it (see renderAutoProgress's remarks).
+                    if (result && typeof result.unknownEmployeeCount !== 'undefined') {
+                        $('#autoUnmapped').text(fmtNum(result.unknownEmployeeCount));
+                        $('#sumUnmapped').text(fmtNum(result.unknownEmployeeCount));
+                    }
+                });
+            });
+
+            $('#retryFailedBtn').on('click', function () {
+                var from = $('#historyFromDate').val();
+                var to = $('#historyToDate').val();
+                if (!from || !to) {
+                    var toDate = new Date(); var fromDate = new Date(); fromDate.setDate(fromDate.getDate() - 90);
+                    to = toDate.toISOString().slice(0, 10); from = fromDate.toISOString().slice(0, 10);
+                }
+                runAutoSync({ FromDate: from, ToDate: to });
+            });
+
+            $('#historicalSyncBtn').on('click', function () {
+                var from = $('#historyFromDate').val();
+                var to = $('#historyToDate').val();
+                if (!from || !to) {
+                    if (typeof swal === 'function') swal("Missing Dates", "Please select both From Date and To Date.", "warning");
+                    else alert("Please select both From Date and To Date.");
+                    return;
+                }
+                runAutoSync({ FromDate: from, ToDate: to });
+            });
+
+            $('#autoResetStuckBtn').on('click', function () {
+                var $btn = $(this).prop('disabled', true);
+                $.ajax({
+                    url: AUTO_RESET_STUCK_URL, type: 'POST',
+                    success: function (resp) {
+                        $btn.prop('disabled', false);
+                        if (!resp || !resp.success) {
+                            if (typeof swal === 'function') swal("Not Reset", (resp && resp.message) || "Unable to reset the stuck sync.", "warning");
+                            return;
+                        }
+                        if (typeof swal === 'function') swal("Reset", resp.message || "The stuck sync has been reset.", "success");
+                        stopAutoPoll(); stopAutoElapsedTimer();
+                        $('#autoResetStuckContainer').hide();
+                        setAutoBusy(false);
+                        $.ajax({ url: AUTO_GET_STATUS_URL, type: 'GET', success: function (r) { if (r && r.success && r.data) applyAutoStatusToDom(r.data); } });
+                    },
+                    error: function () { $btn.prop('disabled', false); if (typeof swal === 'function') swal("Error", "Unable to reach the ERP API.", "error"); }
+                });
+            });
+
+            // Resume on load if a sync is already running (any trigger point).
+            var initialSyncRunning = @Json.Serialize(status.IsSyncRunning);
+            if (initialSyncRunning) {
+                setAutoBusy(true);
+                startAutoElapsedTimer('@(status.LastSyncStartedAt?.ToString("o"))');
+                renderAutoProgress({
+                    recordsRead: @status.RecordsRead, recordsImported: @status.RecordsImported,
+                    recordsFailed: @status.RecordsFailed, isSyncRunning: true,
+                    canForceReset: @Json.Serialize(status.CanForceReset)
+                });
+                $('#autoProgressBar').addClass('progress-bar-striped progress-bar-animated').css('width', '100%');
+                $('#autoProgressPct').text('In Progress');
+                pollAutoStatus(false);
+            }
+
+            function applyAutoSummaryFromStatus(d) {
+                $('#sumSyncTime').text(formatStatusDate(d.lastSyncStartedAt));
+                $('#sumFetched').text(fmtNum(d.recordsRead));
+                $('#sumImported').text(fmtNum(d.recordsImported));
+                $('#sumProcessed').text(fmtNum(d.recordsImported));
+                $('#sumFailed').text(fmtNum(d.recordsFailed));
+
+                if (d.lastSyncStartedAt && d.lastSyncCompletedAt) {
+                    var ms = new Date(d.lastSyncCompletedAt).getTime() - new Date(d.lastSyncStartedAt).getTime();
+                    $('#sumDuration').text(fmtElapsed(ms));
+                }
+
+                var statusHtml = '<span class="text-muted">—</span>';
+                if (d.lastSyncStatus === 'Success') statusHtml = '<span class="badge bg-success">Completed</span>';
+                else if (d.lastSyncStatus === 'PartialFailure') statusHtml = '<span class="badge bg-warning text-dark">Partial</span>';
+                else if (d.lastSyncStatus === 'Failed') statusHtml = '<span class="badge bg-danger">Failed</span>';
+                $('#sumStatus').html(statusHtml);
+            }
+
+            // ==============================================================
+            // HISTORICAL SYNC (Manual) - reuses the standalone Historical
+            // Attendance Sync page's own Preview/Start/GetStatus/History
+            // actions verbatim; only the ids/markup are new (card layout).
+            // ==============================================================
+            var histPollTimer = null;
+
+            function histRequest() {
+                return {
+                    fromDate: $('#histFromDate').val(),
+                    toDate: $('#histToDate').val(),
+                    employeeId: $('#histEmployeeId').val() || null,
+                    batchSize: 1000
+                };
+            }
+
+            function histValidate(req) {
+                if (!req.fromDate || !req.toDate) { alert('Please select both From Date and To Date.'); return false; }
+                if (new Date(req.fromDate) > new Date(req.toDate)) { alert('From Date cannot be after To Date.'); return false; }
+                return true;
+            }
+
+            function histExtractError(xhr) {
+                try { var json = JSON.parse(xhr.responseText); return json.message || 'Request failed.'; } catch (e) { return 'Request failed.'; }
+            }
+
+            function histStatBox(label, value) {
+                return '<div class="col-4 col-md-2 mb-2"><div style="font-weight:700;font-size:1.05rem;">' + fmtNum(value) +
+                    '</div><div class="text-muted" style="font-size:10.5px;">' + label + '</div></div>';
+            }
+
+            $('#histPreviewBtn').on('click', function () {
+                var req = histRequest();
+                if (!histValidate(req)) return;
+                var btn = $(this).prop('disabled', true);
+                $.ajax({
+                    url: HIST_PREVIEW_URL, type: 'POST', contentType: 'application/json', data: JSON.stringify(req),
+                    success: function (resp) {
+                        btn.prop('disabled', false);
+                        if (!resp || !resp.success) { alert((resp && resp.message) || 'Preview failed.'); return; }
+                        renderHistPreview(resp.data);
+                        $('#histStartBtn').prop('disabled', resp.data.hasOverlappingActiveJob);
+                    },
+                    error: function (xhr) { btn.prop('disabled', false); alert(histExtractError(xhr)); }
+                });
+            });
+
+            function renderHistPreview(d) {
+                $('#histPreviewBox').show();
+                var scopeCount = $('#histModeSafe').is(':checked') ? d.totalBiometricLogsInRange : d.unprocessedLogsInRange;
+                var html = '';
+                html += histStatBox('Total in Range', d.totalBiometricLogsInRange);
+                html += histStatBox('Will Process', scopeCount);
+                html += histStatBox('Already Linked', d.alreadyLinkedCount);
+                html += histStatBox('Duplicates', d.flaggedDuplicateCount);
+                html += histStatBox('Unmapped', d.unmappedEmployeeCodeCount);
+                $('#histPreviewSummary').html(html);
+
+                if (d.hasOverlappingActiveJob) {
+                    $('#histPreviewWarning').text('A Historical Sync job is already Queued/Running for an overlapping range (Job Id: ' + d.overlappingJobId + '). Start is disabled until it finishes.').show();
+                } else {
+                    $('#histPreviewWarning').hide();
+                }
+            }
+
+            $('#histStartBtn').on('click', function () {
+                var req = histRequest();
+                if (!histValidate(req)) return;
+                if (!confirm('Start Historical Sync for ' + req.fromDate + ' to ' + req.toDate + '?')) return;
+
+                var btn = $(this).prop('disabled', true);
+                $.ajax({
+                    url: HIST_START_URL, type: 'POST', contentType: 'application/json', data: JSON.stringify(req),
+                    success: function (resp) {
+                        if (!resp || !resp.success) { btn.prop('disabled', false); alert((resp && resp.message) || 'Could not start Historical Sync.'); return; }
+                        var jobId = resp.data && resp.data.jobId;
+                        if (jobId) { $('#histStatusBox').show(); startHistPolling(jobId); }
+                    },
+                    error: function (xhr) { btn.prop('disabled', false); alert(histExtractError(xhr)); }
+                });
+            });
+
+            $('#histResetBtn').on('click', function () {
+                $('#histFromDate, #histToDate').val('');
+                $('#histEmployeeId').val('');
+                $('#histModeUnprocessed').prop('checked', true);
+                $('#histPreviewBox, #histStatusBox').hide();
+                // Start no longer requires a Preview click first (see
+                // histStartBtn's remarks above) - Reset just clears the
+                // form back to a blank state, it should not leave Start
+                // permanently disabled the way it used to.
+                $('#histStartBtn').prop('disabled', false);
+            });
+
+            var histStartedAtMs = null;
+            var histElapsedTimer = null;
+
+            function startHistPolling(jobId) {
+                if (histPollTimer) clearInterval(histPollTimer);
+                histStartedAtMs = Date.now();
+                if (histElapsedTimer) clearInterval(histElapsedTimer);
+                histElapsedTimer = setInterval(function () { $('#histElapsedTime').text('Elapsed ' + fmtElapsed(Date.now() - histStartedAtMs)); }, 1000);
+                histPollJobStatus(jobId);
+                histPollTimer = setInterval(function () { histPollJobStatus(jobId); }, 3000);
+            }
+
+            function histPollJobStatus(jobId) {
+                $.ajax({
+                    url: HIST_STATUS_URL, type: 'GET', data: { jobId: jobId },
+                    success: function (resp) {
+                        if (!resp || !resp.success || !resp.data) return;
+                        renderHistStatus(resp.data);
+                        if (resp.data.status === 'Completed' || resp.data.status === 'Failed' || resp.data.status === 'PartiallyCompleted') {
+                            if (histPollTimer) { clearInterval(histPollTimer); histPollTimer = null; }
+                            if (histElapsedTimer) { clearInterval(histElapsedTimer); histElapsedTimer = null; }
+                            $('#histStartBtn').prop('disabled', false);
+                            refreshHistSummary(resp.data);
+                            if (resp.data.status === 'Completed') {
+                                showSuccessBanner('Historical attendance sync completed successfully!');
+                            }
+                            loadProcessingLog();
+                        }
+                    }
+                });
+            }
+
+            function renderHistStatus(d) {
+                var badgeClass = 'bg-secondary';
+                if (d.status === 'Running' || d.status === 'Queued') badgeClass = 'bg-info text-dark';
+                else if (d.status === 'Completed') badgeClass = 'bg-success';
+                else if (d.status === 'PartiallyCompleted') badgeClass = 'bg-warning text-dark';
+                else if (d.status === 'Failed') badgeClass = 'bg-danger';
+                $('#histStatusBadge').attr('class', 'badge ' + badgeClass).text(d.status);
+
+                var pct = 0;
+                if (d.totalRecords > 0) pct = Math.min(100, Math.round(((d.processedCount + d.failedCount + d.unmappedCount + d.duplicateCount) / d.totalRecords) * 100));
+                else if (d.status === 'Completed') pct = 100;
+                $('#histProgressBar').css('width', pct + '%');
+
+                if (d.errorSummary) { $('#histStatusError').text(d.errorSummary).show(); } else { $('#histStatusError').hide(); }
+            }
+
+            function refreshHistSummary(d) {
+                $('#hSumRange').text(formatDateOnly(d.fromDate) + ' to ' + formatDateOnly(d.toDate));
+                $('#hSumTotal').text(fmtNum(d.totalRecords));
+                $('#hSumProcessed').text(fmtNum(d.processedCount));
+                $('#hSumLogsInserted').text(fmtNum(d.attendanceLogsCreated));
+                $('#hSumAttCreated').text(fmtNum(d.attendancesCreated));
+                $('#hSumAttUpdated').text(fmtNum(d.attendancesUpdated));
+                $('#hSumUnmapped').text(fmtNum(d.unmappedCount));
+                $('#hSumFailed').text(fmtNum(d.failedCount));
+                $('#hSumDuration').text(d.durationSeconds != null ? fmtElapsed(d.durationSeconds * 1000) : '—');
+
+                var statusBadge = '<span class="text-muted">—</span>';
+                if (d.status === 'Completed') statusBadge = '<span class="badge bg-success">Completed</span>';
+                else if (d.status === 'PartiallyCompleted') statusBadge = '<span class="badge bg-warning text-dark">Partial</span>';
+                else if (d.status === 'Failed') statusBadge = '<span class="badge bg-danger">Failed</span>';
+                else statusBadge = '<span class="badge bg-info text-dark">' + d.status + '</span>';
+                $('#hSumStatus').html(statusBadge);
+            }
+
+            function formatDateOnly(s) { var d = new Date(s); if (isNaN(d.getTime())) return s; return d.toLocaleDateString(); }
+
+            $('#historyModal').on('show.bs.modal shown.bs.tab', function () {
+                $('#historyModalBody').load(HIST_HISTORY_URL);
+            });
+            // Bootstrap 3-style data-toggle also used elsewhere in this app -
+            // handle both trigger conventions for the modal.
+            $('#histViewDetailsLink').on('click', function (e) {
+                e.preventDefault();
+                $('#historyModalBody').load(HIST_HISTORY_URL);
+                if ($.fn.modal) { $('#historyModal').modal('show'); }
+            });
+
+            // ==============================================================
+            // PROCESSING LOG (combined, additive - see CombinedLog() action)
+            // ==============================================================
+            function loadProcessingLog() {
+                $.ajax({
+                    url: COMBINED_LOG_URL, type: 'GET',
+                    success: function (resp) {
+                        if (!resp || !resp.success) { return; }
+                        var rows = resp.data || [];
+                        if (rows.length === 0) {
+                            $('#processingLogBody').html('<tr><td colspan="3" class="text-center text-muted">No activity yet.</td></tr>');
+                            return;
+                        }
+                        var html = '';
+                        rows.forEach(function (r) {
+                            html += '<tr><td>' + r.line + '</td><td>' + r.time + '</td><td>' + $('<div>').text(r.message).html() + '</td></tr>';
+                        });
+                        $('#processingLogBody').html(html);
+                    },
+                    error: function () {
+                        $('#processingLogBody').html('<tr><td colspan="3" class="text-center text-danger">Unable to load the processing log.</td></tr>');
+                    }
+                });
+            }
+
+            $('#refreshLogBtn').on('click', loadProcessingLog);
+            loadProcessingLog();
+
+            // ==============================================================
+            // LEGACY TABS + CONFIG FORM (unchanged behavior, moved under the
+            // collapsible "Settings & Advanced Tools" panel)
             // ==============================================================
             var originalValues = captureFormValues();
 
@@ -365,37 +1360,24 @@
                 clearValidation();
             }
 
-            // ==============================================================
-            // AUTHENTICATION TYPE TOGGLE (requirement #5)
-            // ==============================================================
             function toggleAuthFields() {
                 var isSql = $("#AuthenticationType").val() === "Sql";
                 $("#credentialsRow").toggle(isSql);
                 $("#Username").prop("disabled", !isSql);
                 $("#Password").prop("disabled", !isSql);
             }
-
             $("#AuthenticationType").on("change", toggleAuthFields);
             toggleAuthFields();
 
-            // ==============================================================
-            // PASSWORD SHOW/HIDE - keyboard accessible (Enter/Space work via
-            // native <button>; aria-pressed reflects state for screen readers)
-            // ==============================================================
             $("#togglePasswordBtn").on("click", function () {
                 var input = $("#Password");
                 var showing = input.attr("type") === "text";
-
                 input.attr("type", showing ? "password" : "text");
                 $(this).attr("aria-pressed", (!showing).toString());
                 $(this).attr("aria-label", showing ? "Show password" : "Hide password");
                 $("#togglePasswordIcon").attr("class", showing ? "icon-eye8" : "icon-eye-blocked2");
             });
 
-            // ==============================================================
-            // CLIENT-SIDE VALIDATION (never the only validation - the API
-            // always re-validates server-side; requirement #16)
-            // ==============================================================
             function clearValidation() {
                 $("#configValidationSummary").hide();
                 $(".field-error").text("");
@@ -410,45 +1392,16 @@
             function validateForm() {
                 clearValidation();
                 var valid = true;
-
-                if (!$("#DatabaseServer").val().trim()) {
-                    showFieldError("DatabaseServer", "Database server is required.");
-                    valid = false;
-                }
-
-                if (!$("#DatabaseName").val().trim()) {
-                    showFieldError("DatabaseName", "Database name is required.");
-                    valid = false;
-                }
-
-                if ($("#AuthenticationType").val() === "Sql" && !$("#Username").val().trim()) {
-                    showFieldError("Username", "Username is required for SQL Server Authentication.");
-                    valid = false;
-                }
-
+                if (!$("#DatabaseServer").val().trim()) { showFieldError("DatabaseServer", "Database server is required."); valid = false; }
+                if (!$("#DatabaseName").val().trim()) { showFieldError("DatabaseName", "Database name is required."); valid = false; }
+                if ($("#AuthenticationType").val() === "Sql" && !$("#Username").val().trim()) { showFieldError("Username", "Username is required for SQL Server Authentication."); valid = false; }
                 var timeout = parseInt($("#ConnectionTimeout").val(), 10);
-                if (!timeout || timeout < 1 || timeout > 300) {
-                    showFieldError("ConnectionTimeout", "Connection timeout must be between 1 and 300 seconds.");
-                    valid = false;
-                }
-
+                if (!timeout || timeout < 1 || timeout > 300) { showFieldError("ConnectionTimeout", "Connection timeout must be between 1 and 300 seconds."); valid = false; }
                 var interval = parseInt($("#SyncIntervalMinutes").val(), 10);
-                if (!interval || interval < 1 || interval > 1440) {
-                    showFieldError("SyncIntervalMinutes", "Sync interval must be greater than zero.");
-                    valid = false;
-                }
-
+                if (!interval || interval < 1 || interval > 1440) { showFieldError("SyncIntervalMinutes", "Sync interval must be greater than zero."); valid = false; }
                 var batch = parseInt($("#BatchSize").val(), 10);
-                if (!batch || batch < 1 || batch > 5000) {
-                    showFieldError("BatchSize", "Batch size must be greater than zero.");
-                    valid = false;
-                }
-
-                if (!valid) {
-                    $("#configValidationMessage").text("Please correct the highlighted fields.");
-                    $("#configValidationSummary").show();
-                }
-
+                if (!batch || batch < 1 || batch > 5000) { showFieldError("BatchSize", "Batch size must be greater than zero."); valid = false; }
+                if (!valid) { $("#configValidationMessage").text("Please correct the highlighted fields."); $("#configValidationSummary").show(); }
                 return valid;
             }
 
@@ -458,8 +1411,6 @@
                     DatabaseServer: $("#DatabaseServer").val().trim(),
                     DatabaseName: $("#DatabaseName").val().trim(),
                     AuthenticationType: $("#AuthenticationType").val(),
-                    // Requirement #5 - never send credential values that
-                    // don't apply to the selected authentication type.
                     Username: $("#AuthenticationType").val() === "Sql" ? $("#Username").val().trim() : null,
                     Password: $("#AuthenticationType").val() === "Sql" ? ($("#Password").val() || null) : null,
                     ConnectionTimeout: parseInt($("#ConnectionTimeout").val(), 10) || 15,
@@ -468,418 +1419,61 @@
                 };
             }
 
-            // ==============================================================
-            // TEST CONNECTION - reads current form values, never saves,
-            // never starts a sync (requirement #6)
-            // ==============================================================
             $("#testConnectionBtn").on("click", function () {
                 if (!validateForm()) return;
-
-                var btn = $(this);
-                var original = btn.html();
+                var btn = $(this); var original = btn.html();
                 btn.prop("disabled", true).html('<i class="icon-spinner2 spinner position-left"></i> Testing...');
-
                 $.ajax({
-                    url: "@Url.Action("TestConnection")",
-                    type: "POST",
-                    contentType: "application/json",
-                    data: JSON.stringify(buildConfigPayload()),
+                    url: "@Url.Action("TestConnection")", type: "POST", contentType: "application/json", data: JSON.stringify(buildConfigPayload()),
                     success: function (resp) {
                         btn.prop("disabled", false).html(original);
-                        if (resp.success) {
-                            swal("Connection Successful", resp.message, "success");
-                        } else {
-                            swal("Connection Failed", resp.message, "error");
-                        }
+                        if (resp.success) swal("Connection Successful", resp.message, "success");
+                        else swal("Connection Failed", resp.message, "error");
                     },
-                    error: function () {
-                        btn.prop("disabled", false).html(original);
-                        swal("Error", "Unable to reach the ERP API.", "error");
-                    }
+                    error: function () { btn.prop("disabled", false).html(original); swal("Error", "Unable to reach the ERP API.", "error"); }
                 });
             });
 
-            // ==============================================================
-            // SAVE SETTINGS
-            // ==============================================================
             $("#saveConfigBtn").on("click", function () {
                 if (!validateForm()) return;
-
-                var btn = $(this);
-                var original = btn.html();
+                var btn = $(this); var original = btn.html();
                 btn.prop("disabled", true).html('<i class="icon-spinner2 spinner position-left"></i> Saving...');
-
                 $.ajax({
-                    url: "@Url.Action("SaveConfiguration")",
-                    type: "POST",
-                    contentType: "application/json",
-                    data: JSON.stringify(buildConfigPayload()),
+                    url: "@Url.Action("SaveConfiguration")", type: "POST", contentType: "application/json", data: JSON.stringify(buildConfigPayload()),
                     success: function (resp) {
                         btn.prop("disabled", false).html(original);
-
                         if (resp.success) {
-                            swal({ title: "Success", text: resp.message || "Settings saved successfully.", type: "success" }, function () {
-                                location.reload();
-                            });
+                            swal({ title: "Success", text: resp.message || "Settings saved successfully.", type: "success" }, function () { location.reload(); });
                         } else {
                             $("#configValidationMessage").text(resp.message || "Unable to save settings.");
                             $("#configValidationSummary").show();
                         }
                     },
-                    error: function () {
-                        btn.prop("disabled", false).html(original);
-                        swal("Error", "Unable to reach the ERP API.", "error");
-                    }
+                    error: function () { btn.prop("disabled", false).html(original); swal("Error", "Unable to reach the ERP API.", "error"); }
                 });
             });
 
-            // ==============================================================
-            // CANCEL - restore persisted values, discard edits (requirement #8)
-            // ==============================================================
-            $("#cancelConfigBtn").on("click", function () {
-                applyFormValues(originalValues);
-            });
+            $("#cancelConfigBtn").on("click", function () { applyFormValues(originalValues); });
 
-            // ==============================================================
-            // SYNC NOW / HISTORICAL IMPORT / RETRY FAILED SYNC
-            // ------------------------------------------------------------
-            // Sync Now used to be one long blocking request - the browser
-            // just sat there until the ENTIRE sync (which, for a large
-            // historical window, could be tens of minutes) finished, with
-            // no feedback in between and a real risk of the request itself
-            // timing out well before the sync did. The sync now runs in
-            // the background on the server (see API's SyncNow action) and
-            // this returns almost immediately; the page instead polls the
-            // status endpoint every 2 seconds and shows live progress
-            // until the run completes.
-            // ==============================================================
-            var statusPollTimer = null;
-
-            // The three sync-trigger buttons are mutually exclusive for a
-            // given tenant - the backend only allows one sync (of any
-            // kind) to run at a time per tenant, so all three are shown
-            // busy/disabled together while any one of them is running.
-            // This is what actually fixes the confusing "click a button,
-            // get an 'already in progress' popup" experience: instead of
-            // discovering the lock by hitting it, the buttons themselves
-            // reflect the real backend state at all times, including
-            // right after a page load/refresh while a sync is still
-            // running in the background.
-            var syncButtonDefaults = {
-                syncNowBtn: '<i class="icon-sync position-left"></i> Sync Now',
-                retryFailedBtn: '<i class="icon-repeat position-left"></i> Retry Failed Sync',
-                historicalSyncBtn: '<i class="icon-history position-left"></i> Import Historical Data'
-            };
-
-            function setSyncButtonsBusy(isBusy) {
-                $.each(syncButtonDefaults, function (id, defaultHtml) {
-                    var $btn = $("#" + id);
-                    if (isBusy) {
-                        $btn.prop("disabled", true).html('<i class="icon-spinner2 spinner position-left"></i> Syncing...');
-                    } else {
-                        $btn.prop("disabled", false).html(defaultHtml);
-                    }
-                });
-            }
-
-            function stopStatusPoll() {
-                if (statusPollTimer) {
-                    clearInterval(statusPollTimer);
-                    statusPollTimer = null;
-                }
-            }
-
-            function renderProgress(d) {
-                $("#progRead").text(d.recordsRead || 0);
-                $("#progImported").text(d.recordsImported || 0);
-                $("#progSkipped").text(d.recordsSkipped || 0);
-                $("#progFailed").text(d.recordsFailed || 0);
-
-                if (d.canForceReset) {
-                    $("#resetStuckContainer").show();
-                } else {
-                    $("#resetStuckContainer").hide();
-                }
-            }
-
-            function formatStatusDate(isoString) {
-                if (!isoString) return "—";
-
-                var dt = new Date(isoString);
-                if (isNaN(dt.getTime())) return isoString;
-
-                var pad = function (n) { return n < 10 ? "0" + n : "" + n; };
-                var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                var hours = dt.getHours();
-                var ampm = hours >= 12 ? "PM" : "AM";
-                var h12 = hours % 12;
-                if (h12 === 0) h12 = 12;
-
-                return pad(dt.getDate()) + "-" + months[dt.getMonth()] + "-" + dt.getFullYear() + " " +
-                    pad(h12) + ":" + pad(dt.getMinutes()) + ":" + pad(dt.getSeconds()) + " " + ampm;
-            }
-
-            // Updates Card 1's status table directly from the JSON status
-            // response - requirement #7: "Stop full-page HTML polling.
-            // Poll only the lightweight status endpoint. Update status,
-            // progress and button states from the JSON response." This
-            // replaces the old behavior of location.reload()-ing the whole
-            // /EsslAttendance/Index page once a run finished, which was
-            // both unnecessary (everything shown here already came from
-            // this same JSON) and disruptive (a full navigation flashes
-            // the page and loses tab/scroll state).
-            function applyStatusToDom(d) {
-                var statusHtml;
-
-                if (d.isSyncRunning) {
-                    statusHtml = '<span class="label label-warning">Sync in progress...</span>';
-                } else if (d.lastSyncStatus === "Success") {
-                    statusHtml = '<span class="label label-success">Last sync: Success</span>';
-                } else if (d.lastSyncStatus === "PartialFailure") {
-                    statusHtml = '<span class="label label-warning">Last sync: Partial Failure</span>';
-                } else if (d.lastSyncStatus === "Failed") {
-                    statusHtml = '<span class="label label-danger">Last sync: Failed</span>';
-                } else if (d.lastSyncStatus === "Cancelled") {
-                    statusHtml = '<span class="label label-default">Last sync: Cancelled</span>';
-                } else {
-                    statusHtml = '<span class="label label-default">Never synced</span>';
-                }
-
-                $("#statSyncStatus").html(statusHtml);
-                $("#statLastStarted").text(formatStatusDate(d.lastSyncStartedAt));
-                $("#statLastCompleted").text(formatStatusDate(d.lastSyncCompletedAt));
-
-                if (d.lastProcessedDeviceLogId) {
-                    $("#statLastProcessed").text(
-                        "DeviceLogId " + d.lastProcessedDeviceLogId +
-                        (d.lastProcessedLogDate ? (", " + formatStatusDate(d.lastProcessedLogDate)) : ""));
-                } else {
-                    $("#statLastProcessed").text("—");
-                }
-
-                if (d.lastError) {
-                    $("#statLastError").text(d.lastError);
-                    $("#statLastErrorRow").show();
-                } else {
-                    $("#statLastErrorRow").hide();
-                }
-            }
-
-            // showCompletionAlert: on a fresh click we always want the
-            // "Sync Complete" popup. On page-load resume (nobody is
-            // sitting there waiting for a click to finish) we skip the
-            // popup, since a swal appearing on an unattended/returning
-            // page load is more confusing than helpful.
-            function pollStatus(showCompletionAlert) {
-                stopStatusPoll();
-
-                statusPollTimer = setInterval(function () {
-                    $.ajax({
-                        url: "@Url.Action("GetStatus")",
-                        type: "GET",
-                        success: function (resp) {
-                            if (!resp || !resp.success || !resp.data) return;
-
-                            var d = resp.data;
-                            renderProgress(d);
-
-                            if (!d.isSyncRunning) {
-                                stopStatusPoll();
-                                $("#syncProgressBox").hide();
-                                setSyncButtonsBusy(false);
-                                applyStatusToDom(d);
-
-                                if (showCompletionAlert) {
-                                    var swalType = d.lastSyncStatus === "Failed" ? "error"
-                                        : d.lastSyncStatus === "PartialFailure" ? "warning" : "success";
-
-                                    // Defensive (d.recordsRead || 0, etc.) -
-                                    // belt-and-suspenders against ever
-                                    // showing a raw JS "undefined" in this
-                                    // popup again, even though the real fix
-                                    // is server-side (ClaimSyncLockAsync -
-                                    // see API's SyncNow action).
-                                    swal({
-                                        title: "Sync Complete",
-                                        text: "Found " + (d.recordsRead || 0) + ", synced " + (d.recordsImported || 0) +
-                                            ", skipped " + (d.recordsSkipped || 0) + ", failed " + (d.recordsFailed || 0) +
-                                            (d.lastError ? (". " + d.lastError) : "."),
-                                        type: swalType
-                                    });
-                                }
-                            }
-                        }
-                        // A single missed poll (network blip) is not worth
-                        // alarming the user over - the next tick 2s later
-                        // just tries again; the run itself is unaffected
-                        // either way since it's not tied to this request.
-                    });
-                }, 2000);
-            }
-
-            function runSync(payload) {
-                setSyncButtonsBusy(true);
-                renderProgress({ recordsRead: 0, recordsImported: 0, recordsSkipped: 0, recordsFailed: 0 });
-                $("#syncProgressBox").show();
-
-                $.ajax({
-                    url: "@Url.Action("SyncNow")",
-                    type: "POST",
-                    contentType: "application/json",
-                    data: JSON.stringify(payload),
-                    success: function (resp) {
-                        if (!resp.success) {
-                            $("#syncProgressBox").hide();
-                            setSyncButtonsBusy(false);
-                            swal("Sync Not Started", resp.message || "Unable to start sync.", "warning");
-                            return;
-                        }
-
-                        pollStatus(true);
-                    },
-                    error: function () {
-                        $("#syncProgressBox").hide();
-                        setSyncButtonsBusy(false);
-                        swal("Error", "Unable to reach the ERP API.", "error");
-                    }
-                });
-            }
-
-            // ==============================================================
-            // RESUME ON PAGE LOAD: if a sync (of any kind) is already
-            // running for this tenant when the page loads/refreshes - e.g.
-            // it was started from another tab, or the user simply
-            // navigated back to this page mid-sync - show the live
-            // progress panel and busy button state immediately instead of
-            // leaving the buttons looking idle/clickable until the user
-            // clicks one and gets an "already in progress" popup.
-            // ==============================================================
-            var initialSyncRunning = @Json.Serialize(status.IsSyncRunning);
-            if (initialSyncRunning) {
-                setSyncButtonsBusy(true);
-                $("#syncProgressBox").show();
-                renderProgress({
-                    recordsRead: @status.RecordsRead,
-                    recordsImported: @status.RecordsImported,
-                    recordsSkipped: @status.RecordsSkipped,
-                    recordsFailed: @status.RecordsFailed,
-                    canForceReset: @Json.Serialize(status.CanForceReset)
-                });
-                pollStatus(false);
-            }
-
-            // Force Reset Stuck Sync - only ever shown once the status poll
-            // reports canForceReset (the lock has been held past the
-            // server's own staleness threshold); the real safety check is
-            // still enforced server-side in ResetStuckSyncAsync regardless.
-            $("#resetStuckBtn").on("click", function () {
-                var $btn = $(this);
-                $btn.prop("disabled", true);
-
-                $.ajax({
-                    url: "@Url.Action("ResetStuckSync")",
-                    type: "POST",
-                    success: function (resp) {
-                        $btn.prop("disabled", false);
-
-                        if (!resp || !resp.success) {
-                            swal("Not Reset", (resp && resp.message) || "Unable to reset the stuck sync.", "warning");
-                            return;
-                        }
-
-                        swal("Reset", resp.message || "The stuck sync has been reset.", "success");
-
-                        stopStatusPoll();
-                        $("#syncProgressBox").hide();
-                        $("#resetStuckContainer").hide();
-                        setSyncButtonsBusy(false);
-
-                        $.ajax({
-                            url: "@Url.Action("GetStatus")",
-                            type: "GET",
-                            success: function (statusResp) {
-                                if (statusResp && statusResp.success && statusResp.data) {
-                                    applyStatusToDom(statusResp.data);
-                                }
-                            }
-                        });
-                    },
-                    error: function () {
-                        $btn.prop("disabled", false);
-                        swal("Error", "Unable to reach the ERP API.", "error");
-                    }
-                });
-            });
-
-            $("#syncNowBtn").on("click", function () {
-                runSync({});
-            });
-
-            $("#historicalSyncBtn").on("click", function () {
-                var from = $("#historyFromDate").val();
-                var to = $("#historyToDate").val();
-
-                if (!from || !to) {
-                    swal("Missing Dates", "Please select both From Date and To Date.", "warning");
-                    return;
-                }
-
-                runSync({ FromDate: from, ToDate: to });
-            });
-
-            // Retry Failed Sync: re-runs the sync over the date range
-            // currently in the Historical Import fields (or, if neither is
-            // set, a default last-90-days window). This is deliberately
-            // NOT a row-level "retry only the failed records" feature -
-            // this codebase doesn't keep a separate queryable table of
-            // failed rows to selectively replay. Instead it leans on the
-            // sync engine's own existing guarantee: re-running any window
-            // is always safe, because already-imported punches are
-            // skipped (the pre-check plus the DB unique index), so a
-            // retry only ever re-attempts what is genuinely still
-            // missing - previously failed or unmapped rows - and can
-            // never create a duplicate.
-            $("#retryFailedBtn").on("click", function () {
-                var from = $("#historyFromDate").val();
-                var to = $("#historyToDate").val();
-
-                if (!from || !to) {
-                    var toDate = new Date();
-                    var fromDate = new Date();
-                    fromDate.setDate(fromDate.getDate() - 90);
-
-                    to = toDate.toISOString().slice(0, 10);
-                    from = fromDate.toISOString().slice(0, 10);
-                }
-
-                runSync({ FromDate: from, ToDate: to });
-            });
-
-            // ==============================================================
-            // SYNC LOGS / UNMAPPED EMPLOYEES TABS (unchanged)
-            // ==============================================================
             var syncLogsLoaded = false;
             $("#tab-synclogs-link").on("shown.bs.tab", function () {
-                if (syncLogsLoaded) return;
-                syncLogsLoaded = true;
+                if (syncLogsLoaded) return; syncLogsLoaded = true;
                 $("#syncLogsContainer").load("@Url.Action("SyncLogs")");
             });
 
             var unmappedLoaded = false;
             $("#tab-unmapped-link").on("shown.bs.tab", function () {
-                if (unmappedLoaded) return;
-                unmappedLoaded = true;
+                if (unmappedLoaded) return; unmappedLoaded = true;
                 $("#unmappedContainer").load("@Url.Action("UnmappedEmployees")");
             });
 
+            // Default Historical Sync (Manual) card's dates to the current month.
+            (function initDefaults() {
+                var today = new Date();
+                var first = new Date(today.getFullYear(), today.getMonth(), 1);
+                $('#histFromDate').val(first.toISOString().slice(0, 10));
+                $('#histToDate').val(today.toISOString().slice(0, 10));
+            })();
         });
     </script>
-
-    <style>
-        .font-size-sm { font-size: 12px; }
-        .field-error { color: #d9534f; }
-        @@media (max-width: 767px) {
-            #esslConfigForm .col-sm-6 { width: 100%; }
-        }
-    </style>
 }

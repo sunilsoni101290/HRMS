@@ -135,5 +135,22 @@ namespace APP.Models.DTOs
     {
         public EsslSyncSettingsDto Status { get; set; } = new();
         public EsslDatabaseConfigViewDto Config { get; set; } = new();
+
+        // ------------------------------------------------------------
+        // ADDITIVE - "Attendance Synchronization" combined-page redesign.
+        // View-only, populated in EsslAttendanceController.Index() from the
+        // SAME already-existing endpoints the old "Sync Logs" tab
+        // (EsslAttendance/sync-history) and the standalone Historical Sync
+        // page's job history (HistoricalAttendanceSync/history) already
+        // call - just the single most recent row of each, fetched once at
+        // page load so the "Last Sync Summary (Auto)" / "Historical Sync
+        // Summary (Manual)" cards render with real data on first paint
+        // instead of only after a poll. Neither the eSSL sync engine nor
+        // the Historical Sync engine had to change to support this - it is
+        // purely reading one more row from data both already persist.
+        // Null when that feature has never run yet.
+        // ------------------------------------------------------------
+        public EsslSyncHistoryDto? LastSyncHistory { get; set; }
+        public HistoricalSyncJobDto? LastHistoricalJob { get; set; }
     }
 }

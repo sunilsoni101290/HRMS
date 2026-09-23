@@ -1,6 +1,8 @@
+using Application.Common.Exceptions;
 using Application.DTOs.Roles;
 using Application.Interfaces.Roles;
 using Domain.Entities;
+using Domain.Helper;
 using Infrastructure;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -16,8 +18,10 @@ namespace Application.Services.Roles
             _context = context;
         }
 
-        public async Task<List<RoleListDto>> GetAllAsync()
+        public async Task<List<RoleListDto>> GetAllAsync(string actingUserId)
         {
+            await EnsurePermissionAsync(actingUserId, Actions.View);
+
             try
             {
                 var roles = await _context.Roles
@@ -58,8 +62,10 @@ namespace Application.Services.Roles
             }
         }
 
-        public async Task<RoleDto> GetByIdAsync(string id)
+        public async Task<RoleDto> GetByIdAsync(string id, string actingUserId)
         {
+            await EnsurePermissionAsync(actingUserId, Actions.View);
+
             try
             {
                 var r = await _context.Roles.AsNoTracking()
@@ -83,8 +89,10 @@ namespace Application.Services.Roles
             }
         }
 
-        public async Task<RoleDetailDto> GetDetailAsync(string id)
+        public async Task<RoleDetailDto> GetDetailAsync(string id, string actingUserId)
         {
+            await EnsurePermissionAsync(actingUserId, Actions.View);
+
             try
             {
                 var role = await _context.Roles.AsNoTracking()
@@ -163,8 +171,10 @@ namespace Application.Services.Roles
             }
         }
 
-        public async Task<string> CreateAsync(RoleDto dto)
+        public async Task<string> CreateAsync(RoleDto dto, string actingUserId)
         {
+            await EnsurePermissionAsync(actingUserId, Actions.Create);
+
             try
             {
                 var exists = await _context.Roles
@@ -197,8 +207,10 @@ namespace Application.Services.Roles
             }
         }
 
-        public async Task<string> UpdateAsync(string id, RoleDto dto)
+        public async Task<string> UpdateAsync(string id, RoleDto dto, string actingUserId)
         {
+            await EnsurePermissionAsync(actingUserId, Actions.Edit);
+
             try
             {
                 var entity = await _context.Roles.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
@@ -222,8 +234,10 @@ namespace Application.Services.Roles
             }
         }
 
-        public async Task<bool> ToggleActiveAsync(string id)
+        public async Task<bool> ToggleActiveAsync(string id, string actingUserId)
         {
+            await EnsurePermissionAsync(actingUserId, Actions.Edit);
+
             try
             {
                 var entity = await _context.Roles.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
@@ -241,8 +255,10 @@ namespace Application.Services.Roles
             }
         }
 
-        public async Task<bool> DeleteAsync(string id)
+        public async Task<bool> DeleteAsync(string id, string actingUserId)
         {
+            await EnsurePermissionAsync(actingUserId, Actions.Delete);
+
             try
             {
                 var entity = await _context.Roles.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
@@ -271,6 +287,12 @@ namespace Application.Services.Roles
 
         public async Task<bool> AssignPermissionsAsync(AssignRolePermissionsRequestDto request)
         {
+            // Reuses request.ModifiedBy as the acting user rather than a
+            // separate parameter - it's already the field the APP/API
+            // callers populate with the logged-in user's id for this
+            // action (see APP/Controllers/RoleController.cs).
+            await EnsurePermissionAsync(request?.ModifiedBy, Actions.Edit);
+
             try
             {
                 var role = await _context.Roles.FirstOrDefaultAsync(x => x.Id == request.RoleId && !x.IsDeleted);
@@ -307,6 +329,36 @@ namespace Application.Services.Roles
             {
                 return false;
             }
+        }
+
+        // ==================================================================
+        // PERMISSION CHECK - Role Management is System Configurator ONLY.
+        // Same shape as ErrorLogService.EnsurePermissionAsync /
+        // DatabaseManagementService.EnsurePermissionAsync - a real,
+        // data-driven RolePermission/Permission check against
+        // AppFeatureConstants.ROLE, not a hard-coded role-name string. In
+        // practice only System Configurator ever holds it (see DbSeeder's
+        // ROLE carve-out), but a tenant could grant it to another role
+        // later without any code change here.
+        // ==================================================================
+
+        private async Task EnsurePermissionAsync(string? actingUserId, string action)
+        {
+            if (string.IsNullOrEmpty(actingUserId))
+                throw new UnauthorizedException("You are not authorized to manage Roles.");
+
+            var allowed = await (
+                from ur in _context.UserRoles.AsNoTracking()
+                join rp in _context.RolePermissions.AsNoTracking().Where(x => x.IsAllowed) on ur.RoleId equals rp.RoleId
+                join p in _context.Permissions.AsNoTracking().Where(x =>
+                        x.FeatureId == AppFeatureConstants.ROLE && x.Action == action)
+                    on rp.PermissionId equals p.Id
+                where ur.UserId == actingUserId
+                select p.Id
+            ).AnyAsync();
+
+            if (!allowed)
+                throw new UnauthorizedException("You are not authorized to manage Roles.");
         }
     }
 }

@@ -1,6 +1,8 @@
+using Application.Common.Exceptions;
 using Application.DTOs.Permissions;
 using Application.Interfaces.Permissions;
 using Domain.Entities;
+using Domain.Helper;
 using Infrastructure;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -16,8 +18,10 @@ namespace Application.Services.Permissions
             _context = context;
         }
 
-        public async Task<List<PermissionListDto>> GetAllAsync()
+        public async Task<List<PermissionListDto>> GetAllAsync(string actingUserId)
         {
+            await EnsurePermissionAsync(actingUserId, Actions.View);
+
             try
             {
                 var permissions = await _context.Permissions
@@ -66,8 +70,10 @@ namespace Application.Services.Permissions
             }
         }
 
-        public async Task<PermissionDto> GetByIdAsync(string id)
+        public async Task<PermissionDto> GetByIdAsync(string id, string actingUserId)
         {
+            await EnsurePermissionAsync(actingUserId, Actions.View);
+
             try
             {
                 var p = await _context.Permissions.AsNoTracking()
@@ -101,8 +107,10 @@ namespace Application.Services.Permissions
             }
         }
 
-        public async Task<string> CreateAsync(PermissionDto dto)
+        public async Task<string> CreateAsync(PermissionDto dto, string actingUserId)
         {
+            await EnsurePermissionAsync(actingUserId, Actions.Create);
+
             try
             {
                 var code = string.IsNullOrWhiteSpace(dto.Code)
@@ -139,8 +147,10 @@ namespace Application.Services.Permissions
             }
         }
 
-        public async Task<string> UpdateAsync(string id, PermissionDto dto)
+        public async Task<string> UpdateAsync(string id, PermissionDto dto, string actingUserId)
         {
+            await EnsurePermissionAsync(actingUserId, Actions.Edit);
+
             try
             {
                 var entity = await _context.Permissions.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
@@ -166,8 +176,10 @@ namespace Application.Services.Permissions
             }
         }
 
-        public async Task<bool> DeleteAsync(string id)
+        public async Task<bool> DeleteAsync(string id, string actingUserId)
         {
+            await EnsurePermissionAsync(actingUserId, Actions.Delete);
+
             try
             {
                 var entity = await _context.Permissions.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
@@ -186,6 +198,36 @@ namespace Application.Services.Permissions
             {
                 return false;
             }
+        }
+
+        // ==================================================================
+        // PERMISSION CHECK - Permission Management is System Configurator
+        // ONLY. Same shape as ErrorLogService.EnsurePermissionAsync /
+        // DatabaseManagementService.EnsurePermissionAsync - a real,
+        // data-driven RolePermission/Permission check against
+        // AppFeatureConstants.PERMISSION, not a hard-coded role-name
+        // string. In practice only System Configurator ever holds it (see
+        // DbSeeder's PERMISSION carve-out), but a tenant could grant it to
+        // another role later without any code change here.
+        // ==================================================================
+
+        private async Task EnsurePermissionAsync(string? actingUserId, string action)
+        {
+            if (string.IsNullOrEmpty(actingUserId))
+                throw new UnauthorizedException("You are not authorized to manage Permissions.");
+
+            var allowed = await (
+                from ur in _context.UserRoles.AsNoTracking()
+                join rp in _context.RolePermissions.AsNoTracking().Where(x => x.IsAllowed) on ur.RoleId equals rp.RoleId
+                join p in _context.Permissions.AsNoTracking().Where(x =>
+                        x.FeatureId == AppFeatureConstants.PERMISSION && x.Action == action)
+                    on rp.PermissionId equals p.Id
+                where ur.UserId == actingUserId
+                select p.Id
+            ).AnyAsync();
+
+            if (!allowed)
+                throw new UnauthorizedException("You are not authorized to manage Permissions.");
         }
     }
 }

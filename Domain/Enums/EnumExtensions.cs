@@ -235,6 +235,20 @@ namespace Domain.Enums
             Overdue = 8         // Payment date crossed without full payment
         }
 
+        // Week Off configuration pattern (Domain/Entities/WeekOff.cs).
+        // EveryWeek is the original/legacy behavior (a fixed weekday is a
+        // week-off every single week, e.g. "every Sunday") - existing rows
+        // default to this so nothing already configured for any
+        // tenant/company changes. NthWeekdayOfMonth is additive: only the
+        // configured occurrence(s) of the configured weekday within a given
+        // calendar month are a week-off (e.g. "2nd and 4th Saturday"). See
+        // Domain/Helper/WeekOffCalculator.cs for the date-resolution logic.
+        public enum WeekOffPatternType
+        {
+            EveryWeek = 0,
+            NthWeekdayOfMonth = 1
+        }
+
         public enum AttendanceStatus
         {
             None = 0,

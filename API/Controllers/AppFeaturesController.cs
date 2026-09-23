@@ -6,6 +6,17 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
 {
+    // Feature Management CRUD (below) is System Configurator ONLY -
+    // [Authorize] is the class-level baseline (any logged-in user with a
+    // valid JWT reaches the menu/favorites actions further down); the CRUD
+    // actions layer [Authorize(Roles="System Configurator")] on top as a
+    // coarse gate, PLUS the REAL, data-driven check is
+    // IAppFeatureService's EnsurePermissionAsync (RolePermission/
+    // Permission against AppFeatureConstants.APP_FEATURE), same convention
+    // as ErrorLogController/DatabaseManagementController - so the acting
+    // user is always passed explicitly rather than trusted implicitly.
+    // GetMenuList/GetMenuByUser/favorites endpoints are deliberately NOT
+    // restricted - every logged-in user needs those for their own sidebar.
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
@@ -22,78 +33,118 @@ namespace API.Controllers
         // GET ALL
         // ======================================================
 
+        [Authorize(Roles = "System Configurator")]
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] string actingUserId)
         {
-            var result = await _service.GetAllAsync();
+            try
+            {
+                var result = await _service.GetAllAsync(actingUserId);
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (Application.Common.Exceptions.UnauthorizedException ex)
+            {
+                return Unauthorized(new { Message = ex.Message, ErrorCode = ex.ErrorCode });
+            }
         }
 
         // ======================================================
         // GET BY ID
         // ======================================================
 
+        [Authorize(Roles = "System Configurator")]
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(string id)
+        public async Task<IActionResult> GetById(string id, [FromQuery] string actingUserId)
         {
-            var result = await _service.GetByIdAsync(id);
+            try
+            {
+                var result = await _service.GetByIdAsync(id, actingUserId);
 
-            if (result == null)
-                return NotFound();
+                if (result == null)
+                    return NotFound();
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (Application.Common.Exceptions.UnauthorizedException ex)
+            {
+                return Unauthorized(new { Message = ex.Message, ErrorCode = ex.ErrorCode });
+            }
         }
 
         // ======================================================
         // CREATE
         // ======================================================
 
+        [Authorize(Roles = "System Configurator")]
         [HttpPost]
-        public async Task<IActionResult> Create(AppFeatureDto dto)
+        public async Task<IActionResult> Create(AppFeatureDto dto, [FromQuery] string actingUserId)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _service.CreateAsync(dto);
+            try
+            {
+                var result = await _service.CreateAsync(dto, actingUserId);
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (Application.Common.Exceptions.UnauthorizedException ex)
+            {
+                return Unauthorized(new { Message = ex.Message, ErrorCode = ex.ErrorCode });
+            }
         }
 
         // ======================================================
         // UPDATE
         // ======================================================
 
+        [Authorize(Roles = "System Configurator")]
         [HttpPut]
-        public async Task<IActionResult> Update(AppFeatureDto dto)
+        public async Task<IActionResult> Update(AppFeatureDto dto, [FromQuery] string actingUserId)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _service.UpdateAsync(dto);
+            try
+            {
+                var result = await _service.UpdateAsync(dto, actingUserId);
 
-            if (result == null)
-                return NotFound();
+                if (result == null)
+                    return NotFound();
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (Application.Common.Exceptions.UnauthorizedException ex)
+            {
+                return Unauthorized(new { Message = ex.Message, ErrorCode = ex.ErrorCode });
+            }
         }
 
         // ======================================================
         // DELETE
         // ======================================================
 
+        [Authorize(Roles = "System Configurator")]
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(string id)
+        public async Task<IActionResult> Delete(string id, [FromQuery] string actingUserId)
         {
-            var result = await _service.DeleteAsync(id);
-
-            if (!result)
-                return NotFound();
-
-            return Ok(new
+            try
             {
-                Message = "Deleted Successfully"
-            });
+                var result = await _service.DeleteAsync(id, actingUserId);
+
+                if (!result)
+                    return NotFound();
+
+                return Ok(new
+                {
+                    Message = "Deleted Successfully"
+                });
+            }
+            catch (Application.Common.Exceptions.UnauthorizedException ex)
+            {
+                return Unauthorized(new { Message = ex.Message, ErrorCode = ex.ErrorCode });
+            }
         }
 
         [AllowAnonymous]

@@ -65,8 +65,24 @@ namespace Domain.Entities
         public string? AreaName { get; set; }
         // Example: Admin
 
+        // Manually-editable URL override, e.g. "/FeatureManagement/Index"
+        // (relative) or "https://intranet.example.com/help" (absolute).
+        // NULL/blank means "not set" - callers fall back to ComputedUrl
+        // below (the Area/Controller/Action convention). This used to be a
+        // [NotMapped], get-only computed property with the same name, which
+        // is why the Url field on the Add/Edit screen looked editable but
+        // silently discarded whatever was typed - see
+        // AppFeatureService.CreateAsync/UpdateAsync for the fix that now
+        // actually persists it here.
+        [MaxLength(500)]
+        [Display(Name = "URL")]
+        public string? Url { get; set; }
+
+        // Auto-derived URL from Area/Controller/Action - unchanged formula,
+        // just renamed from the old "Url" so the real, persisted Url column
+        // above could take that name.
         [NotMapped]
-        public string Url
+        public string ComputedUrl
         {
             get
             {
@@ -78,6 +94,11 @@ namespace Domain.Entities
                 return $"/{ControllerName}/{ActionName}";
             }
         }
+
+        // Effective URL actually used for menu links / navigation: the
+        // manually-set Url when present, otherwise the computed convention.
+        [NotMapped]
+        public string ResolvedUrl => !string.IsNullOrWhiteSpace(Url) ? Url : ComputedUrl;
 
         // =========================================
         // UI SETTINGS

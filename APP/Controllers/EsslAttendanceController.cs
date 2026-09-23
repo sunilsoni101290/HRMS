@@ -3,6 +3,8 @@ using APP.Helpers;
 using APP.Models.DTOs;
 using APP.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using System.Linq;
 
 namespace APP.Controllers
 {
@@ -38,7 +40,133 @@ namespace APP.Controllers
                 Config = configResponse?.Data ?? new EsslDatabaseConfigViewDto()
             };
 
+            // --------------------------------------------------------
+            // ADDITIVE - "Attendance Synchronization" combined-page redesign
+            // (see EsslSettingsPageViewModel's remarks). Reads the single
+            // most recent row from the SAME two already-existing endpoints
+            // the old "Sync Logs" tab and the standalone Historical Sync
+            // page already call - no new API surface, no engine change.
+            // Best-effort: a failure here must never block the page (it
+            // only feeds two summary cards), so it degrades to "no summary
+            // yet" rather than failing the whole page load.
+            // --------------------------------------------------------
+            try
+            {
+                var lastSyncResp = await _apiService.GetAsync<ApiResponse<PagedResult<EsslSyncHistoryDto>>>(
+                    "EsslAttendance/sync-history?PageNumber=1&PageSize=1");
+                model.LastSyncHistory = lastSyncResp?.Data?.Data?.FirstOrDefault();
+            }
+            catch { /* summary card just shows "no sync yet" */ }
+
+            try
+            {
+                var lastJobResp = await _apiService.GetAsync<ApiResponse<PagedResult<HistoricalSyncJobDto>>>(
+                    "HistoricalAttendanceSync/history?PageNumber=1&PageSize=1");
+                model.LastHistoricalJob = lastJobResp?.Data?.Data?.FirstOrDefault();
+            }
+            catch { /* summary card just shows "no historical sync yet" */ }
+
+            // Historical Sync (Manual) card's "Employee (Optional)" dropdown -
+            // reuses the SAME already-existing BiometricSimulator/mapped-employees
+            // endpoint the Biometric Punch Simulator screen already uses for its
+            // own Employee dropdown (APP/Controllers/BiometricSimulatorController.cs),
+            // since it is exactly "employees with an active biometric mapping" -
+            // the same population Historical Sync itself operates over. No new
+            // API endpoint added.
+            try
+            {
+                var tenantId = SessionHelper.GetActiveTenantId;
+                var employees = await _apiService
+                    .GetAsync<List<SimulatorMappedEmployeeDto>>($"BiometricSimulator/mapped-employees?tenantId={Uri.EscapeDataString(tenantId ?? "")}")
+                    ?? new List<SimulatorMappedEmployeeDto>();
+
+                ViewBag.EmployeeList = new SelectList(
+                    employees.Where(x => x.IsActive).OrderBy(x => x.EmployeeName),
+                    "EmployeeId", "EmployeeName");
+            }
+            catch
+            {
+                ViewBag.EmployeeList = new SelectList(new List<SimulatorMappedEmployeeDto>(), "EmployeeId", "EmployeeName");
+            }
+
             return View(model);
+        }
+
+        // --------------------------------------------------------------
+        // ADDITIVE - unified "Processing Log (Last 50 Lines)" for the
+        // combined Attendance Synchronization page. There is no per-line
+        // processing-log table/service anywhere in this codebase for
+        // either sync feature (only per-run summary rows - EsslSyncHistoryDto
+        // / HistoricalSyncJobDto) and IErrorLogService is for unhandled
+        // application exceptions, not routine sync narration - so rather
+        // than inventing a new persisted log table (out of scope for a
+        // UI-only change), this synthesizes readable log lines FROM the
+        // same per-run summary rows both features already persist and the
+        // page already calls (EsslAttendance/sync-history,
+        // HistoricalAttendanceSync/history) - one Start line + one
+        // Completed/Failed line per run, merged and time-sorted. Purely a
+        // thin APP-side composition; no API or engine change.
+        // --------------------------------------------------------------
+        [HttpGet]
+        public async Task<JsonResult> CombinedLog()
+        {
+            var lines = new List<object>();
+
+            try
+            {
+                var esslResp = await _apiService.GetAsync<ApiResponse<PagedResult<EsslSyncHistoryDto>>>(
+                    "EsslAttendance/sync-history?PageNumber=1&PageSize=15");
+
+                foreach (var h in esslResp?.Data?.Data ?? new List<EsslSyncHistoryDto>())
+                {
+                    lines.Add(new { time = h.StartTime, message = $"[eSSL Sync] Started - window {(h.FromDate?.ToString("dd-MMM") ?? "incremental")} to {(h.ToDate?.ToString("dd-MMM") ?? "now")}." });
+
+                    if (h.EndTime.HasValue)
+                    {
+                        var statusWord = h.Status == "Success" ? "completed successfully" : h.Status == "PartialFailure" ? "completed with warnings" : "failed";
+                        lines.Add(new
+                        {
+                            time = h.EndTime.Value,
+                            message = $"[eSSL Sync] {statusWord} - Fetched {h.RecordsFetched}, Imported {h.RecordsInserted}, Skipped {h.RecordsSkipped}, Failed {h.RecordsFailed}." +
+                                      (string.IsNullOrEmpty(h.ErrorMessage) ? "" : $" {h.ErrorMessage}")
+                        });
+                    }
+                }
+            }
+            catch { /* one source failing must not blank out the other */ }
+
+            try
+            {
+                var jobResp = await _apiService.GetAsync<ApiResponse<PagedResult<HistoricalSyncJobDto>>>(
+                    "HistoricalAttendanceSync/history?PageNumber=1&PageSize=15");
+
+                foreach (var j in jobResp?.Data?.Data ?? new List<HistoricalSyncJobDto>())
+                {
+                    var started = j.StartTime ?? j.CreatedOn;
+                    lines.Add(new { time = started, message = $"[Historical Sync] Started - {j.FromDate:dd-MMM-yyyy} to {j.ToDate:dd-MMM-yyyy}{(string.IsNullOrEmpty(j.EmployeeName) ? " (all employees)" : $" - {j.EmployeeName}")}." });
+
+                    if (j.EndTime.HasValue)
+                    {
+                        var statusWord = j.Status == "Completed" ? "completed successfully" : j.Status == "PartiallyCompleted" ? "completed with warnings" : j.Status == "Failed" ? "failed" : j.Status;
+                        lines.Add(new
+                        {
+                            time = j.EndTime.Value,
+                            message = $"[Historical Sync] {statusWord} - Processed {j.ProcessedCount}/{j.TotalRecords}, AttendanceLogs {j.AttendanceLogsCreated}, Attendances Created {j.AttendancesCreated}, Updated {j.AttendancesUpdated}, Unmapped {j.UnmappedCount}, Failed {j.FailedCount}." +
+                                      (string.IsNullOrEmpty(j.ErrorSummary) ? "" : $" {j.ErrorSummary}")
+                        });
+                    }
+                }
+            }
+            catch { /* one source failing must not blank out the other */ }
+
+            var ordered = lines
+                .Select(l => (dynamic)l)
+                .OrderByDescending(l => (DateTime)l.time)
+                .Take(50)
+                .Select((l, idx) => new { line = idx + 1, time = ((DateTime)l.time).ToString("hh:mm:ss tt"), message = (string)l.message })
+                .ToList();
+
+            return Json(new { success = true, data = ordered });
         }
 
         [HttpGet]

@@ -76,8 +76,22 @@ namespace EsslIntegration.Tests.Integration
                     // second call in the same run returns nothing further.
                     cursor == null ? rowsToReturn : new List<EsslDeviceLogRaw>());
 
+            // ROOT-CAUSE FIX: EsslAttendanceSyncService.SyncAsync calls
+            // IAttendanceProcessorService.ProcessAttendanceWithResultAsync
+            // (not the plain bool ProcessAttendanceAsync()) - this mock was
+            // stale against an older interface shape and, being a loose
+            // (non-Strict) Moq mock, silently returned a null Task for the
+            // unconfigured method instead of failing the build/test. Left
+            // uncorrected, `await` on that null Task throws a
+            // NullReferenceException that SyncAsync's own try/catch around
+            // the processing call swallows into an ErrorLog entry - so the
+            // assertions below still passed, but for the wrong reason, and
+            // "attendance processing after import" was silently never
+            // exercised by this whole test class.
             var processorMock = new Mock<IAttendanceProcessorService>();
-            processorMock.Setup(x => x.ProcessAttendanceAsync()).ReturnsAsync(true);
+            processorMock
+                .Setup(x => x.ProcessAttendanceWithResultAsync(It.IsAny<int>()))
+                .ReturnsAsync(new AttendanceProcessingResultDto { Success = true });
 
             var errorLogMock = new Mock<IErrorLogService>();
             errorLogMock
@@ -86,6 +100,22 @@ namespace EsslIntegration.Tests.Integration
                     It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>()))
                 .Returns(Task.CompletedTask);
 
+            // ROOT-CAUSE FIX: EsslAttendanceSyncService's constructor now
+            // also takes IEsslBulkAttendanceLogWriter (the SQL-Server-only
+            // bulk-staging fast path added after this test file was first
+            // written) - this test project targets EF Core InMemory, which
+            // that path cannot run against anyway, so the mock is set up to
+            // THROW, exercising exactly the same "bulk staging unavailable -
+            // fall back to the existing EF AddRange/SaveChangesAsync path"
+            // branch production already falls back to when
+            // EsslBulkStaging.sql's objects aren't deployed yet to an
+            // environment.
+            var bulkWriterMock = new Mock<IEsslBulkAttendanceLogWriter>();
+            bulkWriterMock
+                .Setup(x => x.StageAndMergeAsync(
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyList<EsslBulkStageRow>>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new InvalidOperationException("Bulk staging SQL objects not available in this test environment (EF InMemory) - by design, forces the EF fallback path."));
+
             var service = new EsslAttendanceSyncService(
                 db,
                 dataSourceMock.Object,
@@ -93,6 +123,7 @@ namespace EsslIntegration.Tests.Integration
                 errorLogMock.Object,
                 BuildConfig(),
                 BuildDataProtectionProvider(),
+                bulkWriterMock.Object,
                 NullLogger<EsslAttendanceSyncService>.Instance);
 
             return (service, dataSourceMock);
@@ -170,6 +201,7 @@ namespace EsslIntegration.Tests.Integration
 
             var processorMock = new Mock<IAttendanceProcessorService>();
             var errorLogMock = new Mock<IErrorLogService>();
+            var bulkWriterMock = new Mock<IEsslBulkAttendanceLogWriter>();
 
             var config = new ConfigurationBuilder()
                 .AddInMemoryCollection(new Dictionary<string, string?> { ["EsslDatabase:Enabled"] = "false" })
@@ -177,7 +209,7 @@ namespace EsslIntegration.Tests.Integration
 
             var service = new EsslAttendanceSyncService(
                 fixture.Context, dataSourceMock.Object, processorMock.Object, errorLogMock.Object,
-                config, BuildDataProtectionProvider(), NullLogger<EsslAttendanceSyncService>.Instance);
+                config, BuildDataProtectionProvider(), bulkWriterMock.Object, NullLogger<EsslAttendanceSyncService>.Instance);
 
             var result = await service.SyncAsync(new EsslSyncRequestDto(), EsslTestFixture.TenantId, "Test");
 

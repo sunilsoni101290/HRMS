@@ -80,6 +80,17 @@ namespace APP.Attributes
             // admin configuration screen, same gating as the other
             // Biometric/Attendance admin screens above.
             "EsslAttendance",
+            // Standalone Historical Attendance Sync - a COMPLETELY SEPARATE
+            // admin screen from EsslAttendance above (see
+            // APP/Controllers/HistoricalAttendanceSyncController.cs). Same
+            // admin/HR-only gating.
+            "HistoricalAttendanceSync",
+            // Standalone "Sync Biometric Attendance (Month Wise)" bulk-assign
+            // tool - a brand-new, COMPLETELY SEPARATE admin screen from both
+            // EsslAttendance and HistoricalAttendanceSync above (see
+            // APP/Controllers/MonthWiseBiometricSyncController.cs). Same
+            // admin/HR-only gating.
+            "MonthWiseBiometricSync",
             // Centralized Error Log - System Configurator/Admin only (see
             // SystemConfiguratorOnlyAttribute, applied directly on
             // ErrorLogController - this entry only stops a plain

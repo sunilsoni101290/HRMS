@@ -1,0 +1,65 @@
+@model APP.Models.DTOs.PagedResult<APP.Models.DTOs.HistoricalSyncJobDto>
+
+@if (Model == null || Model.Data == null || Model.Data.Count == 0)
+{
+    <div class="text-muted">No Historical Attendance Sync jobs yet.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-sm table-hover">
+            <thead>
+                <tr>
+                    <th>Requested On</th>
+                    <th>Range</th>
+                    <th>Employee</th>
+                    <th>Status</th>
+                    <th class="text-end">Total</th>
+                    <th class="text-end">Processed</th>
+                    <th class="text-end">AttendanceLogs</th>
+                    <th class="text-end">Att. Created</th>
+                    <th class="text-end">Att. Updated</th>
+                    <th class="text-end">Duplicates</th>
+                    <th class="text-end">Unmapped</th>
+                    <th class="text-end">Failed</th>
+                    <th>Requested By</th>
+                    <th>Duration</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var job in Model.Data)
+                {
+                    var badgeClass = job.Status switch
+                    {
+                        "Completed" => "badge-success",
+                        "PartiallyCompleted" => "badge-warning",
+                        "Failed" => "badge-danger",
+                        "Running" => "badge-info",
+                        _ => "badge-secondary"
+                    };
+
+                    <tr title="@job.ErrorSummary">
+                        <td>@job.CreatedOn.ToString("dd-MMM-yyyy HH:mm")</td>
+                        <td>@job.FromDate.ToString("dd-MMM-yyyy") - @job.ToDate.ToString("dd-MMM-yyyy")</td>
+                        <td>@(job.EmployeeName ?? "All Employees")</td>
+                        <td><span class="badge @badgeClass">@job.Status</span></td>
+                        <td class="text-end">@job.TotalRecords</td>
+                        <td class="text-end">@job.ProcessedCount</td>
+                        <td class="text-end">@job.AttendanceLogsCreated</td>
+                        <td class="text-end">@job.AttendancesCreated</td>
+                        <td class="text-end">@job.AttendancesUpdated</td>
+                        <td class="text-end">@job.DuplicateCount</td>
+                        <td class="text-end">@job.UnmappedCount</td>
+                        <td class="text-end">@job.FailedCount</td>
+                        <td>@job.RequestedBy</td>
+                        <td>@(job.DurationSeconds.HasValue ? Math.Round(job.DurationSeconds.Value, 1) + "s" : "-")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="text-muted small">
+        Showing page @Model.PageNumber of @(Math.Max(1, (int)Math.Ceiling((double)Model.TotalRecords / Math.Max(1, Model.PageSize)))) (@Model.TotalRecords total job(s))
+    </div>
+}

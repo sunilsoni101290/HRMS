@@ -79,6 +79,25 @@ namespace API.Controllers
         }
 
         // ======================================================
+        // GET WEEK OFF DATES FOR MONTH (new - the computational core of
+        // the "Nth weekday of month" pattern, e.g. "2nd and 4th Saturday").
+        // Resolves BOTH patterns (EveryWeek + NthWeekdayOfMonth) for the
+        // tenant and returns the concrete calendar dates that are a
+        // week-off in that month.
+        // ======================================================
+
+        [HttpGet("dates")]
+        public async Task<IActionResult> GetWeekOffDates([FromQuery] int year, [FromQuery] int month, [FromQuery] string tenantId)
+        {
+            if (year < 1 || month < 1 || month > 12 || string.IsNullOrWhiteSpace(tenantId))
+                return BadRequest("year, month and tenantId are required (month must be 1-12).");
+
+            var dates = await _weekOffService.GetWeekOffDatesForMonth(year, month, tenantId);
+
+            return Ok(dates);
+        }
+
+        // ======================================================
         // DELETE
         // ======================================================
 

@@ -1,0 +1,393 @@
+@{
+    ViewData["Title"] = "Historical Attendance Sync";
+}
+
+@*
+    Standalone "Historical Attendance Sync" screen - a COMPLETELY SEPARATE
+    page from Views/EsslAttendance/Index.cshtml (never modified, never
+    referenced here). This never fetches anything new from eSSL/any
+    biometric device - it only re-processes EXISTING BiometricAttendanceLogs
+    rows already sitting in the database, for an admin-picked historical
+    date range.
+
+    Redesign note: the original version of this view used Bootstrap 4/5's
+    ".card"/".card-header"/".card-body" component classes and several
+    Bootstrap 4/5-only utility classes (row g-3, d-flex gap-2, mr-2, ml-2,
+    badge-secondary/info/success/warning/danger, progress-bar-animated).
+    This project actually ships Bootstrap 3.3.7 (see
+    APP/wwwroot/global_assets/js/core/libraries/bootstrap.min.js's header
+    comment) - Bootstrap 3 has no ".card" component at all (that's a
+    Bootstrap 4/5 concept; BS3's equivalent is ".panel"), so every one of
+    those elements was rendering as a bare, unstyled, borderless <div> -
+    which is exactly the flat, white, "no proper background" look reported.
+    This view now uses the same plain-CSS "ent-panel" card style + utility
+    shim introduced in the EsslAttendance/Index.cshtml redesign, so both
+    pages share one consistent, real (not silently-broken) look.
+*@
+
+<div class="ent-page">
+
+    <div class="ent-panel mb-3">
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="ent-icon-badge" style="background:#eaf0fe;color:#2b6fd9;"><i class="bi bi-clock-history"></i></span>
+            <h5 class="mb-0" style="font-weight:700;color:#1b2a4a;">Historical Attendance Sync</h5>
+        </div>
+        <p class="text-muted mb-3">
+            Re-process biometric punches that already exist in the database for a past date range into
+            Attendance records. This does <strong>not</strong> contact any biometric device or fetch new
+            data - it only replays what has already been imported (e.g. via eSSL Sync Now) but has not yet
+            produced Attendance records, using the exact same shift/late/overtime/break rules as the live
+            attendance engine.
+        </p>
+
+        <form id="historicalSyncForm" class="row">
+            <div class="col-md-3" style="margin-bottom:14px;">
+                <label class="form-label small mb-1">From Date <span class="text-danger">*</span></label>
+                <input type="date" id="fromDate" class="form-control" required />
+            </div>
+            <div class="col-md-3" style="margin-bottom:14px;">
+                <label class="form-label small mb-1">To Date <span class="text-danger">*</span></label>
+                <input type="date" id="toDate" class="form-control" required />
+            </div>
+            <div class="col-md-4" style="margin-bottom:14px;">
+                <label class="form-label small mb-1">Employee <span class="text-muted">(optional)</span></label>
+                <input type="text" id="employeeId" class="form-control" placeholder="Employee Id (leave blank for all employees)" />
+            </div>
+            <div class="col-md-2" style="margin-bottom:14px;">
+                <label class="form-label small mb-1">Batch Size</label>
+                <input type="number" id="batchSize" class="form-control" value="1000" min="100" max="5000" />
+            </div>
+
+            <div class="col-md-12" style="clear:both;display:flex;flex-wrap:wrap;gap:.5rem;margin-top:6px;">
+                <button type="button" id="previewBtn" class="btn btn-outline-secondary">
+                    <i class="bi bi-search"></i> Preview Records
+                </button>
+                <button type="button" id="startBtn" class="btn btn-primary">
+                    <i class="bi bi-play-fill"></i> Start Historical Sync
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="ent-panel mb-3" id="previewCard" style="display:none;">
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <i class="bi bi-eye" style="color:#2b6fd9;"></i>
+            <span style="font-weight:700;color:#1b2a4a;">Preview</span>
+        </div>
+        <div class="row text-center g-2" id="previewSummary"></div>
+        <div id="previewWarning" class="alert alert-warning mt-3" style="display:none;"></div>
+        <div id="previewUnmapped" class="mt-2 small text-muted" style="display:none;"></div>
+    </div>
+
+    <div class="ent-panel mb-3" id="statusCard" style="display:none;">
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <i class="bi bi-activity" style="color:#2b6fd9;"></i>
+            <span style="font-weight:700;color:#1b2a4a;">Progress / Status</span>
+        </div>
+
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="badge" id="statusBadge">Queued</span>
+            <span class="text-muted" id="statusRange"></span>
+        </div>
+
+        <div class="progress mb-3" style="height: 10px;">
+            <div id="statusProgressBar" class="progress-bar progress-bar-striped active" role="progressbar" style="width: 0%;"></div>
+        </div>
+
+        <div class="row text-center g-2" id="statusSummary"></div>
+
+        <div id="statusError" class="alert alert-danger mt-3" style="display:none; white-space: pre-wrap;"></div>
+    </div>
+
+    <div class="ent-panel">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-clipboard-data" style="color:#2b6fd9;"></i>
+                <span style="font-weight:700;color:#1b2a4a;">Processing Summary (Job History)</span>
+            </div>
+            <button type="button" id="refreshHistoryBtn" class="btn btn-light btn-sm">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+        </div>
+        <div id="jobHistoryContainer">
+            <div class="text-muted">Loading...</div>
+        </div>
+    </div>
+
+</div>
+
+<style>
+    /* ===================================================================
+       Same enterprise card + Bootstrap 4/5 utility-class shim used on
+       Views/EsslAttendance/Index.cshtml - see that file's <style> block
+       for the full explanation of why this project's real Bootstrap 3.3.7
+       stylesheet needs it. Kept local to this view rather than shared,
+       since Razor views don't have a common included stylesheet here.
+       =================================================================== */
+    .ent-page { background:#f4f6fb; padding:18px; border-radius:10px; }
+    .ent-panel { background:#fff; border:1px solid #e7ebf3; border-radius:10px; padding:16px 18px; }
+    .ent-icon-badge { width:34px; height:34px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; font-size:16px; }
+    .ent-stat { background:#fbfcfe; border:1px solid #eef1f7; border-radius:8px; padding:10px 6px; }
+    .ent-stat-val { font-weight:700; font-size:19px; color:#1b2a4a; }
+    .ent-stat-lbl { font-size:11px; color:#66738f; margin-top:2px; }
+
+    .d-flex { display: flex !important; }
+    .flex-wrap { flex-wrap: wrap !important; }
+    .justify-content-between { justify-content: space-between !important; }
+    .align-items-center { align-items: center !important; }
+    .gap-1 { gap: .25rem !important; }
+    .gap-2 { gap: .5rem !important; }
+    .mb-0 { margin-bottom: 0 !important; }
+    .mb-1 { margin-bottom: .25rem !important; }
+    .mb-2 { margin-bottom: .5rem !important; }
+    .mb-3 { margin-bottom: 1rem !important; }
+    .mt-1 { margin-top: .25rem !important; }
+    .mt-2 { margin-top: .5rem !important; }
+    .mt-3 { margin-top: 1rem !important; }
+
+    .badge { display: inline-block; padding: .35em .65em; font-size: .75em; font-weight: 700; line-height: 1; color: #fff; text-align: center; white-space: nowrap; vertical-align: baseline; border-radius: .375rem; background-color:#6c757d; }
+    .badge.bg-success, .badge-success { background-color: #28a745 !important; }
+    .badge.bg-warning, .badge-warning { background-color: #ffc107 !important; color:#212529 !important; }
+    .badge.bg-danger, .badge-danger { background-color: #d9534f !important; }
+    .badge.bg-info, .badge-info { background-color: #17a2b8 !important; }
+    .badge.bg-secondary, .badge-secondary { background-color: #6c757d !important; }
+
+    .btn-outline-secondary { color: #6c757d; background-color: transparent; border: 1px solid #6c757d; }
+    .btn-outline-secondary:hover { color: #fff; background-color: #6c757d; }
+
+    #previewSummary .col-md-2, #statusSummary .col-md-2 { margin-bottom: .5rem; }
+</style>
+
+@section Scripts {
+    <script>
+        (function () {
+            var previewedRequest = null;
+            var pollTimer = null;
+
+            function fmtNum(n) { return (n === null || n === undefined) ? '0' : n.toLocaleString(); }
+
+            function getRequest() {
+                return {
+                    fromDate: $('#fromDate').val(),
+                    toDate: $('#toDate').val(),
+                    employeeId: $('#employeeId').val() || null,
+                    batchSize: parseInt($('#batchSize').val(), 10) || 1000
+                };
+            }
+
+            function validateRange(req) {
+                if (!req.fromDate || !req.toDate) {
+                    alert('Please select both From Date and To Date.');
+                    return false;
+                }
+                if (new Date(req.fromDate) > new Date(req.toDate)) {
+                    alert('From Date cannot be after To Date.');
+                    return false;
+                }
+                return true;
+            }
+
+            $('#previewBtn').on('click', function () {
+                var req = getRequest();
+                if (!validateRange(req)) return;
+
+                var btn = $(this).prop('disabled', true);
+
+                $.ajax({
+                    url: '@Url.Action("Preview", "HistoricalAttendanceSync")',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(req),
+                    success: function (resp) {
+                        btn.prop('disabled', false);
+                        if (!resp || !resp.success) {
+                            alert((resp && resp.message) || 'Preview failed.');
+                            return;
+                        }
+
+                        previewedRequest = req;
+                        renderPreview(resp.data);
+                        $('#startBtn').prop('disabled', resp.data.hasOverlappingActiveJob);
+                    },
+                    error: function (xhr) {
+                        btn.prop('disabled', false);
+                        alert(extractError(xhr));
+                    }
+                });
+            });
+
+            function renderPreview(d) {
+                $('#previewCard').show();
+
+                var html = '';
+                html += statBox('Total in Range', d.totalBiometricLogsInRange);
+                html += statBox('Unprocessed', d.unprocessedLogsInRange);
+                html += statBox('Already Linked', d.alreadyLinkedCount);
+                html += statBox('Flagged Duplicates', d.flaggedDuplicateCount);
+                html += statBox('Unmapped Codes', d.unmappedEmployeeCodeCount);
+                $('#previewSummary').html(html);
+
+                if (d.hasOverlappingActiveJob) {
+                    $('#previewWarning')
+                        .text('A Historical Attendance Sync job is already Queued/Running for an overlapping date range (Job Id: ' + d.overlappingJobId + '). Start is disabled until it finishes.')
+                        .show();
+                } else {
+                    $('#previewWarning').hide();
+                }
+
+                if (d.sampleUnmappedCodes && d.sampleUnmappedCodes.length > 0) {
+                    $('#previewUnmapped')
+                        .text('Sample unmapped biometric codes: ' + d.sampleUnmappedCodes.join(', '))
+                        .show();
+                } else {
+                    $('#previewUnmapped').hide();
+                }
+            }
+
+            function statBox(label, value) {
+                return '<div class="col-md-2 col-6">' +
+                    '<div class="ent-stat">' +
+                    '<div class="ent-stat-val">' + fmtNum(value) + '</div>' +
+                    '<div class="ent-stat-lbl">' + label + '</div>' +
+                    '</div>' +
+                    '</div>';
+            }
+
+            $('#startBtn').on('click', function () {
+                var req = getRequest();
+                if (!validateRange(req)) return;
+
+                if (!confirm('Start Historical Attendance Sync for ' + req.fromDate + ' to ' + req.toDate +
+                    (req.employeeId ? (' (Employee: ' + req.employeeId + ')') : ' (all employees)') + '?')) {
+                    return;
+                }
+
+                var btn = $(this).prop('disabled', true);
+
+                $.ajax({
+                    url: '@Url.Action("Start", "HistoricalAttendanceSync")',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(req),
+                    success: function (resp) {
+                        if (!resp || !resp.success) {
+                            btn.prop('disabled', false);
+                            alert((resp && resp.message) || 'Could not start Historical Attendance Sync.');
+                            return;
+                        }
+
+                        var jobId = resp.data && resp.data.jobId;
+                        if (jobId) {
+                            $('#statusCard').show();
+                            startPolling(jobId);
+                        }
+                        loadHistory();
+                    },
+                    error: function (xhr) {
+                        btn.prop('disabled', false);
+                        alert(extractError(xhr));
+                    }
+                });
+            });
+
+            function startPolling(jobId) {
+                if (pollTimer) clearInterval(pollTimer);
+                pollJobStatus(jobId);
+                pollTimer = setInterval(function () { pollJobStatus(jobId); }, 3000);
+            }
+
+            function pollJobStatus(jobId) {
+                $.ajax({
+                    url: '@Url.Action("GetStatus", "HistoricalAttendanceSync")',
+                    type: 'GET',
+                    data: { jobId: jobId },
+                    success: function (resp) {
+                        if (!resp || !resp.success || !resp.data) return;
+
+                        renderStatus(resp.data);
+
+                        if (resp.data.status === 'Completed' || resp.data.status === 'Failed' || resp.data.status === 'PartiallyCompleted') {
+                            if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+                            $('#startBtn').prop('disabled', false);
+                            loadHistory();
+                        }
+                    }
+                });
+            }
+
+            function renderStatus(d) {
+                var badgeClass = 'bg-secondary';
+                if (d.status === 'Running' || d.status === 'Queued') badgeClass = 'bg-info';
+                else if (d.status === 'Completed') badgeClass = 'bg-success';
+                else if (d.status === 'PartiallyCompleted') badgeClass = 'bg-warning';
+                else if (d.status === 'Failed') badgeClass = 'bg-danger';
+
+                $('#statusBadge').attr('class', 'badge ' + badgeClass).text(d.status);
+                $('#statusRange').text(d.fromDate ? (formatDate(d.fromDate) + ' to ' + formatDate(d.toDate) +
+                    (d.employeeName ? (' - ' + d.employeeName) : ' - All Employees')) : '');
+
+                var pct = 0;
+                if (d.totalRecords > 0) {
+                    pct = Math.min(100, Math.round(((d.processedCount + d.failedCount + d.unmappedCount + d.duplicateCount) / d.totalRecords) * 100));
+                } else if (d.status === 'Completed') {
+                    pct = 100;
+                }
+                $('#statusProgressBar').css('width', pct + '%').text(pct + '%');
+
+                if (d.status !== 'Running' && d.status !== 'Queued') {
+                    $('#statusProgressBar').removeClass('active');
+                }
+
+                var html = '';
+                html += statBox('Total Records', d.totalRecords);
+                html += statBox('Processed', d.processedCount);
+                html += statBox('AttendanceLogs Created', d.attendanceLogsCreated);
+                html += statBox('Attendances Created', d.attendancesCreated);
+                html += statBox('Attendances Updated', d.attendancesUpdated);
+                html += statBox('Duplicates Skipped', d.duplicateCount);
+                html += statBox('Unmapped', d.unmappedCount);
+                html += statBox('Failed', d.failedCount);
+                if (d.durationSeconds !== null && d.durationSeconds !== undefined) {
+                    html += statBox('Duration (s)', Math.round(d.durationSeconds));
+                }
+                $('#statusSummary').html(html);
+
+                if (d.errorSummary) {
+                    $('#statusError').text(d.errorSummary).show();
+                } else {
+                    $('#statusError').hide();
+                }
+            }
+
+            function formatDate(s) {
+                var d = new Date(s);
+                if (isNaN(d.getTime())) return s;
+                return d.toLocaleDateString();
+            }
+
+            function extractError(xhr) {
+                try {
+                    var json = JSON.parse(xhr.responseText);
+                    return json.message || 'Request failed.';
+                } catch (e) {
+                    return 'Request failed.';
+                }
+            }
+
+            function loadHistory() {
+                $('#jobHistoryContainer').load('@Url.Action("History", "HistoricalAttendanceSync")');
+            }
+
+            $('#refreshHistoryBtn').on('click', loadHistory);
+
+            // Default From/To to the current month, and load history on page load.
+            (function initDefaults() {
+                var today = new Date();
+                var first = new Date(today.getFullYear(), today.getMonth(), 1);
+                $('#fromDate').val(first.toISOString().slice(0, 10));
+                $('#toDate').val(today.toISOString().slice(0, 10));
+                loadHistory();
+            })();
+        })();
+    </script>
+}

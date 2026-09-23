@@ -1,4 +1,5 @@
-﻿using Application.DTOs;
+﻿using Application.Common.Exceptions;
+using Application.DTOs;
 using Domain.Entities;
 using Domain.Helper;
 using Infrastructure;
@@ -22,8 +23,10 @@ namespace Application.Services.Masters
         // GET ALL
         // ======================================================
 
-        public async Task<List<AppFeatureDto>> GetAllAsync()
+        public async Task<List<AppFeatureDto>> GetAllAsync(string actingUserId)
         {
+            await EnsurePermissionAsync(actingUserId, Actions.View);
+
             try
             {
             var data = await _context.AppFeatures
@@ -49,7 +52,10 @@ namespace Application.Services.Masters
                 ControllerName = x.ControllerName,
                 ActionName = x.ActionName,
                 AreaName = x.AreaName,
-                Url = x.Url,
+                // Effective URL (manual override if set, else the
+                // Area/Controller/Action convention) - matches what the
+                // listing/Edit screen should actually show.
+                Url = x.ResolvedUrl,
 
                 IsVisible = x.IsVisible,
                 IsMenu = x.IsMenu,
@@ -81,8 +87,10 @@ namespace Application.Services.Masters
         // GET BY ID
         // ======================================================
 
-        public async Task<AppFeatureDto?> GetByIdAsync(string id)
+        public async Task<AppFeatureDto?> GetByIdAsync(string id, string actingUserId)
         {
+            await EnsurePermissionAsync(actingUserId, Actions.View);
+
             try
             {
             var x = await _context.AppFeatures
@@ -108,7 +116,11 @@ namespace Application.Services.Masters
                 ControllerName = x.ControllerName,
                 ActionName = x.ActionName,
                 AreaName = x.AreaName,
-                Url = x.Url,
+                // Effective URL - see GetAllAsync's comment above. This is
+                // what pre-populates the Edit screen's Url field, so it
+                // always loads the true current value (manual override,
+                // or the computed one if none was ever set).
+                Url = x.ResolvedUrl,
 
                 IsVisible = x.IsVisible,
                 IsMenu = x.IsMenu,
@@ -143,8 +155,10 @@ namespace Application.Services.Masters
         // CREATE
         // ======================================================
 
-        public async Task<AppFeatureDto> CreateAsync(AppFeatureDto dto)
+        public async Task<AppFeatureDto> CreateAsync(AppFeatureDto dto, string actingUserId)
         {
+            await EnsurePermissionAsync(actingUserId, Actions.Create);
+
             try
             {
             var entity = new AppFeature
@@ -161,6 +175,7 @@ namespace Application.Services.Masters
                 ControllerName = dto.ControllerName,
                 ActionName = dto.ActionName,
                 AreaName = dto.AreaName,
+                Url = NormalizeUrl(dto.Url),
 
                 IsVisible = dto.IsVisible,
                 IsMenu = dto.IsMenu,
@@ -200,8 +215,10 @@ namespace Application.Services.Masters
         // UPDATE
         // ======================================================
 
-        public async Task<AppFeatureDto?> UpdateAsync(AppFeatureDto dto)
+        public async Task<AppFeatureDto?> UpdateAsync(AppFeatureDto dto, string actingUserId)
         {
+            await EnsurePermissionAsync(actingUserId, Actions.Edit);
+
             try
             {
             var entity = await _context.AppFeatures
@@ -221,14 +238,15 @@ namespace Application.Services.Masters
             entity.ControllerName = dto.ControllerName;
             entity.ActionName = dto.ActionName;
             entity.AreaName = dto.AreaName;
-            // entity.Url is intentionally not set here - it is a [NotMapped],
-            // get-only computed property on AppFeature (Domain/Entities/
-            // AppFeature.cs), always derived from AreaName/ControllerName/
-            // ActionName. There is no column to persist it to; it has no
-            // setter at all. The Url <input> on Create.cshtml editing it
-            // does nothing today and never has - see the Views/AppFeatures/
-            // Create.cshtml TODO for the actual fix (make that field
-            // read-only/computed in the UI instead of implying it's saved).
+            // Persist exactly what was submitted (trimmed / blank -> null).
+            // Url is now a real, mapped column (Domain/Entities/
+            // AppFeature.cs) instead of the old [NotMapped] computed
+            // property, so an edited value here actually survives the
+            // save and is not silently overwritten by the
+            // Area/Controller/Action convention on the next load - see
+            // GetByIdAsync's ResolvedUrl comment above for how it's
+            // re-populated when the field is left blank.
+            entity.Url = NormalizeUrl(dto.Url);
 
             entity.IsVisible = dto.IsVisible;
             entity.IsMenu = dto.IsMenu;
@@ -264,11 +282,23 @@ namespace Application.Services.Masters
         }
 
         // ======================================================
+        // HELPERS
+        // ======================================================
+
+        // Trims a submitted Url and turns blank/whitespace into null, so
+        // "not set" is stored consistently as NULL (falls back to
+        // AppFeature.ComputedUrl) rather than an empty string.
+        private static string? NormalizeUrl(string? url)
+            => string.IsNullOrWhiteSpace(url) ? null : url.Trim();
+
+        // ======================================================
         // DELETE
         // ======================================================
 
-        public async Task<bool> DeleteAsync(string id)
+        public async Task<bool> DeleteAsync(string id, string actingUserId)
         {
+            await EnsurePermissionAsync(actingUserId, Actions.Delete);
+
             try
             {
             var entity = await _context.AppFeatures
@@ -313,9 +343,17 @@ namespace Application.Services.Masters
                     ActionName = x.ActionName,
                     AreaName = x.AreaName,
 
-                    Url = !string.IsNullOrEmpty(x.AreaName)
-                            ? "/" + x.AreaName + "/" + x.ControllerName + "/" + x.ActionName
-                            : "/" + x.ControllerName + "/" + x.ActionName,
+                    // Prefer the manually-set Url override; fall back to
+                    // the Area/Controller/Action convention when it's
+                    // blank. Previously this always rebuilt the URL from
+                    // Area/Controller/Action and ignored any stored
+                    // override, so a custom Url (e.g. an absolute link)
+                    // never actually took effect in the sidebar menu.
+                    Url = !string.IsNullOrEmpty(x.Url)
+                            ? x.Url
+                            : (!string.IsNullOrEmpty(x.AreaName)
+                                ? "/" + x.AreaName + "/" + x.ControllerName + "/" + x.ActionName
+                                : "/" + x.ControllerName + "/" + x.ActionName),
 
                     DisplayOrder = x.DisplayOrder
                 })
@@ -493,6 +531,39 @@ namespace Application.Services.Masters
 
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        // ==================================================================
+        // PERMISSION CHECK - Feature Management (AppFeatures CRUD) is
+        // System Configurator ONLY. Same shape as
+        // ErrorLogService.EnsurePermissionAsync / DatabaseManagementService.
+        // EnsurePermissionAsync - a real, data-driven RolePermission/
+        // Permission check against AppFeatureConstants.APP_FEATURE, not a
+        // hard-coded role-name string. In practice only System Configurator
+        // ever holds it (see DbSeeder's APP_FEATURE carve-out), but a
+        // tenant could grant it to another role later without any code
+        // change here. Does NOT gate GetMenuAsync/GetMenuByUserAsync/
+        // Favorites above - those are every logged-in user's own sidebar
+        // data, not Feature Management.
+        // ==================================================================
+
+        private async Task EnsurePermissionAsync(string? actingUserId, string action)
+        {
+            if (string.IsNullOrEmpty(actingUserId))
+                throw new UnauthorizedException("You are not authorized to manage Feature Maintenance.");
+
+            var allowed = await (
+                from ur in _context.UserRoles.AsNoTracking()
+                join rp in _context.RolePermissions.AsNoTracking().Where(x => x.IsAllowed) on ur.RoleId equals rp.RoleId
+                join p in _context.Permissions.AsNoTracking().Where(x =>
+                        x.FeatureId == AppFeatureConstants.APP_FEATURE && x.Action == action)
+                    on rp.PermissionId equals p.Id
+                where ur.UserId == actingUserId
+                select p.Id
+            ).AnyAsync();
+
+            if (!allowed)
+                throw new UnauthorizedException("You are not authorized to manage Feature Maintenance.");
         }
     }
 }

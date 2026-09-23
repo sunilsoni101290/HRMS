@@ -26,7 +26,7 @@ namespace APP.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var data = await _apiService.GetAsync<List<UserListDto>>("user");
+            var data = await _apiService.GetAsync<List<UserListDto>>($"user?actingUserId={Uri.EscapeDataString(_userId ?? "")}");
             return View(data);
         }
 
@@ -58,14 +58,16 @@ namespace APP.Controllers
         [HttpGet]
         public async Task<IActionResult> Details(string id)
         {
-            var data = await _apiService.GetAsync<UserDto>($"user/{id}");
+            var data = await _apiService.GetAsync<UserDto>($"user/{id}?actingUserId={Uri.EscapeDataString(_userId ?? "")}");
+            if (data == null) return NotFound();
             return View(data);
         }
 
         [HttpGet]
         public async Task<IActionResult> Edit(string id)
         {
-            var data = await _apiService.GetAsync<UserDto>($"user/{id}");
+            var data = await _apiService.GetAsync<UserDto>($"user/{id}?actingUserId={Uri.EscapeDataString(_userId ?? "")}");
+            if (data == null) return NotFound();
             await LoadDropdowns(data.CompanyId);
             return View("Create", data);
         }
@@ -79,7 +81,7 @@ namespace APP.Controllers
                 dto.ModifiedBy = _userId;
                 dto.ModifiedOn = DateTime.UtcNow;
 
-                await _apiService.PutAsync<dynamic>($"user/{id}", dto);
+                await _apiService.PutAsync<dynamic>($"user/{id}?actingUserId={Uri.EscapeDataString(_userId ?? "")}", dto);
 
                 TempData["Success"] = "User updated successfully.";
                 return RedirectToAction(nameof(Index));
@@ -234,7 +236,7 @@ namespace APP.Controllers
 
         public async Task<IActionResult> Delete(string id)
         {
-            await _apiService.DeleteAsync($"user/{id}");
+            await _apiService.DeleteAsync($"user/{id}?actingUserId={Uri.EscapeDataString(_userId ?? "")}");
             TempData["Success"] = "User deleted successfully.";
             return RedirectToAction(nameof(Index));
         }

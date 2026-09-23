@@ -1,248 +1,153 @@
-﻿
 @model WeekOffDto
 
 @{
     ViewData["Title"] = "Week Off";
+    var isEdit = !string.IsNullOrEmpty(Model?.Id);
+    var selectedOccurrences = (Model?.Occurrences ?? new List<int>());
 }
 
-<form asp-action="@(string.IsNullOrEmpty(Model?.Id) ? "Create" : "Edit")"
-      method="post">
+@*
+    Redesigned Week Off Create/Edit screen - supports BOTH patterns:
+      - "Every Week" (legacy/original): a fixed weekday is a week-off every
+        single week.
+      - "Nth Occurrence of Month" (new, additive): only the checked
+        occurrence(s) of the chosen weekday in a month are a week-off, e.g.
+        Saturday + [2nd, 4th] checked = "2nd and 4th Saturday".
+
+    This project ships Bootstrap 3.3.7 (jQuery-based), not 4/5 - see
+    Views/EsslAttendance/Index.cshtml's <style> block for the full
+    explanation. This view reuses that same plain-CSS "ent-panel" card style
+    + small Bootstrap 4/5 utility-class shim (kept local to this view, same
+    as every other redesigned view in this codebase) and uses real
+    Bootstrap 3 markup throughout (col-md-6 with explicit breakpoints, no
+    d-flex/mb-3/gap-2/text-end/bare col-12/data-bs-*/.card outside the shim).
+*@
+
+<form asp-action="@(isEdit ? "Edit" : "Create")" method="post" id="weekOffForm">
 
     <!-- Hidden Fields -->
-
     <input asp-for="Id" type="hidden" />
     <input asp-for="TenantId" type="hidden" />
     <input asp-for="CreatedBy" type="hidden" />
     <input asp-for="ModifiedBy" type="hidden" />
     <input asp-for="ModifiedOn" type="hidden" />
 
-    <div class="panel panel-flat">
+    <div class="ent-page">
+        <div class="ent-panel">
 
-        <!-- Header -->
-
-        <div class="panel-heading">
-
-            <h5 class="panel-title">
-
-                <i class="icon-calendar52 position-left"></i>
-
-                @(string.IsNullOrEmpty(Model?.Id)
-                    ? "Create Week Off"
-                    : "Edit Week Off")
-
-            </h5>
-
-            <div class="heading-elements">
-
-                <a asp-action="Index"
-                   class="btn btn-default">
-
-                    <i class="icon-arrow-left13 position-left"></i>
-
-                    Back
-
-                </a>
-
+            <div class="d-flex align-items-center gap-2 mb-2 wko-header-row">
+                <span class="ent-icon-badge" style="background:#eaf0fe;color:#2b6fd9;"><i class="bi bi-calendar-week"></i></span>
+                <div>
+                    <h5 class="mb-0" style="font-weight:700;color:#1b2a4a;">@(isEdit ? "Edit Week Off" : "Create Week Off")</h5>
+                    <div class="text-muted" style="font-size:12.5px;">Configure a fixed weekly day off, or a specific occurrence pattern such as "2nd and 4th Saturday".</div>
+                </div>
+                <div style="margin-left:auto;">
+                    <a asp-action="Index" class="btn btn-default"><i class="bi bi-arrow-left"></i> Back</a>
+                </div>
             </div>
 
-        </div>
-
-        <!-- Body -->
-
-        <div class="panel-body">
-
-            <div asp-validation-summary="ModelOnly"
-                 class="alert alert-danger">
-            </div>
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
             <!-- ===================================== -->
-            <!-- Week Off Information -->
+            <!-- Pattern Type -->
             <!-- ===================================== -->
-
-            <fieldset>
-
-                <legend class="text-semibold">
-
-                    <i class="icon-calendar3 position-left"></i>
-
-                    Week Off Information
-
-                </legend>
+            <div class="wko-section">
+                <div class="wko-section-title"><i class="bi bi-diagram-3"></i> Pattern</div>
 
                 <div class="row">
-
-                    <!-- Week Off Day -->
-
-                    <div class="col-md-6">
-
-                        <div class="form-group">
-
-                            <label asp-for="Day"></label>
-
-                            <select asp-for="Day"
-                                    asp-items="ViewBag.DayList"
-                                    class="form-control select-search">
-
-                                <option value="">
-
-                                    -- Select Week Off Day --
-
-                                </option>
-
-                            </select>
-
-                            <span asp-validation-for="Day"
-                                  class="text-danger"></span>
-
-                        </div>
-
+                    <div class="col-md-6 col-sm-6">
+                        <label class="wko-pattern-card" for="patternEveryWeek">
+                            <input type="radio" id="patternEveryWeek" name="PatternType" value="0"
+                                   checked="@(Model == null || Model.PatternType == Domain.Enums.EnumExtensions.WeekOffPatternType.EveryWeek)" />
+                            <div>
+                                <div class="wko-pattern-title"><i class="bi bi-arrow-repeat"></i> Every Week</div>
+                                <div class="wko-pattern-sub">The selected weekday is a week-off every single week (original behavior).</div>
+                            </div>
+                        </label>
                     </div>
-
+                    <div class="col-md-6 col-sm-6">
+                        <label class="wko-pattern-card" for="patternNth">
+                            <input type="radio" id="patternNth" name="PatternType" value="1"
+                                   checked="@(Model != null && Model.PatternType == Domain.Enums.EnumExtensions.WeekOffPatternType.NthWeekdayOfMonth)" />
+                            <div>
+                                <div class="wko-pattern-title"><i class="bi bi-calendar2-check"></i> Nth Occurrence of Month</div>
+                                <div class="wko-pattern-sub">Only the checked occurrence(s) of the weekday each month are a week-off (e.g. "2nd and 4th Saturday").</div>
+                            </div>
+                        </label>
+                    </div>
                 </div>
+            </div>
 
-            </fieldset>
+            <!-- ===================================== -->
+            <!-- Week Off Day -->
+            <!-- ===================================== -->
+            <div class="wko-section">
+                <div class="wko-section-title"><i class="bi bi-calendar3"></i> Week Off Day</div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="Day"></label>
+                            <select asp-for="Day" asp-items="ViewBag.DayList" class="form-control select-search" id="Day">
+                                <option value="">-- Select Week Off Day --</option>
+                            </select>
+                            <span asp-validation-for="Day" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===================================== -->
+            <!-- Occurrences (only for Nth Occurrence pattern) -->
+            <!-- ===================================== -->
+            <div class="wko-section" id="occurrenceSection">
+                <div class="wko-section-title"><i class="bi bi-check2-square"></i> Occurrence(s) of the Month</div>
+                <p class="text-muted" style="font-size:12.5px;margin-bottom:12px;">
+                    Check every occurrence that should be a week-off. Some months only have 4 occurrences of a
+                    weekday - if a 5th occurrence is checked but the month has none, it is simply skipped for
+                    that month.
+                </p>
+
+                <div class="wko-occurrence-row" id="occurrenceCheckboxes">
+                    @{
+                        var labels = new[] { "1st", "2nd", "3rd", "4th", "5th" };
+                    }
+                    @for (var i = 1; i <= 5; i++)
+                    {
+                        var isChecked = selectedOccurrences.Contains(i);
+                        <label class="wko-occurrence-chip">
+                            <input type="checkbox" name="Occurrences" value="@i" checked="@isChecked" />
+                            <span>@labels[i - 1]</span>
+                        </label>
+                    }
+                </div>
+            </div>
 
             <!-- ===================================== -->
             <!-- Preview -->
             <!-- ===================================== -->
-
-            <fieldset>
-
-                <legend class="text-semibold">
-
-                    <i class="icon-display4 position-left"></i>
-
-                    Week Off Preview
-
-                </legend>
-
-                <div class="row">
-
-                    <!-- Selected Day -->
-
-                    <div class="col-md-6">
-
-                        <div class="panel bg-info-400">
-
-                            <div class="panel-body">
-
-                                <h4 class="no-margin">
-
-                                    <span id="WeekOffPreview">
-
-                                        @(Model?.Day.ToString() ?? "-")
-
-                                    </span>
-
-                                </h4>
-
-                                Selected Week Off
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    <!-- Status -->
-
-                    <div class="col-md-6">
-
-                        <div class="panel bg-success-400">
-
-                            <div class="panel-body">
-
-                                <h4 class="no-margin">
-
-                                    Active
-
-                                </h4>
-
-                                Default Status
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
+            <div class="wko-section">
+                <div class="wko-section-title"><i class="bi bi-eye"></i> Preview</div>
+                <div class="wko-preview-box">
+                    <i class="bi bi-info-circle"></i>
+                    <span id="WeekOffPreview">@(isEdit ? "-" : "Select a pattern and a day above")</span>
                 </div>
-
-            </fieldset>
-            <!-- ===================================== -->
-            <!-- Information -->
-            <!-- ===================================== -->
-
-            <fieldset>
-
-                <legend class="text-semibold">
-
-                    <i class="icon-info22 position-left"></i>
-
-                    Information
-
-                </legend>
-
-                <div class="row">
-
-                    <div class="col-md-12">
-
-                        <div class="alert alert-info no-margin">
-
-                            <i class="icon-info22 position-left"></i>
-
-                            Select the weekly off day that will be applicable for employees.
-                            This configuration will be used while calculating attendance,
-                            leave and payroll.
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </fieldset>
+            </div>
 
         </div>
 
         <!-- Footer -->
-
-        <div class="panel-footer text-right">
-
-            <a asp-action="Index"
-               class="btn btn-default">
-
-                <i class="icon-arrow-left13 position-left"></i>
-
-                Back
-
-            </a>
-
-            <button type="reset"
-                    class="btn btn-warning">
-
-                <i class="icon-reset position-left"></i>
-
-                Reset
-
+        <div class="ent-panel wko-footer">
+            <a asp-action="Index" class="btn btn-default"><i class="bi bi-arrow-left"></i> Back</a>
+            <button type="reset" class="btn btn-warning"><i class="bi bi-arrow-counterclockwise"></i> Reset</button>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save"></i> @(isEdit ? "Update Week Off" : "Save Week Off")
             </button>
-
-            <button type="submit"
-                    class="btn bg-primary">
-
-                <i class="icon-floppy-disk position-left"></i>
-
-                @(string.IsNullOrEmpty(Model?.Id)
-                    ? "Save Week Off"
-                    : "Update Week Off")
-
-            </button>
-
         </div>
-
     </div>
 
 </form>
+
 @section Scripts {
 
     @{
@@ -250,121 +155,255 @@
     }
 
     <script>
-
         $(document).ready(function () {
 
             //=========================================
             // Chosen Dropdown
             //=========================================
-
             if ($(".select-search").length) {
-
                 $(".select-search").chosen({
-
                     width: "100%",
                     search_contains: true,
                     allow_single_deselect: true
-
                 });
-
             }
 
             //=========================================
-            // Preview Selected Day
+            // Toggle Occurrence section by Pattern
             //=========================================
+            function togglePatternUI() {
+                var isNth = $('input[name="PatternType"]:checked').val() === "1";
+                $("#occurrenceSection").toggle(isNth);
+                updatePreview();
+            }
 
-            $("#Day").change(function () {
+            function ordinal(n) {
+                var map = { 1: "1st", 2: "2nd", 3: "3rd", 4: "4th", 5: "5th" };
+                return map[n] || (n + "th");
+            }
 
-                var day = $("#Day option:selected").text();
+            function updatePreview() {
+                var dayText = $("#Day option:selected").text();
+                var isNth = $('input[name="PatternType"]:checked').val() === "1";
 
-                if ($(this).val() == "") {
-
-                    $("#WeekOffPreview").text("-");
-
+                if (!dayText) {
+                    $("#WeekOffPreview").text("Select a pattern and a day above");
+                    return;
                 }
-                else {
 
-                    $("#WeekOffPreview").text(day);
-
+                if (!isNth) {
+                    $("#WeekOffPreview").text("Every " + dayText + " is a week-off.");
+                    return;
                 }
 
-            });
+                var occurrences = $('#occurrenceCheckboxes input[type="checkbox"]:checked')
+                    .map(function () { return parseInt($(this).val(), 10); })
+                    .get()
+                    .sort(function (a, b) { return a - b; });
+
+                if (occurrences.length === 0) {
+                    $("#WeekOffPreview").text("Select at least one occurrence for " + dayText + ".");
+                    return;
+                }
+
+                var labelled = occurrences.map(ordinal).join(" and ");
+                $("#WeekOffPreview").text(labelled + " " + dayText + " of every month is a week-off.");
+            }
+
+            // Visual "selected" state for the pattern cards / occurrence
+            // chips, done in JS rather than relying on the CSS :has()
+            // selector (not supported in every browser this project may
+            // still need to run on).
+            function refreshSelectedVisuals() {
+                $(".wko-pattern-card").each(function () {
+                    $(this).toggleClass("is-selected", $(this).find('input[type="radio"]').is(":checked"));
+                });
+                $(".wko-occurrence-chip").each(function () {
+                    $(this).toggleClass("is-selected", $(this).find('input[type="checkbox"]').is(":checked"));
+                });
+            }
+
+            $('input[name="PatternType"]').on("change", function () { togglePatternUI(); refreshSelectedVisuals(); });
+            $("#Day").on("change", updatePreview);
+            $('#occurrenceCheckboxes input[type="checkbox"]').on("change", function () { updatePreview(); refreshSelectedVisuals(); });
+
+            togglePatternUI();
+            refreshSelectedVisuals();
 
             //=========================================
             // Client Validation
             //=========================================
+            $("#weekOffForm").submit(function () {
 
-            $("form").submit(function () {
-
-                if ($("#Day").val() == "") {
-
+                if ($("#Day").val() === "") {
                     alert("Please select Week Off Day.");
-
                     $("#Day").focus();
-
                     return false;
+                }
 
+                var isNth = $('input[name="PatternType"]:checked').val() === "1";
+                if (isNth) {
+                    var checkedCount = $('#occurrenceCheckboxes input[type="checkbox"]:checked').length;
+                    if (checkedCount === 0) {
+                        alert("Please select at least one occurrence (e.g. 2nd and 4th).");
+                        return false;
+                    }
                 }
 
                 return true;
-
             });
 
         });
-
     </script>
 
     <style>
+        /* ===================================================================
+           Same enterprise card + Bootstrap 4/5 utility-class shim used on
+           Views/EsslAttendance/Index.cshtml / Views/HistoricalAttendanceSync/
+           Index.cshtml / Views/MonthWiseBiometricSync/Index.cshtml - see
+           EsslAttendance/Index.cshtml's <style> block for the full
+           explanation of why this project's real Bootstrap 3.3.7 stylesheet
+           needs it. Kept local to this view, same convention.
+           =================================================================== */
+        .ent-page { background:#f4f6fb; padding:18px; border-radius:10px; }
+        .ent-panel { background:#fff; border:1px solid #e7ebf3; border-radius:10px; padding:16px 18px; margin-bottom:18px; }
+        .ent-icon-badge { width:34px; height:34px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; font-size:16px; flex:none; }
+
+        .d-flex { display: flex !important; }
+        .align-items-center { align-items: center !important; }
+        .gap-2 { gap: .5rem !important; }
+        .mb-0 { margin-bottom: 0 !important; }
+        .mb-2 { margin-bottom: .5rem !important; }
+
+        .wko-header-row { flex-wrap: wrap; }
 
         /*=========================================
-                    Panel
+                    Sections
                 =========================================*/
-
-        .panel-heading {
-            padding: 18px 20px;
+        .wko-section {
+            border: 1px solid #e7ebf3;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin-bottom: 16px;
         }
 
-        .panel-title {
+        .wko-section-title {
+            font-weight: 700;
+            font-size: 13.5px;
+            color: #1b2a4a;
+            margin-bottom: 14px;
+        }
+
+            .wko-section-title i {
+                color: #2b6fd9;
+                margin-right: 6px;
+            }
+
+        /*=========================================
+                    Pattern Cards
+                =========================================*/
+        .wko-pattern-card {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            border: 1px solid #dde3ee;
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            font-weight: normal;
+            transition: border-color .15s, background .15s;
+        }
+
+            .wko-pattern-card:hover {
+                border-color: #2b6fd9;
+                background: #f7faff;
+            }
+
+            .wko-pattern-card input[type="radio"] {
+                margin-top: 3px;
+                flex: none;
+            }
+
+            .wko-pattern-card.is-selected,
+            .wko-pattern-card:has(input:checked) {
+                border-color: #2b6fd9;
+                background: #f2f7ff;
+            }
+
+        .wko-pattern-title {
+            font-weight: 600;
+            color: #1b2a4a;
+            font-size: 13.5px;
+        }
+
+            .wko-pattern-title i {
+                color: #2b6fd9;
+                margin-right: 4px;
+            }
+
+        .wko-pattern-sub {
+            font-size: 12px;
+            color: #6b7488;
+            margin-top: 3px;
+        }
+
+        /*=========================================
+                    Occurrence Chips
+                =========================================*/
+        .wko-occurrence-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .wko-occurrence-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid #dde3ee;
+            border-radius: 20px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            color: #3a4a68;
+        }
+
+            .wko-occurrence-chip input {
+                margin: 0;
+            }
+
+            .wko-occurrence-chip.is-selected,
+            .wko-occurrence-chip:has(input:checked) {
+                background: #2b6fd9;
+                border-color: #2b6fd9;
+                color: #fff;
+            }
+
+        /*=========================================
+                    Preview
+                =========================================*/
+        .wko-preview-box {
+            background: #f4f8ff;
+            border: 1px solid #dbe7fb;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 13px;
+            color: #1b2a4a;
             font-weight: 600;
         }
 
-        .panel-body {
-            padding: 20px;
-        }
-
-        .panel-footer {
-            background: #fafafa;
-            padding: 15px 20px;
-        }
-
-        /*=========================================
-                    Fieldset
-                =========================================*/
-
-        fieldset {
-            border: 1px solid #e5e5e5;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-
-        legend {
-            width: auto;
-            border: none;
-            padding: 0 10px;
-            font-size: 15px;
-            font-weight: 600;
-        }
+            .wko-preview-box i {
+                color: #2b6fd9;
+                margin-right: 6px;
+            }
 
         /*=========================================
                     Form Controls
                 =========================================*/
-
         .form-group {
-            margin-bottom: 18px;
-        }
-
-        .form-control {
-            border-radius: 3px;
+            margin-bottom: 12px;
         }
 
         label {
@@ -373,47 +412,20 @@
         }
 
         /*=========================================
-                    Dashboard Cards
+                    Footer
                 =========================================*/
-
-        .panel.bg-info-400,
-        .panel.bg-success-400 {
-            margin-bottom: 15px;
-            border-radius: 3px;
-            color: #fff;
+        .wko-footer {
+            text-align: right;
         }
 
-            .panel.bg-info-400 h4,
-            .panel.bg-success-400 h4 {
-                color: #fff;
-                font-weight: 600;
-                margin-bottom: 5px;
+            .wko-footer .btn {
+                min-width: 110px;
+                margin-left: 6px;
             }
-
-        /*=========================================
-                    Validation
-                =========================================*/
-
-        .text-danger {
-            font-size: 12px;
-        }
-
-        .validation-summary-errors ul {
-            margin-bottom: 0;
-        }
-
-        /*=========================================
-                    Buttons
-                =========================================*/
-
-        .btn {
-            min-width: 110px;
-        }
 
         /*=========================================
                     Chosen
                 =========================================*/
-
         .chosen-container {
             width: 100% !important;
         }
@@ -428,34 +440,17 @@
             }
 
         /*=========================================
-                    Alert
-                =========================================*/
-
-        .alert {
-            margin-bottom: 20px;
-        }
-
-        /*=========================================
                     Responsive
                 =========================================*/
-
         @@media (max-width:768px) {
-
-            .panel-footer {
-                text-align: center !important;
+            .wko-footer {
+                text-align: center;
             }
 
-                .panel-footer .btn {
+                .wko-footer .btn {
                     width: 100%;
-                    margin-bottom: 10px;
+                    margin: 4px 0;
                 }
-
-            .panel-heading .heading-elements {
-                float: none;
-                margin-top: 15px;
-            }
         }
-
     </style>
-
 }

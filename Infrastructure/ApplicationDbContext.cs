@@ -87,6 +87,28 @@ namespace Infrastructure
         // Editable connection/sync configuration for the eSSL integration -
         // one row per tenant. See Domain/Entities/EsslIntegrationSetting.cs.
         public DbSet<EsslIntegrationSetting> EsslIntegrationSettings { get; set; }
+        #endregion
+
+        #region 🛠️ DATABASE MANAGEMENT MODULE (Phase A)
+        // One settings row per tenant. See Domain/Entities/DatabaseManagementSettings.cs.
+        public DbSet<DatabaseManagementSettings> DatabaseManagementSettings { get; set; }
+
+        // Schema only in Phase A - no writer yet; later phases (Execute/Restore/Swap) insert here.
+        public DbSet<DatabaseOperationHistory> DatabaseOperationHistories { get; set; }
+
+        // Schema only in Phase A - no writer yet; later phases (Backup) insert here.
+        public DbSet<DatabaseBackupHistory> DatabaseBackupHistories { get; set; }
+
+        // Standalone Historical Attendance Sync feature - COMPLETELY
+        // SEPARATE from EsslAttendanceSyncState above (its own lock/audit
+        // row per run, never reused by or reusing the eSSL pipeline). See
+        // Domain/Entities/HistoricalAttendanceSyncJob.cs and the root-level
+        // "Create HistoricalAttendanceSyncJob table and
+        // ProcessHistoricalBiometricAttendance SP.sql" script (run that
+        // script once - EF migrations are not used for this table, matching
+        // this codebase's existing convention for BiometricAttendanceLogs-
+        // adjacent tables/indexes, see EsslBulkStaging.sql).
+        public DbSet<HistoricalAttendanceSyncJob> HistoricalAttendanceSyncJobs { get; set; }
 
 
         public DbSet<AttendanceRegularization> AttendanceRegularizations { get; set; }
@@ -230,6 +252,10 @@ namespace Infrastructure
         public DbSet<HolidayGroup> HolidayGroups { get; set; }
         public DbSet<HolidayGroupDetail> HolidayGroupDetails { get; set; }
         public DbSet<WeekOff> WeekOffs { get; set; }
+        // Additive - child rows for WeekOff.PatternType ==
+        // NthWeekdayOfMonth (e.g. "2nd and 4th Saturday"). See
+        // Domain/Entities/WeekOff.cs and Domain/Helper/WeekOffCalculator.cs.
+        public DbSet<WeekOffOccurrence> WeekOffOccurrences { get; set; }
         public DbSet<SequenceMaster> SequenceMasters { get; set; }
         #endregion
 
@@ -491,6 +517,25 @@ namespace Infrastructure
 
             modelBuilder.Entity<Attendance>()
                 .HasIndex(x => new { x.EmployeeId, x.Date });
+
+            // AttendanceService's Punch*/Break*CoreAsync "does an
+            // Attendance row already exist for this Employee+Shift+Date"
+            // lookup filters on all three columns - the (EmployeeId, Date)
+            // index above still requires a scan
+            // across every Shift the employee has ever had. See
+            // "add attendance processing performance indexes.sql".
+            modelBuilder.Entity<Attendance>()
+                .HasIndex(x => new { x.EmployeeId, x.ShiftId, x.Date })
+                .HasDatabaseName("IX_Attendances_Employee_Shift_Date");
+
+            // EmployeeShiftMapping had no explicit indexes before this
+            // feature - AttendanceService's shift-resolution query
+            // (EmployeeShiftMapping active-as-of a date) runs this same
+            // "latest EffectiveFrom for this Employee" lookup on every
+            // punch.
+            modelBuilder.Entity<EmployeeShiftMapping>()
+                .HasIndex(x => new { x.EmployeeId, x.EffectiveFrom })
+                .HasDatabaseName("IX_EmployeeShiftMappings_Employee_EffectiveFrom");
 
             // AttendanceLog had no explicit indexes before this feature -
             // AttendanceId/EmployeeId are the two lookup paths used by
@@ -1286,6 +1331,31 @@ namespace Infrastructure
                 entity.HasIndex(e => e.TenantId)
                     .IsUnique()
                     .HasDatabaseName("IX_EsslIntegrationSettings_Tenant");
+            });
+
+            // ---------------- DATABASE MANAGEMENT MODULE (Phase A) ----------------
+            modelBuilder.Entity<DatabaseManagementSettings>(entity =>
+            {
+                // One settings row per tenant - upserted, never duplicated
+                // (same convention as EsslIntegrationSetting above).
+                entity.HasIndex(e => e.TenantId)
+                    .IsUnique()
+                    .HasDatabaseName("IX_DatabaseManagementSettings_Tenant");
+            });
+
+            modelBuilder.Entity<DatabaseOperationHistory>(entity =>
+            {
+                entity.HasIndex(e => new { e.TenantId, e.StartedAt })
+                    .HasDatabaseName("IX_DatabaseOperationHistories_Tenant_StartedAt");
+
+                entity.HasIndex(e => new { e.TenantId, e.Status })
+                    .HasDatabaseName("IX_DatabaseOperationHistories_Tenant_Status");
+            });
+
+            modelBuilder.Entity<DatabaseBackupHistory>(entity =>
+            {
+                entity.HasIndex(e => new { e.TenantId, e.Status, e.CompletedAt })
+                    .HasDatabaseName("IX_DatabaseBackupHistories_Tenant_Status_CompletedAt");
             });
 
 

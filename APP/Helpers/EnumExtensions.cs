@@ -839,6 +839,17 @@ namespace APP.Helpers
             SpecificRole = 2,
             SpecificUser = 3
         }
+
+        // NOTE: WeekOffPatternType intentionally does NOT live here.
+        // WeekOffDto.PatternType is typed as Domain.Enums.EnumExtensions.WeekOffPatternType
+        // (via `using static Domain.Enums.EnumExtensions;` in WeekOffDto.cs).
+        // A duplicate enum of the same name was added here by mistake, which made
+        // bare `EnumExtensions.WeekOffPatternType` in WeekOff/Index.cshtml and
+        // WeekOff/Details.cshtml resolve to THIS class instead of Domain's, causing
+        // CS0019 ("cannot be applied to operands of type ... and ...") when compared
+        // against Model.PatternType. Do not re-add it here - reference
+        // Domain.Enums.EnumExtensions.WeekOffPatternType (fully qualified, or via
+        // `using static Domain.Enums.EnumExtensions;`) from views instead.
     }
 
     public static class EnumHelper

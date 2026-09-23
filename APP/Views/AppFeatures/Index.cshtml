@@ -1,247 +1,306 @@
-﻿@model IEnumerable<AppFeatureDto>
+@model IEnumerable<AppFeatureDto>
 
 @{
     ViewData["Title"] = "App Features";
+    var totalCount = Model?.Count() ?? 0;
+    var activeCount = Model?.Count(x => x.IsActive) ?? 0;
+    var inactiveCount = totalCount - activeCount;
+    var moduleList = (Model ?? Enumerable.Empty<AppFeatureDto>())
+        .Select(x => x.Module)
+        .Where(m => !string.IsNullOrWhiteSpace(m))
+        .Distinct()
+        .OrderBy(m => m)
+        .ToList();
 }
 
-<div class="panel panel-flat">
+@*
+    ==========================================================================
+    FEATURE MANAGEMENT (AppFeatures) - LISTING (enterprise redesign)
+    ==========================================================================
+    Restyle only - same data source (APP/Controllers/AppFeaturesController.cs
+    Index -> API "AppFeatures" GetAll), same rows/actions (Details/Edit/
+    Delete) as before. Search + Module/Type/Status filters run entirely
+    client-side against the rows already rendered - no new endpoints added.
+*@
 
-    <div class="panel-heading">
+<div class="ent-page">
 
-        <h5 class="panel-title">
-            <i class="icon-grid6 position-left"></i>
-            App Feature Management
-        </h5>
-
-        <div class="heading-elements">
-
-            <a asp-action="Create"
-               class="btn bg-primary btn-sm">
-
-                <i class="icon-plus22 position-left"></i>
-                Add Feature
-
-            </a>
-
+    <!-- ================= HEADER ================= -->
+    <div class="d-flex flex-wrap justify-content-between align-items-start mb-3 gap-2">
+        <div>
+            <h3 class="mb-0" style="font-weight:700;color:#1b2a4a;">
+                <i class="bi bi-diagram-3-fill me-1"></i> Feature Management
+            </h3>
+            <p class="text-muted mb-0">Manage menu features, routing and access control</p>
         </div>
-
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Add Feature
+        </a>
     </div>
 
-    <div class="panel-body">
-
-        <div class="row">
-
-            <div class="col-md-4">
-                <input type="text"
-                       id="searchInput"
-                       class="form-control"
-                       placeholder="Search Feature..." />
+    <!-- ================= SUMMARY COUNTERS ================= -->
+    <div class="row g-2 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="ent-counter">
+                <i class="bi bi-collection text-primary"></i>
+                <div class="ent-counter-val">@totalCount</div>
+                <div class="ent-counter-lbl">Total Features</div>
             </div>
-
-            <div class="col-md-3">
-                <select class="form-control">
-                    <option>All Modules</option>
-                </select>
-            </div>
-
-            <div class="col-md-3">
-                <select class="form-control">
-                    <option>All Types</option>
-                </select>
-            </div>
-
-            <div class="col-md-2">
-                <button class="btn bg-primary btn-block">
-                    <i class="icon-filter4 position-left"></i>
-                    Filter
-                </button>
-            </div>
-
         </div>
-
+        <div class="col-6 col-md-3">
+            <div class="ent-counter">
+                <i class="bi bi-check-circle text-success"></i>
+                <div class="ent-counter-val">@activeCount</div>
+                <div class="ent-counter-lbl">Active</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ent-counter">
+                <i class="bi bi-x-circle text-danger"></i>
+                <div class="ent-counter-val">@inactiveCount</div>
+                <div class="ent-counter-lbl">Inactive</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ent-counter">
+                <i class="bi bi-grid text-info"></i>
+                <div class="ent-counter-val">@moduleList.Count</div>
+                <div class="ent-counter-lbl">Modules</div>
+            </div>
+        </div>
     </div>
 
-    <table id="featureTable" class="table datatable-scroll-y table-hover datatable-basic">
+    <!-- ================= SEARCH / FILTERS ================= -->
+    <div class="ent-panel mb-3">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-4 col-sm-12">
+                <label class="form-label small mb-1">Search</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search by name, code, controller..." />
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <label class="form-label small mb-1">Module</label>
+                <select id="moduleFilter" class="form-control">
+                    <option value="">All Modules</option>
+                    @foreach (var m in moduleList)
+                    {
+                        <option value="@m">@m</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <label class="form-label small mb-1">Type</label>
+                <select id="typeFilter" class="form-control">
+                    <option value="">All Types</option>
+                    @foreach (var t in Enum.GetNames(typeof(EnumExtensions.AppFeatureType)))
+                    {
+                        <option value="@t">@t</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2 col-sm-6">
+                <label class="form-label small mb-1">Status</label>
+                <select id="statusFilter" class="form-control">
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+            </div>
+        </div>
+    </div>
 
-        <thead>
+    <!-- ================= LISTING ================= -->
+    <div class="ent-panel">
+        <div class="table-responsive">
+            <table id="featureTable" class="table table-hover align-middle datatable-basic mb-0">
+                <thead>
+                    <tr>
+                        <th style="width:40px;">#</th>
+                        <th>Feature</th>
+                        <th class="d-none d-md-table-cell">Module</th>
+                        <th class="d-none d-lg-table-cell">Route</th>
+                        <th class="d-none d-md-table-cell">Parent</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th class="text-center" style="width:120px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        int sr = 1;
+                    }
+                    @foreach (var item in Model ?? Enumerable.Empty<AppFeatureDto>())
+                    {
+                        <tr data-module="@item.Module" data-type="@item.AppFeatureType" data-active="@(item.IsActive ? "active" : "inactive")">
+                            <td>@sr</td>
 
-            <tr>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="ent-row-icon"><i class="@(string.IsNullOrWhiteSpace(item.Icon) ? "bi bi-app" : item.Icon)"></i></span>
+                                    <div>
+                                        <div class="fw-semibold">@item.Name</div>
+                                        <div class="text-muted" style="font-size:11.5px;">@item.Code</div>
+                                        <div class="d-md-none text-muted" style="font-size:11px;">@item.Module</div>
+                                    </div>
+                                </div>
+                            </td>
 
-                <th>#</th>
-                <th>Feature</th>
-                <th>Module</th>
-                <th>Controller</th>
-                <th>Action</th>
-                <th>Parent</th>
-                <th>Type</th>
-                <th>Status</th>
-                <th class="text-center">Actions</th>
+                            <td class="d-none d-md-table-cell">
+                                <span class="badge bg-primary-subtle text-primary">@item.Module</span>
+                            </td>
 
-            </tr>
+                            <td class="d-none d-lg-table-cell">
+                                <code style="font-size:11.5px;">@item.Url</code>
+                            </td>
 
-        </thead>
+                            <td class="d-none d-md-table-cell">
+                                @(item.ParentFeatureId != null &&
+                                  ViewBag.ParentFeatures != null &&
+                                  ViewBag.ParentFeatures.ContainsKey(item.ParentFeatureId)
+                                    ? ViewBag.ParentFeatures[item.ParentFeatureId]
+                                    : "-")
+                            </td>
 
-        <tbody>
+                            <td>
+                                <span class="badge bg-info-subtle text-info">@item.AppFeatureType</span>
+                            </td>
 
-            @{
-                int sr = 1;
-            }
+                            <td>
+                                @if (item.IsActive)
+                                {
+                                    <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle-fill"></i> Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger-subtle text-danger"><i class="bi bi-x-circle-fill"></i> Inactive</span>
+                                }
+                            </td>
 
-            @foreach (var item in Model)
+                            <td class="text-center">
+                                <div class="d-flex justify-content-center gap-1">
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary" title="View">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a asp-action="Delete" asp-route-id="@item.Id"
+                                       onclick="return confirmSweetDelete(event, this, 'Delete this feature?');"
+                                       class="btn btn-sm btn-outline-danger" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        sr++;
+                    }
+                </tbody>
+            </table>
+
+            @if (totalCount == 0)
             {
-                <tr>
-
-                    <td>@sr</td>
-
-                    <td>
-                        <div class="text-semibold">
-                            <i class="@item.Icon"></i>
-                            @item.Name
-                        </div>
-
-                        <span class="text-muted">
-                            @item.Code
-                        </span>
-                    </td>
-
-                    <td>
-                        <span class="label bg-primary">
-                            @item.Module
-                        </span>
-                    </td>
-
-                    <td>@item.ControllerName</td>
-
-                    <td>@item.ActionName</td>
-
-                    <td>
-                        @(item.ParentFeatureId != null &&
-                          ViewBag.ParentFeatures != null &&
-                          ViewBag.ParentFeatures.ContainsKey(item.ParentFeatureId)
-                            ? ViewBag.ParentFeatures[item.ParentFeatureId]
-                            : "-")
-                    </td>
-
-                    <td>
-                        <span class="label bg-info">
-                            @item.AppFeatureType
-                        </span>
-                    </td>
-
-                    <td>
-
-                        @if (item.IsActive)
-                        {
-                            <span class="label label-success">
-                                Active
-                            </span>
-                        }
-                        else
-                        {
-                            <span class="label label-danger">
-                                Inactive
-                            </span>
-                        }
-
-                    </td>
-
-                    <td class="text-center">
-
-                        <ul class="icons-list">
-
-                            <li>
-                                <a asp-action="Details"
-                                   asp-route-id="@item.Id"
-                                   title="View">
-                                    <i class="icon-eye"></i>
-                                </a>
-                            </li>
-
-                            <li>
-                                <a asp-action="Edit"
-                                   asp-route-id="@item.Id"
-                                   title="Edit">
-                                    <i class="icon-pencil7"></i>
-                                </a>
-                            </li>
-
-                            <li>
-                                <a asp-action="Delete"
-                                   asp-route-id="@item.Id"
-                                   onclick="return confirmSweetDelete(event, this, 'Delete this feature?');"
-                                   title="Delete">
-                                    <i class="icon-trash"></i>
-                                </a>
-                            </li>
-
-                        </ul>
-
-                    </td>
-
-                </tr>
-
-                sr++;
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-inbox" style="font-size:2rem;"></i>
+                    <p class="mt-2 mb-0">No features found.</p>
+                </div>
             }
 
-        </tbody>
-
-    </table>
+            <div id="noResultsRow" class="text-center text-muted py-4" style="display:none;">
+                <i class="bi bi-search" style="font-size:1.5rem;"></i>
+                <p class="mt-2 mb-0">No features match your search/filters.</p>
+            </div>
+        </div>
+    </div>
 </div>
 
+<style>
+    .ent-page .ent-panel { background:#fff; border:1px solid #e7ebf3; border-radius:10px; padding:16px 18px; }
+    .ent-page .ent-counter { background:#fbfcfe; border:1px solid #eef1f7; border-radius:8px; padding:10px 8px; text-align:center; }
+    .ent-page .ent-counter-val { font-weight:700; font-size:19px; color:#1b2a4a; }
+    .ent-page .ent-counter-lbl { font-size:11px; color:#66738f; }
+    .ent-page .ent-row-icon { width:32px; height:32px; border-radius:8px; background:#f4f6fb; color:#2b6fd9; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .ent-page .badge.bg-primary-subtle { background:#eaf2fd !important; }
+    .ent-page .badge.bg-info-subtle { background:#e7f6fb !important; }
+    .ent-page .badge.bg-success-subtle { background:#eaf7ef !important; }
+    .ent-page .badge.bg-danger-subtle { background:#fdeaea !important; }
+    @@media (max-width: 767px) {
+        .ent-page h3 { font-size:1.25rem; }
+        .ent-page .ent-panel { padding:12px; }
+        .ent-page table { font-size:12.5px; }
+    }
+</style>
+
 @section Scripts {
-
     <script>
-               
-        // Search Table
-
-        document.getElementById("searchInput")
-            .addEventListener("keyup", function () {
-
-                let value = this.value.toLowerCase();
-
-                let rows = document.querySelectorAll("#featureTable tr");
-
-                rows.forEach(function (row) {
-
-                    let text = row.innerText.toLowerCase();
-
-                    row.style.display =
-                        text.includes(value) ? "" : "none";
-
-                });
-
-            });
-
-    </script>
-
-
-    <script>
-        // Auto-added: client-side pagination for this Index page's listing
-        // table (DataTables). Safe to run even if this page already
-        // initializes '.datatable-basic' itself above - 'retrieve: true'
-        // makes DataTables return the existing instance instead of
-        // re-initializing (and throwing) when that's the case.
         $(document).ready(function () {
+            var table = null;
             if ($.fn.DataTable) {
-                var __indexDataTable = $('.datatable-basic').DataTable({
+                table = $('#featureTable').DataTable({
                     autoWidth: false,
                     paging: true,
                     ordering: true,
-                    searching: false,
+                    searching: true,
                     pageLength: 10,
                     lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
-                    language: { search: "_INPUT_", searchPlaceholder: "Search..." },
+                    columnDefs: [{ orderable: false, targets: -1 }],
+                    language: { search: "_INPUT_", searchPlaceholder: "Search...", emptyTable: "No features found." },
                     retrieve: true
                 });
-
-            // Rewire the page's existing search box to drive DataTables'
-            // own filtering pipeline (instead of any legacy row .toggle()
-            // logic still bound above), so search results stay correct once
-            // rows are split across pages.
-            $('#searchInput').on('keyup', function () {
-                __indexDataTable.search($(this).val() || '').draw();
-            });
             }
+
+            function applyFilters() {
+                var q = ($('#searchInput').val() || '').toLowerCase();
+                var mod = $('#moduleFilter').val() || '';
+                var type = $('#typeFilter').val() || '';
+                var status = $('#statusFilter').val() || '';
+
+                if (table) {
+                    // Custom search combining free text + the three dropdown filters.
+                    $.fn.dataTable.ext.search = $.fn.dataTable.ext.search.filter(function (fn) {
+                        return fn.__appFeatureFilter !== true;
+                    });
+
+                    var filterFn = function (settings, data, dataIndex) {
+                        var row = table.row(dataIndex).node();
+                        if (!row) return true;
+                        var $row = $(row);
+
+                        if (mod && $row.data('module') !== mod) return false;
+                        if (type && String($row.data('type')) !== type) return false;
+                        if (status && $row.data('active') !== status) return false;
+                        if (q && $row.text().toLowerCase().indexOf(q) === -1) return false;
+
+                        return true;
+                    };
+                    filterFn.__appFeatureFilter = true;
+
+                    $.fn.dataTable.ext.search.push(filterFn);
+                    table.draw();
+
+                    $('#noResultsRow').toggle(table.rows({ search: 'applied' }).count() === 0);
+                } else {
+                    // Fallback if DataTables isn't available: plain row show/hide.
+                    var visible = 0;
+                    $('#featureTable tbody tr').each(function () {
+                        var $row = $(this);
+                        var show = true;
+
+                        if (mod && $row.data('module') !== mod) show = false;
+                        if (type && String($row.data('type')) !== type) show = false;
+                        if (status && $row.data('active') !== status) show = false;
+                        if (q && $row.text().toLowerCase().indexOf(q) === -1) show = false;
+
+                        $row.toggle(show);
+                        if (show) visible++;
+                    });
+                    $('#noResultsRow').toggle(visible === 0);
+                }
+            }
+
+            $('#searchInput').on('keyup', applyFilters);
+            $('#moduleFilter, #typeFilter, #statusFilter').on('change', applyFilters);
         });
     </script>
 }

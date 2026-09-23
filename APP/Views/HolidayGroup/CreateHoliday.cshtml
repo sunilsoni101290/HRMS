@@ -1,543 +1,313 @@
-﻿@model HolidayGroupDetailDto
+@model HolidayGroupDetailDto
 
 @{
     ViewData["Title"] = "Holiday";
+    var isEdit = !string.IsNullOrEmpty(Model?.Id);
 }
 
+@*
+    Shared by both CreateHoliday and EditHoliday (HolidayGroupController.
+    EditHoliday GET returns View("CreateHoliday", data)) - form
+    action/fields/validation are unchanged, only the markup/style is
+    redesigned. Bootstrap 3.3.7, ent-page/ent-panel style - see
+    Views/WeekOff/Index.cshtml / Views/HolidayGroup/Index.cshtml.
+*@
+
 <form asp-controller="HolidayGroup"
-      asp-action="@(string.IsNullOrEmpty(Model?.Id) ? "CreateHoliday" : "EditHoliday")"
+      asp-action="@(isEdit ? "EditHoliday" : "CreateHoliday")"
       method="post">
 
     <!-- Hidden Fields -->
-
     <input asp-for="Id" type="hidden" />
     <input asp-for="TenantId" type="hidden" />
     <input asp-for="HolidayGroupId" type="hidden" />
 
-    <div class="panel panel-flat">
+    <div class="ent-page">
+        <div class="ent-panel">
 
-        <!-- Header -->
-
-        <div class="panel-heading">
-
-            <h5 class="panel-title">
-
-                <i class="icon-calendar52 position-left"></i>
-
-                @(string.IsNullOrEmpty(Model?.Id)
-                    ? "Create Holiday"
-                    : "Edit Holiday")
-
-            </h5>
-
-            <div class="heading-elements">
-
-                <a asp-controller="HolidayGroup"
-                   asp-action="HolidayList"
-                   asp-route-holidayGroupId="@Model.HolidayGroupId"
-                   class="btn btn-default">
-
-                    <i class="icon-arrow-left13 position-left"></i>
-
-                    Back
-
-                </a>
-
+            <div class="d-flex align-items-center gap-2 mb-2 hg-header-row">
+                <span class="ent-icon-badge" style="background:#eaf0fe;color:#2b6fd9;"><i class="bi bi-calendar2-week"></i></span>
+                <div>
+                    <h5 class="mb-0" style="font-weight:700;color:#1b2a4a;">@(isEdit ? "Edit Holiday" : "Create Holiday")</h5>
+                    <div class="text-muted" style="font-size:12.5px;">@(isEdit ? "Update this holiday's details." : "Add a new holiday to the selected holiday group.")</div>
+                </div>
+                <div style="margin-left:auto;">
+                    <a asp-controller="HolidayGroup" asp-action="HolidayList" asp-route-holidayGroupId="@Model.HolidayGroupId" class="btn btn-default">
+                        <i class="bi bi-arrow-left"></i> Back
+                    </a>
+                </div>
             </div>
 
-        </div>
-
-        <!-- Body -->
-
-        <div class="panel-body">
-
-            <div asp-validation-summary="ModelOnly"
-                 class="alert alert-danger">
-            </div>
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
             <!-- ===================================== -->
             <!-- Holiday Information -->
             <!-- ===================================== -->
-
-            <fieldset>
-
-                <legend class="text-semibold">
-
-                    <i class="icon-info22 position-left"></i>
-
-                    Holiday Information
-
-                </legend>
+            <div class="hg-section">
+                <div class="hg-section-title"><i class="bi bi-info-circle"></i> Holiday Information</div>
 
                 <div class="row">
-
-                    <!-- Holiday Group -->
-
-                    <div class="col-md-6">
-
+                    <div class="col-md-6 col-sm-6">
                         <div class="form-group">
-
                             <label asp-for="HolidayGroupId"></label>
-
-                            <select asp-for="HolidayGroupId"
-                                    asp-items="ViewBag.HolidayGroupList"
-                                    class="form-control select-search">
-
-                                <option value="">
-
-                                    -- Select Holiday Group --
-
-                                </option>
-
+                            <select asp-for="HolidayGroupId" asp-items="ViewBag.HolidayGroupList" class="form-control select-search">
+                                <option value="">-- Select Holiday Group --</option>
                             </select>
-
-                            <span asp-validation-for="HolidayGroupId"
-                                  class="text-danger"></span>
-
+                            <span asp-validation-for="HolidayGroupId" class="text-danger"></span>
                         </div>
-
                     </div>
 
-                    <!-- Holiday Date -->
-
-                    <div class="col-md-6">
-
+                    <div class="col-md-6 col-sm-6">
                         <div class="form-group">
-
                             <label asp-for="HolidayDate"></label>
-
-                            <input asp-for="HolidayDate"
-                                   type="date"
-                                   class="form-control" />
-
-                            <span asp-validation-for="HolidayDate"
-                                  class="text-danger"></span>
-
+                            <input asp-for="HolidayDate" type="date" class="form-control" />
+                            <span asp-validation-for="HolidayDate" class="text-danger"></span>
                         </div>
-
                     </div>
 
-                    <!-- Holiday Name -->
-
-                    <div class="col-md-6">
-
+                    <div class="col-md-6 col-sm-6">
                         <div class="form-group">
-
                             <label asp-for="HolidayName"></label>
-
-                            <input asp-for="HolidayName"
-                                   class="form-control"
-                                   placeholder="Enter Holiday Name" />
-
-                            <span asp-validation-for="HolidayName"
-                                  class="text-danger"></span>
-
+                            <input asp-for="HolidayName" class="form-control" placeholder="Enter Holiday Name" />
+                            <span asp-validation-for="HolidayName" class="text-danger"></span>
                         </div>
-
                     </div>
 
-                    <!-- Holiday Type -->
-
-                    <div class="col-md-6">
-
+                    <div class="col-md-6 col-sm-6">
                         <div class="form-group">
-
                             <label>&nbsp;</label>
-
-                            <div class="checkbox">
-
+                            <div class="checkbox hg-checkbox">
                                 <label>
-
-                                    <input asp-for="IsOptional"
-                                           type="checkbox"
-                                           class="styled" />
-
+                                    <input asp-for="IsOptional" type="checkbox" class="styled" />
                                     Optional Holiday
-
                                 </label>
-
                             </div>
-
                         </div>
-
                     </div>
 
-                    <!-- Remarks -->
-
-                    <div class="col-md-12">
-
+                    <div class="col-md-12 col-sm-12">
                         <div class="form-group">
-
                             <label asp-for="Remarks"></label>
-
-                            <textarea asp-for="Remarks"
-                                      rows="4"
-                                      class="form-control"
-                                      placeholder="Enter Remarks"></textarea>
-
+                            <textarea asp-for="Remarks" rows="4" class="form-control" placeholder="Enter Remarks"></textarea>
                         </div>
-
                     </div>
-
                 </div>
-
-            </fieldset>
+            </div>
 
             <!-- ===================================== -->
             <!-- Preview -->
             <!-- ===================================== -->
-
-            <fieldset>
-
-                <legend class="text-semibold">
-
-                    <i class="icon-display4 position-left"></i>
-
-                    Holiday Preview
-
-                </legend>
+            <div class="hg-section">
+                <div class="hg-section-title"><i class="bi bi-eye"></i> Holiday Preview</div>
 
                 <div class="row">
-
-                    <div class="col-md-4">
-
-                        <div class="panel bg-primary-400">
-
-                            <div class="panel-body">
-
-                                <h4 class="no-margin">
-
-                                    <span id="HolidayNamePreview">
-
-                                        @(string.IsNullOrWhiteSpace(Model?.HolidayName)
-                                            ? "-"
-                                            : Model.HolidayName)
-
-                                    </span>
-
-                                </h4>
-
-                                Holiday Name
-
+                    <div class="col-md-4 col-sm-4">
+                        <div class="hg-tile" style="background:#2b6fd9;">
+                            <i class="bi bi-calendar3"></i>
+                            <div>
+                                <h3 id="HolidayNamePreview">@(string.IsNullOrWhiteSpace(Model?.HolidayName) ? "-" : Model.HolidayName)</h3>
+                                <span>Holiday Name</span>
                             </div>
-
                         </div>
-
                     </div>
-
-                    <div class="col-md-4">
-
-                        <div class="panel bg-success-400">
-
-                            <div class="panel-body">
-
-                                <h4 class="no-margin">
-
-                                    <span id="HolidayDatePreview">
-
-                                        @(Model.HolidayDate == DateTime.MinValue
-                                            ? "-"
-                                            : Model.HolidayDate.ToString("dd-MMM-yyyy"))
-
-                                    </span>
-
-                                </h4>
-
-                                Holiday Date
-
+                    <div class="col-md-4 col-sm-4">
+                        <div class="hg-tile" style="background:#2e9e6c;">
+                            <i class="bi bi-calendar-event"></i>
+                            <div>
+                                <h3 id="HolidayDatePreview">@(Model.HolidayDate == DateTime.MinValue ? "-" : Model.HolidayDate.ToString("dd-MMM-yyyy"))</h3>
+                                <span>Holiday Date</span>
                             </div>
-
                         </div>
-
                     </div>
-
-                    <div class="col-md-4">
-
-                        <div class="panel bg-warning-400">
-
-                            <div class="panel-body">
-
-                                <h4 class="no-margin">
-
-                                    <span id="HolidayTypePreview">
-
-                                        @(Model.IsOptional
-                                            ? "Optional"
-                                            : "Mandatory")
-
-                                    </span>
-
-                                </h4>
-
-                                Holiday Type
-
+                    <div class="col-md-4 col-sm-4">
+                        <div class="hg-tile" style="background:#e0a12b;">
+                            <i class="bi bi-star"></i>
+                            <div>
+                                <h3 id="HolidayTypePreview">@(Model.IsOptional ? "Optional" : "Mandatory")</h3>
+                                <span>Holiday Type</span>
                             </div>
-
                         </div>
-
                     </div>
-
                 </div>
+            </div>
 
-            </fieldset>
             <!-- ===================================== -->
             <!-- Summary -->
             <!-- ===================================== -->
+            <div class="hg-section">
+                <div class="hg-section-title"><i class="bi bi-list-check"></i> Summary</div>
 
-            <fieldset>
-
-                <legend class="text-semibold">
-
-                    <i class="icon-list3 position-left"></i>
-
-                    Summary
-
-                </legend>
-
-                <div class="row">
-
-                    <div class="col-md-12">
-
-                        <div class="alert alert-info no-margin">
-
-                            <i class="icon-info22"></i>
-
-                            Fill all required fields before saving.
-                            The holiday will be available under the selected
-                            Holiday Group calendar.
-
-                        </div>
-
-                    </div>
-
+                <div class="alert alert-info no-margin">
+                    <i class="bi bi-info-circle"></i>
+                    Fill all required fields before saving. The holiday will be available under the selected Holiday Group calendar.
                 </div>
-
-            </fieldset>
-
+            </div>
         </div>
 
-        <!-- Footer -->
-
-        <div class="panel-footer text-right">
-
-            <a asp-controller="HolidayGroup"
-               asp-action="HolidayList"
-               asp-route-holidayGroupId="@Model.HolidayGroupId"
-               class="btn btn-default">
-
-                <i class="icon-arrow-left13 position-left"></i>
-
-                Back
-
+        <div class="ent-panel hg-footer">
+            <a asp-controller="HolidayGroup" asp-action="HolidayList" asp-route-holidayGroupId="@Model.HolidayGroupId" class="btn btn-default">
+                <i class="bi bi-arrow-left"></i> Back
             </a>
-
-            <button type="reset"
-                    class="btn btn-warning">
-
-                <i class="icon-reset position-left"></i>
-
-                Reset
-
-            </button>
-
-            <button type="submit"
-                    class="btn bg-primary">
-
-                <i class="icon-floppy-disk position-left"></i>
-
-                @(string.IsNullOrEmpty(Model?.Id)
-                    ? "Save Holiday"
-                    : "Update Holiday")
-
-            </button>
-
+            <button type="reset" class="btn btn-warning"><i class="bi bi-arrow-counterclockwise"></i> Reset</button>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> @(isEdit ? "Update Holiday" : "Save Holiday")</button>
         </div>
-
     </div>
-
 </form>
-@section Scripts {
 
+@section Scripts {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
 
     <script>
-
         $(document).ready(function () {
-
             //=========================================
             // Chosen Dropdown
             //=========================================
-
             if ($(".select-search").length) {
-
                 $(".select-search").chosen({
-
                     width: "100%",
                     search_contains: true,
                     allow_single_deselect: true
-
                 });
-
             }
 
             //=========================================
             // Holiday Name Preview
             //=========================================
-
             $("#HolidayName").keyup(function () {
-
                 var value = $(this).val();
-
-                if (value == "")
-                    value = "-";
-
+                if (value == "") value = "-";
                 $("#HolidayNamePreview").text(value);
-
             });
 
             //=========================================
             // Holiday Date Preview
             //=========================================
-
             $("#HolidayDate").change(function () {
-
                 var value = $(this).val();
 
                 if (value == "") {
-
                     $("#HolidayDatePreview").text("-");
-
                     return;
-
                 }
 
                 var date = new Date(value);
+                var options = { day: '2-digit', month: 'short', year: 'numeric' };
 
-                var options = {
-
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric'
-
-                };
-
-                $("#HolidayDatePreview")
-                    .text(date.toLocaleDateString('en-GB', options));
-
+                $("#HolidayDatePreview").text(date.toLocaleDateString('en-GB', options));
             });
 
             //=========================================
             // Holiday Type Preview
             //=========================================
-
             $("#IsOptional").change(function () {
-
                 if ($(this).is(":checked")) {
-
-                    $("#HolidayTypePreview")
-                        .text("Optional");
-
+                    $("#HolidayTypePreview").text("Optional");
+                } else {
+                    $("#HolidayTypePreview").text("Mandatory");
                 }
-                else {
-
-                    $("#HolidayTypePreview")
-                        .text("Mandatory");
-
-                }
-
             });
 
             //=========================================
             // Client Validation
             //=========================================
-
             $("form").submit(function () {
-
                 if ($("#HolidayGroupId").val() == "") {
-
                     alert("Please select Holiday Group.");
-
                     $("#HolidayGroupId").focus();
-
                     return false;
-
                 }
 
                 if ($("#HolidayDate").val() == "") {
-
                     alert("Please select Holiday Date.");
-
                     $("#HolidayDate").focus();
-
                     return false;
-
                 }
 
                 if ($("#HolidayName").val().trim() == "") {
-
                     alert("Please enter Holiday Name.");
-
                     $("#HolidayName").focus();
-
                     return false;
-
                 }
 
                 return true;
-
             });
-
         });
-
     </script>
 
     <style>
+        /* ===================================================================
+           Same enterprise card style used on Views/WeekOff/Index.cshtml /
+           Views/HolidayGroup/Create.cshtml.
+           =================================================================== */
+        .ent-page { background:#f4f6fb; padding:18px; border-radius:10px; }
+        .ent-panel { background:#fff; border:1px solid #e7ebf3; border-radius:10px; padding:16px 18px; margin-bottom:18px; }
+        .ent-icon-badge { width:34px; height:34px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; font-size:16px; flex:none; }
+
+        .d-flex { display: flex !important; }
+        .align-items-center { align-items: center !important; }
+        .gap-2 { gap: .5rem !important; }
+        .mb-0 { margin-bottom: 0 !important; }
+        .mb-2 { margin-bottom: .5rem !important; }
+
+        .hg-header-row { flex-wrap: wrap; }
 
         /*=========================================
-                    Panel
+                    Section blocks (fieldset replacement)
                 =========================================*/
-
-        .panel-heading {
-            padding: 18px 20px;
+        .hg-section {
+            border: 1px solid #e7ebf3;
+            border-radius: 8px;
+            padding: 18px;
+            margin-bottom: 18px;
         }
 
-        .panel-title {
+        .hg-section-title {
             font-weight: 600;
+            font-size: 13.5px;
+            color: #1b2a4a;
+            margin-bottom: 16px;
         }
 
-        .panel-body {
-            padding: 20px;
-        }
-
-        .panel-footer {
-            background: #fafafa;
-            padding: 15px 20px;
-        }
+            .hg-section-title i {
+                color: #2b6fd9;
+                margin-right: 6px;
+            }
 
         /*=========================================
-                    Fieldset
+                    Preview tiles
                 =========================================*/
-
-        fieldset {
-            border: 1px solid #e5e5e5;
-            padding: 20px;
-            margin-bottom: 20px;
+        .hg-tile {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin-bottom: 10px;
+            color: #fff;
         }
 
-        legend {
-            width: auto;
-            border: none;
-            padding: 0 10px;
-            font-size: 15px;
-            font-weight: 600;
-        }
+            .hg-tile i {
+                font-size: 22px;
+                opacity: .9;
+            }
+
+            .hg-tile h3 {
+                margin: 0;
+                font-weight: 700;
+                color: #fff;
+                font-size: 16px;
+            }
+
+            .hg-tile span {
+                font-size: 12px;
+                opacity: .9;
+            }
 
         /*=========================================
                     Form
                 =========================================*/
-
         .form-group {
             margin-bottom: 18px;
         }
@@ -550,28 +320,9 @@
             resize: vertical;
         }
 
-        /*=========================================
-                    Dashboard Cards
-                =========================================*/
-
-        .panel.bg-primary-400,
-        .panel.bg-success-400,
-        .panel.bg-warning-400 {
-            margin-bottom: 15px;
-            border-radius: 3px;
+        .hg-checkbox {
+            padding-top: 8px;
         }
-
-            .panel.bg-primary-400 h4,
-            .panel.bg-success-400 h4,
-            .panel.bg-warning-400 h4 {
-                color: #fff;
-                font-weight: 600;
-                margin-bottom: 6px;
-            }
-
-        /*=========================================
-                    Validation
-                =========================================*/
 
         .text-danger {
             font-size: 12px;
@@ -582,22 +333,25 @@
         }
 
         /*=========================================
-                    Buttons
+                    Footer
                 =========================================*/
-
-        .btn {
-            min-width: 110px;
+        .hg-footer {
+            text-align: right;
         }
+
+            .hg-footer .btn {
+                min-width: 110px;
+                margin-left: 6px;
+            }
 
         /*=========================================
                     Chosen
                 =========================================*/
-
         .chosen-container {
             width: 100% !important;
         }
 
-        .chosen-single {
+        .chosen-container-single .chosen-single {
             height: 36px !important;
             line-height: 34px !important;
         }
@@ -605,35 +359,27 @@
         /*=========================================
                     Alert
                 =========================================*/
-
         .alert {
-            margin-bottom: 20px;
-        }
-
-        /*=========================================
-                    Checkbox
-                =========================================*/
-
-        .checkbox {
-            padding-top: 8px;
+            margin-bottom: 0;
         }
 
         /*=========================================
                     Responsive
                 =========================================*/
-
         @@media (max-width:768px) {
+            .hg-header-row > div:last-child {
+                margin-top: 12px;
+                margin-left: 0 !important;
+            }
 
-            .panel-footer {
+            .hg-footer {
                 text-align: center !important;
             }
 
-                .panel-footer .btn {
+                .hg-footer .btn {
                     width: 100%;
-                    margin-bottom: 10px;
+                    margin: 0 0 10px;
                 }
         }
-
     </style>
-
 }

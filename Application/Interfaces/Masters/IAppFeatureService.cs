@@ -7,15 +7,22 @@ namespace Application.Interfaces.Masters
 {
     public interface IAppFeatureService
     {
-        Task<List<AppFeatureDto>> GetAllAsync();
+        // Feature Management CRUD - System Configurator ONLY (see
+        // EnsurePermissionAsync in AppFeatureService). actingUserId is
+        // always passed explicitly rather than trusted implicitly, same
+        // convention as IErrorLogService/IDatabaseManagementService.
+        // GetMenuAsync/GetMenuByUserAsync/Favorites below are NOT part of
+        // this restriction - every logged-in user needs those for their
+        // own sidebar.
+        Task<List<AppFeatureDto>> GetAllAsync(string actingUserId);
 
-        Task<AppFeatureDto?> GetByIdAsync(string id);
+        Task<AppFeatureDto?> GetByIdAsync(string id, string actingUserId);
 
-        Task<AppFeatureDto> CreateAsync(AppFeatureDto dto);
+        Task<AppFeatureDto> CreateAsync(AppFeatureDto dto, string actingUserId);
 
-        Task<AppFeatureDto?> UpdateAsync(AppFeatureDto dto);
+        Task<AppFeatureDto?> UpdateAsync(AppFeatureDto dto, string actingUserId);
 
-        Task<bool> DeleteAsync(string id);
+        Task<bool> DeleteAsync(string id, string actingUserId);
         Task<List<AppFeatureDto>> GetMenuAsync();
         Task<List<AppFeatureDto>> GetMenuByUserAsync(string? userId);
 

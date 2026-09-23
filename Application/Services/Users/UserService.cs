@@ -20,11 +20,13 @@ namespace Application.Services.Users
 
         #region Get All
 
-        public async Task<List<UserListDto>> GetAllAsync()
+        public async Task<List<UserListDto>> GetAllAsync(string actingUserId)
         {
             try
             {
-                var users = await _context.Users
+                var actingIsSystemConfigurator = await IsSystemConfiguratorAsync(actingUserId);
+
+                var query = _context.Users
                     .AsNoTracking()
                     .Include(x => x.Employee).ThenInclude(e => e.Designation)
                     .Include(x => x.UserRoles.Where(ur => !ur.IsDeleted)).ThenInclude(ur => ur.Role)
@@ -32,6 +34,20 @@ namespace Application.Services.Users
                     .Include(x => x.Branch)
                     .Include(x => x.Tenant)
                     .Where(x => !x.IsDeleted)
+                    .AsQueryable();
+
+                // System Configurator accounts are invisible to a
+                // non-System-Configurator caller (requirement: filtered at
+                // the query/database level, not after materializing -
+                // translates to a SQL WHERE/NOT EXISTS, never an
+                // in-memory .Where after ToListAsync).
+                if (!actingIsSystemConfigurator)
+                {
+                    query = query.Where(x => !x.UserRoles.Any(ur =>
+                        !ur.IsDeleted && ur.Role.Code == ConstantHelper.SYSTEM_CONFIGURATOR));
+                }
+
+                var users = await query
                     .OrderByDescending(x => x.CreatedOn)
                     .ToListAsync();
 
@@ -86,7 +102,7 @@ namespace Application.Services.Users
 
         #region Get By Id
 
-        public async Task<UserDto> GetByIdAsync(string id)
+        public async Task<UserDto> GetByIdAsync(string id, string actingUserId)
         {
             try
             {
@@ -97,6 +113,14 @@ namespace Application.Services.Users
                     .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
 
                 if (user == null)
+                    return null;
+
+                // A non-System-Configurator caller must not be able to
+                // fetch a System Configurator account directly by id -
+                // treated identically to a genuinely missing id (null),
+                // never a different error, so the caller can't tell the
+                // two apart.
+                if (!await CanSeeTargetAsync(actingUserId, id))
                     return null;
 
                 return new UserDto
@@ -185,7 +209,7 @@ namespace Application.Services.Users
 
         #region Update
 
-        public async Task<string> UpdateAsync(string id, UserDto dto)
+        public async Task<string> UpdateAsync(string id, UserDto dto, string actingUserId)
         {
             try
             {
@@ -194,6 +218,13 @@ namespace Application.Services.Users
                     .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
 
                 if (user == null)
+                    return "User Not Found";
+
+                // Same "not found" treatment as GetByIdAsync above - a
+                // non-System-Configurator caller cannot edit a System
+                // Configurator account, and gets exactly the same result
+                // string a genuinely missing id would produce.
+                if (!await CanSeeTargetAsync(actingUserId, id))
                     return "User Not Found";
 
                 user.Username = dto.Username;
@@ -339,7 +370,7 @@ namespace Application.Services.Users
 
         #region Delete (Soft)
 
-        public async Task<bool> DeleteAsync(string id)
+        public async Task<bool> DeleteAsync(string id, string actingUserId)
         {
             try
             {
@@ -347,6 +378,12 @@ namespace Application.Services.Users
                     .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
 
                 if (user == null) return false;
+
+                // Same "not found" treatment as GetByIdAsync/UpdateAsync
+                // above - a non-System-Configurator caller cannot delete a
+                // System Configurator account.
+                if (!await CanSeeTargetAsync(actingUserId, id))
+                    return false;
 
                 user.IsDeleted = true;
                 user.IsActive = false;
@@ -363,5 +400,37 @@ namespace Application.Services.Users
         }
 
         #endregion
+
+        // ==================================================================
+        // SYSTEM CONFIGURATOR VISIBILITY - a non-System-Configurator caller
+        // must not be able to see or manage a System Configurator account
+        // (list, details, edit, delete). A System Configurator caller sees/
+        // manages everyone, including other System Configurator accounts
+        // and their own, exactly as before this change.
+        // ==================================================================
+
+        private async Task<bool> IsSystemConfiguratorAsync(string? userId)
+        {
+            if (string.IsNullOrEmpty(userId))
+                return false;
+
+            return await (
+                from ur in _context.UserRoles.AsNoTracking()
+                join r in _context.Roles.AsNoTracking() on ur.RoleId equals r.Id
+                where ur.UserId == userId && !ur.IsDeleted
+                select r.Code
+            ).AnyAsync(code => code == ConstantHelper.SYSTEM_CONFIGURATOR);
+        }
+
+        // True when actingUserId is allowed to see/act on targetUserId -
+        // either actingUserId is itself System Configurator (sees
+        // everyone), or targetUserId is not a System Configurator account.
+        private async Task<bool> CanSeeTargetAsync(string? actingUserId, string targetUserId)
+        {
+            if (await IsSystemConfiguratorAsync(actingUserId))
+                return true;
+
+            return !await IsSystemConfiguratorAsync(targetUserId);
+        }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using APP.Attributes;
+using APP.Attributes;
 using APP.Helpers;
 using APP.Models.DTOs;
 using APP.Services.Interfaces;
@@ -7,6 +8,14 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace APP.Controllers
 {
+    // Feature Management CRUD screens below are System Configurator ONLY
+    // (requirement: lock down Feature Management same as Error Log /
+    // Database Management). [SystemConfiguratorOnly] is the "don't even
+    // show the page" convenience gate; the real, data-driven check is
+    // still IAppFeatureService.EnsurePermissionAsync on the API side, so
+    // actingUserId is appended to every call below. GetMyFavorites/
+    // ToggleFavorite are deliberately NOT restricted - every logged-in
+    // user needs those for their own sidebar Quick Access.
     [JwtAuthorize]
     public class AppFeaturesController : Controller
     {
@@ -20,14 +29,17 @@ namespace APP.Controllers
             _tenantId = SessionHelper.GetActiveTenantId;
             _userId = SessionHelper.GetActiveUserId;
         }
+
+        [SystemConfiguratorOnly]
         public async Task<IActionResult> Index()
         {
             var data = await _apiService
-                .GetAsync<List<AppFeatureDto>>("AppFeatures");
+                .GetAsync<List<AppFeatureDto>>($"AppFeatures?actingUserId={Uri.EscapeDataString(_userId ?? "")}");
             await LoadDropdowns();
             return View(data);
         }
 
+        [SystemConfiguratorOnly]
         [HttpGet]
         public async Task<IActionResult> Create()
         {
@@ -35,6 +47,7 @@ namespace APP.Controllers
             return View(new AppFeatureDto());
         }
 
+        [SystemConfiguratorOnly]
         [HttpPost]
         public async Task<IActionResult> Create(AppFeatureDto dto)
         {
@@ -42,7 +55,7 @@ namespace APP.Controllers
             {
                 dto.CreatedBy = _userId;
 
-                await _apiService.PostAsync<dynamic>("AppFeatures", dto);
+                await _apiService.PostAsync<dynamic>($"AppFeatures?actingUserId={Uri.EscapeDataString(_userId ?? "")}", dto);
 
                 TempData["Success"] = "Feature created successfully.";
                 return RedirectToAction(nameof(Index));
@@ -52,15 +65,20 @@ namespace APP.Controllers
             return View(dto);
         }
 
+        [SystemConfiguratorOnly]
         [HttpGet]
         public async Task<IActionResult> Edit(string id)
         {
             var data = await _apiService
-                .GetAsync<AppFeatureDto>($"AppFeatures/{id}");
+                .GetAsync<AppFeatureDto>($"AppFeatures/{id}?actingUserId={Uri.EscapeDataString(_userId ?? "")}");
+            if (data == null)
+                return NotFound();
+
             await LoadDropdowns();
             return View("Create", data);
         }
 
+        [SystemConfiguratorOnly]
         [HttpPost]
         public async Task<IActionResult> Edit(AppFeatureDto dto)
         {
@@ -69,7 +87,7 @@ namespace APP.Controllers
                 dto.ModifiedBy = _userId;
                 dto.ModifiedOn = DateTime.UtcNow;
 
-                await _apiService.PutAsync<dynamic>("AppFeatures", dto);
+                await _apiService.PutAsync<dynamic>($"AppFeatures?actingUserId={Uri.EscapeDataString(_userId ?? "")}", dto);
 
                 TempData["Success"] = "Feature updated successfully.";
                 return RedirectToAction(nameof(Index));
@@ -79,18 +97,21 @@ namespace APP.Controllers
             return View("Create", dto);
         }
 
+        [SystemConfiguratorOnly]
         public async Task<IActionResult> Details(string id)
         {
             var data = await _apiService
-                .GetAsync<AppFeatureDto>($"AppFeatures/{id}");
+                .GetAsync<AppFeatureDto>($"AppFeatures/{id}?actingUserId={Uri.EscapeDataString(_userId ?? "")}");
             if (data == null)
                 return NotFound();
 
             return View(data);
         }
+
+        [SystemConfiguratorOnly]
         public async Task<IActionResult> Delete(string id)
         {
-            await _apiService.DeleteAsync($"AppFeatures/{id}");
+            await _apiService.DeleteAsync($"AppFeatures/{id}?actingUserId={Uri.EscapeDataString(_userId ?? "")}");
 
             return RedirectToAction(nameof(Index));
         }

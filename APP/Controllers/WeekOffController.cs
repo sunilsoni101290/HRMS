@@ -115,11 +115,13 @@ namespace APP.Controllers
         {
             try
             {
-                if (!ModelState.IsValid)
+                // NOTE: this condition was inverted before this change (it
+                // only called PutAsync when ModelState was INVALID), which
+                // meant Edit never actually saved anything on a normal
+                // valid submit. Fixed as part of wiring up the new
+                // pattern-type fields so Edit genuinely works end-to-end.
+                if (ModelState.IsValid)
                 {
-                    await LoadDayDropdown();
-
-
                     dto.CreatedBy = _userId;
                     dto.TenantId = _tenantId;
                     dto.ModifiedOn = DateTime.UtcNow;
@@ -131,8 +133,11 @@ namespace APP.Controllers
                     );
 
                     TempData["Success"] = "Week Off updated successfully.";
-                    return View("Create", dto);
+                    return RedirectToAction(nameof(Index));
                 }
+
+                await LoadDayDropdown();
+                return View("Create", dto);
             }
             catch (Exception ex)
             {
@@ -142,7 +147,6 @@ namespace APP.Controllers
 
                 return View("Create", dto);
             }
-            return RedirectToAction(nameof(Index));
         }
 
         // =====================================================

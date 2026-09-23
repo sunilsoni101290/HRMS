@@ -1,559 +1,282 @@
-﻿@model IEnumerable<WeekOffDto>
+@model IEnumerable<WeekOffDto>
 
 @{
     ViewData["Title"] = "Week Off Management";
+    var list = (Model ?? Enumerable.Empty<WeekOffDto>()).ToList();
+    var everyWeekCount = list.Count(x => x.PatternType == Domain.Enums.EnumExtensions.WeekOffPatternType.EveryWeek);
+    var nthCount = list.Count(x => x.PatternType == Domain.Enums.EnumExtensions.WeekOffPatternType.NthWeekdayOfMonth);
 }
 
-<div class="panel panel-flat">
+@*
+    This project ships Bootstrap 3.3.7 (jQuery-based), not 4/5 - see
+    Views/EsslAttendance/Index.cshtml's <style> block for the full
+    explanation. This view reuses that same plain-CSS "ent-panel" card style
+    + small Bootstrap 4/5 utility-class shim (kept local to this view, same
+    as every other redesigned view in this codebase) and uses real
+    Bootstrap 3 markup throughout.
+*@
 
-    <!-- Header -->
+<div class="ent-page">
+    <div class="ent-panel">
 
-    <div class="panel-heading">
-
-        <h5 class="panel-title">
-
-            <i class="icon-calendar52 position-left"></i>
-
-            Week Off Management
-
-        </h5>
-
-        <div class="heading-elements">
-
-            <a asp-action="Create"
-               class="btn bg-primary">
-
-                <i class="icon-plus22 position-left"></i>
-
-                Add Week Off
-
-            </a>
-
+        <div class="d-flex align-items-center gap-2 mb-2 wko-header-row">
+            <span class="ent-icon-badge" style="background:#eaf0fe;color:#2b6fd9;"><i class="bi bi-calendar-week"></i></span>
+            <div>
+                <h5 class="mb-0" style="font-weight:700;color:#1b2a4a;">Week Off Management</h5>
+                <div class="text-muted" style="font-size:12.5px;">Configure fixed weekly days off, or specific occurrence patterns like "2nd and 4th Saturday".</div>
+            </div>
+            <div style="margin-left:auto;">
+                <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Week Off</a>
+            </div>
         </div>
 
-    </div>
-
-    <!-- Dashboard -->
-
-    <div class="panel-body">
-
-        <div class="row">
-
-            <!-- Total Week Off -->
-
-            <div class="col-md-4">
-
-                <div class="panel bg-primary-400">
-
-                    <div class="panel-body">
-
-                        <div class="media">
-
-                            <div class="media-left">
-
-                                <i class="icon-calendar3 icon-3x"></i>
-
-                            </div>
-
-                            <div class="media-body text-right">
-
-                                <h3 class="no-margin">
-
-                                    @Model.Count()
-
-                                </h3>
-
-                                <span>
-
-                                    Total Week Offs
-
-                                </span>
-
-                            </div>
-
-                        </div>
-
+        <!-- Summary tiles -->
+        <div class="row wko-tiles">
+            <div class="col-md-4 col-sm-4">
+                <div class="wko-tile" style="background:#2b6fd9;">
+                    <i class="bi bi-calendar3"></i>
+                    <div>
+                        <h3>@list.Count</h3>
+                        <span>Total Week Offs</span>
                     </div>
-
                 </div>
-
             </div>
-
-            <!-- Weekend Days -->
-
-            <div class="col-md-4">
-
-                <div class="panel bg-success-400">
-
-                    <div class="panel-body">
-
-                        <div class="media">
-
-                            <div class="media-left">
-
-                                <i class="icon-calendar22 icon-3x"></i>
-
-                            </div>
-
-                            <div class="media-body text-right">
-
-                                <h3 class="no-margin">
-
-                                    @Model.Count()
-
-                                </h3>
-
-                                <span>
-
-                                    Configured Days
-
-                                </span>
-
-                            </div>
-
-                        </div>
-
+            <div class="col-md-4 col-sm-4">
+                <div class="wko-tile" style="background:#2e9e6c;">
+                    <i class="bi bi-arrow-repeat"></i>
+                    <div>
+                        <h3>@everyWeekCount</h3>
+                        <span>Every-Week Patterns</span>
                     </div>
-
                 </div>
-
             </div>
-
-            <!-- Active -->
-
-            <div class="col-md-4">
-
-                <div class="panel bg-info-400">
-
-                    <div class="panel-body">
-
-                        <div class="media">
-
-                            <div class="media-left">
-
-                                <i class="icon-checkmark-circle icon-3x"></i>
-
-                            </div>
-
-                            <div class="media-body text-right">
-
-                                <h3 class="no-margin">
-
-                                    Active
-
-                                </h3>
-
-                                <span>
-
-                                    Current Status
-
-                                </span>
-
-                            </div>
-
-                        </div>
-
+            <div class="col-md-4 col-sm-4">
+                <div class="wko-tile" style="background:#7a5cf0;">
+                    <i class="bi bi-calendar2-check"></i>
+                    <div>
+                        <h3>@nthCount</h3>
+                        <span>Nth-Occurrence Patterns</span>
                     </div>
-
                 </div>
-
             </div>
-
         </div>
 
         <hr />
 
         <!-- Search Panel -->
-
         <div class="row">
-
-            <div class="col-md-5">
-
+            <div class="col-md-5 col-sm-5">
                 <div class="form-group">
-
-                    <input type="text"
-                           id="searchInput"
-                           class="form-control"
-                           placeholder="Search Week Off..." />
-
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search Week Off..." />
                 </div>
-
             </div>
-
-            <div class="col-md-5">
-
+            <div class="col-md-5 col-sm-5">
                 <div class="form-group">
-
-                    <select id="DayFilter"
-                            class="form-control select-search">
-
-                        <option value="">
-
-                            All Days
-
-                        </option>
-
+                    <select id="DayFilter" class="form-control select-search">
+                        <option value="">All Days</option>
                         @foreach (var day in Enum.GetNames(typeof(DayOfWeek)))
                         {
-                            <option value="@day">
-
-                                @day
-
-                            </option>
+                            <option value="@day">@day</option>
                         }
-
                     </select>
-
                 </div>
-
             </div>
-
-            <div class="col-md-2">
-
-                <button class="btn bg-primary btn-block">
-
-                    <i class="icon-search4 position-left"></i>
-
-                    Search
-
-                </button>
-
+            <div class="col-md-2 col-sm-2">
+                <button class="btn btn-primary btn-block" type="button"><i class="bi bi-search"></i> Search</button>
             </div>
-
         </div>
-
     </div>
 
     <!-- Grid -->
-
-    <table class="table table-hover table-striped datatable-basic">
-
-        <thead>
-
-            <tr>
-
-                <th width="60">
-
-                    #
-
-                </th>
-
-                <th>
-
-                    Week Off Day
-
-                </th>
-
-                <th width="140">
-
-                    Status
-
-                </th>
-
-                <th width="180"
-                    class="text-center">
-
-                    Action
-
-                </th>
-
-            </tr>
-
-        </thead>
-
-        <tbody id="weekOffTable">
-            @{
-                int sr = 1;
-            }
-
-            @foreach (var item in Model)
-            {
+    <div class="ent-panel wko-grid-panel">
+        <table class="table table-hover table-striped datatable-basic">
+            <thead>
                 <tr>
-
-                    <!-- Sr No -->
-
-                    <td>
-
-                        @sr
-
-                    </td>
-
-                    <!-- Week Off Day -->
-
-                    <td>
-
-                        <div class="text-semibold">
-
-                            <i class="icon-calendar22 text-primary position-left"></i>
-
-                            @item.Day
-
-                        </div>
-
-                        <small class="text-muted">
-
-                            Weekly Holiday
-
-                        </small>
-
-                    </td>
-
-                    <!-- Status -->
-
-                    <td>
-
-                        <span class="label bg-success">
-
-                            Active
-
-                        </span>
-
-                    </td>
-
-                    <!-- Action -->
-
-                    <td class="text-center">
-
-                        <div class="btn-group">
-
-                            <!-- Details -->
-
-                            <a asp-action="Details"
-                               asp-route-id="@item.Id"
-                               class="btn btn-default btn-icon"
-                               data-popup="tooltip"
-                               title="View Details">
-
-                                <i class="icon-eye"></i>
-
-                            </a>
-
-                            <!-- Edit -->
-
-                            <a asp-action="Edit"
-                               asp-route-id="@item.Id"
-                               class="btn bg-primary btn-icon"
-                               data-popup="tooltip"
-                               title="Edit">
-
-                                <i class="icon-pencil7"></i>
-
-                            </a>
-
-                            <!-- Delete -->
-
-                            <a asp-action="Delete"
-                               asp-route-id="@item.Id"
-                               class="btn btn-danger btn-icon"
-                               data-popup="tooltip"
-                               title="Delete"
-                               onclick="return confirmSweetDelete(event, this, 'Are you sure you want to delete this Week Off?');">
-
-                                <i class="icon-trash"></i>
-
-                            </a>
-
-                        </div>
-
-                    </td>
-
+                    <th width="60">#</th>
+                    <th>Week Off Day</th>
+                    <th>Pattern</th>
+                    <th width="180" class="text-center">Action</th>
                 </tr>
+            </thead>
+            <tbody id="weekOffTable">
+                @{
+                    int sr = 1;
+                }
 
-                sr++;
-            }
+                @foreach (var item in list)
+                {
+                    var isNth = item.PatternType == Domain.Enums.EnumExtensions.WeekOffPatternType.NthWeekdayOfMonth;
+                    var occurrences = (item.Occurrences ?? new List<int>()).OrderBy(o => o).ToList();
+                    var ordinalMap = new Dictionary<int, string> { { 1, "1st" }, { 2, "2nd" }, { 3, "3rd" }, { 4, "4th" }, { 5, "5th" } };
+                    var occurrenceText = occurrences.Count > 0
+                        ? string.Join(" & ", occurrences.Select(o => ordinalMap.ContainsKey(o) ? ordinalMap[o] : o + "th"))
+                        : "-";
 
-        </tbody>
-
-    </table>
-
+                    <tr>
+                        <td>@sr</td>
+                        <td>
+                            <div class="text-semibold"><i class="bi bi-calendar-week wko-row-icon"></i> @item.Day</div>
+                            <small class="text-muted">@(isNth ? "Nth Occurrence Pattern" : "Weekly Holiday")</small>
+                        </td>
+                        <td>
+                            @if (isNth)
+                            {
+                                <span class="wko-badge wko-badge-purple"><i class="bi bi-calendar2-check"></i> @occurrenceText @item.Day</span>
+                            }
+                            else
+                            {
+                                <span class="wko-badge wko-badge-green"><i class="bi bi-arrow-repeat"></i> Every @item.Day</span>
+                            }
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group">
+                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-default btn-icon" data-popup="tooltip" title="View Details">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary btn-icon" data-popup="tooltip" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-danger btn-icon" data-popup="tooltip" title="Delete"
+                                   onclick="return confirmSweetDelete(event, this, 'Are you sure you want to delete this Week Off?');">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    sr++;
+                }
+            </tbody>
+        </table>
+    </div>
 </div>
+
 @section Scripts {
     <script>
-
-        // Search Table
-
-        document.getElementById("searchInput")
-            .addEventListener("keyup", function () {
-
-                let value = this.value.toLowerCase();
-
-                let rows = document.querySelectorAll("#weekOffTable tr");
-
-                rows.forEach(function (row) {
-
-                    let text = row.innerText.toLowerCase();
-
-                    row.style.display =
-                        text.includes(value) ? "" : "none";
-
-                });
-
+        document.getElementById("searchInput").addEventListener("keyup", function () {
+            let value = this.value.toLowerCase();
+            let rows = document.querySelectorAll("#weekOffTable tr");
+            rows.forEach(function (row) {
+                let text = row.innerText.toLowerCase();
+                row.style.display = text.includes(value) ? "" : "none";
             });
-
+        });
     </script>
 
     <script>
-
         $(document).ready(function () {
-
             //=========================================
             // Bootstrap Tooltip
             //=========================================
-
             $('[data-popup="tooltip"]').tooltip();
 
             //=========================================
             // Chosen Dropdown
             //=========================================
-
             if ($(".select-search").length) {
-
                 $(".select-search").chosen({
-
                     width: "100%",
                     search_contains: true,
                     allow_single_deselect: true
-
                 });
-
             }
-
-            //=========================================
-            // Search
-            //=========================================
-
-            $("#searchInput").keyup(function () {
-
-                filterTable();
-
-            });
-
-            //=========================================
-            // Day Filter
-            //=========================================
-
-            $("#DayFilter").change(function () {
-
-                filterTable();
-
-            });
 
             //=========================================
             // Filter Function
             //=========================================
-
             function filterTable() {
-
-                var keyword =
-                    $("#searchInput").val().toLowerCase();
-
-                var day =
-                    $("#DayFilter").val().toLowerCase();
+                var keyword = $("#searchInput").val().toLowerCase();
+                var day = $("#DayFilter").val().toLowerCase();
 
                 $("#weekOffTable tr").each(function () {
-
                     var row = $(this);
+                    var weekDay = row.find("td:eq(1)").text().toLowerCase();
 
-                    var weekDay =
-                        row.find("td:eq(1)").text().toLowerCase();
-
-                    var searchMatch =
-                        keyword == "" ||
-                        weekDay.indexOf(keyword) > -1;
-
-                    var dayMatch =
-                        day == "" ||
-                        weekDay.indexOf(day) > -1;
+                    var searchMatch = keyword == "" || weekDay.indexOf(keyword) > -1;
+                    var dayMatch = day == "" || weekDay.indexOf(day) > -1;
 
                     row.toggle(searchMatch && dayMatch);
-
                 });
-
             }
+
+            $("#searchInput").keyup(function () { filterTable(); });
+            $("#DayFilter").change(function () { filterTable(); });
 
             //=========================================
             // DataTable
             //=========================================
-
             if ($.fn.DataTable) {
-
-                $(".datatable-basic").DataTable({
-
+                var __indexDataTable = $(".datatable-basic").DataTable({
                     autoWidth: false,
-
                     ordering: true,
-
                     paging: true,
-
                     searching: false,
-
                     info: true,
-
                     pageLength: 10,
-
-                    lengthMenu: [
-
-                        [10, 25, 50, 100],
-
-                        [10, 25, 50, 100]
-
-                    ],
-
-                    language: {
-
-                        search: "_INPUT_",
-
-                        searchPlaceholder: "Search..."
-
-                    }
-
+                    lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                    language: { search: "_INPUT_", searchPlaceholder: "Search..." },
+                    retrieve: true
                 });
 
+                $('#searchInput').on('keyup', function () {
+                    __indexDataTable.search($(this).val() || '').draw();
+                });
             }
-
         });
-
     </script>
 
     <style>
+        /* ===================================================================
+           Same enterprise card + Bootstrap 4/5 utility-class shim used on
+           Views/EsslAttendance/Index.cshtml / Views/HistoricalAttendanceSync/
+           Index.cshtml / Views/MonthWiseBiometricSync/Index.cshtml.
+           =================================================================== */
+        .ent-page { background:#f4f6fb; padding:18px; border-radius:10px; }
+        .ent-panel { background:#fff; border:1px solid #e7ebf3; border-radius:10px; padding:16px 18px; margin-bottom:18px; }
+        .ent-icon-badge { width:34px; height:34px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; font-size:16px; flex:none; }
+
+        .d-flex { display: flex !important; }
+        .align-items-center { align-items: center !important; }
+        .gap-2 { gap: .5rem !important; }
+        .mb-0 { margin-bottom: 0 !important; }
+        .mb-2 { margin-bottom: .5rem !important; }
+
+        .wko-header-row { flex-wrap: wrap; }
 
         /*=========================================
-                    Panel
+                    Tiles
                 =========================================*/
+        .wko-tiles { margin-top: 4px; }
 
-        .panel-heading {
-            padding: 18px 20px;
+        .wko-tile {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin-bottom: 15px;
+            color: #fff;
         }
 
-        .panel-title {
-            font-weight: 600;
-        }
+            .wko-tile i {
+                font-size: 26px;
+                opacity: .9;
+            }
 
-        .panel-body {
-            padding: 20px;
-        }
-
-        /*=========================================
-                    Dashboard Cards
-                =========================================*/
-
-        .panel.bg-primary-400,
-        .panel.bg-success-400,
-        .panel.bg-info-400 {
-            margin-bottom: 20px;
-            border-radius: 3px;
-        }
-
-            .panel.bg-primary-400 h3,
-            .panel.bg-success-400 h3,
-            .panel.bg-info-400 h3 {
+            .wko-tile h3 {
+                margin: 0;
+                font-weight: 700;
                 color: #fff;
-                font-weight: 600;
+            }
+
+            .wko-tile span {
+                font-size: 12.5px;
+                opacity: .9;
             }
 
         /*=========================================
-                    Table
+                    Grid panel
                 =========================================*/
+        .wko-grid-panel { padding: 0; overflow: hidden; }
 
         .table > thead > tr > th {
             background: #fafafa;
@@ -575,19 +298,41 @@
             font-weight: 600;
         }
 
-        /*=========================================
-                    Badge
-                =========================================*/
+        .wko-row-icon {
+            color: #2b6fd9;
+            margin-right: 6px;
+        }
 
-        .label {
-            font-size: 11px;
+        .text-muted {
+            color: #999;
+        }
+
+        /*=========================================
+                    Pattern Badges
+                =========================================*/
+        .wko-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11.5px;
+            font-weight: 600;
             padding: 5px 10px;
+            border-radius: 20px;
+        }
+
+        .wko-badge-green {
+            background: #e8f7ef;
+            color: #1e8a54;
+        }
+
+        .wko-badge-purple {
+            background: #f0ecff;
+            color: #6a45e0;
         }
 
         /*=========================================
                     Buttons
                 =========================================*/
-
         .btn-group .btn {
             margin-right: 2px;
         }
@@ -599,23 +344,8 @@
         }
 
         /*=========================================
-                    Dashboard
-                =========================================*/
-
-        .media {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .media-left i {
-            opacity: .9;
-        }
-
-        /*=========================================
                     Chosen
                 =========================================*/
-
         .chosen-container {
             width: 100% !important;
         }
@@ -626,67 +356,17 @@
         }
 
         /*=========================================
-                    DataTable
-                =========================================*/
-
-        .datatable-basic tbody tr:hover {
-            background: #f5f5f5;
-        }
-
-        /*=========================================
-                    Text
-                =========================================*/
-
-        .text-muted {
-            color: #999;
-        }
-
-        /*=========================================
                     Responsive
                 =========================================*/
-
         @@media (max-width:768px) {
-
-            .heading-elements {
-                margin-top: 15px;
-                float: none;
+            .wko-header-row > div:last-child {
+                margin-top: 12px;
+                margin-left: 0 !important;
             }
 
             .btn-block {
                 margin-top: 10px;
             }
         }
-
     </style>
-
-
-    <script>
-        // Auto-added: client-side pagination for this Index page's listing
-        // table (DataTables). Safe to run even if this page already
-        // initializes '.datatable-basic' itself above - 'retrieve: true'
-        // makes DataTables return the existing instance instead of
-        // re-initializing (and throwing) when that's the case.
-        $(document).ready(function () {
-            if ($.fn.DataTable) {
-                var __indexDataTable = $('.datatable-basic').DataTable({
-                    autoWidth: false,
-                    paging: true,
-                    ordering: true,
-                    searching: false,
-                    pageLength: 10,
-                    lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
-                    language: { search: "_INPUT_", searchPlaceholder: "Search..." },
-                    retrieve: true
-                });
-
-            // Rewire the page's existing search box to drive DataTables'
-            // own filtering pipeline (instead of any legacy row .toggle()
-            // logic still bound above), so search results stay correct once
-            // rows are split across pages.
-            $('#searchInput').on('keyup', function () {
-                __indexDataTable.search($(this).val() || '').draw();
-            });
-            }
-        });
-    </script>
 }

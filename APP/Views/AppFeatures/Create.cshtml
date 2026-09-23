@@ -1,296 +1,335 @@
-﻿@model AppFeatureDto
+@model AppFeatureDto
 
 @{
     ViewData["Title"] = "App Feature";
+    bool isEdit = !string.IsNullOrEmpty(Model?.Id);
 }
 
-<div class="panel panel-flat">
+@*
+    ==========================================================================
+    APP FEATURE - ADD / EDIT (enterprise redesign)
+    ==========================================================================
+    Restyle only, same Views/AppFeatures/Create.cshtml used for both Create
+    and Edit (APP/Controllers/AppFeaturesController.cs's Edit GET renders
+    this same view). No fields were removed or renamed.
 
-    <div class="panel-heading">
-        <h5 class="panel-title">
-            <i class="icon-grid6 position-left"></i>
-            App Feature Master
-        </h5>
+    URL FIELD FIX: Url used to be rendered readonly here because
+    AppFeature.Url was a [NotMapped], get-only computed property - whatever
+    was typed was silently discarded on save. It is now a real, persisted,
+    optional column (Domain/Entities/AppFeature.cs + AppFeatureService
+    Create/Update), so the field below is a normal editable text input in
+    both Add and Edit mode, pre-populated with the true current effective
+    value (manual override if one was saved, otherwise the
+    Area/Controller/Action-derived value) and it persists exactly what is
+    typed - see AppFeatureService.UpdateAsync. "Regenerate" only fills the
+    field on an explicit click; it never overwrites it automatically.
+*@
+
+<div class="ent-page">
+
+    <!-- ================= HEADER ================= -->
+    <div class="d-flex flex-wrap justify-content-between align-items-start mb-3 gap-2">
+        <div>
+            <h3 class="mb-0" style="font-weight:700;color:#1b2a4a;">
+                <i class="bi @(isEdit ? "bi-pencil-square" : "bi-plus-circle") me-1"></i>
+                @(isEdit ? "Edit Feature" : "Add Feature")
+            </h3>
+            <p class="text-muted mb-0">
+                @(isEdit ? "Update this menu feature's routing and access settings." : "Register a new menu feature / screen for role and menu configuration.")
+            </p>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Back to List
+        </a>
     </div>
 
-    <div class="panel-body">
+    <form asp-action="@(isEdit ? "Edit" : "Create")" method="post" id="appFeatureForm" novalidate>
 
-        <form asp-action="@(Model.Id == null ? "Create" : "Edit")"
-              method="post">
+        <input asp-for="Id" type="hidden" />
+        <input asp-for="CreatedBy" type="hidden" />
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger" id="formValidationSummary" style="display:none;"></div>
 
-            <input asp-for="Id" type="hidden" />
-            <input asp-for="CreatedBy" type="hidden" />
-
-            <!-- Basic Information -->
-            <fieldset>
-                <legend class="text-semibold">
-                    <i class="icon-info22 position-left"></i>
-                    Basic Information
-                </legend>
-
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label asp-for="Name"></label>
-                            <input asp-for="Name"
-                                   class="form-control" />
-                        </div>
-                    </div>
-
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label asp-for="Code"></label>
-                            <input asp-for="Code"
-                                   class="form-control" />
-                        </div>
-                    </div>
-
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label asp-for="Module"></label>
-                            <input asp-for="Module"
-                                   readonly
-                                   class="form-control" />
-                        </div>
-                    </div>
-
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label>Parent Feature</label>
-                            <select asp-for="ParentFeatureId"
-                                    asp-items="ViewBag.ParentFeaturesList"
-                                    class="form-control">
-                                <option value="">
-                                    -- Select Parent --
-                                </option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label asp-for="DisplayOrder"></label>
-                            <input asp-for="DisplayOrder"
-                                   class="form-control" />
-                        </div>
-                    </div>
-
-                    <div class="col-md-9">
-                        <div class="form-group">
-                            <label asp-for="Description"></label>
-                            <textarea asp-for="Description"
-                                      rows="3"
-                                      class="form-control"></textarea>
-                        </div>
-                    </div>
-                </div>
-            </fieldset>
-
-            <!-- Routing -->
-            <fieldset>
-                <legend class="text-semibold">
-                    <i class="icon-tree7 position-left"></i>
-                    Routing Configuration
-                </legend>
-
-                <div class="row">
-
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label asp-for="ControllerName"></label>
-                            <input asp-for="ControllerName"
-                                   class="form-control" />
-                        </div>
-                    </div>
-
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label asp-for="ActionName"></label>
-                            <input asp-for="ActionName"
-                                   class="form-control" />
-                        </div>
-                    </div>
-
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label asp-for="AreaName"></label>
-                            <input asp-for="AreaName"
-                                   class="form-control" />
-                        </div>
-                    </div>
-
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label asp-for="Url"></label>
-                            <!-- Url is computed on the server from Area/
-                                 Controller/Action (AppFeature.Url is a
-                                 read-only [NotMapped] property - see
-                                 AppFeatureService) and can never actually
-                                 be saved, so it's shown read-only here
-                                 instead of looking editable while silently
-                                 discarding whatever is typed. -->
-                            <input asp-for="Url"
-                                   readonly
-                                   class="form-control"
-                                   title="Computed automatically from Area / Controller / Action - not directly editable." />
-                        </div>
-                    </div>
-
-                </div>
-            </fieldset>
-
-            <div class="row">
-
-                <!-- UI Settings -->
-                <div class="col-md-6">
-
-                    <fieldset>
-                        <legend class="text-semibold">
-                            <i class="icon-palette position-left"></i>
-                            UI Settings
-                        </legend>
-
-                        <div class="form-group">
-                            <label asp-for="Icon"></label>
-                            <input asp-for="Icon"
-                                   class="form-control" />
-                        </div>
-
-                        <div class="form-group">
-                            <label asp-for="BadgeText"></label>
-                            <input asp-for="BadgeText"
-                                   class="form-control" />
-                        </div>
-
-                        <div class="checkbox checkbox-switchery">
-                            <label>
-                                <input asp-for="IsVisible"
-                                       type="checkbox"
-                                       class="switchery">
-                                Is Visible
-                            </label>
-                        </div>
-
-                        <div class="checkbox checkbox-switchery">
-                            <label>
-                                <input asp-for="IsMenu"
-                                       type="checkbox"
-                                       class="switchery">
-                                Is Menu
-                            </label>
-                        </div>
-
-                        <div class="checkbox checkbox-switchery">
-                            <label>
-                                <input asp-for="IsActive"
-                                       type="checkbox"
-                                       class="switchery">
-                                Is Active
-                            </label>
-                        </div>
-
-                    </fieldset>
-
-                </div>
-
-                <!-- Access Control -->
-                <div class="col-md-6">
-
-                    <fieldset>
-
-                        <legend class="text-semibold">
-                            <i class="icon-shield2 position-left"></i>
-                            Access Control
-                        </legend>
-
-                        <div class="row">
-
-                            <div class="col-md-6">
-                                <div class="checkbox checkbox-switchery">
-                                    <label><input asp-for="CanView" type="checkbox" class="switchery"> View</label>
-                                </div>
-
-                                <div class="checkbox checkbox-switchery">
-                                    <label><input asp-for="CanAdd" type="checkbox" class="switchery"> Add</label>
-                                </div>
-
-                                <div class="checkbox checkbox-switchery">
-                                    <label><input asp-for="CanEdit" type="checkbox" class="switchery"> Edit</label>
-                                </div>
-
-                                <div class="checkbox checkbox-switchery">
-                                    <label><input asp-for="CanDelete" type="checkbox" class="switchery"> Delete</label>
-                                </div>
-                            </div>
-
-                            <div class="col-md-6">
-                                <div class="checkbox checkbox-switchery">
-                                    <label><input asp-for="CanApprove" type="checkbox" class="switchery"> Approve</label>
-                                </div>
-
-                                <div class="checkbox checkbox-switchery">
-                                    <label><input asp-for="CanExport" type="checkbox" class="switchery"> Export</label>
-                                </div>
-
-                                <div class="checkbox checkbox-switchery">
-                                    <label><input asp-for="CanPrint" type="checkbox" class="switchery"> Print</label>
-                                </div>
-
-                                <div class="checkbox checkbox-switchery">
-                                    <label><input asp-for="IsHRMSFeature" type="checkbox" class="switchery"> HRMS Feature</label>
-                                </div>
-                            </div>
-
-                        </div>
-
-                    </fieldset>
-
-                </div>
-
+        <!-- ================= BASIC INFORMATION ================= -->
+        <div class="ent-panel mb-3">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <span class="ent-icon-badge" style="background:#eaf2fd;color:#2b6fd9;"><i class="bi bi-info-circle-fill"></i></span>
+                <div style="font-weight:700;">Basic Information</div>
             </div>
 
-            <!-- Feature Type -->
-            <fieldset>
-                <legend class="text-semibold">
-                    <i class="icon-grid52 position-left"></i>
-                    Feature Type
-                </legend>
+            <div class="row g-3">
+                <div class="col-md-3 col-sm-6">
+                    <label asp-for="Name" class="form-label"></label>
+                    <input asp-for="Name" class="form-control" placeholder="e.g. Employee Management" />
+                    <span asp-validation-for="Name" class="text-danger small"></span>
+                </div>
 
-                <div class="row">
+                <div class="col-md-3 col-sm-6">
+                    <label asp-for="Code" class="form-label"></label>
+                    <input asp-for="Code" class="form-control" placeholder="e.g. EMPLOYEE" />
+                    <span asp-validation-for="Code" class="text-danger small"></span>
+                </div>
 
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label asp-for="AppFeatureType"></label>
+                <div class="col-md-3 col-sm-6">
+                    <label asp-for="Module" class="form-label"></label>
+                    <input asp-for="Module" readonly class="form-control" style="background:#f4f6fb;" />
+                    <span asp-validation-for="Module" class="text-danger small"></span>
+                </div>
 
-                            <select asp-for="AppFeatureType"
-                                    asp-items="@EnumHelper.GetEnumList<EnumExtensions.AppFeatureType>()"
-                                    class="form-control">
-                                <option value="">
-                                    -- Select Feature Type --
-                                </option>
-                            </select>
+                <div class="col-md-3 col-sm-6">
+                    <label class="form-label">Parent Feature</label>
+                    <select asp-for="ParentFeatureId" asp-items="ViewBag.ParentFeaturesList" class="form-control select-search">
+                        <option value="">-- None (Top Level) --</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3 col-sm-6">
+                    <label asp-for="DisplayOrder" class="form-label"></label>
+                    <input asp-for="DisplayOrder" type="number" class="form-control" />
+                    <span asp-validation-for="DisplayOrder" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-9">
+                    <label asp-for="Description" class="form-label"></label>
+                    <textarea asp-for="Description" rows="2" class="form-control" placeholder="Optional short description"></textarea>
+                    <span asp-validation-for="Description" class="text-danger small"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= ROUTING & URL ================= -->
+        <div class="ent-panel mb-3">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <span class="ent-icon-badge" style="background:#eaf7ef;color:#28a745;"><i class="bi bi-signpost-split-fill"></i></span>
+                <div>
+                    <div style="font-weight:700;">Routing Configuration</div>
+                    <div class="text-muted" style="font-size:12.5px;">Controls where this feature links to in the menu.</div>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-3 col-sm-6">
+                    <label asp-for="ControllerName" class="form-label"></label>
+                    <input asp-for="ControllerName" id="ControllerName" class="form-control" placeholder="e.g. Employee" />
+                    <span asp-validation-for="ControllerName" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-3 col-sm-6">
+                    <label asp-for="ActionName" class="form-label"></label>
+                    <input asp-for="ActionName" id="ActionName" class="form-control" placeholder="e.g. Index" />
+                    <span asp-validation-for="ActionName" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-3 col-sm-6">
+                    <label asp-for="AreaName" class="form-label"></label>
+                    <input asp-for="AreaName" id="AreaName" class="form-control" placeholder="Optional" />
+                    <span asp-validation-for="AreaName" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-3 col-sm-6">
+                    <label asp-for="Url" class="form-label"></label>
+                    <div class="input-group">
+                        <input asp-for="Url" id="UrlField" class="form-control"
+                               placeholder="/FeatureManagement/Index or https://..." autocomplete="off" />
+                        <button type="button" id="regenerateUrlBtn" class="btn btn-outline-secondary" title="Fill this field from Area / Controller / Action (does not save automatically)">
+                            <i class="bi bi-arrow-repeat"></i>
+                        </button>
+                    </div>
+                    <span asp-validation-for="Url" class="text-danger small"></span>
+                    <div class="form-text" style="font-size:11.5px;">
+                        Fully editable. Accepts a relative route (e.g. <code>/FeatureManagement/Index</code>) or an absolute URL.
+                        Leave blank to use Area/Controller/Action automatically. Your edits are saved exactly as typed.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- ================= UI SETTINGS ================= -->
+            <div class="col-lg-6 mb-3">
+                <div class="ent-panel h-100">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <span class="ent-icon-badge" style="background:#fdf3e7;color:#e08e2b;"><i class="bi bi-palette-fill"></i></span>
+                        <div style="font-weight:700;">UI Settings</div>
+                    </div>
+
+                    <div class="row g-3 mb-2">
+                        <div class="col-sm-6">
+                            <label asp-for="Icon" class="form-label"></label>
+                            <input asp-for="Icon" class="form-control" placeholder="e.g. bi bi-people-fill" />
+                        </div>
+                        <div class="col-sm-6">
+                            <label asp-for="BadgeText" class="form-label"></label>
+                            <input asp-for="BadgeText" class="form-control" placeholder="e.g. New" />
                         </div>
                     </div>
 
+                    <div class="d-flex flex-wrap gap-4 mt-2">
+                        <div class="form-check form-switch">
+                            <input asp-for="IsVisible" type="checkbox" class="form-check-input" role="switch">
+                            <label asp-for="IsVisible" class="form-check-label"></label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input asp-for="IsMenu" type="checkbox" class="form-check-input" role="switch">
+                            <label asp-for="IsMenu" class="form-check-label"></label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input asp-for="IsActive" type="checkbox" class="form-check-input" role="switch">
+                            <label asp-for="IsActive" class="form-check-label"></label>
+                        </div>
+                    </div>
                 </div>
-            </fieldset>
-
-            <div class="text-right">
-                <a asp-action="Index"
-                   class="btn btn-default">
-                    <i class="icon-arrow-left13"></i>
-                    Back
-                </a>
-
-                <button type="submit"
-                        class="btn bg-primary">
-                    <i class="icon-checkmark3"></i>
-                    Save
-                </button>
             </div>
 
-        </form>
+            <!-- ================= ACCESS CONTROL ================= -->
+            <div class="col-lg-6 mb-3">
+                <div class="ent-panel h-100">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <span class="ent-icon-badge" style="background:#fdeaea;color:#d9534f;"><i class="bi bi-shield-lock-fill"></i></span>
+                        <div style="font-weight:700;">Access Control</div>
+                    </div>
 
-    </div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <div class="form-check form-switch">
+                                <input asp-for="CanView" type="checkbox" class="form-check-input" role="switch">
+                                <label asp-for="CanView" class="form-check-label"></label>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input asp-for="CanAdd" type="checkbox" class="form-check-input" role="switch">
+                                <label asp-for="CanAdd" class="form-check-label"></label>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input asp-for="CanEdit" type="checkbox" class="form-check-input" role="switch">
+                                <label asp-for="CanEdit" class="form-check-label"></label>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input asp-for="CanDelete" type="checkbox" class="form-check-input" role="switch">
+                                <label asp-for="CanDelete" class="form-check-label"></label>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-check form-switch">
+                                <input asp-for="CanApprove" type="checkbox" class="form-check-input" role="switch">
+                                <label asp-for="CanApprove" class="form-check-label"></label>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input asp-for="CanExport" type="checkbox" class="form-check-input" role="switch">
+                                <label asp-for="CanExport" class="form-check-label"></label>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input asp-for="CanPrint" type="checkbox" class="form-check-input" role="switch">
+                                <label asp-for="CanPrint" class="form-check-label"></label>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input asp-for="IsHRMSFeature" type="checkbox" class="form-check-input" role="switch">
+                                <label asp-for="IsHRMSFeature" class="form-check-label"></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= FEATURE TYPE ================= -->
+        <div class="ent-panel mb-3">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <span class="ent-icon-badge" style="background:#efeafd;color:#6f42c1;"><i class="bi bi-grid-3x3-gap-fill"></i></span>
+                <div style="font-weight:700;">Feature Type</div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-4 col-sm-6">
+                    <label asp-for="AppFeatureType" class="form-label"></label>
+                    <select asp-for="AppFeatureType" asp-items="@EnumHelper.GetEnumList<EnumExtensions.AppFeatureType>()" class="form-control">
+                        <option value="">-- Select Feature Type --</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= ACTIONS ================= -->
+        <div class="d-flex justify-content-end gap-2 flex-wrap mb-4">
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="bi bi-x-lg"></i> Cancel
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-lg"></i> @(isEdit ? "Update Feature" : "Save Feature")
+            </button>
+        </div>
+
+    </form>
 
 </div>
+
+<style>
+    .ent-page .ent-panel { background:#fff; border:1px solid #e7ebf3; border-radius:10px; padding:16px 18px; }
+    .ent-page .ent-icon-badge { width:34px; height:34px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+    .ent-page .form-label { font-weight:600; font-size:13px; color:#334; margin-bottom:4px; }
+    .ent-page .form-check-label { font-size:13px; }
+    @@media (max-width: 767px) {
+        .ent-page h3 { font-size:1.25rem; }
+        .ent-page .ent-panel { padding:14px; }
+    }
+</style>
+
+@section Scripts {
+    <script>
+        (function () {
+            function buildComputedUrl() {
+                var area = ($('#AreaName').val() || '').trim();
+                var controller = ($('#ControllerName').val() || '').trim();
+                var action = ($('#ActionName').val() || '').trim() || 'Index';
+
+                if (!controller) return '';
+
+                return area
+                    ? '/' + area + '/' + controller + '/' + action
+                    : '/' + controller + '/' + action;
+            }
+
+            // Only fills the Url field on an explicit click - it never
+            // runs automatically on page load or while typing, so an
+            // already-saved custom Url is never silently overwritten.
+            $('#regenerateUrlBtn').on('click', function () {
+                var computed = buildComputedUrl();
+                if (!computed) {
+                    alert('Enter a Controller name first.');
+                    return;
+                }
+                $('#UrlField').val(computed);
+            });
+
+            // Client-side sanity check mirroring the server-side
+            // [RegularExpression] on AppFeatureDto.Url - relative routes
+            // ("/FeatureManagement/Index") and absolute http(s) URLs are
+            // both accepted; anything else is flagged before submit.
+            var urlPattern = /^(\/[^\s]*|https?:\/\/[^\s]+)$/;
+
+            $('#appFeatureForm').on('submit', function (e) {
+                var val = ($('#UrlField').val() || '').trim();
+                $('#UrlField').val(val);
+
+                if (val && !urlPattern.test(val)) {
+                    e.preventDefault();
+                    $('#UrlField').addClass('is-invalid').focus();
+                    $('#formValidationSummary')
+                        .text('URL must start with "/" (relative route) or be a full http(s):// URL.')
+                        .show();
+                    return false;
+                }
+
+                $('#UrlField').removeClass('is-invalid');
+                $('#formValidationSummary').hide();
+            });
+
+            $('#UrlField').on('input', function () {
+                $(this).removeClass('is-invalid');
+                $('#formValidationSummary').hide();
+            });
+        })();
+    </script>
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

@@ -19,17 +19,21 @@ namespace API.Controllers
             _service = service;
         }
 
+        // actingUserId identifies who is calling, so System Configurator
+        // accounts can be hidden from a non-System-Configurator caller -
+        // see IUserService's remarks. Same [FromQuery] actingUserId
+        // convention as ErrorLogController/DatabaseManagementController.
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] string actingUserId)
         {
-            var data = await _service.GetAllAsync();
+            var data = await _service.GetAllAsync(actingUserId);
             return Ok(data);
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(string id)
+        public async Task<IActionResult> GetById(string id, [FromQuery] string actingUserId)
         {
-            var data = await _service.GetByIdAsync(id);
+            var data = await _service.GetByIdAsync(id, actingUserId);
             if (data == null) return NotFound();
             return Ok(data);
         }
@@ -42,9 +46,9 @@ namespace API.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(string id, [FromBody] UserDto dto)
+        public async Task<IActionResult> Update(string id, [FromBody] UserDto dto, [FromQuery] string actingUserId)
         {
-            var result = await _service.UpdateAsync(id, dto);
+            var result = await _service.UpdateAsync(id, dto, actingUserId);
             return Ok(new { Message = "User Updated Successfully", Id = result });
         }
 
@@ -85,9 +89,9 @@ namespace API.Controllers
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(string id)
+        public async Task<IActionResult> Delete(string id, [FromQuery] string actingUserId)
         {
-            var result = await _service.DeleteAsync(id);
+            var result = await _service.DeleteAsync(id, actingUserId);
             if (!result) return NotFound();
             return Ok(new { Message = "User Deleted Successfully" });
         }

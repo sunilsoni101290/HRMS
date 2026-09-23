@@ -202,6 +202,7 @@ builder.Services.AddAuthorization();
 // DEPENDENCY INJECTION
 // ======================================================
 builder.Services.AddScoped<IErrorLogService, ErrorLogService>();
+builder.Services.AddScoped<Application.Interfaces.DatabaseManagement.IDatabaseManagementService, Application.Services.DatabaseManagement.DatabaseManagementService>();
 builder.Services.AddScoped<ISequenceService, SequenceService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
@@ -245,6 +246,21 @@ builder.Services.AddSingleton<IEsslSyncJobQueue, EsslSyncJobQueue>();
 // consumed by EsslAttendanceSyncBackgroundService. See
 // IAttendanceProcessingJobQueue's remarks.
 builder.Services.AddSingleton<IAttendanceProcessingJobQueue, AttendanceProcessingJobQueue>();
+// Standalone Historical Attendance Sync feature - its own service/queue,
+// COMPLETELY SEPARATE from the eSSL registrations above (IEsslAttendanceSyncService/
+// IEsslSyncJobQueue/IAttendanceProcessingJobQueue are all left exactly as
+// they were - nothing here modifies or replaces them). See
+// Application/Interfaces/Attendances/IHistoricalAttendanceSyncService.cs.
+builder.Services.AddScoped<IHistoricalAttendanceSyncService, HistoricalAttendanceSyncService>();
+builder.Services.AddSingleton<IHistoricalAttendanceSyncJobQueue, HistoricalAttendanceSyncJobQueue>();
+// Standalone "Sync Biometric Attendance (Month Wise)" bulk-assign tool - a
+// brand-new, COMPLETELY SEPARATE feature from both the eSSL Sync Now
+// pipeline and Historical Attendance Sync above (neither is modified). A
+// single bounded set-based/cursor-driven run over one tenant/company/shift/
+// calendar-month, so it is only ever Scoped (called inline on the request),
+// never a background job queue - see
+// Application/Interfaces/Attendances/IMonthWiseBiometricSyncService.cs.
+builder.Services.AddScoped<IMonthWiseBiometricSyncService, MonthWiseBiometricSyncService>();
 builder.Services.AddScoped<IBiometricSimulatorService, BiometricSimulatorService>();
 builder.Services.AddScoped<ILeaveTypeService, LeaveTypeService>();
 builder.Services.AddScoped<ILeaveBalanceService, LeaveBalanceService>();
@@ -389,6 +405,13 @@ builder.Services.AddHostedService<API.BackgroundServices.LoanAdvanceReminderServ
 // every cycle unless EsslDatabase:Enabled = true, so it's always safe to
 // leave registered even for a tenant that never configures eSSL.
 builder.Services.AddHostedService<API.BackgroundServices.EsslAttendanceSyncBackgroundService>();
+
+// Standalone Historical Attendance Sync - a NEW, SEPARATE BackgroundService
+// from EsslAttendanceSyncBackgroundService above (that one is completely
+// untouched). Consumes IHistoricalAttendanceSyncJobQueue only; never reads
+// or writes EsslAttendanceSyncState and never fetches from eSSL/any device -
+// see API/BackgroundServices/HistoricalAttendanceSyncBackgroundService.cs.
+builder.Services.AddHostedService<API.BackgroundServices.HistoricalAttendanceSyncBackgroundService>();
 
 // ======================================================
 // SWAGGER

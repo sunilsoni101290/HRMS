@@ -398,19 +398,16 @@ namespace Application.Services
         {
             try
             {
-            return await _context.AppFeatures
-                .AsNoTracking()
-                .Where(x => x.IsActive && x.ParentFeatureId != null)
-                .Select(x => x.ParentFeature)
-                .Where(x => x != null)
-                .Distinct()
-                .OrderBy(x => x.DisplayOrder)
-                .Select(x => new DropdownDto
-                {
-                    Value = x.Id,
-                    Text = x.Name
-                })
-                .ToListAsync();
+                return await _context.AppFeatures
+                    .AsNoTracking()
+                    .Where(x => x.IsActive && x.ParentFeatureId == null)
+                    .OrderBy(x => x.DisplayOrder)
+                    .Select(x => new DropdownDto
+                    {
+                        Value = x.Id,
+                        Text = x.Name
+                    })
+                    .ToListAsync();
             }
             catch (Exception)
             {
