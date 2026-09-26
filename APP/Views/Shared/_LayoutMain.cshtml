@@ -333,7 +333,18 @@
 	<script src="~/global_assets/js/plugins/visualization/d3/d3_tooltip.js"></script>
 
 	<script src="~/assets/js/app.js"></script>
-	<script src="~/global_assets/js/demo_pages/general_widgets_stats.js"></script>
+	<!-- general_widgets_stats.js removed (was loaded globally here) - it's
+	     leftover Limitless theme demo JS for a "Widgets - Stats" demo page
+	     that this app never built. On document ready it unconditionally
+	     calls d3.select("#chart_area_basic").node().getBoundingClientRect(),
+	     and neither #chart_area_basic nor #chart_area_color exists anywhere
+	     in APP/Views (confirmed via search) - so .node() is always null and
+	     that line throws on EVERY page using this layout, e.g. surfacing as
+	     a console error on Payroll/Generate. Safe to remove outright: no
+	     view depends on it. If a real "area chart" widget is ever wanted on
+	     an actual dashboard, wire this script (or its logic) into that
+	     page's own Scripts section instead of the shared layout, matching
+	     the pattern already used by DataTables/other per-page JS below. -->
 	<!-- /theme JS files -->
 
 	<!-- Enables client-side pagination (DataTables) on Index/list pages

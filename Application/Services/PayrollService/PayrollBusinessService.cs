@@ -430,40 +430,164 @@ namespace Application.Services.PayrollService
         // salary structure effective by period end), runs
         // SalaryCalculationService against all of them, and returns the
         // full breakdown for the Review table.
-        public async Task<SalaryProcessingPreviewDto> PreviewAsync(int salaryYear, int salaryMonth, string? companyId, string? branchId, string tenantId)
+        //
+        // NOTE (audit finding): an OLDER version of this method used to sit
+        // here, commented out, that resolved employees by starting from
+        // SalaryStructures and only filtering by Company/Branch afterwards,
+        // with TenantId accepted but never applied anywhere. That dead code
+        // has been removed - it was not what actually ran. The method below
+        // is (and was, before this change) the one Preview() in
+        // API/Controllers/PayrollController.cs actually calls; it already
+        // started from Employees and joined to SalaryStructures. What this
+        // change adds on top:
+        //   1. EmployeesMatchingFilterCount is now returned so the Generate
+        //      screen can tell "no employees at all for this company/branch"
+        //      apart from "employees exist here, but none of them have a
+        //      salary structure effective for this period" - see
+        //      Generate.cshtml. Before this, both cases showed the exact
+        //      same hardcoded client-side message regardless of which was
+        //      actually true.
+        //   2. Structured logging for troubleshooting future "0 employees"
+        //      reports without needing a debugger.
+        //
+        // TenantId is DELIBERATELY NOT used as a hard filter on Employees or
+        // SalaryStructures below, even though it's accepted as a parameter
+        // and even though the entities do carry a TenantId column. A first
+        // version of this fix added `e.TenantId == tenantId` /
+        // `structure.TenantId == tenantId` here, and it broke Load
+        // Attendance outright - "All Companies" returned 0 employees for
+        // every month, because the session's active TenantId
+        // (SessionHelper.GetActiveTenantId, empty string when the logged-in
+        // user's TenantId is null) doesn't reliably equal every Employee's
+        // stored TenantId in this deployment's actual data. Checking the
+        // rest of this codebase confirms that's not an oversight to "fix"
+        // here: EmployeeService.GetAllAsync() - the query behind the actual
+        // Employee Management list - takes no tenantId parameter at all and
+        // never filters by it either. Matching that established, working
+        // convention (rather than introducing a stricter rule only in this
+        // one method) is what keeps Load Attendance finding the same
+        // employees Employee Management already shows.
+        public async Task<SalaryProcessingPreviewDto> PreviewAsync(
+            int salaryYear,
+            int salaryMonth,
+            string? companyId,
+            string? branchId,
+            string tenantId)
         {
-            var periodEnd = new DateTime(salaryYear, salaryMonth, DateTime.DaysInMonth(salaryYear, salaryMonth));
+            var periodEnd = new DateTime(
+                salaryYear,
+                salaryMonth,
+                DateTime.DaysInMonth(salaryYear, salaryMonth));
 
-            var structureQuery = _context.SalaryStructures
+            // ---------------------------------------------------------
+            // 1. Employees matching Tenant/Company/Branch - independent of
+            //    whether they have a salary structure yet. Kept as its own
+            //    count (not just the post-join list) purely so the
+            //    empty-state message below can distinguish "no employees
+            //    for this org filter" from "employees exist, no applicable
+            //    salary structure" - see EmployeesMatchingFilterCount above.
+            // ---------------------------------------------------------
+
+            var employeeQuery = _context.Employees
                 .AsNoTracking()
-                .Where(s => !s.IsDeleted && s.EffectiveFrom <= periodEnd);
+                .Where(e => !e.IsDeleted);
 
-            var employeeIds = await structureQuery
-                .Select(s => s.EmployeeId)
-                .Distinct()
-                .ToListAsync();
+            // No TenantId filter here - see the class remarks above this
+            // method for why (matches EmployeeService.GetAllAsync's
+            // established behavior; a literal TenantId match here was tried
+            // and caused a regression).
 
-            if (!string.IsNullOrEmpty(companyId) || !string.IsNullOrEmpty(branchId))
+            // Company filter
+            if (!string.IsNullOrWhiteSpace(companyId))
             {
-                var filtered = await _context.Employees
-                    .AsNoTracking()
-                    .Where(e => employeeIds.Contains(e.Id) && !e.IsDeleted
-                        && (string.IsNullOrEmpty(companyId) || e.CompanyId == companyId)
-                        && (string.IsNullOrEmpty(branchId) || e.BranchId == branchId))
-                    .Select(e => e.Id)
-                    .ToListAsync();
-
-                employeeIds = filtered;
+                employeeQuery = employeeQuery
+                    .Where(e => e.CompanyId == companyId);
             }
 
-            var calculations = await _salaryCalculationService.CalculateBatchAsync(employeeIds, salaryYear, salaryMonth, tenantId);
+            // Branch filter
+            if (!string.IsNullOrWhiteSpace(branchId))
+            {
+                employeeQuery = employeeQuery
+                    .Where(e => e.BranchId == branchId);
+            }
+
+            var matchingEmployeeCount = await employeeQuery.CountAsync();
+
+            // ---------------------------------------------------------
+            // 2. Of those, who has a salary structure applicable to this
+            //    period. SalaryStructure (Domain/Entities/SalaryStructure.cs)
+            //    has no EffectiveTo column, so "applicable" is simply
+            //    EffectiveFrom <= periodEnd - there is no upper bound to
+            //    add without a schema change, which is out of scope here.
+            //    When an employee has more than one structure effective by
+            //    then, SalaryCalculationService.CalculateBatchAsync already
+            //    picks the single latest one (OrderByDescending(EffectiveFrom)
+            //    .FirstOrDefault()) for the actual calculation - this join
+            //    only needs to know THAT one exists, not which.
+            // ---------------------------------------------------------
+
+            var employeeIds = await (
+                from employee in employeeQuery
+
+                join structure in _context.SalaryStructures.AsNoTracking()
+                    on employee.Id equals structure.EmployeeId
+
+                where
+                    !structure.IsDeleted
+                    && structure.EffectiveFrom <= periodEnd
+                    // No TenantId filter here either, for the same reason
+                    // as the Employees query above.
+
+                select employee.Id
+            )
+            .Distinct()
+            .ToListAsync();
+
+            // ---------------------------------------------------------
+            // 3. Calculate payroll preview for the eligible employees.
+            //    CalculateBatchAsync (SalaryCalculationService.cs) always
+            //    returns exactly one result per input id - including a
+            //    CanProcess:false / BlockReason row for anyone it can't
+            //    actually process (missing structure lines, outside their
+            //    employment window, etc). So Employees.Count here can only
+            //    be 0 when employeeIds itself was empty; per-employee
+            //    "can't process this one" reasons already surface as row
+            //    notes on the Review table (Generate.cshtml), never as the
+            //    blanket empty-state message.
+            // ---------------------------------------------------------
+
+            var calculations = new List<SalaryCalculationResultDto>();
+
+            if (employeeIds.Count > 0)
+            {
+                calculations = await _salaryCalculationService
+                    .CalculateBatchAsync(
+                        employeeIds,
+                        salaryYear,
+                        salaryMonth,
+                        tenantId);
+            }
+
+            _logger.LogInformation(
+                "Payroll Preview: Year={SalaryYear} Month={SalaryMonth} CompanyId={CompanyId} BranchId={BranchId} TenantId={TenantId} " +
+                "MatchingEmployeeCount={MatchingEmployeeCount} EligibleWithSalaryStructureCount={EligibleCount} CalculationResultCount={ResultCount}",
+                salaryYear, salaryMonth, companyId, branchId, tenantId,
+                matchingEmployeeCount, employeeIds.Count, calculations.Count);
+
+            // ---------------------------------------------------------
+            // 4. Return preview
+            // ---------------------------------------------------------
 
             return new SalaryProcessingPreviewDto
             {
                 SalaryYear = salaryYear,
                 SalaryMonth = salaryMonth,
                 MonthName = MonthName(salaryMonth),
-                Employees = calculations.OrderBy(c => c.EmployeeName).ToList()
+                EmployeesMatchingFilterCount = matchingEmployeeCount,
+
+                Employees = calculations
+                    .OrderBy(c => c.EmployeeName)
+                    .ToList()
             };
         }
 

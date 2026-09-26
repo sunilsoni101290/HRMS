@@ -117,18 +117,27 @@ namespace APP.Controllers
 
         // "Process Salary" - the Review table posts back exactly the
         // employee ids the user checked (never a blind re-filter).
+        //
+        // Redesigned Generate.cshtml (Process Salary page) calls this via
+        // AJAX and expects a JSON {success,message,processedCount,
+        // skippedCount,failedCount} response so it can show a SweetAlert
+        // and refresh LoadPreview in place, instead of a full-page
+        // redirect. This is the ONLY caller of this action (confirmed -
+        // no other view posts to Payroll/ProcessSalary), so switching its
+        // response shape is safe. The underlying call - _apiService.
+        // PostAsync("payroll/process", dto), the DTO shape, the
+        // [ValidateAntiForgeryToken]/admin gate, and
+        // PayrollBusinessService.ProcessAsync on the API side - are all
+        // unchanged.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ProcessSalary(SalaryProcessRequestDto dto)
         {
             if (!_isAdmin)
-                return RedirectToAction(nameof(MyPayslips));
+                return Json(new { success = false, message = "You are not authorized to process salary." });
 
             if (dto == null || dto.EmployeeIds == null || !dto.EmployeeIds.Any())
-            {
-                TempData["Error"] = "Please select at least one employee to process.";
-                return RedirectToAction(nameof(Generate));
-            }
+                return Json(new { success = false, message = "Please select at least one employee to process." });
 
             dto.TenantId = _tenantId;
             dto.CreatedBy = _userId;
@@ -137,19 +146,24 @@ namespace APP.Controllers
             {
                 var result = await _apiService.PostAsync<PayrollGenerateResultDto>("payroll/process", dto);
 
-                TempData["Success"] = result != null
+                var message = result != null
                     ? $"Processed {result.Generated} payroll(s), skipped {result.Skipped}."
                     : "Salary processing completed.";
 
-                if (result != null && result.Messages != null && result.Messages.Count > 1)
-                    TempData["Info"] = string.Join(" | ", result.Messages.Skip(1).Take(5));
+                return Json(new
+                {
+                    success = true,
+                    message,
+                    processedCount = result?.Generated ?? 0,
+                    skippedCount = result?.Skipped ?? 0,
+                    failedCount = 0,
+                    messages = result?.Messages ?? new List<string>()
+                });
             }
             catch (ApiException apiEx)
             {
-                TempData["Error"] = GetErrorMessage(apiEx.ResponseContent);
+                return Json(new { success = false, message = GetErrorMessage(apiEx.ResponseContent) });
             }
-
-            return RedirectToAction(nameof(Index), new { year = dto.SalaryYear, month = dto.SalaryMonth });
         }
 
         // Re-runs Salary Processing for one already-generated payroll -

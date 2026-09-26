@@ -396,6 +396,13 @@ namespace APP.Models.DTOs
         public int SalaryYear { get; set; }
         public int SalaryMonth { get; set; }
         public string? MonthName { get; set; }
+
+        // Mirrors Application.DTOs.Payroll.SalaryProcessingPreviewDto's new
+        // field of the same name - diagnostic count (Tenant/Company/Branch
+        // match, before the salary-structure requirement) used only to pick
+        // the right empty-state message on the Generate screen.
+        public int EmployeesMatchingFilterCount { get; set; }
+
         public List<SalaryCalculationResultDto> Employees { get; set; } = new();
     }
 

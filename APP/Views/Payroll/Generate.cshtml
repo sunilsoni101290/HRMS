@@ -4,138 +4,325 @@
     ViewData["Title"] = "Process Salary";
 }
 
-<div class="panel panel-flat">
+@*
+    Redesigned to the enterprise ERP visual system (design-system.css -
+    "ent-*" classes, already loaded globally via _LayoutMain.cshtml, same
+    as HolidayGroup/DatabaseManagement/Employee). This project ships
+    Bootstrap 3.3.7, not 4/5 - Bootstrap 4/5 utility classes like d-flex/
+    gap-2 are NOT actually wired up anywhere in wwwroot despite appearing
+    in a couple of other views, so this page does not rely on them; all
+    layout here is done with real Bootstrap 3 grid classes (col-md-*) plus
+    a small page-scoped <style> block below (".pg-*" classes) for the
+    pieces design-system.css doesn't already cover (search/filter toolbar,
+    sticky table header, sticky bottom process bar, KPI flex grid).
 
-    <div class="panel-heading">
-        <h5 class="panel-title"><i class="icon-gear position-left"></i> Process Salary</h5>
-        <div class="heading-elements">
-            <a asp-action="Index" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
-        </div>
+    Business logic, DTO contracts and the AJAX endpoints this page calls
+    are UNCHANGED:
+      - GET  Payroll/LoadPreview (salaryYear, salaryMonth, companyId)
+      - POST Payroll/ProcessSalary (salaryYear, salaryMonth, companyId,
+        EmployeeIds[], __RequestVerificationToken)
+    ProcessSalary's controller action now returns JSON instead of a
+    TempData+Redirect (see APP/Controllers/PayrollController.cs) so this
+    page's AJAX call - which was already written to expect
+    response.success/message - actually works; the underlying
+    _apiService.PostAsync("payroll/process", dto) call, the DTO it sends,
+    and PayrollBusinessService.ProcessAsync are all untouched.
+*@
+
+<style>
+
+    /* ============================================================
+       Page header - breadcrumb + title/description + Back button
+       ============================================================ */
+    .pg-breadcrumb { font-size: 12px; color: #8896ad; margin-bottom: 4px; }
+    .pg-breadcrumb a { color: #8896ad; }
+    .pg-breadcrumb a:hover { color: #4e9cff; text-decoration: none; }
+
+    /* ============================================================
+       Compact business-rule info panel - visually secondary, replaces
+       the old large .alert-info block.
+       ============================================================ */
+    .pg-info-note {
+        display: flex; gap: 12px; align-items: flex-start;
+        background: #f7f9fc; border: 1px solid #edf0f5; border-radius: 8px;
+        padding: 12px 16px; margin-bottom: 20px; font-size: 12.5px; color: #6b7488;
+    }
+    .pg-info-note > i { font-size: 16px; color: #8896ad; margin-top: 1px; flex-shrink: 0; }
+    .pg-info-note strong { color: #45526b; font-size: 12.5px; }
+    .pg-info-note p { margin: 3px 0 0; line-height: 1.5; }
+    .pg-info-note .pg-formula {
+        font-family: "Courier New", monospace; background: #fff; border: 1px solid #edf0f5;
+        border-radius: 5px; padding: 5px 10px; display: inline-block; margin-top: 6px; color: #45526b;
+    }
+
+    /* ============================================================
+       KPI grid - flexbox, no Bootstrap utility-class dependency.
+       Reuses .ent-kpi-card/.ent-kpi-icon/.ent-kpi-body from
+       design-system.css, just supplies the flex-wrap container.
+       ============================================================ */
+    .pg-kpi-grid { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 4px; }
+    .pg-kpi-grid .ent-kpi-card { flex: 1 1 150px; margin-bottom: 14px; min-width: 150px; }
+    .pg-kpi-grid .ent-kpi-body h3 { font-size: 20px; }
+
+    /* ============================================================
+       Employee review toolbar (search + status filter + select-all +
+       selected count) above the table.
+       ============================================================ */
+    .pg-toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .pg-status-filter { width: 168px; }
+
+    /* ============================================================
+       Table - sticky header, right-aligned currency, centered day
+       counts, compact rows, horizontal scroll contained to the table
+       area only (never the page).
+       ============================================================ */
+    .pg-table-scroll { max-height: 560px; overflow-y: auto; overflow-x: auto; }
+    .pg-table thead th {
+        position: sticky; top: 0; z-index: 2;
+    }
+    .pg-table tbody td { padding-top: 9px; padding-bottom: 9px; }
+    .pg-table .text-right { text-align: right; }
+    .pg-table .text-center { text-align: center; }
+    .pg-table tbody tr.pg-row-disabled { color: #b6bccb; background: #fbfbfc; }
+    .pg-details-btn {
+        border: 1px solid #edf0f5; background: #fff; color: #8896ad; border-radius: 6px;
+        width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+        cursor: pointer;
+    }
+    .pg-details-btn:hover, .pg-details-btn:focus { color: #4e9cff; border-color: #4e9cff; outline: none; }
+
+    /* ============================================================
+       Sticky bottom process summary bar - only shown when >=1 selected.
+       ============================================================ */
+    .pg-process-bar {
+        position: sticky; bottom: 0; left: 0; right: 0; z-index: 50;
+        background: #fff; border: 1px solid #edf0f5; border-radius: 10px;
+        box-shadow: 0 -4px 18px rgba(20,30,60,.12);
+        margin-top: 18px; padding: 14px 20px;
+    }
+    .pg-process-bar-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; }
+    .pg-process-count { font-size: 13.5px; color: #1b2a4a; font-weight: 600; flex: 0 0 auto; }
+    .pg-process-count strong { font-size: 18px; color: var(--ent-blue-dark, #2b6fd9); margin-right: 4px; }
+    .pg-process-totals { display: flex; gap: 22px; flex-wrap: wrap; }
+    .pg-process-totals > div { text-align: right; }
+    .pg-process-totals span { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: .4px; color: #8896ad; }
+    .pg-process-totals strong { font-size: 15px; color: #1b2a4a; }
+    .pg-process-totals .pg-total-net strong { color: #1e8e4e; }
+    .pg-process-btn { padding: 10px 26px; font-weight: 600; }
+
+    @@media (max-width: 767px) {
+        .pg-process-bar-inner { justify-content: center; text-align: center; }
+        .pg-process-totals { justify-content: center; }
+        .pg-toolbar-right { width: 100%; }
+        .pg-status-filter { flex: 1 1 auto; width: auto; }
+    }
+
+</style>
+
+<div class="ent-page-header">
+    <div>
+        <div class="pg-breadcrumb"><a asp-action="Index">Payroll</a> / Process Salary</div>
+        <h4><i class="bi bi-cash-coin" style="color:#4e9cff;margin-right:6px;"></i> Process Salary</h4>
+        <p>Process monthly employee payroll based on attendance, leave and salary structure.</p>
     </div>
-
-    <div class="panel-body">
-        <div class="alert alert-info">
-            <i class="icon-info22"></i>
-            Per Day Salary = Monthly Salary &divide; Total Days (Calendar or Working, per each employee's company Attendance Policy) &times; Payable Days (Present + Paid Leave).
-            Employees who already have a payroll for the selected month are shown but cannot be re-processed here - use <strong>Recalculate</strong> on their existing payroll instead.
-        </div>
-
-        <!-- Step 1: Select Month -->
-        <fieldset>
-            <legend class="text-semibold"><span class="label bg-primary">1</span> Select Month</legend>
-            <div class="row">
-                <div class="col-md-2">
-                    <div class="form-group">
-                        <label>Year</label>
-                        <select id="salaryYear" class="form-control">
-                            @for (int y = DateTime.UtcNow.Year; y >= DateTime.UtcNow.Year - 5; y--)
-                            {
-                                <option value="@y">@y</option>
-                            }
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="form-group">
-                        <label>Month</label>
-                        <select id="salaryMonth" class="form-control">
-                            @for (int m = 1; m <= 12; m++)
-                            {
-                                var name = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m);
-                                if (m == DateTime.UtcNow.Month)
-                                {
-                                    <option value="@m" selected>@name</option>
-                                }
-                                else
-                                {
-                                    <option value="@m">@name</option>
-                                }
-                            }
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group">
-                        <label>Company</label>
-                        <select id="companyId" class="form-control" asp-items="ViewBag.CompanyList">
-                            <option value="">All Companies</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group" style="margin-top:24px;">
-                        <button type="button" id="loadAttendanceBtn" class="btn bg-primary">
-                            <i class="icon-download4"></i> Load Attendance
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </fieldset>
-
-        <!-- Step 2: Review -->
-        <fieldset id="reviewSection" style="display:none;">
-            <legend class="text-semibold">
-                <span class="label bg-primary">2</span> Review
-                <span class="pull-right">
-                    <span class="label bg-info" id="selectedSummary" style="font-size:13px;padding:6px 10px;">Selected: 0</span>
-                </span>
-            </legend>
-
-            <div id="reviewLoading" class="text-center text-muted" style="padding:20px; display:none;">
-                <i class="icon-spinner2 spinner"></i> Loading attendance and calculating payable days...
-            </div>
-
-            <div id="reviewEmpty" class="text-center text-muted" style="padding:30px; display:none;">
-                <i class="icon-cash3" style="font-size:32px;"></i><br />
-                No employees with a salary structure were found for this period.
-            </div>
-
-            <div class="table-responsive" id="reviewTableWrap" style="display:none;">
-                <table class="table table-hover table-striped table-condensed">
-                    <thead>
-                        <tr>
-                            <th width="34"><input type="checkbox" id="selectAllEmp" /></th>
-                            <th>Employee</th>
-                            <th class="text-right">Monthly Salary</th>
-                            <th class="text-center">Basis</th>
-                            <th class="text-center">Total Days</th>
-                            <th class="text-center">Present</th>
-                            <th class="text-center">Paid Leave</th>
-                            <th class="text-center">Payable Days</th>
-                            <th class="text-right">Gross Salary</th>
-                            <th class="text-right">Deductions</th>
-                            <th class="text-right">Net Salary</th>
-                            <th>Notes</th>
-                        </tr>
-                    </thead>
-                    <tbody id="reviewRows"></tbody>
-                    <tfoot>
-                        <tr>
-                            <th colspan="8" class="text-right">Totals (selected)</th>
-                            <th class="text-right" id="totalGross">0.00</th>
-                            <th class="text-right" id="totalDeductions">0.00</th>
-                            <th class="text-right" id="totalNet">0.00</th>
-                            <th></th>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-        </fieldset>
-    </div>
-
-    <!-- Step 3: Process -->
-    <div class="panel-footer text-right" id="processFooter" style="display:none;">
-        <button type="button" class="btn bg-success" id="processSalaryBtn">
-            <i class="icon-checkmark3"></i> Process Salary
-        </button>
+    <div class="ent-page-header-actions">
+        <a asp-action="Index" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
     </div>
 </div>
 
-<form id="processForm" asp-action="ProcessSalary" method="post" style="display:none;">
-    <input type="hidden" name="SalaryYear" id="postSalaryYear" />
-    <input type="hidden" name="SalaryMonth" id="postSalaryMonth" />
-    <div id="postEmployeeIds"></div>
-</form>
+<!-- ==================== 1. Salary Processing Period ==================== -->
+<div class="ent-filter-card">
+    <div style="font-size:13px;font-weight:700;color:#1b2a4a;margin-bottom:14px;">
+        <i class="bi bi-calendar-range" style="color:#4e9cff;margin-right:4px;"></i> Salary Processing Period
+    </div>
+    <div class="row">
+        <div class="col-md-2 col-sm-4 col-xs-6">
+            <label for="salaryYear">Year</label>
+            <select id="salaryYear" class="form-control" aria-label="Salary Year">
+                @for (int y = DateTime.UtcNow.Year; y >= DateTime.UtcNow.Year - 5; y--)
+                {
+                    <option value="@y">@y</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3 col-sm-4 col-xs-6">
+            <label for="salaryMonth">Month</label>
+            <select id="salaryMonth" class="form-control" aria-label="Salary Month">
+                @for (int m = 1; m <= 12; m++)
+                {
+                    var name = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m);
+                    if (m == DateTime.UtcNow.Month)
+                    {
+                        <option value="@m" selected>@name</option>
+                    }
+                    else
+                    {
+                        <option value="@m">@name</option>
+                    }
+                }
+            </select>
+        </div>
+        <div class="col-md-4 col-sm-4 col-xs-12">
+            <label for="companyId">Company</label>
+            <select id="companyId" class="form-control" aria-label="Company" asp-items="ViewBag.CompanyList">
+                <option value="">All Companies</option>
+            </select>
+        </div>
+        <div class="col-md-3 col-sm-12 col-xs-12">
+            <label class="hidden-xs" style="visibility:hidden;">Action</label>
+            <button type="button" id="loadAttendanceBtn" class="btn btn-primary btn-block">
+                <i class="bi bi-cloud-download"></i> Load Attendance
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 2. Business rule info panel ==================== -->
+<div class="pg-info-note">
+    <i class="bi bi-info-circle"></i>
+    <div>
+        <strong>Salary Calculation</strong>
+        <p>Monthly Salary is prorated according to the employee's attendance policy and payable days.</p>
+        <span class="pg-formula">Monthly Salary &divide; Applicable Period Days &times; Payable Days &nbsp;&middot;&nbsp; Payable Days = Present Days + Paid Leave</span>
+        <p>Employees already processed for this period cannot be processed again. Use <strong>Recalculate</strong> from the existing payroll record when required.</p>
+    </div>
+</div>
+
+<div id="reviewSection" style="display:none;">
+
+    <!-- ==================== 3. KPI summary ==================== -->
+    <div class="pg-kpi-grid" id="kpiGrid">
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-blue"><i class="bi bi-people-fill"></i></div>
+            <div class="ent-kpi-body"><h3 id="kpiEligible">0</h3><span>Eligible Employees</span></div>
+        </div>
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-indigo"><i class="bi bi-check2-square"></i></div>
+            <div class="ent-kpi-body"><h3 id="kpiSelected">0</h3><span>Selected Employees</span></div>
+        </div>
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-green"><i class="bi bi-patch-check-fill"></i></div>
+            <div class="ent-kpi-body"><h3 id="kpiProcessed">0</h3><span>Already Processed</span></div>
+        </div>
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-orange"><i class="bi bi-exclamation-triangle-fill"></i></div>
+            <div class="ent-kpi-body"><h3 id="kpiWarnings">0</h3><span>Warnings</span></div>
+        </div>
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-teal"><i class="bi bi-cash-stack"></i></div>
+            <div class="ent-kpi-body"><h3 id="kpiGross">&#8377;0.00</h3><span>Gross Salary</span></div>
+        </div>
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-red"><i class="bi bi-dash-circle-fill"></i></div>
+            <div class="ent-kpi-body"><h3 id="kpiDeductions">&#8377;0.00</h3><span>Deductions</span></div>
+        </div>
+        <div class="ent-kpi-card">
+            <div class="ent-kpi-icon ent-icon-green"><i class="bi bi-wallet2"></i></div>
+            <div class="ent-kpi-body"><h3 id="kpiNet">&#8377;0.00</h3><span>Net Salary</span></div>
+        </div>
+    </div>
+
+    <!-- ==================== Loading state ==================== -->
+    <div id="reviewLoading" class="ent-loading-state" style="display:none;">
+        <div class="ent-spinner"></div>
+        <p>Loading attendance and calculating payable days...</p>
+    </div>
+
+    <!-- ==================== Empty states ==================== -->
+    <div id="reviewEmpty" class="ent-empty-state" style="display:none;">
+        <i class="bi bi-cash-coin"></i>
+        <p style="font-weight:700;color:#1b2a4a;margin-bottom:4px;" id="reviewEmptyTitle">No Employees Available</p>
+        <p id="reviewEmptyMessage">No employees were found for the selected company/branch.</p>
+    </div>
+
+    <!-- ==================== 5. Employee review table ==================== -->
+    <div class="ent-list-card" id="reviewTableWrap" style="display:none;">
+
+        <div class="ent-table-toolbar">
+            <div class="ent-table-search">
+                <i class="bi bi-search"></i>
+                <input type="text" id="employeeSearch" class="form-control input-sm" placeholder="Search employee..." aria-label="Search employee by name or code" autocomplete="off">
+            </div>
+            <div class="pg-toolbar-right">
+                <select id="statusFilter" class="form-control input-sm pg-status-filter" aria-label="Filter by status">
+                    <option value="all">All Status</option>
+                    <option value="ready">Ready</option>
+                    <option value="processed">Already Processed</option>
+                    <option value="blocked">Blocked</option>
+                    <option value="warning">Warning</option>
+                </select>
+                <button type="button" id="selectAllBtn" class="btn btn-default btn-sm">
+                    <i class="bi bi-check2-square"></i> Select All
+                </button>
+                <span class="ent-count-badge" id="selectedSummary" role="status" aria-live="polite">Selected: 0</span>
+            </div>
+        </div>
+
+        <div class="table-responsive pg-table-scroll">
+            <table class="table table-hover ent-list-table pg-table">
+                <thead>
+                    <tr>
+                        <th width="34"><input type="checkbox" id="selectAllEmp" aria-label="Select all eligible employees" /></th>
+                        <th>Employee</th>
+                        <th class="text-right">Monthly Salary</th>
+                        <th class="text-center">Basis</th>
+                        <th class="text-center">Period Days</th>
+                        <th class="text-center">Present</th>
+                        <th class="text-center">Paid Leave</th>
+                        <th class="text-center">Payable</th>
+                        <th class="text-right">Gross Salary</th>
+                        <th class="text-right">Deductions</th>
+                        <th class="text-right">Net Salary</th>
+                        <th class="text-center">Status</th>
+                        <th class="text-center">Details</th>
+                    </tr>
+                </thead>
+                <tbody id="reviewRows"></tbody>
+            </table>
+        </div>
+
+        <div id="reviewNoMatch" class="ent-empty-state" style="display:none;padding:26px;">
+            <i class="bi bi-search"></i>
+            <p>No employees match your search/filter.</p>
+        </div>
+    </div>
+
+    <!-- ==================== 9. Sticky bottom process bar ==================== -->
+    <div class="pg-process-bar" id="processFooter" style="display:none;">
+        <div class="pg-process-bar-inner">
+            <div class="pg-process-count"><strong id="footerSelectedCount">0</strong> Employees Selected</div>
+            <div class="pg-process-totals">
+                <div><span>Gross</span><strong id="footerGross">0.00</strong></div>
+                <div><span>Deductions</span><strong id="footerDeductions">0.00</strong></div>
+                <div class="pg-total-net"><span>Net</span><strong id="footerNet">0.00</strong></div>
+            </div>
+            <button type="button" id="processSalaryBtn" class="btn btn-success pg-process-btn">
+                <i class="bi bi-check2-circle"></i> Process Salary
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<!-- ==================== 7. Employee details modal ==================== -->
+<div class="modal fade" id="employeeDetailsModal" tabindex="-1" role="dialog" aria-labelledby="employeeDetailsModalLabel">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h5 class="modal-title" id="employeeDetailsModalLabel">Employee Details</h5>
+            </div>
+            <div class="modal-body" id="employeeDetailsBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Anti-forgery token only - Process Salary is submitted via AJAX, never
+     a real form post (see JS below). -->
+<form id="processForm">@Html.AntiForgeryToken()</form>
 
 @section Scripts {
     @if (TempData["Success"] != null)
@@ -152,40 +339,119 @@
     }
     <script>
         $(function () {
-            var currentData = null;
 
-            function fmt(n) { return (n || 0).toFixed(2); }
-            function fmtDays(n) { return (n === null || n === undefined) ? "-" : (Math.round(n * 10) / 10).toString(); }
+            // ============================================================
+            // GLOBAL STATE
+            // ============================================================
 
-            function rowEligible(emp) {
-                return emp.canProcess && !emp.alreadyProcessed;
+            var currentData = null;       // last LoadPreview response, unchanged shape
+            var employeesById = {};       // employeeId -> employee row, rebuilt on every load
+            var selectedIds = {};         // employeeId -> true, survives search/status filtering
+            var isLoading = false;
+            var isProcessing = false;
+
+
+            // ============================================================
+            // FORMAT HELPERS
+            // ============================================================
+
+            function fmt(n) {
+                var value = parseFloat(n);
+                if (isNaN(value)) value = 0;
+                return value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             }
 
-            function renderRows(data) {
-                var rows = "";
+            function fmtCurrency(n) {
+                return '₹' + fmt(n);
+            }
 
-                $.each(data.employees || [], function (i, emp) {
+            function fmtDays(n) {
+                if (n === null || n === undefined || n === "") return "-";
+                var value = parseFloat(n);
+                if (isNaN(value)) return "-";
+                return (Math.round(value * 10) / 10).toString();
+            }
+
+            function numericValue(value) {
+                if (value === null || value === undefined || value === "") return 0;
+                var number = parseFloat(value);
+                return isNaN(number) ? 0 : number;
+            }
+
+            function escapeHtml(value) {
+                if (value === null || value === undefined) return "";
+                return $("<div>").text(value).html();
+            }
+
+
+            // ============================================================
+            // ELIGIBILITY / STATUS
+            // Existing eligibility rule - UNCHANGED. Every other function
+            // below (selection, checkbox enable/disable, KPI counts) must
+            // keep deferring to this, not re-implement the rule.
+            // ============================================================
+
+            function rowEligible(emp) {
+                return emp &&
+                    emp.canProcess === true &&
+                    emp.alreadyProcessed !== true;
+            }
+
+            // Display-only classification for the status badge/filter -
+            // does not change what rowEligible() decides can be selected.
+            function statusOf(emp) {
+                if (emp.alreadyProcessed) return "processed";
+                if (!emp.canProcess) return "blocked";
+                if (emp.warnings && emp.warnings.length > 0) return "warning";
+                return "ready";
+            }
+
+            function statusBadge(status, emp) {
+                switch (status) {
+                    case "processed":
+                        return '<span class="ent-status-pill ent-badge-success">Already ' + escapeHtml(emp.existingPayrollStatus || "Processed") + '</span>';
+                    case "blocked":
+                        return '<span class="ent-status-pill ent-badge-danger">Blocked</span>';
+                    case "warning":
+                        return '<span class="ent-status-pill ent-badge-warning">Warning</span>';
+                    default:
+                        return '<span class="ent-status-pill ent-badge-info">Ready</span>';
+                }
+            }
+
+
+            // ============================================================
+            // RENDER: EMPLOYEE ROWS
+            // ============================================================
+
+            function renderEmployees(list) {
+
+                var html = [];
+
+                $.each(list, function (i, emp) {
+
                     var eligible = rowEligible(emp);
+                    var status = statusOf(emp);
+                    var checked = eligible && !!selectedIds[emp.employeeId];
+
                     var checkboxHtml = eligible
-                        ? '<input type="checkbox" class="emp-check" value="' + emp.employeeId + '" data-gross="' + emp.grossSalary + '" data-ded="' + emp.totalDeductions + '" data-net="' + emp.netSalary + '" checked />'
-                        : '<input type="checkbox" disabled title="Cannot be processed" />';
+                        ? '<input type="checkbox" class="emp-check" value="' + escapeHtml(emp.employeeId) + '" ' + (checked ? "checked " : "") + '/>'
+                        : '<input type="checkbox" disabled title="Cannot be selected" aria-label="' + escapeHtml(emp.employeeName || emp.employeeId) + ' cannot be selected" />';
 
-                    var notes = "";
-                    if (!emp.canProcess) {
-                        notes += '<span class="label bg-danger">' + emp.blockReason + '</span> ';
-                    }
-                    if (emp.alreadyProcessed) {
-                        notes += '<span class="label bg-grey">Already ' + emp.existingPayrollStatus + '</span> ';
-                    }
-                    $.each(emp.warnings || [], function (j, w) {
-                        notes += '<br /><small class="text-muted"><i class="icon-info22"></i> ' + w + '</small>';
-                    });
+                    var hasDetails = !emp.canProcess || emp.alreadyProcessed || (emp.warnings && emp.warnings.length > 0);
+                    var detailsBtn = hasDetails
+                        ? '<button type="button" class="pg-details-btn emp-details-btn" data-id="' + escapeHtml(emp.employeeId) + '" title="View details" aria-label="View details for ' + escapeHtml(emp.employeeName || emp.employeeId) + '"><i class="bi bi-info-lg"></i></button>'
+                        : '<span class="text-muted">&mdash;</span>';
 
-                    rows += '<tr class="' + (eligible ? "" : "text-muted") + '">' +
+                    html.push(
+                        '<tr class="' + (eligible ? "" : "pg-row-disabled") + '" data-employee-id="' + escapeHtml(emp.employeeId) + '">' +
                         '<td>' + checkboxHtml + '</td>' +
-                        '<td><strong>' + (emp.employeeName || emp.employeeId) + '</strong><br /><small class="text-muted">' + (emp.employeeCode || "") + '</small></td>' +
+                        '<td class="ent-name-cell">' +
+                            '<div><div class="ent-name-primary">' + escapeHtml(emp.employeeName || emp.employeeId) + '</div>' +
+                            '<div class="ent-name-secondary">' + escapeHtml(emp.employeeCode || "") + '</div></div>' +
+                        '</td>' +
                         '<td class="text-right">' + fmt(emp.monthlySalary) + '</td>' +
-                        '<td class="text-center">' + (emp.prorationBasisUsedName || "-") + '</td>' +
+                        '<td class="text-center">' + escapeHtml(emp.prorationBasisUsedName || "-") + '</td>' +
                         '<td class="text-center">' + fmtDays(emp.totalDaysInPeriod) + '</td>' +
                         '<td class="text-center">' + fmtDays(emp.presentDays) + '</td>' +
                         '<td class="text-center">' + fmtDays(emp.paidLeaveDays) + '</td>' +
@@ -193,101 +459,489 @@
                         '<td class="text-right">' + fmt(emp.grossSalary) + '</td>' +
                         '<td class="text-right">' + fmt(emp.totalDeductions) + '</td>' +
                         '<td class="text-right"><strong>' + fmt(emp.netSalary) + '</strong></td>' +
-                        '<td>' + notes + '</td>' +
-                        '</tr>';
+                        '<td class="text-center">' + statusBadge(status, emp) + '</td>' +
+                        '<td class="text-center">' + detailsBtn + '</td>' +
+                        '</tr>'
+                    );
                 });
 
-                $("#reviewRows").html(rows);
+                $("#reviewRows").html(html.join(""));
+                $("#reviewNoMatch").toggle(list.length === 0 && !!currentData && currentData.employees.length > 0);
+
+                updateSelectAllState();
             }
 
-            function updateSummary() {
-                var $checked = $(".emp-check:checked");
-                var gross = 0, ded = 0, net = 0;
 
-                $checked.each(function () {
-                    gross += parseFloat($(this).data("gross")) || 0;
-                    ded += parseFloat($(this).data("ded")) || 0;
-                    net += parseFloat($(this).data("net")) || 0;
+            // ============================================================
+            // SEARCH / STATUS FILTER (client-side only, against the
+            // already-loaded data - never a new AJAX call)
+            // ============================================================
+
+            function getFilteredEmployees() {
+                if (!currentData || !currentData.employees) return [];
+
+                var term = ($("#employeeSearch").val() || "").toLowerCase().trim();
+                var status = $("#statusFilter").val() || "all";
+
+                return $.grep(currentData.employees, function (emp) {
+                    if (status !== "all" && statusOf(emp) !== status) return false;
+                    if (term) {
+                        var name = (emp.employeeName || "").toLowerCase();
+                        var code = (emp.employeeCode || "").toLowerCase();
+                        if (name.indexOf(term) === -1 && code.indexOf(term) === -1) return false;
+                    }
+                    return true;
+                });
+            }
+
+            var searchDebounce = null;
+            function requestFilterRender() {
+                clearTimeout(searchDebounce);
+                searchDebounce = setTimeout(function () {
+                    renderEmployees(getFilteredEmployees());
+                }, 180);
+            }
+
+
+            // ============================================================
+            // RENDER: KPI SUMMARY + STICKY BOTTOM BAR
+            // ============================================================
+
+            function renderSummary() {
+                if (!currentData || !currentData.employees) return;
+
+                var eligibleCount = 0, processedCount = 0, warningsCount = 0;
+                var gross = 0, deductions = 0, net = 0, selectedCount = 0;
+
+                $.each(currentData.employees, function (i, emp) {
+                    if (rowEligible(emp)) eligibleCount++;
+                    if (emp.alreadyProcessed) processedCount++;
+                    if (emp.warnings && emp.warnings.length > 0) warningsCount++;
                 });
 
-                $("#selectedSummary").text("Selected: " + $checked.length);
-                $("#totalGross").text(fmt(gross));
-                $("#totalDeductions").text(fmt(ded));
-                $("#totalNet").text(fmt(net));
-                $("#processFooter").toggle($checked.length > 0);
+                $.each(selectedIds, function (employeeId, isSelected) {
+                    if (!isSelected) return;
+                    var emp = employeesById[employeeId];
+                    if (!emp) return;
+                    selectedCount++;
+                    gross += numericValue(emp.grossSalary);
+                    deductions += numericValue(emp.totalDeductions);
+                    net += numericValue(emp.netSalary);
+                });
+
+                $("#kpiEligible").text(eligibleCount);
+                $("#kpiSelected").text(selectedCount);
+                $("#kpiProcessed").text(processedCount);
+                $("#kpiWarnings").text(warningsCount);
+                $("#kpiGross").text(fmtCurrency(gross));
+                $("#kpiDeductions").text(fmtCurrency(deductions));
+                $("#kpiNet").text(fmtCurrency(net));
+
+                $("#selectedSummary").text("Selected: " + selectedCount);
+
+                updateProcessBar(selectedCount, gross, deductions, net);
             }
 
-            $("#loadAttendanceBtn").on("click", function () {
-                var year = $("#salaryYear").val();
-                var month = $("#salaryMonth").val();
-                var companyId = $("#companyId").val();
+            function updateProcessBar(selectedCount, gross, deductions, net) {
+                $("#footerSelectedCount").text(selectedCount);
+                $("#footerGross").text(fmt(gross));
+                $("#footerDeductions").text(fmt(deductions));
+                $("#footerNet").text(fmt(net));
+                $("#processFooter").toggle(selectedCount > 0);
+            }
 
+
+            // ============================================================
+            // SELECTION
+            // ============================================================
+
+            function updateSelection() {
+                // Sync selectedIds from every currently-rendered checkbox
+                // (search/status filtering only changes which rows are
+                // rendered, never selectedIds directly - a row scrolled
+                // out of the current filter keeps its prior selection).
+                $(".emp-check").each(function () {
+                    var $cb = $(this);
+                    selectedIds[$cb.val()] = $cb.is(":checked");
+                });
+
+                updateSelectAllState();
+                renderSummary();
+            }
+
+            function updateSelectAllState() {
+                var $visible = $(".emp-check:not(:disabled)");
+                var total = $visible.length;
+                var checked = $visible.filter(":checked").length;
+                var allSelected = total > 0 && total === checked;
+
+                $("#selectAllEmp").prop("checked", allSelected);
+                $("#selectAllBtn").html(
+                    '<i class="bi bi-check2-square"></i> ' + (allSelected ? "Deselect All" : "Select All")
+                );
+            }
+
+            function setAllVisibleSelected(select) {
+                $(".emp-check:not(:disabled)").prop("checked", select);
+                updateSelection();
+            }
+
+
+            // ============================================================
+            // EMPLOYEE DETAILS MODAL
+            // ============================================================
+
+            function showEmployeeDetails(employeeId) {
+                var emp = employeesById[employeeId];
+                if (!emp) return;
+
+                var status = statusOf(emp);
+                var rows = [];
+
+                rows.push(
+                    '<div class="empdetail-field"><div><div class="empdetail-field-label">Employee</div>' +
+                    '<div class="empdetail-field-value">' + escapeHtml(emp.employeeName || emp.employeeId) + '</div></div></div>'
+                );
+                rows.push(
+                    '<div class="empdetail-field"><div><div class="empdetail-field-label">Employee Code</div>' +
+                    '<div class="empdetail-field-value">' + escapeHtml(emp.employeeCode || "-") + '</div></div></div>'
+                );
+                rows.push(
+                    '<div class="empdetail-field"><div><div class="empdetail-field-label">Status</div>' +
+                    '<div class="empdetail-field-value">' + statusBadge(status, emp) + '</div></div></div>'
+                );
+
+                if (!emp.canProcess && emp.blockReason) {
+                    rows.push(
+                        '<div class="empdetail-field"><div><div class="empdetail-field-label">Block Reason</div>' +
+                        '<div class="empdetail-field-value">' + escapeHtml(emp.blockReason) + '</div></div></div>'
+                    );
+                }
+
+                if (emp.alreadyProcessed) {
+                    rows.push(
+                        '<div class="empdetail-field"><div><div class="empdetail-field-label">Existing Payroll Status</div>' +
+                        '<div class="empdetail-field-value">' + escapeHtml(emp.existingPayrollStatus || "Processed") + '</div></div></div>'
+                    );
+                }
+
+                if (emp.warnings && emp.warnings.length > 0) {
+                    var warningItems = $.map(emp.warnings, function (w) {
+                        return '<li>' + escapeHtml(w) + '</li>';
+                    }).join("");
+
+                    rows.push(
+                        '<div class="empdetail-field"><div><div class="empdetail-field-label">Warnings</div>' +
+                        '<div class="empdetail-field-value"><ul style="margin:2px 0 0;padding-left:18px;">' + warningItems + '</ul></div></div></div>'
+                    );
+                }
+
+                $("#employeeDetailsBody").html(rows.join(""));
+                $("#employeeDetailsModal").modal("show");
+            }
+
+
+            // ============================================================
+            // LOADING / EMPTY STATE HELPERS
+            // ============================================================
+
+            function showLoading() {
                 $("#reviewSection").show();
                 $("#reviewTableWrap").hide();
                 $("#reviewEmpty").hide();
                 $("#processFooter").hide();
                 $("#reviewLoading").show();
+                $("#reviewRows").empty();
+                $("#loadAttendanceBtn").prop("disabled", true);
+            }
 
-                $.get("@Url.Action("LoadPreview", "Payroll")", { salaryYear: year, salaryMonth: month, companyId: companyId })
-                    .done(function (data) {
-                        $("#reviewLoading").hide();
+            function hideLoading() {
+                $("#reviewLoading").hide();
+                $("#loadAttendanceBtn").prop("disabled", false);
+            }
 
-                        if (data && data.error) {
-                            swal({ title: "Error", text: data.error, type: "error" });
+            function showEmptyState(matched, year, monthName) {
+                var title, message;
+
+                if (matched > 0) {
+                    title = "Salary Structure Required";
+                    message = "Found " + matched + " employee(s) for the selected company/branch, but none have a salary structure effective for " +
+                        monthName + " " + year + ". Please assign or backdate the salary structure before processing payroll.";
+                } else {
+                    title = "No Employees Available";
+                    message = "No employees were found for the selected company/branch.";
+                }
+
+                $("#reviewEmptyTitle").text(title);
+                $("#reviewEmptyMessage").text(message);
+                $("#reviewEmpty").show();
+                $("#kpiGrid").hide();
+            }
+
+
+            // ============================================================
+            // LOAD PREVIEW ("Load Attendance")
+            // ============================================================
+
+            function loadPreview() {
+                if (isLoading) return;
+
+                var year = $("#salaryYear").val();
+                var month = $("#salaryMonth").val();
+                var companyId = $("#companyId").val();
+
+                if (!year || !month) {
+                    swal({ title: "Required", text: "Please select Year and Month.", type: "warning" });
+                    return;
+                }
+
+                isLoading = true;
+                showLoading();
+
+                $.ajax({
+                    url: "@Url.Action("LoadPreview", "Payroll")",
+                    type: "GET",
+                    data: { salaryYear: year, salaryMonth: month, companyId: companyId },
+
+                    success: function (data) {
+                        hideLoading();
+                        isLoading = false;
+
+                        if (!data) {
+                            showError("Server returned an empty response.");
+                            return;
+                        }
+
+                        if (data.error) {
+                            showError(data.error);
                             return;
                         }
 
                         currentData = data;
+                        employeesById = {};
+                        selectedIds = {};
 
-                        if (!data || !data.employees || data.employees.length === 0) {
-                            $("#reviewEmpty").show();
+                        $.each(data.employees || [], function (i, emp) {
+                            employeesById[emp.employeeId] = emp;
+                            if (rowEligible(emp)) selectedIds[emp.employeeId] = true;
+                        });
+
+                        $("#kpiGrid").show();
+                        $("#employeeSearch").val("");
+                        $("#statusFilter").val("all");
+
+                        if (!data.employees || data.employees.length === 0) {
+                            var monthName = $("#salaryMonth option:selected").text() || "this period";
+                            showEmptyState(data.employeesMatchingFilterCount || 0, year, monthName);
+                            renderSummary();
                             return;
                         }
 
-                        renderRows(data);
+                        renderEmployees(getFilteredEmployees());
                         $("#reviewTableWrap").show();
-                        $("#selectAllEmp").prop("checked", true);
-                        updateSummary();
-                    })
-                    .fail(function () {
-                        $("#reviewLoading").hide();
-                        swal({ title: "Error", text: "Could not load attendance for this period.", type: "error" });
-                    });
-            });
+                        renderSummary();
+                    },
 
-            $("#selectAllEmp").on("change", function () {
-                $(".emp-check:not(:disabled)").prop("checked", $(this).is(":checked"));
-                updateSummary();
-            });
+                    error: function (xhr) {
+                        hideLoading();
+                        isLoading = false;
+                        showError(extractErrorMessage(xhr, "Could not load attendance for this period."));
+                    }
+                });
+            }
 
-            $(document).on("change", ".emp-check", updateSummary);
 
-            $("#processSalaryBtn").on("click", function () {
-                var $checked = $(".emp-check:checked");
+            // ============================================================
+            // PROCESS SALARY CONFIRMATION + AJAX
+            // ============================================================
 
-                if ($checked.length === 0) return;
+            function showProcessConfirmation() {
+                var ids = $.map(selectedIds, function (isSelected, id) { return isSelected ? id : null; });
 
-                var proceed = confirm(
-                    "Salary will be processed for " + $checked.length + " employee(s) for " +
-                    $("#salaryMonth option:selected").text() + " " + $("#salaryYear").val() + ". Continue?"
-                );
+                if (ids.length === 0) {
+                    swal({ title: "No Employee Selected", text: "Please select at least one employee.", type: "warning" });
+                    return;
+                }
 
-                if (!proceed) return;
+                var year = $("#salaryYear").val();
+                var monthName = $("#salaryMonth option:selected").text();
+                var companyName = $("#companyId option:selected").text() || "All Companies";
 
-                $("#postSalaryYear").val($("#salaryYear").val());
-                $("#postSalaryMonth").val($("#salaryMonth").val());
-
-                $("#postEmployeeIds").empty();
-                $checked.each(function (i) {
-                    $("<input>").attr({
-                        type: "hidden",
-                        name: "EmployeeIds[" + i + "]",
-                        value: $(this).val()
-                    }).appendTo("#postEmployeeIds");
+                var gross = 0, deductions = 0, net = 0;
+                $.each(ids, function (i, id) {
+                    var emp = employeesById[id];
+                    if (!emp) return;
+                    gross += numericValue(emp.grossSalary);
+                    deductions += numericValue(emp.totalDeductions);
+                    net += numericValue(emp.netSalary);
                 });
 
-                $("#processForm").submit();
+                var summaryHtml =
+                    '<div style="text-align:left;font-size:13.5px;line-height:1.9;">' +
+                    'You are about to process salary for <strong>' + ids.length + ' Employee' + (ids.length > 1 ? 's' : '') + '</strong>.<br/>' +
+                    '<table style="width:100%;margin-top:10px;">' +
+                    '<tr><td style="color:#8896ad;">Period</td><td style="text-align:right;font-weight:600;">' + escapeHtml(monthName) + ' ' + escapeHtml(year) + '</td></tr>' +
+                    '<tr><td style="color:#8896ad;">Company</td><td style="text-align:right;font-weight:600;">' + escapeHtml(companyName) + '</td></tr>' +
+                    '<tr><td style="color:#8896ad;">Gross Salary</td><td style="text-align:right;font-weight:600;">' + fmtCurrency(gross) + '</td></tr>' +
+                    '<tr><td style="color:#8896ad;">Deductions</td><td style="text-align:right;font-weight:600;">' + fmtCurrency(deductions) + '</td></tr>' +
+                    '<tr><td style="color:#8896ad;">Net Salary</td><td style="text-align:right;font-weight:700;color:#1e8e4e;">' + fmtCurrency(net) + '</td></tr>' +
+                    '</table>' +
+                    '<p style="margin-top:12px;color:#8896ad;font-size:12px;">This action will create payroll records for the selected employees.</p>' +
+                    '</div>';
+
+                swal({
+                    title: "Process Salary?",
+                    text: summaryHtml,
+                    html: true,
+                    type: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#2b6fd9",
+                    confirmButtonText: "Process Salary",
+                    cancelButtonText: "Cancel",
+                    closeOnConfirm: true
+                }, function (isConfirm) {
+                    if (isConfirm) processSalary(ids);
+                });
+            }
+
+            function processSalary(employeeIds) {
+                if (isProcessing) return;
+
+                var year = $("#salaryYear").val();
+                var month = $("#salaryMonth").val();
+                var companyId = $("#companyId").val();
+
+                var $button = $("#processSalaryBtn");
+                var originalHtml = $button.html();
+
+                isProcessing = true;
+                $button.prop("disabled", true).html('<i class="bi bi-arrow-repeat" style="animation:ent-spin .8s linear infinite;display:inline-block;"></i> Processing Salary...');
+
+                var formData = new FormData();
+                formData.append("salaryYear", year);
+                formData.append("salaryMonth", month);
+                formData.append("companyId", companyId || "");
+                $.each(employeeIds, function (i, id) { formData.append("EmployeeIds", id); });
+
+                var token = $('#processForm input[name="__RequestVerificationToken"]').val();
+                if (token) formData.append("__RequestVerificationToken", token);
+
+                $.ajax({
+                    url: "@Url.Action("ProcessSalary", "Payroll")",
+                    type: "POST",
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    cache: false,
+
+                    success: function (response) {
+                        if (!response) {
+                            handleProcessError(null, "Server returned an empty response.");
+                            return;
+                        }
+                        if (response.success === true) {
+                            handleProcessSuccess(response);
+                        } else {
+                            handleProcessError(null, response.message || response.error);
+                        }
+                    },
+
+                    error: function (xhr) {
+                        handleProcessError(xhr);
+                    },
+
+                    complete: function () {
+                        isProcessing = false;
+                        resetProcessButton($button, originalHtml);
+                    }
+                });
+            }
+
+            function handleProcessSuccess(response) {
+                var count = response.processedCount != null ? response.processedCount : "";
+                var message = response.message || ((count !== "" ? count + " employee(s) " : "Salary ") + "processed successfully.");
+
+                swal({
+                    title: "Salary Processed Successfully",
+                    text: message,
+                    type: "success"
+                }, function () {
+                    // Refresh via the existing AJAX preview - never a full
+                    // page reload - so just-processed rows flip to
+                    // "Already Processed" without losing scroll position.
+                    loadPreview();
+                });
+            }
+
+            function handleProcessError(xhr, fallbackMessage) {
+                var message = fallbackMessage || extractErrorMessage(xhr, "Salary processing failed.");
+                showError("Salary Processing Failed", message);
+            }
+
+            function resetProcessButton($button, originalHtml) {
+                $button.prop("disabled", false).html(originalHtml || '<i class="bi bi-check2-circle"></i> Process Salary');
+            }
+
+
+            // ============================================================
+            // ERROR HELPERS - never surface "undefined"/"null"/"[object
+            // Object]"; always prefer the server's own message.
+            // ============================================================
+
+            function extractErrorMessage(xhr, fallback) {
+                if (!xhr) return fallback;
+
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    if (response && response.message) return response.message;
+                    if (response && response.error) return response.error;
+                } catch (e) { }
+
+                if (xhr.responseText && xhr.responseText.length > 0 && xhr.responseText.length < 500) {
+                    return xhr.responseText;
+                }
+
+                return fallback;
+            }
+
+            function showError(titleOrMessage, message) {
+                var title = message !== undefined ? titleOrMessage : "Error";
+                var text = message !== undefined ? message : titleOrMessage;
+
+                if (!text || text === "undefined" || text === "null" || text === "[object Object]") {
+                    text = "Something went wrong. Please try again.";
+                }
+
+                swal({ title: title, text: text, type: "error" });
+            }
+
+
+            // ============================================================
+            // EVENT BINDINGS
+            // ============================================================
+
+            $("#loadAttendanceBtn").on("click", loadPreview);
+
+            $("#employeeSearch").on("input", requestFilterRender);
+            $("#statusFilter").on("change", requestFilterRender);
+
+            $("#selectAllEmp").on("change", function () {
+                setAllVisibleSelected($(this).is(":checked"));
             });
+
+            $("#selectAllBtn").on("click", function () {
+                var allSelected = $("#selectAllEmp").is(":checked");
+                setAllVisibleSelected(!allSelected);
+            });
+
+            $(document).on("change", ".emp-check", updateSelection);
+
+            $(document).on("click", ".emp-details-btn", function () {
+                showEmployeeDetails($(this).data("id"));
+            });
+
+            $("#processSalaryBtn").on("click", showProcessConfirmation);
+
         });
     </script>
 }

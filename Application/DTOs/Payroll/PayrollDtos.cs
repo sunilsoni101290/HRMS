@@ -419,6 +419,15 @@ namespace Application.DTOs.Payroll
         public int SalaryYear { get; set; }
         public int SalaryMonth { get; set; }
         public string? MonthName { get; set; }
+
+        // Diagnostic only - how many employees matched Tenant/Company/Branch
+        // BEFORE the salary-structure requirement was applied. Lets the UI
+        // tell "no employees at all for this company/branch" apart from
+        // "employees exist, but none have a salary structure effective for
+        // this period" instead of showing one blanket message for both -
+        // see PayrollBusinessService.PreviewAsync.
+        public int EmployeesMatchingFilterCount { get; set; }
+
         public List<SalaryCalculationResultDto> Employees { get; set; } = new();
     }
 
