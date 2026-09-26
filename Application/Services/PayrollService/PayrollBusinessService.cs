@@ -1,4 +1,5 @@
 using Application.DTOs.Payroll;
+using Application.Interfaces;
 using Application.Interfaces.LoanAdvance;
 using Application.Interfaces.Payroll;
 using Domain.Entities;
@@ -6,6 +7,7 @@ using Domain.Helper;
 using Infrastructure;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
 using static Domain.Enums.EnumExtensions;
@@ -29,21 +31,41 @@ namespace Application.Services.PayrollService
         // RecalculateAsync below no longer compute a factor themselves).
         private readonly ISalaryCalculationService _salaryCalculationService;
 
+        // Payslip verification token signing secret - reuses the existing
+        // login-JWT secret (API/appsettings.json "Jwt:Key") rather than
+        // introducing a second one to manage. See
+        // Domain.Helper.PayslipVerificationHelper.
+        private readonly IConfiguration _configuration;
+
+        // "Email Payslip" toolbar action - see EmailPayslipAsync below.
+        private readonly IEmailSender _emailSender;
+
         public PayrollBusinessService(
             ApplicationDbContext context,
             IPayrollLoanRecoveryService loanRecoveryService,
             ILogger<PayrollBusinessService> logger,
-            ISalaryCalculationService salaryCalculationService)
+            ISalaryCalculationService salaryCalculationService,
+            IConfiguration configuration,
+            IEmailSender emailSender)
         {
             _context = context;
             _loanRecoveryService = loanRecoveryService;
             _logger = logger;
             _salaryCalculationService = salaryCalculationService;
+            _configuration = configuration;
+            _emailSender = emailSender;
         }
 
         #region Get All
 
-        public async Task<List<PayrollListDto>> GetAllAsync(int? year = null, int? month = null)
+        public async Task<List<PayrollListDto>> GetAllAsync(
+            int? year = null,
+            int? month = null,
+            string? departmentId = null,
+            string? designationId = null,
+            string? employeeStatus = null,
+            string? paymentStatus = null,
+            string? search = null)
         {
             try
             {
@@ -53,6 +75,24 @@ namespace Application.Services.PayrollService
 
             if (year.HasValue) query = query.Where(x => x.SalaryYear == year.Value);
             if (month.HasValue) query = query.Where(x => x.SalaryMonth == month.Value);
+            if (!string.IsNullOrEmpty(departmentId)) query = query.Where(x => x.Employee != null && x.Employee.DepartmentId == departmentId);
+            if (!string.IsNullOrEmpty(designationId)) query = query.Where(x => x.Employee != null && x.Employee.DesignationId == designationId);
+            if (!string.IsNullOrEmpty(paymentStatus)) query = query.Where(x => x.Status == paymentStatus);
+
+            // "active" / "inactive" - matches Employee.IsActive (BaseEntity),
+            // never a recalculated or invented status.
+            if (string.Equals(employeeStatus, "active", StringComparison.OrdinalIgnoreCase))
+                query = query.Where(x => x.Employee != null && x.Employee.IsActive);
+            else if (string.Equals(employeeStatus, "inactive", StringComparison.OrdinalIgnoreCase))
+                query = query.Where(x => x.Employee != null && !x.Employee.IsActive);
+
+            if (!string.IsNullOrEmpty(search))
+            {
+                var s = search.Trim();
+                query = query.Where(x =>
+                    (x.Employee != null && x.Employee.EmployeeCode != null && x.Employee.EmployeeCode.Contains(s)) ||
+                    (x.Employee != null && (x.Employee.FirstName + " " + x.Employee.LastName).Contains(s)));
+            }
 
             var list = await query
                 .OrderByDescending(x => x.SalaryYear).ThenByDescending(x => x.SalaryMonth)
@@ -62,9 +102,12 @@ namespace Application.Services.PayrollService
                     EmployeeId = x.EmployeeId,
                     EmployeeName = x.Employee != null ? x.Employee.FirstName + " " + x.Employee.LastName : "",
                     EmployeeCode = x.Employee != null ? x.Employee.EmployeeCode : "",
+                    DepartmentName = x.Employee != null && x.Employee.Department != null ? x.Employee.Department.Name : null,
+                    DesignationName = x.Employee != null && x.Employee.Designation != null ? x.Employee.Designation.Name : null,
                     SalaryYear = x.SalaryYear,
                     SalaryMonth = x.SalaryMonth,
                     GrossSalary = x.GrossSalary,
+                    Deductions = x.TotalDeductions,
                     NetSalary = x.NetSalary,
                     PresentDays = x.PresentDays,
                     TotalWorkingDays = x.TotalWorkingDays,
@@ -74,6 +117,27 @@ namespace Application.Services.PayrollService
 
             foreach (var item in list)
                 item.MonthName = MonthName(item.SalaryMonth);
+
+            // Basic / Allowances split - one grouped query across all fetched
+            // payroll ids (never per-row), reusing the same "Code == BASIC"
+            // convention already used in TaxComputationService.
+            if (list.Count > 0)
+            {
+                var payrollIds = list.Select(x => x.Id).ToList();
+                var details = await _context.PayrollDetails
+                    .AsNoTracking()
+                    .Where(d => payrollIds.Contains(d.PayrollId) && d.IsEarning)
+                    .Select(d => new { d.PayrollId, Code = d.SalaryComponent != null ? d.SalaryComponent.Code : null, d.Amount })
+                    .ToListAsync();
+
+                var byPayroll = details.GroupBy(d => d.PayrollId).ToDictionary(g => g.Key, g => g.ToList());
+                foreach (var item in list)
+                {
+                    if (!byPayroll.TryGetValue(item.Id, out var rows)) continue;
+                    item.BasicSalary = rows.Where(r => r.Code == "BASIC").Sum(r => r.Amount);
+                    item.Allowances = rows.Where(r => r.Code != "BASIC").Sum(r => r.Amount);
+                }
+            }
 
             return list;
             }
@@ -142,6 +206,7 @@ namespace Application.Services.PayrollService
                 EmployeeId = entity.EmployeeId,
                 EmployeeName = entity.Employee != null ? entity.Employee.FirstName + " " + entity.Employee.LastName : "",
                 EmployeeCode = entity.Employee != null ? entity.Employee.EmployeeCode : "",
+                EmployeePhotoUrl = entity.Employee?.FilePath,
 
                 CompanyName = company?.Name,
                 CompanyAddress = BuildCompanyAddress(company),
@@ -902,6 +967,350 @@ namespace Application.Services.PayrollService
             }
         }
 
+        // Redesigned payslip document - see PayslipDto's class remarks.
+        // Tenant-scoped (defense in depth - GetByIdAsync/GetPayslipAsync
+        // above intentionally aren't touched, to avoid changing behavior
+        // any other caller relies on).
+        public async Task<PayslipDto?> GetPayslipDocumentAsync(string payrollId, string tenantId)
+        {
+            try
+            {
+                var entity = await _context.Payrolls
+                    .AsNoTracking()
+                    .Include(x => x.Employee).ThenInclude(e => e.Company).ThenInclude(c => c.City)
+                    .Include(x => x.Employee).ThenInclude(e => e.Company).ThenInclude(c => c.State)
+                    .Include(x => x.Employee).ThenInclude(e => e.Department)
+                    .Include(x => x.Employee).ThenInclude(e => e.Designation)
+                    .Include(x => x.Employee).ThenInclude(e => e.Branch)
+                    .Include(x => x.PayrollDetails).ThenInclude(d => d.SalaryComponent)
+                    .FirstOrDefaultAsync(x => x.Id == payrollId && !x.IsDeleted);
+
+                if (entity == null)
+                    return null;
+
+                // Tenant isolation - never let one tenant's admin reach
+                // another tenant's payslip by guessing/incrementing a
+                // payroll id.
+                if (string.IsNullOrEmpty(tenantId) || entity.TenantId != tenantId)
+                    return null;
+
+                var employee = entity.Employee;
+                var company = employee?.Company;
+
+                var pfDetail = await _context.EmployeePFDetails
+                    .AsNoTracking()
+                    .Where(x => x.EmployeeId == entity.EmployeeId && !x.IsDeleted)
+                    .OrderByDescending(x => x.PFJoiningDate)
+                    .FirstOrDefaultAsync();
+
+                var bankDetail = await _context.EmployeeBankDetails
+                    .AsNoTracking()
+                    .Where(x => x.EmployeeId == entity.EmployeeId && !x.IsDeleted)
+                    .OrderByDescending(x => x.IsPrimary)
+                    .FirstOrDefaultAsync();
+
+                // Financial Year for this payslip's Company - drives both
+                // the YTD panel and the Tax Regime lookup. Null when Master
+                // -> Financial Year hasn't been configured for this
+                // Company yet (common on a fresh tenant) - both panels
+                // degrade gracefully rather than guessing Apr-Mar.
+                var financialYear = await _context.FinancialYears
+                    .AsNoTracking()
+                    .Where(x => !x.IsDeleted
+                        && x.CompanyId == entity.CompanyId
+                        && x.StartDate.Date <= entity.SalaryDate.Date
+                        && x.EndDate.Date >= entity.SalaryDate.Date)
+                    .FirstOrDefaultAsync();
+
+                PayslipYtdSummaryDto? ytd = null;
+                if (financialYear != null)
+                {
+                    var ytdTotals = await _context.Payrolls
+                        .AsNoTracking()
+                        .Where(x => !x.IsDeleted
+                            && x.EmployeeId == entity.EmployeeId
+                            && x.SalaryDate.Date >= financialYear.StartDate.Date
+                            && x.SalaryDate.Date <= entity.SalaryDate.Date)
+                        .GroupBy(x => 1)
+                        .Select(g => new
+                        {
+                            Earnings = g.Sum(x => x.TotalEarnings),
+                            Deductions = g.Sum(x => x.TotalDeductions),
+                            Net = g.Sum(x => x.NetSalary)
+                        })
+                        .FirstOrDefaultAsync();
+
+                    ytd = new PayslipYtdSummaryDto
+                    {
+                        PeriodLabel = $"{financialYear.StartDate:MMM yyyy} - {entity.SalaryDate:MMM yyyy}",
+                        TotalEarnings = ytdTotals?.Earnings ?? 0m,
+                        TotalDeductions = ytdTotals?.Deductions ?? 0m,
+                        NetSalary = ytdTotals?.Net ?? 0m
+                    };
+                }
+
+                string? taxRegimeName = null;
+                if (financialYear != null)
+                {
+                    var taxComputation = await _context.EmployeeTaxComputations
+                        .AsNoTracking()
+                        .Where(x => !x.IsDeleted
+                            && x.EmployeeId == entity.EmployeeId
+                            && x.FinancialYearId == financialYear.Id)
+                        .FirstOrDefaultAsync();
+
+                    taxRegimeName = taxComputation?.Regime.ToString();
+                }
+
+                // Attendance day-type counts for this payroll's month - a
+                // read-only breakdown of the SAME Attendance rows Salary
+                // Processing already reads (see SalaryCalculationService),
+                // never a second independent calculation of payable/paid
+                // days (those stay exactly as Payroll persisted them).
+                var monthStart = new DateTime(entity.SalaryYear, entity.SalaryMonth, 1);
+                var monthEnd = monthStart.AddMonths(1).AddDays(-1);
+
+                var attendanceCounts = await _context.Attendances
+                    .AsNoTracking()
+                    .Where(x => !x.IsDeleted
+                        && x.EmployeeId == entity.EmployeeId
+                        && x.Date >= monthStart && x.Date <= monthEnd)
+                    .GroupBy(x => x.Status)
+                    .Select(g => new { Status = g.Key, Count = g.Count() })
+                    .ToListAsync();
+
+                decimal? CountOf(AttendanceStatus status)
+                {
+                    var match = attendanceCounts.FirstOrDefault(x => x.Status == status);
+                    return match != null ? match.Count : (decimal?)null;
+                }
+
+                // Leave Balance - current year, this employee. Hidden by
+                // the view entirely when empty.
+                var leaveBalances = await _context.LeaveBalances
+                    .AsNoTracking()
+                    .Include(x => x.LeaveType)
+                    .Where(x => !x.IsDeleted
+                        && x.EmployeeId == entity.EmployeeId
+                        && x.Year == entity.SalaryYear)
+                    .OrderBy(x => x.LeaveType.Name)
+                    .Select(x => new PayslipLeaveBalanceLineDto
+                    {
+                        LeaveTypeName = x.LeaveType.Name,
+                        Entitled = x.OpeningBalance + x.Allocated + x.Credited + x.CarryForward,
+                        Used = x.Used,
+                        Balance = x.Balance
+                    })
+                    .ToListAsync();
+
+                var earnings = (entity.PayrollDetails ?? new List<PayrollDetail>())
+                    .Where(d => d.IsEarning)
+                    .Select(d => new PayslipLineDto
+                    {
+                        ComponentName = d.SalaryComponent?.Name ?? "-",
+                        RateOrUnitsDisplay = "-",
+                        Amount = d.Amount
+                    })
+                    .ToList();
+
+                var deductions = (entity.PayrollDetails ?? new List<PayrollDetail>())
+                    .Where(d => !d.IsEarning)
+                    .Select(d => new PayslipLineDto
+                    {
+                        ComponentName = d.SalaryComponent?.Name ?? "-",
+                        RateOrUnitsDisplay = "-",
+                        Amount = d.Amount
+                    })
+                    .ToList();
+
+                var jwtSecret = _configuration["Jwt:Key"] ?? string.Empty;
+
+                return new PayslipDto
+                {
+                    PayrollId = entity.Id,
+                    Status = entity.Status,
+
+                    Company = new PayslipCompanyDto
+                    {
+                        Name = company?.Name,
+                        LogoUrl = company?.Logo,
+                        Address = BuildCompanyAddress(company),
+                        Phone = company?.Phone,
+                        Email = company?.Email,
+                        Website = company?.WebsiteUrl
+                    },
+
+                    Employee = new PayslipEmployeeDto
+                    {
+                        EmployeeId = entity.EmployeeId,
+                        EmployeeCode = employee?.EmployeeCode,
+                        EmployeeName = employee != null ? $"{employee.FirstName} {employee.LastName}".Trim() : "",
+                        PhotoUrl = employee?.FilePath,
+                        DepartmentName = employee?.Department?.Name,
+                        DesignationName = employee?.Designation?.Name,
+                        BranchName = employee?.Branch?.Name
+                    },
+
+                    Employment = new PayslipEmploymentDto
+                    {
+                        PAN = employee?.PANNumber,
+                        UAN = pfDetail?.UANNumber,
+                        PFNumber = pfDetail?.PFNumber,
+                        DateOfJoining = employee?.JoiningDate,
+                        EmploymentTypeName = employee?.EmploymentType.ToString()
+                    },
+
+                    BankDetails = bankDetail == null ? null : new PayslipBankDetailsDto
+                    {
+                        BankName = bankDetail.BankName,
+                        AccountNumberMasked = MaskAccountNumber(bankDetail.AccountNumber),
+                        IFSCCode = bankDetail.IFSCCode,
+                        AccountTypeName = bankDetail.AccountType.ToString()
+                    },
+
+                    SalaryYear = entity.SalaryYear,
+                    SalaryMonth = entity.SalaryMonth,
+                    MonthName = MonthName(entity.SalaryMonth),
+                    SalaryDate = entity.SalaryDate,
+                    PayPeriodStart = monthStart,
+                    PayPeriodEnd = monthEnd,
+                    DaysInMonth = DateTime.DaysInMonth(entity.SalaryYear, entity.SalaryMonth),
+
+                    Earnings = earnings,
+                    Deductions = deductions,
+
+                    GrossEarnings = entity.TotalEarnings,
+                    TotalDeductions = entity.TotalDeductions,
+                    NetSalary = entity.NetSalary,
+                    NetSalaryInWords = NumberToWordsHelper.ToRupeesInWords(entity.NetSalary),
+
+                    AttendanceSummary = new PayslipAttendanceSummaryDto
+                    {
+                        TotalDays = entity.TotalWorkingDays,
+                        PresentDays = entity.PresentDays,
+                        AbsentDays = CountOf(AttendanceStatus.Absent),
+                        PaidLeaveDays = entity.PaidLeaveDays,
+                        UnpaidLeaveDays = entity.UnpaidLeaveDays,
+                        WeekOffDays = CountOf(AttendanceStatus.WeekOff),
+                        HolidayDays = CountOf(AttendanceStatus.Holiday),
+                        PayableDays = entity.PayableDays
+                    },
+
+                    TaxInfo = new PayslipTaxInfoDto
+                    {
+                        TaxRegimeName = taxRegimeName,
+                        LopDays = entity.UnpaidLeaveDays
+                    },
+
+                    Ytd = ytd,
+                    LeaveBalances = leaveBalances,
+
+                    Remarks = new List<string>
+                    {
+                        "This is a computer generated payslip and does not require a signature.",
+                        "Salary has been processed as per company policies.",
+                        "For any discrepancies, please contact the HR department."
+                    },
+
+                    VerificationToken = string.IsNullOrEmpty(jwtSecret)
+                        ? null
+                        : Domain.Helper.PayslipVerificationHelper.GenerateToken(entity.Id, jwtSecret),
+
+                    SignatoryCompanyName = company?.Name,
+                    SignatoryImageUrl = null,
+
+                    RecalculatedCount = entity.RecalculatedCount
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "GetPayslipDocumentAsync failed for payrollId {PayrollId}", payrollId);
+                return null;
+            }
+        }
+
+        public async Task<PayslipVerificationResultDto?> VerifyPayslipAsync(string token)
+        {
+            try
+            {
+                var jwtSecret = _configuration["Jwt:Key"] ?? string.Empty;
+
+                if (string.IsNullOrEmpty(jwtSecret) ||
+                    !Domain.Helper.PayslipVerificationHelper.TryValidate(token, jwtSecret, out var payrollId))
+                {
+                    return new PayslipVerificationResultDto { IsValid = false };
+                }
+
+                var entity = await _context.Payrolls
+                    .AsNoTracking()
+                    .Include(x => x.Employee).ThenInclude(e => e.Company)
+                    .FirstOrDefaultAsync(x => x.Id == payrollId && !x.IsDeleted);
+
+                if (entity == null)
+                    return new PayslipVerificationResultDto { IsValid = false };
+
+                return new PayslipVerificationResultDto
+                {
+                    IsValid = true,
+                    EmployeeName = entity.Employee != null
+                        ? $"{entity.Employee.FirstName} {entity.Employee.LastName}".Trim()
+                        : null,
+                    EmployeeCode = entity.Employee?.EmployeeCode,
+                    CompanyName = entity.Employee?.Company?.Name,
+                    MonthName = MonthName(entity.SalaryMonth),
+                    SalaryYear = entity.SalaryYear,
+                    NetSalary = entity.NetSalary,
+                    Status = entity.Status
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "VerifyPayslipAsync failed.");
+                return new PayslipVerificationResultDto { IsValid = false };
+            }
+        }
+
+        public async Task<bool> EmailPayslipAsync(string payrollId, string tenantId, string verificationUrl)
+        {
+            try
+            {
+                var entity = await _context.Payrolls
+                    .AsNoTracking()
+                    .Include(x => x.Employee).ThenInclude(e => e.Company)
+                    .FirstOrDefaultAsync(x => x.Id == payrollId && !x.IsDeleted);
+
+                if (entity == null || entity.TenantId != tenantId)
+                    return false;
+
+                var employee = entity.Employee;
+                if (employee == null || string.IsNullOrWhiteSpace(employee.Email))
+                    return false;
+
+                var monthLabel = $"{MonthName(entity.SalaryMonth)} {entity.SalaryYear}";
+                var companyName = employee.Company?.Name ?? "";
+                var netInWords = NumberToWordsHelper.ToRupeesInWords(entity.NetSalary);
+
+                var subject = $"Your Payslip - {monthLabel}";
+
+                var body = $@"
+                    <p>Dear {employee.FirstName},</p>
+                    <p>Your payslip for <strong>{monthLabel}</strong> has been processed.</p>
+                    <table style=""border-collapse:collapse;margin:12px 0;"">
+                        <tr><td style=""padding:4px 12px 4px 0;color:#5b6b83;"">Net Pay</td><td style=""padding:4px 0;font-weight:bold;"">&#8377; {entity.NetSalary:N2}</td></tr>
+                        <tr><td style=""padding:4px 12px 4px 0;color:#5b6b83;"">In Words</td><td style=""padding:4px 0;"">{netInWords}</td></tr>
+                    </table>
+                    {(string.IsNullOrEmpty(verificationUrl) ? "" : $@"<p>You can verify this payslip online at: <a href=""{verificationUrl}"">{verificationUrl}</a></p>")}
+                    <p style=""color:#8b93a6;font-size:12px;"">This is a computer generated email from {companyName} HRMS and does not require a signature.</p>";
+
+                return await _emailSender.SendAsync(employee.Email, subject, body, isBodyHtml: true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "EmailPayslipAsync failed for payrollId {PayrollId}", payrollId);
+                return false;
+            }
+        }
+
         #endregion
 
         #region Dashboard
@@ -955,30 +1364,125 @@ namespace Application.Services.PayrollService
                 })
                 .ToList();
 
-            // Monthly trend for the year
-            var yearData = await _context.Payrolls
+            // Company-wide active employee count (independent of whether a
+            // payroll has been run for them this month).
+            dto.TotalActiveEmployees = await _context.Employees
+                .CountAsync(e => !e.IsDeleted && e.IsActive);
+
+            // Rolling last-6-months trend ending at the selected year/month
+            // (spans a year boundary correctly, e.g. Aug 2025 - Jan 2026).
+            var monthKeys = new List<(int Year, int Month)>();
+            {
+                int ry = year, rm = month;
+                for (int i = 0; i < 6; i++)
+                {
+                    monthKeys.Add((ry, rm));
+                    rm--;
+                    if (rm < 1) { rm = 12; ry--; }
+                }
+                monthKeys.Reverse();
+            }
+            var minOrdinal = monthKeys.Min(k => k.Year * 100 + k.Month);
+            var maxOrdinal = monthKeys.Max(k => k.Year * 100 + k.Month);
+
+            var trendData = await _context.Payrolls
                 .AsNoTracking()
-                .Where(p => !p.IsDeleted && p.SalaryYear == year)
-                .GroupBy(p => p.SalaryMonth)
+                .Where(p => !p.IsDeleted
+                    && (p.SalaryYear * 100 + p.SalaryMonth) >= minOrdinal
+                    && (p.SalaryYear * 100 + p.SalaryMonth) <= maxOrdinal)
+                .GroupBy(p => new { p.SalaryYear, p.SalaryMonth })
                 .Select(g => new
                 {
-                    Month = g.Key,
+                    g.Key.SalaryYear,
+                    g.Key.SalaryMonth,
+                    TotalGross = g.Sum(x => x.GrossSalary),
+                    TotalDeductions = g.Sum(x => x.TotalDeductions),
                     TotalNet = g.Sum(x => x.NetSalary),
                     Count = g.Count()
                 })
                 .ToListAsync();
 
-            for (int m = 1; m <= 12; m++)
+            foreach (var (ky, km) in monthKeys)
             {
-                var found = yearData.FirstOrDefault(x => x.Month == m);
+                var found = trendData.FirstOrDefault(x => x.SalaryYear == ky && x.SalaryMonth == km);
                 dto.MonthlyTrend.Add(new PayrollTrendPointDto
                 {
-                    Month = m,
-                    MonthName = MonthName(m),
+                    Year = ky,
+                    Month = km,
+                    MonthName = MonthName(km),
+                    TotalGross = found?.TotalGross ?? 0,
+                    TotalDeductions = found?.TotalDeductions ?? 0,
                     TotalNet = found?.TotalNet ?? 0,
                     Count = found?.Count ?? 0
                 });
             }
+
+            // Salary distribution for the selected month - grouped from
+            // existing PayrollDetail earning rows, never recalculated.
+            var earningRows = await _context.PayrollDetails
+                .AsNoTracking()
+                .Where(d => d.IsEarning
+                    && !d.Payroll.IsDeleted
+                    && d.Payroll.SalaryYear == year
+                    && d.Payroll.SalaryMonth == month)
+                .Select(d => new { Name = d.SalaryComponent != null ? d.SalaryComponent.Name : "Other", d.Amount })
+                .ToListAsync();
+
+            if (earningRows.Count > 0)
+            {
+                var grouped = earningRows
+                    .GroupBy(x => x.Name)
+                    .Select(g => new { Name = g.Key, Amount = g.Sum(x => x.Amount) })
+                    .OrderByDescending(x => x.Amount)
+                    .ToList();
+
+                decimal totalEarnings = grouped.Sum(x => x.Amount);
+                var top = grouped.Take(5).ToList();
+                var rest = grouped.Skip(5).Sum(x => x.Amount);
+
+                foreach (var g in top)
+                {
+                    dto.SalaryDistribution.Add(new PayrollSalaryDistributionItemDto
+                    {
+                        ComponentName = g.Name ?? "Other",
+                        Amount = g.Amount,
+                        Percentage = totalEarnings > 0 ? Math.Round(g.Amount * 100m / totalEarnings, 1) : 0
+                    });
+                }
+                if (rest > 0)
+                {
+                    dto.SalaryDistribution.Add(new PayrollSalaryDistributionItemDto
+                    {
+                        ComponentName = "Other Earnings",
+                        Amount = rest,
+                        Percentage = totalEarnings > 0 ? Math.Round(rest * 100m / totalEarnings, 1) : 0
+                    });
+                }
+            }
+
+            // Recent payroll payments (most recently processed first).
+            dto.RecentPayments = await _context.Payrolls
+                .AsNoTracking()
+                .Where(p => !p.IsDeleted)
+                .OrderByDescending(p => p.CreatedOn)
+                .Take(8)
+                .Select(p => new PayrollRecentPaymentDto
+                {
+                    Id = p.Id,
+                    EmployeeCode = p.Employee != null ? p.Employee.EmployeeCode : null,
+                    EmployeeName = p.Employee != null ? p.Employee.FirstName + " " + p.Employee.LastName : null,
+                    DepartmentName = p.Employee != null && p.Employee.Department != null ? p.Employee.Department.Name : null,
+                    SalaryYear = p.SalaryYear,
+                    SalaryMonth = p.SalaryMonth,
+                    GrossSalary = p.GrossSalary,
+                    Deductions = p.TotalDeductions,
+                    NetSalary = p.NetSalary,
+                    Status = p.Status
+                })
+                .ToListAsync();
+
+            foreach (var rp in dto.RecentPayments)
+                rp.MonthName = MonthName(rp.SalaryMonth);
 
             // Setup coverage
             dto.SalaryStructureCount = await _context.SalaryStructures.CountAsync(x => !x.IsDeleted);

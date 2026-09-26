@@ -1,13 +1,22 @@
 @model IEnumerable<PayrollListDto>
+@using APP.Models.DTOs
 
 @{
     ViewData["Title"] = "Payroll Register";
     int selYear = ViewBag.Year != null ? (int)ViewBag.Year : DateTime.UtcNow.Year;
-    int selMonth = ViewBag.Month != null ? (int)ViewBag.Month : 0;
+    int selMonth = ViewBag.Month != null ? (int)ViewBag.Month : DateTime.UtcNow.Month;
     string selStatus = ViewBag.Status as string ?? "";
+    string selDept = ViewBag.DepartmentId as string ?? "";
+    string selDesig = ViewBag.DesignationId as string ?? "";
+    string selEmpStatus = ViewBag.EmployeeStatus as string ?? "active";
+    string selSearch = ViewBag.Search as string ?? "";
+    var departments = ViewBag.Departments as List<DropdownDto> ?? new();
+    var designations = ViewBag.Designations as List<DropdownDto> ?? new();
+    string? loadError = ViewBag.LoadError as string;
 
     var rows = Model?.ToList() ?? new List<PayrollListDto>();
     decimal totalGross = rows.Sum(x => x.GrossSalary);
+    decimal totalDeductions = rows.Sum(x => x.Deductions);
     decimal totalNet = rows.Sum(x => x.NetSalary);
 
     string StatusLabel(string? s) => s switch
@@ -15,37 +24,102 @@
         "Draft" => "bg-grey",
         "Processed" => "bg-primary",
         "Paid" => "bg-success",
-        _ => "bg-info"
+        _ => "bg-warning"
     };
+
+    string exportQuery = $"year={selYear}&month={selMonth}"
+        + (!string.IsNullOrEmpty(selStatus) ? $"&status={selStatus}" : "")
+        + (!string.IsNullOrEmpty(selDept) ? $"&departmentId={selDept}" : "")
+        + (!string.IsNullOrEmpty(selDesig) ? $"&designationId={selDesig}" : "")
+        + (!string.IsNullOrEmpty(selEmpStatus) ? $"&employeeStatus={selEmpStatus}" : "")
+        + (!string.IsNullOrEmpty(selSearch) ? $"&search={Uri.EscapeDataString(selSearch)}" : "");
 }
 
-<div class="panel panel-flat">
+@*
+    Redesigned Payroll Register - same "ent-*"/"pdb-*" enterprise visual
+    language as Payroll/Dashboard.cshtml. Filtering stays a normal GET
+    form submit (server-side, via PayrollController.Report ->
+    PayrollBusinessService.GetAllAsync's new optional filter parameters) -
+    consistent with this page's existing convention and with
+    Payroll/Generate.cshtml's own year/month filters, rather than adding a
+    new AJAX/JSON endpoint. Pagination/sorting/search-within-results reuse
+    the DataTables plugin already bundled and already used the same way on
+    other list pages (e.g. Views/AdvanceType/Index.cshtml) - no new
+    dependency, no unbounded client-side dataset (the server already
+    filtered by month + the toolbar filters before this table renders).
+*@
 
-    <div class="panel-heading">
-        <h5 class="panel-title"><i class="icon-file-text2 position-left"></i> Payroll Register</h5>
-        <div class="heading-elements">
-            <button onclick="exportCsv()" class="btn btn-default btn-xs"><i class="icon-file-excel"></i> CSV</button>
-            <button onclick="window.print()" class="btn btn-default btn-xs"><i class="icon-printer"></i> Print</button>
-            <a asp-action="Dashboard" class="btn btn-default btn-xs"><i class="icon-stats-bars"></i> Dashboard</a>
+<style>
+    .pdb-breadcrumb { font-size: 12px; color: #8896ad; margin-bottom: 4px; }
+    .pdb-breadcrumb a { color: #8896ad; }
+    .pdb-breadcrumb a:hover { color: #4e9cff; text-decoration: none; }
+
+    .reg-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 20px; }
+    .reg-header-left { display: flex; gap: 14px; align-items: flex-start; }
+    .reg-header-icon {
+        width: 52px; height: 52px; border-radius: 12px; flex-shrink: 0;
+        background: linear-gradient(135deg, var(--ent-blue), var(--ent-indigo-dark));
+        color: #fff; display: flex; align-items: center; justify-content: center; font-size: 22px;
+    }
+    .reg-title { margin: 0; font-size: 22px; font-weight: 700; color: var(--ent-text-heading); }
+    .reg-subtitle { margin: 2px 0 0; color: var(--ent-text-muted); font-size: 13px; }
+    .reg-period-label { font-size: 11px; text-transform: uppercase; letter-spacing: .4px; color: var(--ent-text-muted); display: block; margin-bottom: 4px; }
+
+    .reg-kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+    .reg-kpi-card { border-radius: var(--ent-radius-lg); padding: 18px; display: flex; gap: 14px; align-items: flex-start; border: 1px solid var(--ent-border); box-shadow: var(--ent-shadow-sm); }
+    .reg-kpi-icon { width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 19px; }
+    .reg-kpi-green  { background: #e9f9f2; } .reg-kpi-green  .reg-kpi-icon { background: var(--ent-green-dark); }
+    .reg-kpi-blue   { background: #eaf3ff; } .reg-kpi-blue   .reg-kpi-icon { background: var(--ent-blue-dark); }
+    .reg-kpi-red    { background: #fdecec; } .reg-kpi-red    .reg-kpi-icon { background: var(--ent-red-dark); }
+    .reg-kpi-purple { background: #f2ecff; } .reg-kpi-purple .reg-kpi-icon { background: var(--ent-indigo-dark); }
+    .reg-kpi-title { font-size: 12.5px; font-weight: 600; color: var(--ent-text-body); margin: 0 0 2px; }
+    .reg-kpi-value { font-size: 21px; font-weight: 700; color: var(--ent-text-heading); line-height: 1.25; }
+    .reg-kpi-sub { font-size: 11px; color: var(--ent-text-muted); }
+    @@media (max-width: 991px) { .reg-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+    @@media (max-width: 480px) { .reg-kpi-grid { grid-template-columns: 1fr; } }
+
+    .reg-panel { background: var(--ent-surface); border: 1px solid var(--ent-border); border-radius: var(--ent-radius-lg); box-shadow: var(--ent-shadow-sm); margin-bottom: 20px; }
+    .reg-filter-bar { padding: 16px 18px; border-bottom: 1px solid var(--ent-border-soft); }
+    .reg-filter-bar .form-group { margin-right: 10px; margin-bottom: 8px; }
+    .reg-filter-bar label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .3px; color: var(--ent-text-muted); margin-bottom: 3px; }
+    .reg-filter-bar .form-control { min-width: 160px; }
+
+    .reg-action-bar { padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--ent-border-soft); }
+    .reg-action-bar .btn { margin-right: 6px; }
+
+    .reg-net { color: var(--ent-indigo-dark); font-weight: 700; }
+    .reg-empty { text-align: center; color: var(--ent-text-muted); padding: 30px 10px; font-size: 13px; }
+
+    @@media print {
+        .hidden-print, .sidebar, .navbar, .page-header, .breadcrumb-line, .footer, .heading-elements, .reg-filter-bar, .reg-action-bar { display: none !important; }
+        .content-wrapper, .content, .page-content { margin: 0 !important; padding: 0 !important; }
+    }
+</style>
+
+<div class="pdb-breadcrumb hidden-print">
+    <a asp-controller="Home" asp-action="Index"><i class="icon-home2"></i> Home</a> &gt;
+    <a asp-action="Index">Payroll</a> &gt; <strong>Payroll Register</strong>
+</div>
+
+<div class="reg-header hidden-print">
+    <div class="reg-header-left">
+        <div class="reg-header-icon"><i class="icon-file-text2"></i></div>
+        <div>
+            <h4 class="reg-title">Payroll Register</h4>
+            <p class="reg-subtitle">Month wise employee salary register with earnings, deductions and net pay details</p>
         </div>
     </div>
 
-    <div class="panel-body hidden-print">
-        <form asp-action="Report" method="get" class="form-inline">
-            <div class="form-group">
-                <label>Year</label>
-                <select name="year" class="form-control" style="margin:0 8px;">
-                    @for (int y = DateTime.UtcNow.Year; y >= DateTime.UtcNow.Year - 5; y--)
-                    {
-                        if (y == selYear) { <option value="@y" selected>@y</option> }
-                        else { <option value="@y">@y</option> }
-                    }
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Month</label>
-                <select name="month" class="form-control" style="margin:0 8px;">
-                    <option value="0">All</option>
+    <form asp-action="Report" method="get" id="periodForm" style="display:flex; align-items:flex-end; gap:10px;">
+        <input type="hidden" name="status" value="@selStatus" />
+        <input type="hidden" name="departmentId" value="@selDept" />
+        <input type="hidden" name="designationId" value="@selDesig" />
+        <input type="hidden" name="employeeStatus" value="@selEmpStatus" />
+        <input type="hidden" name="search" value="@selSearch" />
+        <div>
+            <label class="reg-period-label"><i class="icon-calendar3"></i> Month &amp; Year</label>
+            <div style="display:flex; gap:6px;">
+                <select name="month" class="form-control">
                     @for (int m = 1; m <= 12; m++)
                     {
                         var name = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m);
@@ -53,40 +127,137 @@
                         else { <option value="@m">@name</option> }
                     }
                 </select>
-            </div>
-            <div class="form-group">
-                <label>Status</label>
-                <select name="status" class="form-control" style="margin:0 8px;">
-                    <option value="">All</option>
-                    <option value="Draft" selected="@(selStatus == "Draft")">Draft</option>
-                    <option value="Processed" selected="@(selStatus == "Processed")">Processed</option>
-                    <option value="Paid" selected="@(selStatus == "Paid")">Paid</option>
+                <select name="year" class="form-control">
+                    @for (int y = DateTime.UtcNow.Year; y >= DateTime.UtcNow.Year - 5; y--)
+                    {
+                        if (y == selYear) { <option value="@y" selected>@y</option> }
+                        else { <option value="@y">@y</option> }
+                    }
                 </select>
             </div>
-            <button type="submit" class="btn bg-primary"><i class="icon-search4"></i> Filter</button>
-        </form>
-    </div>
+        </div>
+        <button type="submit" class="btn bg-primary"><i class="icon-search4 position-left"></i> Search</button>
+    </form>
+</div>
 
-    <div class="panel-body" style="border-bottom:1px solid #ddd;">
-        <div class="row text-center">
-            <div class="col-md-4"><span class="text-muted">Records</span><h4 class="no-margin-top">@rows.Count</h4></div>
-            <div class="col-md-4"><span class="text-muted">Total Gross</span><h4 class="no-margin-top text-success">₹ @totalGross.ToString("N2")</h4></div>
-            <div class="col-md-4"><span class="text-muted">Total Net</span><h4 class="no-margin-top text-primary">₹ @totalNet.ToString("N2")</h4></div>
+@if (!string.IsNullOrEmpty(loadError))
+{
+    <div class="alert alert-danger hidden-print"><i class="icon-warning22 position-left"></i> @loadError</div>
+}
+
+<!-- KPI cards -->
+<div class="reg-kpi-grid hidden-print">
+    <div class="reg-kpi-card reg-kpi-green">
+        <span class="reg-kpi-icon"><i class="icon-users"></i></span>
+        <div>
+            <p class="reg-kpi-title">Total Employees</p>
+            <div class="reg-kpi-value">@rows.Count</div>
+            <span class="reg-kpi-sub">Employees in selected month</span>
+        </div>
+    </div>
+    <div class="reg-kpi-card reg-kpi-blue">
+        <span class="reg-kpi-icon"><i class="icon-wallet"></i></span>
+        <div>
+            <p class="reg-kpi-title">Total Gross Salary</p>
+            <div class="reg-kpi-value">₹ @totalGross.ToString("N2")</div>
+        </div>
+    </div>
+    <div class="reg-kpi-card reg-kpi-red">
+        <span class="reg-kpi-icon"><i class="icon-minus-circle2"></i></span>
+        <div>
+            <p class="reg-kpi-title">Total Deductions</p>
+            <div class="reg-kpi-value">₹ @totalDeductions.ToString("N2")</div>
+        </div>
+    </div>
+    <div class="reg-kpi-card reg-kpi-purple">
+        <span class="reg-kpi-icon"><i class="icon-coin-dollar"></i></span>
+        <div>
+            <p class="reg-kpi-title">Total Net Pay</p>
+            <div class="reg-kpi-value">₹ @totalNet.ToString("N2")</div>
+        </div>
+    </div>
+</div>
+
+<div class="reg-panel">
+    <!-- Filter toolbar -->
+    <form asp-action="Report" method="get" class="reg-filter-bar hidden-print form-inline">
+        <input type="hidden" name="year" value="@selYear" />
+        <input type="hidden" name="month" value="@selMonth" />
+        <div class="form-group">
+            <label>Department</label>
+            <select name="departmentId" class="form-control">
+                <option value="">All Departments</option>
+                @foreach (var d in departments)
+                {
+                    if (d.Value == selDept) { <option value="@d.Value" selected>@d.Text</option> }
+                    else { <option value="@d.Value">@d.Text</option> }
+                }
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Designation</label>
+            <select name="designationId" class="form-control">
+                <option value="">All Designations</option>
+                @foreach (var d in designations)
+                {
+                    if (d.Value == selDesig) { <option value="@d.Value" selected>@d.Text</option> }
+                    else { <option value="@d.Value">@d.Text</option> }
+                }
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Employee Status</label>
+            <select name="employeeStatus" class="form-control">
+                <option value="active" selected="@(selEmpStatus == "active")">Active Employees</option>
+                <option value="inactive" selected="@(selEmpStatus == "inactive")">Inactive Employees</option>
+                <option value="" selected="@(selEmpStatus == "")">All</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Payment Status</label>
+            <select name="status" class="form-control">
+                <option value="" selected="@(selStatus == "")">All</option>
+                <option value="Draft" selected="@(selStatus == "Draft")">Draft</option>
+                <option value="Processed" selected="@(selStatus == "Processed")">Processed</option>
+                <option value="Paid" selected="@(selStatus == "Paid")">Paid</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Search</label>
+            <input type="text" name="search" value="@selSearch" class="form-control" placeholder="Emp Code, Name..." />
+        </div>
+        <div class="form-group" style="align-self:flex-end;">
+            <button type="submit" class="btn bg-primary"><i class="icon-search4 position-left"></i> Apply</button>
+            <a asp-action="Report" asp-route-year="@selYear" asp-route-month="@selMonth" class="btn btn-default"><i class="icon-reset position-left"></i> Reset</a>
+        </div>
+    </form>
+
+    <!-- Action bar -->
+    <div class="reg-action-bar hidden-print">
+        <div>
+            <a asp-action="Generate" class="btn bg-success"><i class="icon-plus3 position-left"></i> Process Payroll</a>
+            <a asp-action="ExportRegister" asp-route-year="@selYear" asp-route-month="@selMonth" asp-route-status="@selStatus" asp-route-departmentId="@selDept" asp-route-designationId="@selDesig" asp-route-employeeStatus="@selEmpStatus" asp-route-search="@selSearch" class="btn bg-blue"><i class="icon-file-excel position-left"></i> Export to Excel</a>
+            <button type="button" onclick="window.print()" class="btn bg-danger"><i class="icon-file-pdf position-left"></i> Export to PDF</button>
+            <button type="button" onclick="window.print()" class="btn btn-default"><i class="icon-printer position-left"></i> Print Register</button>
         </div>
     </div>
 
     <div class="table-responsive">
-        <table class="table table-striped" id="reportTable">
+        <table class="table table-striped datatable-basic" id="registerTable" style="width:100%;">
             <thead>
                 <tr>
-                    <th width="50">#</th>
-                    <th>Employee</th>
-                    <th>Code</th>
-                    <th>Period</th>
-                    <th class="text-center">Present/Working</th>
-                    <th class="text-right">Gross</th>
-                    <th class="text-right">Net</th>
-                    <th>Status</th>
+                    <th width="40">#</th>
+                    <th>Employee Code</th>
+                    <th>Employee Name</th>
+                    <th>Department</th>
+                    <th>Designation</th>
+                    <th class="text-right">Basic Salary (₹)</th>
+                    <th class="text-right">Allowances (₹)</th>
+                    <th class="text-right">Gross Salary (₹)</th>
+                    <th class="text-right">Deductions (₹)</th>
+                    <th class="text-right">Net Pay (₹)</th>
+                    <th>Payment Status</th>
+                    <th class="text-center hidden-print">Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -97,69 +268,60 @@
                     {
                         <tr>
                             <td>@sr</td>
-                            <td>@item.EmployeeName</td>
                             <td>@item.EmployeeCode</td>
-                            <td>@item.MonthName @item.SalaryYear</td>
-                            <td class="text-center">@(item.PresentDays?.ToString("0.#") ?? "-") / @(item.TotalWorkingDays?.ToString("0.#") ?? "-")</td>
-                            <td class="text-right">@item.GrossSalary.ToString("N2")</td>
-                            <td class="text-right">@item.NetSalary.ToString("N2")</td>
+                            <td>@item.EmployeeName</td>
+                            <td>@(item.DepartmentName ?? "-")</td>
+                            <td>@(item.DesignationName ?? "-")</td>
+                            <td class="text-right" data-order="@item.BasicSalary">@item.BasicSalary.ToString("N2")</td>
+                            <td class="text-right" data-order="@item.Allowances">@item.Allowances.ToString("N2")</td>
+                            <td class="text-right" data-order="@item.GrossSalary">@item.GrossSalary.ToString("N2")</td>
+                            <td class="text-right" data-order="@item.Deductions">@item.Deductions.ToString("N2")</td>
+                            <td class="text-right reg-net" data-order="@item.NetSalary">@item.NetSalary.ToString("N2")</td>
                             <td><span class="label @StatusLabel(item.Status)">@item.Status</span></td>
+                            <td class="text-center hidden-print">
+                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-default btn-icon btn-xs" title="View Payroll Details"><i class="icon-eye"></i></a>
+                                <a asp-action="Payslip" asp-route-id="@item.Id" target="_blank" class="btn btn-default btn-icon btn-xs" title="Payslip / PDF"><i class="icon-file-pdf"></i></a>
+                            </td>
                         </tr>
                         sr++;
                     }
                 }
-                else
-                {
-                    <tr><td colspan="8" class="text-center text-muted" style="padding:30px;">No records for the selected filters.</td></tr>
-                }
             </tbody>
             <tfoot>
                 <tr>
-                    <th colspan="5" class="text-right">Total</th>
-                    <th class="text-right">₹ @totalGross.ToString("N2")</th>
+                    <th colspan="8" class="text-right">Total</th>
+                    <th class="text-right">₹ @totalDeductions.ToString("N2")</th>
                     <th class="text-right">₹ @totalNet.ToString("N2")</th>
                     <th></th>
+                    <th class="hidden-print"></th>
                 </tr>
             </tfoot>
         </table>
+        @if (!rows.Any())
+        {
+            <div class="reg-empty"><i class="icon-file-text2" style="font-size:28px;display:block;margin-bottom:8px;opacity:.4;"></i>No records for the selected filters.</div>
+        }
     </div>
 </div>
 
 @section Scripts {
+    <script src="~/global_assets/js/plugins/tables/datatables/datatables.min.js"></script>
     <script>
-        function exportCsv() {
-            var rows = [];
-            var header = ["#", "Employee", "Code", "Period", "Present", "Working", "Gross", "Net", "Status"];
-            rows.push(header.join(","));
-            $("#reportTable tbody tr").each(function () {
-                var cols = $(this).find("td");
-                if (cols.length < 8) return;
-                var present = $(cols[4]).text().trim();
-                var line = [
-                    $(cols[0]).text().trim(),
-                    '"' + $(cols[1]).text().trim() + '"',
-                    $(cols[2]).text().trim(),
-                    '"' + $(cols[3]).text().trim() + '"',
-                    '"' + present + '"',
-                    "",
-                    $(cols[5]).text().trim().replace(/,/g, ""),
-                    $(cols[6]).text().trim().replace(/,/g, ""),
-                    $(cols[7]).text().trim()
-                ];
-                rows.push(line.join(","));
-            });
-            var csv = rows.join("\n");
-            var blob = new Blob([csv], { type: "text/csv" });
-            var link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = "payroll-register-@(selYear).csv";
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
+        $(function () {
+            if ($.fn.DataTable && $('#registerTable tbody tr').length) {
+                $('#registerTable').DataTable({
+                    autoWidth: false,
+                    paging: true,
+                    ordering: true,
+                    info: true,
+                    searching: true,
+                    pageLength: 10,
+                    lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                    order: [],
+                    columnDefs: [{ orderable: false, searchable: false, targets: -1 }],
+                    language: { search: "_INPUT_", searchPlaceholder: "Quick search this page..." }
+                });
+            }
+        });
     </script>
-    <style media="print">
-        .hidden-print, .sidebar, .navbar, .page-header, .breadcrumb-line, .footer, .heading-elements { display: none !important; }
-        .content-wrapper, .content, .page-content { margin: 0 !important; padding: 0 !important; }
-    </style>
 }

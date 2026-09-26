@@ -85,16 +85,6 @@
     {
         <script>$(function(){ swal({ title:"Error", text:"@TempData["GlobalError"]", type:"error" }); });</script>
     }
-    <script>
-        $(function () {
-            $("#searchInput").on("keyup", function () {
-                var value = $(this).val().toLowerCase();
-                $("#dataTable tr").filter(function () {
-                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
-                });
-            });
-        });
-    </script>
     <style>
         .btn-icon { width: 34px; }
     </style>

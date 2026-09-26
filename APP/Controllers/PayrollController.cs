@@ -1,4 +1,5 @@
 using APP.Attributes;
+using APP.Excel;
 using APP.Helpers;
 using APP.Models.DTOs;
 using APP.Services.Interfaces;
@@ -13,6 +14,7 @@ namespace APP.Controllers
     public class PayrollController : Controller
     {
         private readonly IApiService _apiService;
+        private readonly IExcelEngine _excelEngine;
         private string _tenantId;
         private string _userId;
 
@@ -25,9 +27,10 @@ namespace APP.Controllers
         // nothing else, enforced server-side here.
         private readonly bool _isAdmin;
 
-        public PayrollController(IApiService apiService)
+        public PayrollController(IApiService apiService, IExcelEngine excelEngine)
         {
             _apiService = apiService;
+            _excelEngine = excelEngine;
             _tenantId = SessionHelper.GetActiveTenantId;
             _userId = SessionHelper.GetActiveUserId;
             _employeeId = SessionHelper.GetActiveEmployeeId;
@@ -256,25 +259,102 @@ namespace APP.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Report(int? year = null, int? month = null, string? status = null)
+        public async Task<IActionResult> Report(
+            int? year = null,
+            int? month = null,
+            string? status = null,
+            string? departmentId = null,
+            string? designationId = null,
+            string? employeeStatus = null,
+            string? search = null)
         {
             if (!_isAdmin)
                 return RedirectToAction(nameof(MyPayslips));
 
             int y = year ?? DateTime.UtcNow.Year;
+            int m = month ?? DateTime.UtcNow.Month;
 
-            var url = $"payroll?year={y}";
-            if (month.HasValue && month.Value > 0) url += $"&month={month.Value}";
-
-            var data = await _apiService.GetAsync<List<PayrollListDto>>(url);
-
-            if (!string.IsNullOrEmpty(status))
-                data = data.Where(x => x.Status == status).ToList();
+            List<PayrollListDto> data;
+            try
+            {
+                data = await _apiService.GetAsync<List<PayrollListDto>>(BuildRegisterQuery(y, m, status, departmentId, designationId, employeeStatus, search)) ?? new();
+            }
+            catch (ApiException)
+            {
+                data = new List<PayrollListDto>();
+                ViewBag.LoadError = "Could not load the payroll register right now. Please try again in a moment.";
+            }
 
             ViewBag.Year = y;
-            ViewBag.Month = month ?? 0;
+            ViewBag.Month = m;
             ViewBag.Status = status ?? "";
+            ViewBag.DepartmentId = departmentId ?? "";
+            ViewBag.DesignationId = designationId ?? "";
+            ViewBag.EmployeeStatus = string.IsNullOrEmpty(employeeStatus) ? "active" : employeeStatus;
+            ViewBag.Search = search ?? "";
+
+            var departments = await _apiService.GetAsync<List<DropdownDto>>("dropdown/department") ?? new();
+            var designations = await _apiService.GetAsync<List<DropdownDto>>("dropdown/designation") ?? new();
+            ViewBag.Departments = departments;
+            ViewBag.Designations = designations;
+
             return View(data);
+        }
+
+        // Excel export for the Payroll Register - reuses the shared
+        // IExcelEngine (same engine behind Employee/SalaryComponent export)
+        // instead of a one-off ClosedXML implementation here, and re-applies
+        // the same filters as the on-screen Register so the file always
+        // matches what the user is looking at.
+        [HttpGet]
+        public async Task<IActionResult> ExportRegister(
+            int? year = null,
+            int? month = null,
+            string? status = null,
+            string? departmentId = null,
+            string? designationId = null,
+            string? employeeStatus = null,
+            string? search = null)
+        {
+            if (!_isAdmin)
+                return Forbid();
+
+            int y = year ?? DateTime.UtcNow.Year;
+            int m = month ?? DateTime.UtcNow.Month;
+
+            var data = await _apiService.GetAsync<List<PayrollListDto>>(BuildRegisterQuery(y, m, status, departmentId, designationId, employeeStatus, search)) ?? new();
+
+            var columns = new List<ExcelColumn<PayrollListDto>>
+            {
+                new ExcelColumn<PayrollListDto>("Employee Code", x => x.EmployeeCode, (_, _) => { }),
+                new ExcelColumn<PayrollListDto>("Employee Name", x => x.EmployeeName, (_, _) => { }),
+                new ExcelColumn<PayrollListDto>("Department", x => x.DepartmentName, (_, _) => { }),
+                new ExcelColumn<PayrollListDto>("Designation", x => x.DesignationName, (_, _) => { }),
+                new ExcelColumn<PayrollListDto>("Basic Salary", x => x.BasicSalary, (_, _) => { }),
+                new ExcelColumn<PayrollListDto>("Allowances", x => x.Allowances, (_, _) => { }),
+                new ExcelColumn<PayrollListDto>("Gross Salary", x => x.GrossSalary, (_, _) => { }),
+                new ExcelColumn<PayrollListDto>("Deductions", x => x.Deductions, (_, _) => { }),
+                new ExcelColumn<PayrollListDto>("Net Pay", x => x.NetSalary, (_, _) => { }),
+                new ExcelColumn<PayrollListDto>("Payment Status", x => x.Status, (_, _) => { }),
+            };
+
+            var bytes = _excelEngine.Export(data, columns, "Payroll Register");
+            var fileName = $"PayrollRegister_{y}_{m:00}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+
+            return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+
+        private static string BuildRegisterQuery(
+            int year, int month, string? status, string? departmentId,
+            string? designationId, string? employeeStatus, string? search)
+        {
+            var url = $"payroll?year={year}&month={month}";
+            if (!string.IsNullOrEmpty(status)) url += $"&paymentStatus={Uri.EscapeDataString(status)}";
+            if (!string.IsNullOrEmpty(departmentId)) url += $"&departmentId={Uri.EscapeDataString(departmentId)}";
+            if (!string.IsNullOrEmpty(designationId)) url += $"&designationId={Uri.EscapeDataString(designationId)}";
+            if (!string.IsNullOrEmpty(employeeStatus)) url += $"&employeeStatus={Uri.EscapeDataString(employeeStatus)}";
+            if (!string.IsNullOrEmpty(search)) url += $"&search={Uri.EscapeDataString(search)}";
+            return url;
         }
 
         // Admin-only direct payslip lookup by Payroll id, kept for HR/Admin
@@ -290,13 +370,78 @@ namespace APP.Controllers
             if (!_isAdmin)
                 return RedirectToAction("MyRequests", "PayslipRequest");
 
-            // Ensure a payslip record exists, then show the printable view
+            // Ensure a Payslip audit record exists (unchanged behavior),
+            // then load the redesigned, fully-formatted payslip document.
             await _apiService.PostAsync<dynamic>($"payroll/payslip/{id}?userId={_userId}", new { });
 
-            var data = await _apiService.GetAsync<PayrollDto>($"payroll/payslip/{id}");
+            PayslipDto? data;
+            try
+            {
+                data = await _apiService.GetAsync<PayslipDto>($"payroll/payslip-document/{id}");
+            }
+            catch (ApiException)
+            {
+                // 403/404 from the API (wrong tenant, or the payroll no
+                // longer exists) - never distinguish the two to the caller.
+                return NotFound();
+            }
+
+            if (data == null)
+                return NotFound();
+
+            // Presentation-only: the absolute verification URL and its QR
+            // code image are built here, never in the API/Application
+            // layer (see PayslipDto's VerificationUrl remarks).
+            if (!string.IsNullOrEmpty(data.VerificationToken))
+            {
+                data.VerificationUrl = Url.Action(
+                    nameof(PayslipVerificationController.Verify),
+                    "PayslipVerification",
+                    new { token = data.VerificationToken },
+                    Request.Scheme);
+
+                data.VerificationQrCodeDataUri = QrCodeHelper.GeneratePngDataUri(data.VerificationUrl);
+            }
 
             ViewBag.IsAdmin = _isAdmin;
             return View(data);
+        }
+
+        // Toolbar "Email Payslip" button - posts back the same
+        // verification URL the page rendered with (built client-side, no
+        // second Url.Action round trip needed) and redirects back to the
+        // payslip with a SweetAlert result.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EmailPayslip(string id, string? verificationUrl)
+        {
+            if (!_isAdmin)
+                return Forbid();
+
+            try
+            {
+                var url = $"payroll/payslip-document/{id}/email";
+                if (!string.IsNullOrEmpty(verificationUrl))
+                    url += $"?verificationUrl={Uri.EscapeDataString(verificationUrl)}";
+
+                var result = await _apiService.PostAsync<dynamic>(url, new { });
+
+                bool sent = false;
+                string? message = null;
+                if (result is Newtonsoft.Json.Linq.JObject resultObj)
+                {
+                    sent = resultObj.Value<bool?>("Sent") ?? false;
+                    message = resultObj.Value<string?>("Message");
+                }
+
+                TempData[sent ? "Success" : "Error"] = message ?? (sent ? "Payslip emailed successfully." : "Could not email this payslip.");
+            }
+            catch (ApiException apiEx)
+            {
+                TempData["Error"] = GetErrorMessage(apiEx.ResponseContent);
+            }
+
+            return RedirectToAction(nameof(Payslip), new { id });
         }
 
         #region Load Dropdowns

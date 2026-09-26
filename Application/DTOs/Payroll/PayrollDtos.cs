@@ -261,6 +261,7 @@ namespace Application.DTOs.Payroll
         public string EmployeeId { get; set; }
         public string? EmployeeName { get; set; }
         public string? EmployeeCode { get; set; }
+        public string? EmployeePhotoUrl { get; set; }
 
         // Payslip letterhead / employee-detail fields - all optional/nullable
         // since not every employee has a PF or bank record on file, and a
@@ -336,7 +337,17 @@ namespace Application.DTOs.Payroll
         public int SalaryYear { get; set; }
         public int SalaryMonth { get; set; }
         public string? MonthName { get; set; }
+        public string? DepartmentName { get; set; }
+        public string? DesignationName { get; set; }
+        // Both derived from existing PayrollDetail rows for this payroll
+        // (Code == "BASIC" vs. other earning components) - a display split
+        // of the already-final GrossSalary, never a recalculation of it.
+        public decimal BasicSalary { get; set; }
+        public decimal Allowances { get; set; }
         public decimal GrossSalary { get; set; }
+        // Sourced directly from Payroll.TotalDeductions (the payroll engine's
+        // own stored figure) - never recomputed as Gross - Net here.
+        public decimal Deductions { get; set; }
         public decimal NetSalary { get; set; }
         public decimal? PresentDays { get; set; }
         public decimal? TotalWorkingDays { get; set; }
@@ -490,14 +501,53 @@ namespace Application.DTOs.Payroll
         public int SalaryStructureCount { get; set; }
         public int SalaryComponentCount { get; set; }
 
+        // Company-wide active employee count (NOT limited to employees who
+        // have a payroll record for the selected month - EmployeesPaid above
+        // is that narrower count). Used for the "Total Employees" KPI card.
+        public int TotalActiveEmployees { get; set; }
+
         public List<PayrollTrendPointDto> MonthlyTrend { get; set; } = new();
         public List<PayrollTopEarnerDto> TopEarners { get; set; } = new();
+
+        // Earning-component breakdown for the selected month, derived purely
+        // from existing PayrollDetail rows (IsEarning == true) grouped by
+        // SalaryComponent name - never a recalculation of payroll amounts.
+        public List<PayrollSalaryDistributionItemDto> SalaryDistribution { get; set; } = new();
+
+        // Most recently processed payroll records (latest first), for the
+        // "Recent Payroll Payments" table.
+        public List<PayrollRecentPaymentDto> RecentPayments { get; set; } = new();
+    }
+
+    public class PayrollSalaryDistributionItemDto
+    {
+        public string ComponentName { get; set; } = "";
+        public decimal Amount { get; set; }
+        public decimal Percentage { get; set; }
+    }
+
+    public class PayrollRecentPaymentDto
+    {
+        public string Id { get; set; } = "";
+        public string? EmployeeCode { get; set; }
+        public string? EmployeeName { get; set; }
+        public string? DepartmentName { get; set; }
+        public int SalaryYear { get; set; }
+        public int SalaryMonth { get; set; }
+        public string? MonthName { get; set; }
+        public decimal GrossSalary { get; set; }
+        public decimal Deductions { get; set; }
+        public decimal NetSalary { get; set; }
+        public string? Status { get; set; }
     }
 
     public class PayrollTrendPointDto
     {
+        public int Year { get; set; }
         public int Month { get; set; }
         public string? MonthName { get; set; }
+        public decimal TotalGross { get; set; }
+        public decimal TotalDeductions { get; set; }
         public decimal TotalNet { get; set; }
         public int Count { get; set; }
     }

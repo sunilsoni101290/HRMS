@@ -40,6 +40,12 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="NuGet.Packaging" Version="6.12.1" />
     <PackageReference Include="NuGet.Protocol" Version="6.12.1" />
+    <!-- Payslip "Scan to Verify" QR code (Payroll/Payslip.cshtml) - a
+         small, single-purpose, dependency-free QR encoder. Used ONLY here
+         in the presentation layer (see APP/Helpers/QrCodeHelper.cs); the
+         Application/API layer never references it. Run `dotnet restore`
+         after pulling this change. -->
+    <PackageReference Include="QRCoder" Version="1.4.3" />
   </ItemGroup>
 
   <ItemGroup>

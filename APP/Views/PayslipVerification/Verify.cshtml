@@ -1,0 +1,71 @@
+@model PayslipVerificationResultDto
+@{
+    ViewData["Title"] = "Payslip Verification";
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Payslip Verification</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <style>
+        body {
+            font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+            background: #eef1f6;
+            margin: 0;
+            padding: 40px 16px;
+            display: flex;
+            justify-content: center;
+        }
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 6px 24px rgba(15,30,60,.12);
+            max-width: 420px;
+            width: 100%;
+            padding: 32px 28px;
+            text-align: center;
+        }
+        .badge {
+            width: 56px; height: 56px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 16px; font-size: 26px; color: #fff;
+        }
+        .badge.ok { background: #1c7a4d; }
+        .badge.fail { background: #b23a48; }
+        h4 { margin: 0 0 6px; color: #0f2a52; font-weight: 800; }
+        p.sub { color: #5b6b83; font-size: 13px; margin: 0 0 20px; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        table td { padding: 6px 0; border-bottom: 1px solid #eef1f6; font-size: 13px; }
+        table td.label { color: #5b6b83; width: 45%; }
+        table td.value { font-weight: 700; color: #1f2733; }
+        .footer-note { margin-top: 20px; font-size: 11px; color: #9aa5b8; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        @if (Model.IsValid)
+        {
+            <div class="badge ok">&#10003;</div>
+            <h4>Payslip Verified</h4>
+            <p class="sub">This payslip was genuinely issued by @(Model.CompanyName ?? "the company").</p>
+            <table>
+                <tr><td class="label">Employee</td><td class="value">@(Model.EmployeeName ?? "-")@(string.IsNullOrEmpty(Model.EmployeeCode) ? "" : $" ({Model.EmployeeCode})")</td></tr>
+                <tr><td class="label">Company</td><td class="value">@(Model.CompanyName ?? "-")</td></tr>
+                <tr><td class="label">Salary Period</td><td class="value">@(Model.MonthName ?? "-") @Model.SalaryYear</td></tr>
+                <tr><td class="label">Net Pay</td><td class="value">&#8377; @Model.NetSalary.ToString("N2")</td></tr>
+                <tr><td class="label">Status</td><td class="value">@(Model.Status ?? "-")</td></tr>
+            </table>
+        }
+        else
+        {
+            <div class="badge fail">&#10007;</div>
+            <h4>Could Not Verify</h4>
+            <p class="sub">This link is invalid, expired, or the payslip it points to no longer exists.</p>
+        }
+        <p class="footer-note">HRMS Payslip Verification</p>
+    </div>
+</body>
+</html>

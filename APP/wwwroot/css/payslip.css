@@ -1,0 +1,292 @@
+/* ==========================================================================
+   Payslip - corporate A4 payroll document (Views/Payroll/Payslip.cshtml)
+   ==========================================================================
+   Scoped entirely under .pys-* classes so nothing here can leak into, or be
+   overridden by, the app shell's own styling (Limitless theme / design-
+   system.css). Two audiences share this one stylesheet:
+     - SCREEN: an A4-proportioned sheet centered on a light gray page
+       background (see .pys-page-bg / .pys-sheet), with a toolbar above it
+       that is never part of the printable area.
+     - PRINT:  @page rules below force real A4 portrait output; the toolbar
+       and the app's own sidebar/navbar/breadcrumb are hidden, and the
+       sheet is the only thing rendered.
+   ========================================================================== */
+
+@page {
+    size: A4 portrait;
+    margin: 8mm;
+}
+
+.pys-page-bg {
+    background: #eef1f6;
+    padding: 24px 16px 48px;
+}
+
+.pys-toolbar {
+    max-width: 210mm;
+    margin: 0 auto 14px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* ---- The printable document itself ---- */
+.pys-sheet {
+    --pys-navy: #0f2a52;
+    --pys-navy-dark: #0a1d3a;
+    --pys-blue: #3b6fd6;
+    --pys-slate: #5b6b83;
+    --pys-text: #1f2733;
+    --pys-border: #d9dee6;
+    --pys-bg-soft: #f6f8fb;
+    --pys-earn-bg: #eef8f1;
+    --pys-earn-text: #1c7a4d;
+    --pys-ded-bg: #fdeef0;
+    --pys-ded-text: #b23a48;
+
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    color: var(--pys-text);
+    font-size: 12.5px;
+    line-height: 1.45;
+
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    background: #fff;
+    box-shadow: 0 6px 24px rgba(15, 30, 60, .12);
+    padding: 10mm 11mm;
+    box-sizing: border-box;
+}
+
+.pys-sheet * { box-sizing: border-box; }
+
+/* ---- Header ---- */
+.pys-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    gap: 16px;
+    border-bottom: 3px solid var(--pys-navy);
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+}
+
+.pys-brand { display: flex; align-items: center; gap: 14px; }
+
+.pys-logo-box {
+    width: 60px; height: 60px; flex-shrink: 0; border-radius: 6px;
+    border: 1px solid var(--pys-border); background: var(--pys-bg-soft);
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.pys-logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.pys-logo-box span { font-size: 9px; font-weight: 700; letter-spacing: .5px; color: #9aa5b8; }
+
+.pys-company-name { font-size: 19px; font-weight: 800; color: var(--pys-navy); margin: 0; letter-spacing: .2px; }
+.pys-company-contact { font-size: 11px; color: var(--pys-slate); margin: 4px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 14px; }
+.pys-contact-item { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.pys-contact-item i { font-size: 12px; color: var(--pys-blue, #2f6fed); }
+
+.pys-title-block { text-align: right; flex-shrink: 0; }
+.pys-title-block .pys-doc-title {
+    font-size: 24px; font-weight: 800; color: var(--pys-navy); margin: 0;
+    letter-spacing: 1px;
+}
+.pys-title-block .pys-doc-period { font-size: 14px; font-weight: 700; color: var(--pys-blue); margin: 2px 0 0; }
+.pys-title-block .pys-doc-sub { font-size: 10.5px; color: var(--pys-slate); margin: 2px 0 0; }
+
+/* ---- Info panels (Employee / Employment / Bank + Tax strip) ---- */
+.pys-info-grid {
+    display: grid;
+    grid-template-columns: 1.25fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.pys-panel {
+    border: 1px solid var(--pys-border);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.pys-panel-head {
+    display: flex; align-items: center; gap: 7px;
+    background: var(--pys-bg-soft); color: var(--pys-navy);
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px;
+    padding: 6px 10px; border-bottom: 1px solid var(--pys-border);
+}
+.pys-panel-head i { font-size: 12px; color: var(--pys-blue); }
+
+.pys-panel-body { padding: 9px 10px; }
+
+.pys-field-row {
+    display: flex; justify-content: space-between; gap: 10px;
+    padding: 3px 0; font-size: 11.5px;
+}
+.pys-field-row .pys-field-label { color: var(--pys-slate); flex-shrink: 0; }
+.pys-field-row .pys-field-value { font-weight: 600; text-align: right; word-break: break-word; }
+
+.pys-employee-photo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.pys-employee-photo {
+    width: 46px; height: 46px; border-radius: 50%; object-fit: cover;
+    border: 1px solid var(--pys-border); flex-shrink: 0; background: var(--pys-bg-soft);
+}
+.pys-employee-initials {
+    width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0;
+    background: var(--pys-navy); color: #fff; font-weight: 700; font-size: 15px;
+    display: flex; align-items: center; justify-content: center;
+}
+.pys-employee-photo-row .pys-employee-name { font-weight: 800; font-size: 13.5px; color: var(--pys-navy); }
+.pys-employee-photo-row .pys-employee-code { font-size: 10.5px; color: var(--pys-slate); }
+
+.pys-tax-strip {
+    display: flex; border: 1px solid var(--pys-border); border-radius: 4px;
+    margin-bottom: 14px; overflow: hidden;
+}
+.pys-tax-strip .pys-tax-item {
+    flex: 1; text-align: center; padding: 7px 6px; border-right: 1px solid var(--pys-border);
+}
+.pys-tax-strip .pys-tax-item:last-child { border-right: none; }
+.pys-tax-strip .pys-tax-label { font-size: 9.5px; text-transform: uppercase; letter-spacing: .4px; color: var(--pys-slate); }
+.pys-tax-strip .pys-tax-value { font-size: 13px; font-weight: 700; color: var(--pys-navy); margin-top: 2px; }
+
+/* ---- Earnings / Deductions ---- */
+.pys-earn-ded-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;
+}
+
+.pys-ed-table { width: 100%; border-collapse: collapse; border: 1px solid var(--pys-border); }
+.pys-ed-table th, .pys-ed-table td { border: 1px solid var(--pys-border); padding: 5px 8px; font-size: 11px; }
+.pys-ed-table th { text-align: left; font-weight: 700; }
+.pys-ed-table td.pys-num, .pys-ed-table th.pys-num { text-align: right; }
+.pys-ed-table td.pys-sr { width: 22px; text-align: center; color: var(--pys-slate); }
+
+.pys-earn-ded-grid .earn th { background: var(--pys-earn-bg); color: var(--pys-earn-text); }
+.pys-earn-ded-grid .deduct th { background: var(--pys-ded-bg); color: var(--pys-ded-text); }
+
+.pys-ed-total td {
+    font-weight: 800; font-size: 12px;
+}
+.pys-earn-ded-grid .earn .pys-ed-total td { background: var(--pys-earn-bg); color: var(--pys-earn-text); }
+.pys-earn-ded-grid .deduct .pys-ed-total td { background: var(--pys-ded-bg); color: var(--pys-ded-text); }
+
+/* ---- Net Salary bar ---- */
+.pys-net-bar {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    background: linear-gradient(100deg, var(--pys-navy-dark), var(--pys-navy));
+    color: #fff; border-radius: 5px; padding: 12px 18px; margin-bottom: 14px;
+}
+.pys-net-bar .pys-net-label { font-size: 13.5px; font-weight: 700; letter-spacing: .3px; }
+.pys-net-bar .pys-net-words { font-size: 10.5px; color: #c7d3ea; margin-top: 2px; }
+.pys-net-bar .pys-net-amount { font-size: 22px; font-weight: 800; white-space: nowrap; }
+
+/* ---- Summary cards (subtle, not colorful) ---- */
+.pys-summary-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px;
+}
+.pys-summary-card {
+    border: 1px solid var(--pys-border); border-radius: 5px; background: var(--pys-bg-soft);
+    padding: 9px 10px; display: flex; align-items: center; gap: 8px;
+}
+.pys-summary-card .pys-summary-icon {
+    width: 28px; height: 28px; border-radius: 50%; background: #fff; border: 1px solid var(--pys-border);
+    color: var(--pys-navy); font-size: 12px; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.pys-summary-card .pys-summary-label { font-size: 9.5px; text-transform: uppercase; letter-spacing: .3px; color: var(--pys-slate); }
+.pys-summary-card .pys-summary-value { font-size: 13px; font-weight: 800; color: var(--pys-navy); }
+.pys-summary-card.pys-summary-words .pys-summary-value { font-size: 10.5px; font-weight: 700; line-height: 1.3; }
+
+/* ---- Attendance summary strip ---- */
+.pys-attendance-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px;
+}
+.pys-attendance-cell {
+    border: 1px solid var(--pys-border); border-radius: 5px; text-align: center; padding: 7px 4px;
+}
+.pys-attendance-cell .pys-att-value { font-size: 15px; font-weight: 800; color: var(--pys-navy); }
+.pys-attendance-cell .pys-att-label { font-size: 9px; text-transform: uppercase; letter-spacing: .3px; color: var(--pys-slate); margin-top: 1px; }
+
+/* ---- YTD + Leave Balance ---- */
+.pys-ytd-leave-grid {
+    display: grid; grid-template-columns: 1fr 1.2fr; gap: 10px; margin-bottom: 14px;
+}
+.pys-ytd-row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 11.5px; }
+.pys-ytd-row .pys-ytd-label { color: var(--pys-slate); }
+.pys-ytd-row .pys-ytd-value { font-weight: 700; }
+
+.pys-leave-table { width: 100%; border-collapse: collapse; }
+.pys-leave-table th, .pys-leave-table td { border: 1px solid var(--pys-border); padding: 4px 8px; font-size: 11px; }
+.pys-leave-table th { background: var(--pys-bg-soft); text-align: left; font-weight: 700; }
+.pys-leave-table td.pys-num, .pys-leave-table th.pys-num { text-align: right; }
+
+/* ---- Remarks ---- */
+.pys-remarks { font-size: 10.5px; color: var(--pys-slate); margin-bottom: 14px; }
+.pys-remarks ul { margin: 4px 0 0; padding-left: 16px; }
+.pys-remarks li { margin-bottom: 2px; }
+
+/* ---- Verification + Signatory footer ---- */
+.pys-footer-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    border-top: 1px solid var(--pys-border); padding-top: 12px;
+}
+.pys-verify { display: flex; align-items: center; gap: 10px; }
+.pys-verify img { width: 62px; height: 62px; border: 1px solid var(--pys-border); border-radius: 4px; }
+.pys-verify .pys-verify-title { font-size: 11.5px; font-weight: 700; color: var(--pys-navy); display: flex; align-items: center; gap: 5px; }
+.pys-verify .pys-verify-sub { font-size: 9.5px; color: var(--pys-slate); word-break: break-all; }
+
+.pys-signatory { text-align: right; align-self: end; }
+.pys-signatory img { max-height: 42px; margin-bottom: 4px; }
+.pys-signatory .pys-signatory-line { border-top: 1px solid var(--pys-text); width: 170px; margin: 0 0 4px auto; }
+.pys-signatory .pys-signatory-label { font-size: 11px; font-weight: 700; }
+.pys-signatory .pys-signatory-company { font-size: 10px; color: var(--pys-slate); }
+
+.pys-recalc-note {
+    font-size: 10px; color: #b6790a; margin-bottom: 8px; display: flex; align-items: center; gap: 5px;
+}
+
+/* ==========================================================================
+   Print
+   ========================================================================== */
+@media print {
+    .hidden-print,
+    .pys-toolbar,
+    .sidebar, .navbar, .page-header, .breadcrumb-line, .footer {
+        display: none !important;
+    }
+
+    body, .content-wrapper, .content, .page-content, .pys-page-bg {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+    }
+
+    .pys-sheet {
+        box-shadow: none;
+        width: auto;
+        min-height: 0;
+        margin: 0;
+        padding: 0;
+    }
+
+    .pys-panel,
+    .pys-earn-ded-grid,
+    .pys-net-bar,
+    .pys-summary-grid,
+    .pys-attendance-grid,
+    .pys-ytd-leave-grid,
+    .pys-footer-grid {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    a[href]:after { content: "" !important; }
+}
+
+/* ---- Small-screen preview: horizontal scroll rather than breaking the
+   A4 layout (section 18 - never destroy the A4 layout on mobile). ---- */
+@media (max-width: 900px) {
+    .pys-page-bg { overflow-x: auto; }
+}
+
+.pys-ytd-leave-grid.pys-single-col { grid-template-columns: 1fr; }

@@ -60,9 +60,15 @@
        Reuses .ent-kpi-card/.ent-kpi-icon/.ent-kpi-body from
        design-system.css, just supplies the flex-wrap container.
        ============================================================ */
-    .pg-kpi-grid { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 4px; }
-    .pg-kpi-grid .ent-kpi-card { flex: 1 1 150px; margin-bottom: 14px; min-width: 150px; }
+    .pg-kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; align-items: stretch; }
+    .pg-kpi-grid .ent-kpi-card { margin-bottom: 0; min-width: 0; height: 100%; }
     .pg-kpi-grid .ent-kpi-body h3 { font-size: 20px; }
+    @@media (max-width: 991px) {
+        .pg-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @@media (max-width: 480px) {
+        .pg-kpi-grid { grid-template-columns: 1fr; }
+    }
 
     /* ============================================================
        Employee review toolbar (search + status filter + select-all +
@@ -337,13 +343,2469 @@
     {
         <script>$(function(){ swal({ title:"Error", text:"@TempData["Error"]", type:"error" }); });</script>
     }
+
     <script>
-        $(function () {
+        $(function() {
 
             // ============================================================
             // GLOBAL STATE
             // ============================================================
 
+            var currentData = null;
+            var employeesById = {};
+            var selectedIds = {};
+            var isLoading = false;
+            var isProcessing = false;
+            var searchDebounce = null;
+
+
+            // ============================================================
+            // GENERIC PROPERTY HELPER
+            //
+            // Supports BOTH:
+            //   Employees / employees
+            //   EmployeeId / employeeId
+            //
+            // This prevents JSON serializer casing problems.
+            // ============================================================
+
+            function prop(obj, pascalName, camelName, defaultValue) {
+
+                if (!obj) {
+                    return defaultValue;
+                }
+
+                if (
+                    obj[pascalName] !== undefined &&
+                    obj[pascalName] !== null
+                ) {
+                    return obj[pascalName];
+                }
+
+                if (
+                    obj[camelName] !== undefined &&
+                    obj[camelName] !== null
+                ) {
+                    return obj[camelName];
+                }
+
+                return defaultValue;
+            }
+
+
+            // ============================================================
+            // NORMALIZE EMPLOYEE
+            // ============================================================
+
+            function normalizeEmployee(emp) {
+
+                if (!emp) {
+                    return null;
+                }
+
+                return {
+
+                    employeeId:
+                        prop(emp, "EmployeeId", "employeeId", ""),
+
+                    employeeName:
+                        prop(emp, "EmployeeName", "employeeName", ""),
+
+                    employeeCode:
+                        prop(emp, "EmployeeCode", "employeeCode", ""),
+
+                    monthlySalary:
+                        prop(emp, "MonthlySalary", "monthlySalary", 0),
+
+                    prorationBasisUsedName:
+                        prop(
+                            emp,
+                            "ProrationBasisUsedName",
+                            "prorationBasisUsedName",
+                            "-"
+                        ),
+
+                    totalDaysInPeriod:
+                        prop(
+                            emp,
+                            "TotalDaysInPeriod",
+                            "totalDaysInPeriod",
+                            null
+                        ),
+
+                    presentDays:
+                        prop(
+                            emp,
+                            "PresentDays",
+                            "presentDays",
+                            null
+                        ),
+
+                    paidLeaveDays:
+                        prop(
+                            emp,
+                            "PaidLeaveDays",
+                            "paidLeaveDays",
+                            null
+                        ),
+
+                    payableDays:
+                        prop(
+                            emp,
+                            "PayableDays",
+                            "payableDays",
+                            null
+                        ),
+
+                    grossSalary:
+                        prop(
+                            emp,
+                            "GrossSalary",
+                            "grossSalary",
+                            0
+                        ),
+
+                    totalDeductions:
+                        prop(
+                            emp,
+                            "TotalDeductions",
+                            "totalDeductions",
+                            0
+                        ),
+
+                    netSalary:
+                        prop(
+                            emp,
+                            "NetSalary",
+                            "netSalary",
+                            0
+                        ),
+
+                    canProcess:
+                        prop(
+                            emp,
+                            "CanProcess",
+                            "canProcess",
+                            false
+                        ),
+
+                    alreadyProcessed:
+                        prop(
+                            emp,
+                            "AlreadyProcessed",
+                            "alreadyProcessed",
+                            false
+                        ),
+
+                    blockReason:
+                        prop(
+                            emp,
+                            "BlockReason",
+                            "blockReason",
+                            ""
+                        ),
+
+                    existingPayrollStatus:
+                        prop(
+                            emp,
+                            "ExistingPayrollStatus",
+                            "existingPayrollStatus",
+                            ""
+                        ),
+
+                    warnings:
+                        prop(
+                            emp,
+                            "Warnings",
+                            "warnings",
+                            []
+                        ) || []
+                };
+            }
+
+
+            // ============================================================
+            // NORMALIZE LOAD PREVIEW RESPONSE
+            //
+            // Your Controller currently returns:
+            //
+            // Employees
+            // EmployeesMatchingFilterCount
+            // MonthName
+            // SalaryMonth
+            // SalaryYear
+            //
+            // The UI internally uses camelCase.
+            // ============================================================
+
+            function normalizePreviewResponse(data) {
+
+                if (!data) {
+                    return null;
+                }
+
+                var rawEmployees =
+                    prop(
+                        data,
+                        "Employees",
+                        "employees",
+                        []
+                    ) || [];
+
+
+                var employees = [];
+
+
+                $.each(
+                    rawEmployees,
+                    function(i, rawEmployee) {
+
+                        var employee =
+                            normalizeEmployee(rawEmployee);
+
+                        if (employee) {
+                            employees.push(employee);
+                        }
+                    }
+                );
+
+
+                return {
+
+                    employees: employees,
+
+                    employeesMatchingFilterCount:
+                        prop(
+                            data,
+                            "EmployeesMatchingFilterCount",
+                            "employeesMatchingFilterCount",
+                            0
+                        ),
+
+                    monthName:
+                        prop(
+                            data,
+                            "MonthName",
+                            "monthName",
+                            ""
+                        ),
+
+                    salaryMonth:
+                        prop(
+                            data,
+                            "SalaryMonth",
+                            "salaryMonth",
+                            null
+                        ),
+
+                    salaryYear:
+                        prop(
+                            data,
+                            "SalaryYear",
+                            "salaryYear",
+                            null
+                        )
+                };
+            }
+
+
+            // ============================================================
+            // FORMAT HELPERS
+            // ============================================================
+
+            function fmt(n) {
+
+                var value =
+                    parseFloat(n);
+
+                if (isNaN(value)) {
+                    value = 0;
+                }
+
+                return value.toLocaleString(
+                    "en-IN",
+                    {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    }
+                );
+            }
+
+
+            function fmtCurrency(n) {
+
+                return "₹" + fmt(n);
+            }
+
+
+            function fmtDays(n) {
+
+                if (
+                    n === null ||
+                    n === undefined ||
+                    n === ""
+                ) {
+                    return "-";
+                }
+
+                var value =
+                    parseFloat(n);
+
+                if (isNaN(value)) {
+                    return "-";
+                }
+
+                return (
+                    Math.round(value * 10) / 10
+                ).toString();
+            }
+
+
+            function numericValue(value) {
+
+                if (
+                    value === null ||
+                    value === undefined ||
+                    value === ""
+                ) {
+                    return 0;
+                }
+
+                var number =
+                    parseFloat(value);
+
+                return isNaN(number)
+                    ? 0
+                    : number;
+            }
+
+
+            function escapeHtml(value) {
+
+                if (
+                    value === null ||
+                    value === undefined
+                ) {
+                    return "";
+                }
+
+                return $("<div>")
+                    .text(value)
+                    .html();
+            }
+
+
+            // ============================================================
+            // ELIGIBILITY
+            // ============================================================
+
+            function rowEligible(emp) {
+
+                return emp &&
+                    emp.canProcess === true &&
+                    emp.alreadyProcessed !== true;
+            }
+
+
+            // ============================================================
+            // STATUS
+            // ============================================================
+
+            function statusOf(emp) {
+
+                if (emp.alreadyProcessed) {
+                    return "processed";
+                }
+
+                if (!emp.canProcess) {
+                    return "blocked";
+                }
+
+                if (
+                    emp.warnings &&
+                    emp.warnings.length > 0
+                ) {
+                    return "warning";
+                }
+
+                return "ready";
+            }
+
+
+            function statusBadge(status, emp) {
+
+                switch (status) {
+
+                    case "processed":
+
+                        return (
+                            '<span class="ent-status-pill ent-badge-success">' +
+                            'Already ' +
+                            escapeHtml(
+                                emp.existingPayrollStatus ||
+                                "Processed"
+                            ) +
+                            '</span>'
+                        );
+
+
+                    case "blocked":
+
+                        return (
+                            '<span class="ent-status-pill ent-badge-danger">' +
+                            'Blocked' +
+                            '</span>'
+                        );
+
+
+                    case "warning":
+
+                        return (
+                            '<span class="ent-status-pill ent-badge-warning">' +
+                            'Warning' +
+                            '</span>'
+                        );
+
+
+                    default:
+
+                        return (
+                            '<span class="ent-status-pill ent-badge-info">' +
+                            'Ready' +
+                            '</span>'
+                        );
+                }
+            }
+
+
+            // ============================================================
+            // RENDER EMPLOYEE ROWS
+            // ============================================================
+
+            function renderEmployees(list) {
+
+                var html = [];
+
+
+                $.each(
+                    list,
+                    function(i, emp) {
+
+                        var eligible =
+                            rowEligible(emp);
+
+                        var status =
+                            statusOf(emp);
+
+                        var checked =
+                            eligible &&
+                            !!selectedIds[
+                            String(emp.employeeId)
+                            ];
+
+
+                        // ------------------------------------------------
+                        // CHECKBOX
+                        // ------------------------------------------------
+
+                        var checkboxHtml;
+
+
+                        if (eligible) {
+
+                            checkboxHtml =
+                                '<input ' +
+                                'type="checkbox" ' +
+                                'class="emp-check" ' +
+                                'value="' +
+                                escapeHtml(emp.employeeId) +
+                                '" ' +
+                                (
+                                    checked
+                                        ? "checked "
+                                        : ""
+                                ) +
+                                '/>';
+                        }
+                        else {
+
+                            checkboxHtml =
+                                '<input ' +
+                                'type="checkbox" ' +
+                                'disabled ' +
+                                'title="Cannot be selected" ' +
+                                'aria-label="' +
+                                escapeHtml(
+                                    emp.employeeName ||
+                                    emp.employeeId
+                                ) +
+                                ' cannot be selected" />';
+                        }
+
+
+                        // ------------------------------------------------
+                        // DETAILS BUTTON
+                        // ------------------------------------------------
+
+                        var hasDetails =
+                            !emp.canProcess ||
+                            emp.alreadyProcessed ||
+                            (
+                                emp.warnings &&
+                                emp.warnings.length > 0
+                            );
+
+
+                        var detailsBtn;
+
+
+                        if (hasDetails) {
+
+                            detailsBtn =
+                                '<button ' +
+                                'type="button" ' +
+                                'class="pg-details-btn emp-details-btn" ' +
+                                'data-id="' +
+                                escapeHtml(emp.employeeId) +
+                                '" ' +
+                                'title="View details" ' +
+                                'aria-label="View details for ' +
+                                escapeHtml(
+                                    emp.employeeName ||
+                                    emp.employeeId
+                                ) +
+                                '">' +
+                                '<i class="bi bi-info-lg"></i>' +
+                                '</button>';
+                        }
+                        else {
+
+                            detailsBtn =
+                                '<span class="text-muted">&mdash;</span>';
+                        }
+
+
+                        // ------------------------------------------------
+                        // ROW
+                        // ------------------------------------------------
+
+                        html.push(
+
+                            '<tr class="' +
+                            (
+                                eligible
+                                    ? ""
+                                    : "pg-row-disabled"
+                            ) +
+                            '" data-employee-id="' +
+                            escapeHtml(emp.employeeId) +
+                            '">' +
+
+
+                            // Checkbox
+                            '<td>' +
+                            checkboxHtml +
+                            '</td>' +
+
+
+                            // Employee
+                            '<td class="ent-name-cell">' +
+
+                            '<div>' +
+
+                            '<div class="ent-name-primary">' +
+                            escapeHtml(
+                                emp.employeeName ||
+                                emp.employeeId
+                            ) +
+                            '</div>' +
+
+                            '<div class="ent-name-secondary">' +
+                            escapeHtml(
+                                emp.employeeCode || ""
+                            ) +
+                            '</div>' +
+
+                            '</div>' +
+
+                            '</td>' +
+
+
+                            // Monthly Salary
+                            '<td class="text-right">' +
+                            fmt(emp.monthlySalary) +
+                            '</td>' +
+
+
+                            // Proration
+                            '<td class="text-center">' +
+                            escapeHtml(
+                                emp.prorationBasisUsedName ||
+                                "-"
+                            ) +
+                            '</td>' +
+
+
+                            // Period Days
+                            '<td class="text-center">' +
+                            fmtDays(
+                                emp.totalDaysInPeriod
+                            ) +
+                            '</td>' +
+
+
+                            // Present
+                            '<td class="text-center">' +
+                            fmtDays(
+                                emp.presentDays
+                            ) +
+                            '</td>' +
+
+
+                            // Paid Leave
+                            '<td class="text-center">' +
+                            fmtDays(
+                                emp.paidLeaveDays
+                            ) +
+                            '</td>' +
+
+
+                            // Payable
+                            '<td class="text-center">' +
+                            '<strong>' +
+                            fmtDays(
+                                emp.payableDays
+                            ) +
+                            '</strong>' +
+                            '</td>' +
+
+
+                            // Gross
+                            '<td class="text-right">' +
+                            fmt(
+                                emp.grossSalary
+                            ) +
+                            '</td>' +
+
+
+                            // Deductions
+                            '<td class="text-right">' +
+                            fmt(
+                                emp.totalDeductions
+                            ) +
+                            '</td>' +
+
+
+                            // Net
+                            '<td class="text-right">' +
+                            '<strong>' +
+                            fmt(
+                                emp.netSalary
+                            ) +
+                            '</strong>' +
+                            '</td>' +
+
+
+                            // Status
+                            '<td class="text-center">' +
+                            statusBadge(
+                                status,
+                                emp
+                            ) +
+                            '</td>' +
+
+
+                            // Details
+                            '<td class="text-center">' +
+                            detailsBtn +
+                            '</td>' +
+
+
+                            '</tr>'
+                        );
+                    }
+                );
+
+
+                $("#reviewRows")
+                    .html(
+                        html.join("")
+                    );
+
+
+                $("#reviewNoMatch")
+                    .toggle(
+                        list.length === 0 &&
+                        !!currentData &&
+                        currentData.employees.length > 0
+                    );
+
+
+                updateSelectAllState();
+            }
+
+
+            // ============================================================
+            // SEARCH / FILTER
+            // ============================================================
+
+            function getFilteredEmployees() {
+
+                if (
+                    !currentData ||
+                    !currentData.employees
+                ) {
+                    return [];
+                }
+
+
+                var term =
+                    (
+                        $("#employeeSearch")
+                            .val() || ""
+                    )
+                        .toLowerCase()
+                        .trim();
+
+
+                var status =
+                    $("#statusFilter").val() ||
+                    "all";
+
+
+                return $.grep(
+                    currentData.employees,
+                    function(emp) {
+
+
+                        // Status
+                        if (
+                            status !== "all" &&
+                            statusOf(emp) !== status
+                        ) {
+                            return false;
+                        }
+
+
+                        // Search
+                        if (term) {
+
+                            var name =
+                                (
+                                    emp.employeeName ||
+                                    ""
+                                ).toLowerCase();
+
+
+                            var code =
+                                (
+                                    emp.employeeCode ||
+                                    ""
+                                ).toLowerCase();
+
+
+                            if (
+                                name.indexOf(term) === -1 &&
+                                code.indexOf(term) === -1
+                            ) {
+                                return false;
+                            }
+                        }
+
+
+                        return true;
+                    }
+                );
+            }
+
+
+            function requestFilterRender() {
+
+                clearTimeout(
+                    searchDebounce
+                );
+
+
+                searchDebounce =
+                    setTimeout(
+                        function() {
+
+                            renderEmployees(
+                                getFilteredEmployees()
+                            );
+
+                        },
+                        180
+                    );
+            }
+
+
+            // ============================================================
+            // KPI SUMMARY
+            // ============================================================
+
+            function renderSummary() {
+
+                if (
+                    !currentData ||
+                    !currentData.employees
+                ) {
+                    return;
+                }
+
+
+                var eligibleCount = 0;
+                var processedCount = 0;
+                var warningsCount = 0;
+
+                var gross = 0;
+                var deductions = 0;
+                var net = 0;
+
+                var selectedCount = 0;
+
+
+                // --------------------------------------------------------
+                // Employee counts
+                // --------------------------------------------------------
+
+                $.each(
+                    currentData.employees,
+                    function(i, emp) {
+
+                        if (
+                            rowEligible(emp)
+                        ) {
+                            eligibleCount++;
+                        }
+
+
+                        if (
+                            emp.alreadyProcessed
+                        ) {
+                            processedCount++;
+                        }
+
+
+                        if (
+                            emp.warnings &&
+                            emp.warnings.length > 0
+                        ) {
+                            warningsCount++;
+                        }
+                    }
+                );
+
+
+                // --------------------------------------------------------
+                // Selected totals
+                // --------------------------------------------------------
+
+                $.each(
+                    selectedIds,
+                    function(
+                        employeeId,
+                        isSelected
+                    ) {
+
+                        if (!isSelected) {
+                            return;
+                        }
+
+
+                        var emp =
+                            employeesById[
+                            String(employeeId)
+                            ];
+
+
+                        if (!emp) {
+                            return;
+                        }
+
+
+                        selectedCount++;
+
+
+                        gross +=
+                            numericValue(
+                                emp.grossSalary
+                            );
+
+
+                        deductions +=
+                            numericValue(
+                                emp.totalDeductions
+                            );
+
+
+                        net +=
+                            numericValue(
+                                emp.netSalary
+                            );
+                    }
+                );
+
+
+                // --------------------------------------------------------
+                // KPI
+                // --------------------------------------------------------
+
+                $("#kpiEligible")
+                    .text(eligibleCount);
+
+
+                $("#kpiSelected")
+                    .text(selectedCount);
+
+
+                $("#kpiProcessed")
+                    .text(processedCount);
+
+
+                $("#kpiWarnings")
+                    .text(warningsCount);
+
+
+                $("#kpiGross")
+                    .text(
+                        fmtCurrency(gross)
+                    );
+
+
+                $("#kpiDeductions")
+                    .text(
+                        fmtCurrency(deductions)
+                    );
+
+
+                $("#kpiNet")
+                    .text(
+                        fmtCurrency(net)
+                    );
+
+
+                $("#selectedSummary")
+                    .text(
+                        "Selected: " +
+                        selectedCount
+                    );
+
+
+                updateProcessBar(
+                    selectedCount,
+                    gross,
+                    deductions,
+                    net
+                );
+            }
+
+
+            // ============================================================
+            // PROCESS FOOTER
+            // ============================================================
+
+            function updateProcessBar(
+                selectedCount,
+                gross,
+                deductions,
+                net
+            ) {
+
+                $("#footerSelectedCount")
+                    .text(selectedCount);
+
+
+                $("#footerGross")
+                    .text(
+                        fmt(gross)
+                    );
+
+
+                $("#footerDeductions")
+                    .text(
+                        fmt(deductions)
+                    );
+
+
+                $("#footerNet")
+                    .text(
+                        fmt(net)
+                    );
+
+
+                $("#processFooter")
+                    .toggle(
+                        selectedCount > 0
+                    );
+            }
+
+
+            // ============================================================
+            // SELECTION
+            // ============================================================
+
+            function updateSelection() {
+
+                $(".emp-check")
+                    .each(
+                        function() {
+
+                            var $cb =
+                                $(this);
+
+
+                            var id =
+                                String(
+                                    $cb.val()
+                                );
+
+
+                            selectedIds[id] =
+                                $cb.is(":checked");
+                        }
+                    );
+
+
+                updateSelectAllState();
+
+                renderSummary();
+            }
+
+
+            function updateSelectAllState() {
+
+                var $visible =
+                    $(".emp-check:not(:disabled)");
+
+
+                var total =
+                    $visible.length;
+
+
+                var checked =
+                    $visible
+                        .filter(":checked")
+                        .length;
+
+
+                var allSelected =
+                    total > 0 &&
+                    total === checked;
+
+
+                $("#selectAllEmp")
+                    .prop(
+                        "checked",
+                        allSelected
+                    );
+
+
+                $("#selectAllBtn")
+                    .html(
+                        '<i class="bi bi-check2-square"></i> ' +
+                        (
+                            allSelected
+                                ? "Deselect All"
+                                : "Select All"
+                        )
+                    );
+            }
+
+
+            function setAllVisibleSelected(select) {
+
+                $(".emp-check:not(:disabled)")
+                    .prop(
+                        "checked",
+                        select
+                    );
+
+
+                updateSelection();
+            }
+
+
+            // ============================================================
+            // EMPLOYEE DETAILS
+            // ============================================================
+
+            function showEmployeeDetails(employeeId) {
+
+                var emp =
+                    employeesById[
+                    String(employeeId)
+                    ];
+
+
+                if (!emp) {
+                    return;
+                }
+
+
+                var status =
+                    statusOf(emp);
+
+
+                var rows = [];
+
+
+                // Employee
+                rows.push(
+
+                    '<div class="empdetail-field">' +
+
+                    '<div>' +
+
+                    '<div class="empdetail-field-label">' +
+                    'Employee' +
+                    '</div>' +
+
+                    '<div class="empdetail-field-value">' +
+                    escapeHtml(
+                        emp.employeeName ||
+                        emp.employeeId
+                    ) +
+                    '</div>' +
+
+                    '</div>' +
+
+                    '</div>'
+                );
+
+
+                // Employee Code
+                rows.push(
+
+                    '<div class="empdetail-field">' +
+
+                    '<div>' +
+
+                    '<div class="empdetail-field-label">' +
+                    'Employee Code' +
+                    '</div>' +
+
+                    '<div class="empdetail-field-value">' +
+                    escapeHtml(
+                        emp.employeeCode ||
+                        "-"
+                    ) +
+                    '</div>' +
+
+                    '</div>' +
+
+                    '</div>'
+                );
+
+
+                // Status
+                rows.push(
+
+                    '<div class="empdetail-field">' +
+
+                    '<div>' +
+
+                    '<div class="empdetail-field-label">' +
+                    'Status' +
+                    '</div>' +
+
+                    '<div class="empdetail-field-value">' +
+                    statusBadge(
+                        status,
+                        emp
+                    ) +
+                    '</div>' +
+
+                    '</div>' +
+
+                    '</div>'
+                );
+
+
+                // Block Reason
+                if (
+                    !emp.canProcess &&
+                    emp.blockReason
+                ) {
+
+                    rows.push(
+
+                        '<div class="empdetail-field">' +
+
+                        '<div>' +
+
+                        '<div class="empdetail-field-label">' +
+                        'Block Reason' +
+                        '</div>' +
+
+                        '<div class="empdetail-field-value">' +
+                        escapeHtml(
+                            emp.blockReason
+                        ) +
+                        '</div>' +
+
+                        '</div>' +
+
+                        '</div>'
+                    );
+                }
+
+
+                // Existing Payroll Status
+                if (
+                    emp.alreadyProcessed
+                ) {
+
+                    rows.push(
+
+                        '<div class="empdetail-field">' +
+
+                        '<div>' +
+
+                        '<div class="empdetail-field-label">' +
+                        'Existing Payroll Status' +
+                        '</div>' +
+
+                        '<div class="empdetail-field-value">' +
+                        escapeHtml(
+                            emp.existingPayrollStatus ||
+                            "Processed"
+                        ) +
+                        '</div>' +
+
+                        '</div>' +
+
+                        '</div>'
+                    );
+                }
+
+
+                // Warnings
+                if (
+                    emp.warnings &&
+                    emp.warnings.length > 0
+                ) {
+
+                    var warningItems =
+                        $.map(
+                            emp.warnings,
+                            function(w) {
+
+                                return (
+                                    "<li>" +
+                                    escapeHtml(w) +
+                                    "</li>"
+                                );
+                            }
+                        ).join("");
+
+
+                    rows.push(
+
+                        '<div class="empdetail-field">' +
+
+                        '<div>' +
+
+                        '<div class="empdetail-field-label">' +
+                        'Warnings' +
+                        '</div>' +
+
+                        '<div class="empdetail-field-value">' +
+
+                        '<ul style="margin:2px 0 0;padding-left:18px;">' +
+
+                        warningItems +
+
+                        '</ul>' +
+
+                        '</div>' +
+
+                        '</div>' +
+
+                        '</div>'
+                    );
+                }
+
+
+                $("#employeeDetailsBody")
+                    .html(
+                        rows.join("")
+                    );
+
+
+                $("#employeeDetailsModal")
+                    .modal("show");
+            }
+
+
+            // ============================================================
+            // LOADING
+            // ============================================================
+
+            function showLoading() {
+
+                $("#reviewSection")
+                    .show();
+
+
+                $("#reviewTableWrap")
+                    .hide();
+
+
+                $("#reviewEmpty")
+                    .hide();
+
+
+                $("#processFooter")
+                    .hide();
+
+
+                $("#reviewLoading")
+                    .show();
+
+
+                $("#reviewRows")
+                    .empty();
+
+
+                $("#loadAttendanceBtn")
+                    .prop(
+                        "disabled",
+                        true
+                    );
+            }
+
+
+            function hideLoading() {
+
+                $("#reviewLoading")
+                    .hide();
+
+
+                $("#loadAttendanceBtn")
+                    .prop(
+                        "disabled",
+                        false
+                    );
+            }
+
+
+            // ============================================================
+            // EMPTY STATE
+            // ============================================================
+
+            function showEmptyState(
+                matched,
+                year,
+                monthName
+            ) {
+
+                var title;
+                var message;
+
+
+                if (matched > 0) {
+
+                    title =
+                        "Salary Structure Required";
+
+
+                    message =
+                        "Found " +
+                        matched +
+                        " employee(s) for the selected company/branch, " +
+                        "but none have a salary structure effective for " +
+                        monthName +
+                        " " +
+                        year +
+                        ". Please assign or backdate the salary structure before processing payroll.";
+                }
+                else {
+
+                    title =
+                        "No Employees Available";
+
+
+                    message =
+                        "No employees were found for the selected company/branch.";
+                }
+
+
+                $("#reviewEmptyTitle")
+                    .text(title);
+
+
+                $("#reviewEmptyMessage")
+                    .text(message);
+
+
+                $("#reviewEmpty")
+                    .show();
+
+
+                $("#kpiGrid")
+                    .hide();
+            }
+
+
+            // ============================================================
+            // LOAD PREVIEW
+            // ============================================================
+
+            function loadPreview() {
+
+                if (isLoading) {
+                    return;
+                }
+
+
+                var year =
+                    $("#salaryYear").val();
+
+
+                var month =
+                    $("#salaryMonth").val();
+
+
+                var companyId =
+                    $("#companyId").val();
+
+
+                if (!year || !month) {
+
+                    swal({
+                        title: "Required",
+                        text: "Please select Year and Month.",
+                        type: "warning"
+                    });
+
+                    return;
+                }
+
+
+                isLoading = true;
+
+
+                showLoading();
+
+
+                $.ajax({
+
+                    url:
+                        "@Url.Action("LoadPreview", "Payroll")",
+
+                    type: "GET",
+
+                    data: {
+
+                        salaryYear:
+                            year,
+
+                        salaryMonth:
+                            month,
+
+                        companyId:
+                            companyId
+                    },
+
+
+                    success: function(data) {
+
+                        hideLoading();
+
+                        isLoading = false;
+
+
+                        console.log(
+                            "LoadPreview raw response:",
+                            data
+                        );
+
+
+                        // ------------------------------------------------
+                        // Empty response
+                        // ------------------------------------------------
+
+                        if (!data) {
+
+                            showError(
+                                "Server returned an empty response."
+                            );
+
+                            return;
+                        }
+
+
+                        // ------------------------------------------------
+                        // Support both Error and error
+                        // ------------------------------------------------
+
+                        var serverError =
+                            prop(
+                                data,
+                                "Error",
+                                "error",
+                                null
+                            );
+
+
+                        if (serverError) {
+
+                            showError(
+                                serverError
+                            );
+
+                            return;
+                        }
+
+
+                        // ------------------------------------------------
+                        // NORMALIZE RESPONSE
+                        //
+                        // This is the IMPORTANT FIX.
+                        //
+                        // Controller:
+                        //     Employees
+                        //
+                        // UI:
+                        //     employees
+                        // ------------------------------------------------
+
+                        var normalized =
+                            normalizePreviewResponse(
+                                data
+                            );
+
+
+                        if (!normalized) {
+
+                            showError(
+                                "Could not read the salary preview response."
+                            );
+
+                            return;
+                        }
+
+
+                        currentData =
+                            normalized;
+
+
+                        employeesById = {};
+
+                        selectedIds = {};
+
+
+                        // ------------------------------------------------
+                        // BUILD EMPLOYEE MAP
+                        // ------------------------------------------------
+
+                        $.each(
+                            currentData.employees,
+                            function(i, emp) {
+
+                                var id =
+                                    String(
+                                        emp.employeeId
+                                    );
+
+
+                                employeesById[id] =
+                                    emp;
+
+
+                                if (
+                                    rowEligible(emp)
+                                ) {
+
+                                    selectedIds[id] =
+                                        true;
+                                }
+                            }
+                        );
+
+
+                        // ------------------------------------------------
+                        // SHOW KPI
+                        // ------------------------------------------------
+
+                        $("#kpiGrid")
+                            .show();
+
+
+                        $("#employeeSearch")
+                            .val("");
+
+
+                        $("#statusFilter")
+                            .val("all");
+
+
+                        // ------------------------------------------------
+                        // EMPTY
+                        // ------------------------------------------------
+
+                        if (
+                            !currentData.employees ||
+                            currentData.employees.length === 0
+                        ) {
+
+                            var monthName =
+                                currentData.monthName ||
+                                $("#salaryMonth option:selected").text() ||
+                                "this period";
+
+
+                            showEmptyState(
+
+                                currentData
+                                    .employeesMatchingFilterCount ||
+                                0,
+
+                                year,
+
+                                monthName
+                            );
+
+
+                            renderSummary();
+
+
+                            return;
+                        }
+
+
+                        // ------------------------------------------------
+                        // HIDE EMPTY STATE
+                        // ------------------------------------------------
+
+                        $("#reviewEmpty")
+                            .hide();
+
+
+                        // ------------------------------------------------
+                        // RENDER EMPLOYEES
+                        // ------------------------------------------------
+
+                        renderEmployees(
+                            getFilteredEmployees()
+                        );
+
+
+                        $("#reviewTableWrap")
+                            .show();
+
+
+                        // ------------------------------------------------
+                        // SUMMARY
+                        // ------------------------------------------------
+
+                        renderSummary();
+                    },
+
+
+                    error: function(xhr) {
+
+                        hideLoading();
+
+                        isLoading = false;
+
+
+                        showError(
+                            extractErrorMessage(
+                                xhr,
+                                "Could not load attendance for this period."
+                            )
+                        );
+                    }
+                });
+            }
+
+
+            // ============================================================
+            // PROCESS SALARY CONFIRMATION
+            // ============================================================
+
+            function showProcessConfirmation() {
+
+                var ids =
+                    $.map(
+                        selectedIds,
+                        function(
+                            isSelected,
+                            id
+                        ) {
+
+                            return isSelected
+                                ? id
+                                : null;
+                        }
+                    );
+
+
+                if (ids.length === 0) {
+
+                    swal({
+                        title: "No Employee Selected",
+                        text: "Please select at least one employee.",
+                        type: "warning"
+                    });
+
+                    return;
+                }
+
+
+                var year =
+                    $("#salaryYear").val();
+
+
+                var monthName =
+                    $("#salaryMonth option:selected")
+                        .text();
+
+
+                var companyName =
+                    $("#companyId option:selected")
+                        .text() ||
+                    "All Companies";
+
+
+                var gross = 0;
+                var deductions = 0;
+                var net = 0;
+
+
+                $.each(
+                    ids,
+                    function(i, id) {
+
+                        var emp =
+                            employeesById[
+                            String(id)
+                            ];
+
+
+                        if (!emp) {
+                            return;
+                        }
+
+
+                        gross +=
+                            numericValue(
+                                emp.grossSalary
+                            );
+
+
+                        deductions +=
+                            numericValue(
+                                emp.totalDeductions
+                            );
+
+
+                        net +=
+                            numericValue(
+                                emp.netSalary
+                            );
+                    }
+                );
+
+
+                var summaryHtml =
+
+                    '<div style="text-align:left;font-size:13.5px;line-height:1.9;">' +
+
+                    '<div style="margin-bottom:10px;">' +
+
+                    'You are about to process salary for ' +
+
+                    '<strong>' +
+                    ids.length +
+                    ' Employee' +
+                    (
+                        ids.length > 1
+                            ? "s"
+                            : ""
+                    ) +
+                    '</strong>.' +
+
+                    '</div>' +
+
+
+                    '<table style="width:100%;margin-top:10px;">' +
+
+                    '<tr>' +
+
+                    '<td style="color:#8896ad;">' +
+                    'Period' +
+                    '</td>' +
+
+                    '<td style="text-align:right;font-weight:600;">' +
+                    escapeHtml(
+                        monthName
+                    ) +
+                    " " +
+                    escapeHtml(
+                        year
+                    ) +
+                    '</td>' +
+
+                    '</tr>' +
+
+
+                    '<tr>' +
+
+                    '<td style="color:#8896ad;">' +
+                    'Company' +
+                    '</td>' +
+
+                    '<td style="text-align:right;font-weight:600;">' +
+                    escapeHtml(
+                        companyName
+                    ) +
+                    '</td>' +
+
+                    '</tr>' +
+
+
+                    '<tr>' +
+
+                    '<td style="color:#8896ad;">' +
+                    'Gross Salary' +
+                    '</td>' +
+
+                    '<td style="text-align:right;font-weight:600;">' +
+                    fmtCurrency(gross) +
+                    '</td>' +
+
+                    '</tr>' +
+
+
+                    '<tr>' +
+
+                    '<td style="color:#8896ad;">' +
+                    'Deductions' +
+                    '</td>' +
+
+                    '<td style="text-align:right;font-weight:600;">' +
+                    fmtCurrency(deductions) +
+                    '</td>' +
+
+                    '</tr>' +
+
+
+                    '<tr>' +
+
+                    '<td style="color:#8896ad;">' +
+                    'Net Salary' +
+                    '</td>' +
+
+                    '<td style="text-align:right;font-weight:700;color:#1e8e4e;">' +
+                    fmtCurrency(net) +
+                    '</td>' +
+
+                    '</tr>' +
+
+                    '</table>' +
+
+
+                    '<p style="margin-top:12px;color:#8896ad;font-size:12px;">' +
+
+                    'This action will create payroll records for the selected employees.' +
+
+                    '</p>' +
+
+                    '</div>';
+
+
+                swal({
+
+                    title:
+                        "Process Salary?",
+
+                    text:
+                        summaryHtml,
+
+                    html:
+                        true,
+
+                    type:
+                        "warning",
+
+                    showCancelButton:
+                        true,
+
+                    confirmButtonColor:
+                        "#2b6fd9",
+
+                    confirmButtonText:
+                        "Process Salary",
+
+                    cancelButtonText:
+                        "Cancel",
+
+                    closeOnConfirm:
+                        true
+
+                }, function(isConfirm) {
+
+                    if (isConfirm) {
+
+                        processSalary(ids);
+                    }
+                });
+            }
+
+
+            // ============================================================
+            // PROCESS SALARY AJAX
+            // ============================================================
+
+            function processSalary(employeeIds) {
+
+                if (isProcessing) {
+                    return;
+                }
+
+
+                var year =
+                    $("#salaryYear").val();
+
+
+                var month =
+                    $("#salaryMonth").val();
+
+
+                var companyId =
+                    $("#companyId").val();
+
+
+                var $button =
+                    $("#processSalaryBtn");
+
+
+                var originalHtml =
+                    $button.html();
+
+
+                isProcessing = true;
+
+
+                $button
+                    .prop(
+                        "disabled",
+                        true
+                    )
+                    .html(
+                        '<i class="bi bi-arrow-repeat" ' +
+                        'style="animation:ent-spin .8s linear infinite;display:inline-block;"></i> ' +
+                        'Processing Salary...'
+                    );
+
+
+                // --------------------------------------------------------
+                // FORM DATA
+                // --------------------------------------------------------
+
+                var formData =
+                    new FormData();
+
+
+                formData.append(
+                    "salaryYear",
+                    year
+                );
+
+
+                formData.append(
+                    "salaryMonth",
+                    month
+                );
+
+
+                formData.append(
+                    "companyId",
+                    companyId || ""
+                );
+
+
+                $.each(
+                    employeeIds,
+                    function(i, id) {
+
+                        formData.append(
+                            "EmployeeIds",
+                            id
+                        );
+                    }
+                );
+
+
+                // --------------------------------------------------------
+                // ANTI FORGERY TOKEN
+                // --------------------------------------------------------
+
+                var token =
+                    $(
+                        '#processForm input[name="__RequestVerificationToken"]'
+                    ).val();
+
+
+                if (token) {
+
+                    formData.append(
+                        "__RequestVerificationToken",
+                        token
+                    );
+                }
+
+
+                // --------------------------------------------------------
+                // AJAX
+                // --------------------------------------------------------
+
+                $.ajax({
+
+                    url:
+                        "@Url.Action("ProcessSalary", "Payroll")",
+
+                    type:
+                        "POST",
+
+                    data:
+                        formData,
+
+                    processData:
+                        false,
+
+                    contentType:
+                        false,
+
+                    cache:
+                        false,
+
+
+                    success: function(response) {
+
+                        console.log(
+                            "ProcessSalary response:",
+                            response
+                        );
+
+
+                        if (!response) {
+
+                            handleProcessError(
+                                null,
+                                "Server returned an empty response."
+                            );
+
+                            return;
+                        }
+
+
+                        // ------------------------------------------------
+                        // Support PascalCase and camelCase
+                        // ------------------------------------------------
+
+                        var success =
+                            prop(
+                                response,
+                                "Success",
+                                "success",
+                                false
+                            );
+
+
+                        var message =
+                            prop(
+                                response,
+                                "Message",
+                                "message",
+                                ""
+                            );
+
+
+                        var processedCount =
+                            prop(
+                                response,
+                                "ProcessedCount",
+                                "processedCount",
+                                null
+                            );
+
+
+                        if (success === true) {
+
+                            handleProcessSuccess({
+
+                                success:
+                                    true,
+
+                                message:
+                                    message,
+
+                                processedCount:
+                                    processedCount,
+
+                                data:
+                                    prop(
+                                        response,
+                                        "Data",
+                                        "data",
+                                        null
+                                    )
+                            });
+
+                        }
+                        else {
+
+                            handleProcessError(
+                                null,
+                                message ||
+                                prop(
+                                    response,
+                                    "Error",
+                                    "error",
+                                    "Salary processing failed."
+                                )
+                            );
+                        }
+                    },
+
+
+                    error: function(xhr) {
+
+                        handleProcessError(
+                            xhr
+                        );
+                    },
+
+
+                    complete: function() {
+
+                        isProcessing =
+                            false;
+
+
+                        resetProcessButton(
+                            $button,
+                            originalHtml
+                        );
+                    }
+                });
+            }
+
+
+            // ============================================================
+            // PROCESS SUCCESS
+            // ============================================================
+
+            function handleProcessSuccess(response) {
+
+                var count =
+                    response.processedCount != null
+                        ? response.processedCount
+                        : "";
+
+
+                var message =
+                    response.message ||
+                    (
+                        count !== ""
+                            ? count +
+                            " employee(s) processed successfully."
+                            : "Salary processed successfully."
+                    );
+
+
+                swal({
+
+                    title:
+                        "Salary Processed Successfully",
+
+                    text:
+                        message,
+
+                    type:
+                        "success"
+
+                }, function() {
+
+                    // ----------------------------------------------------
+                    // Reload preview using AJAX
+                    //
+                    // No full page refresh.
+                    // ----------------------------------------------------
+
+                    loadPreview();
+                });
+            }
+
+
+            // ============================================================
+            // PROCESS ERROR
+            // ============================================================
+
+            function handleProcessError(
+                xhr,
+                fallbackMessage
+            ) {
+
+                var message =
+                    fallbackMessage ||
+                    extractErrorMessage(
+                        xhr,
+                        "Salary processing failed."
+                    );
+
+
+                showError(
+                    "Salary Processing Failed",
+                    message
+                );
+            }
+
+
+            // ============================================================
+            // RESET PROCESS BUTTON
+            // ============================================================
+
+            function resetProcessButton(
+                $button,
+                originalHtml
+            ) {
+
+                $button
+                    .prop(
+                        "disabled",
+                        false
+                    )
+                    .html(
+                        originalHtml ||
+                        '<i class="bi bi-check2-circle"></i> Process Salary'
+                    );
+            }
+
+
+            // ============================================================
+            // ERROR MESSAGE
+            // ============================================================
+
+            function extractErrorMessage(
+                xhr,
+                fallback
+            ) {
+
+                if (!xhr) {
+                    return fallback;
+                }
+
+
+                try {
+
+                    var response =
+                        JSON.parse(
+                            xhr.responseText
+                        );
+
+
+                    if (
+                        response &&
+                        response.Message
+                    ) {
+
+                        return response.Message;
+                    }
+
+
+                    if (
+                        response &&
+                        response.message
+                    ) {
+
+                        return response.message;
+                    }
+
+
+                    if (
+                        response &&
+                        response.Error
+                    ) {
+
+                        return response.Error;
+                    }
+
+
+                    if (
+                        response &&
+                        response.error
+                    ) {
+
+                        return response.error;
+                    }
+                }
+                catch (e) {
+                    // Response is not JSON
+                }
+
+
+                if (
+                    xhr.responseText &&
+                    xhr.responseText.length > 0 &&
+                    xhr.responseText.length < 500
+                ) {
+
+                    return xhr.responseText;
+                }
+
+
+                return fallback;
+            }
+
+
+            function showError(
+                titleOrMessage,
+                message
+            ) {
+
+                var title =
+                    message !== undefined
+                        ? titleOrMessage
+                        : "Error";
+
+
+                var text =
+                    message !== undefined
+                        ? message
+                        : titleOrMessage;
+
+
+                if (
+                    !text ||
+                    text === "undefined" ||
+                    text === "null" ||
+                    text === "[object Object]"
+                ) {
+
+                    text =
+                        "Something went wrong. Please try again.";
+                }
+
+
+                swal({
+
+                    title:
+                        title,
+
+                    text:
+                        text,
+
+                    type:
+                        "error"
+                });
+            }
+
+
+            // ============================================================
+            // EVENT BINDINGS
+            // ============================================================
+
+            // Load Attendance
+            $("#loadAttendanceBtn")
+                .on(
+                    "click",
+                    loadPreview
+                );
+
+
+            // Employee search
+            $("#employeeSearch")
+                .on(
+                    "input",
+                    requestFilterRender
+                );
+
+
+            // Status filter
+            $("#statusFilter")
+                .on(
+                    "change",
+                    requestFilterRender
+                );
+
+
+            // Select all checkbox
+            $("#selectAllEmp")
+                .on(
+                    "change",
+                    function() {
+
+                        setAllVisibleSelected(
+                            $(this).is(":checked")
+                        );
+                    }
+                );
+
+
+            // Select All button
+            $("#selectAllBtn")
+                .on(
+                    "click",
+                    function() {
+
+                        var allSelected =
+                            $("#selectAllEmp")
+                                .is(":checked");
+
+
+                        setAllVisibleSelected(
+                            !allSelected
+                        );
+                    }
+                );
+
+
+            // Individual employee checkbox
+            $(document)
+                .on(
+                    "change",
+                    ".emp-check",
+                    updateSelection
+                );
+
+
+            // Employee details
+            $(document)
+                .on(
+                    "click",
+                    ".emp-details-btn",
+                    function() {
+
+                        showEmployeeDetails(
+                            $(this).data("id")
+                        );
+                    }
+                );
+
+
+            // Process Salary
+            $("#processSalaryBtn")
+                .on(
+                    "click",
+                    showProcessConfirmation
+                );
+
+
+        });
+    </script>
+
+    @* <script>
+        $(function () {
+
+            // ============================================================
+            // GLOBAL STATE
+            // ============================================================
+            debugger;
             var currentData = null;       // last LoadPreview response, unchanged shape
             var employeesById = {};       // employeeId -> employee row, rebuilt on every load
             var selectedIds = {};         // employeeId -> true, survives search/status filtering
@@ -407,6 +2869,7 @@
             }
 
             function statusBadge(status, emp) {
+debugger;
                 switch (status) {
                     case "processed":
                         return '<span class="ent-status-pill ent-badge-success">Already ' + escapeHtml(emp.existingPayrollStatus || "Processed") + '</span>';
@@ -425,7 +2888,7 @@
             // ============================================================
 
             function renderEmployees(list) {
-
+                debugger;
                 var html = [];
 
                 $.each(list, function (i, emp) {
@@ -478,6 +2941,7 @@
             // ============================================================
 
             function getFilteredEmployees() {
+                debugger;
                 if (!currentData || !currentData.employees) return [];
 
                 var term = ($("#employeeSearch").val() || "").toLowerCase().trim();
@@ -508,18 +2972,21 @@
             // ============================================================
 
             function renderSummary() {
+debugger;
                 if (!currentData || !currentData.employees) return;
 
                 var eligibleCount = 0, processedCount = 0, warningsCount = 0;
                 var gross = 0, deductions = 0, net = 0, selectedCount = 0;
 
                 $.each(currentData.employees, function (i, emp) {
+debugger;
                     if (rowEligible(emp)) eligibleCount++;
                     if (emp.alreadyProcessed) processedCount++;
                     if (emp.warnings && emp.warnings.length > 0) warningsCount++;
                 });
 
                 $.each(selectedIds, function (employeeId, isSelected) {
+debugger;
                     if (!isSelected) return;
                     var emp = employeesById[employeeId];
                     if (!emp) return;
@@ -543,6 +3010,7 @@
             }
 
             function updateProcessBar(selectedCount, gross, deductions, net) {
+debugger;
                 $("#footerSelectedCount").text(selectedCount);
                 $("#footerGross").text(fmt(gross));
                 $("#footerDeductions").text(fmt(deductions));
@@ -561,6 +3029,7 @@
                 // rendered, never selectedIds directly - a row scrolled
                 // out of the current filter keeps its prior selection).
                 $(".emp-check").each(function () {
+debugger;
                     var $cb = $(this);
                     selectedIds[$cb.val()] = $cb.is(":checked");
                 });
@@ -570,6 +3039,7 @@
             }
 
             function updateSelectAllState() {
+debugger;
                 var $visible = $(".emp-check:not(:disabled)");
                 var total = $visible.length;
                 var checked = $visible.filter(":checked").length;
@@ -592,6 +3062,7 @@
             // ============================================================
 
             function showEmployeeDetails(employeeId) {
+debugger;
                 var emp = employeesById[employeeId];
                 if (!emp) return;
 
@@ -646,6 +3117,7 @@
             // ============================================================
 
             function showLoading() {
+debugger;
                 $("#reviewSection").show();
                 $("#reviewTableWrap").hide();
                 $("#reviewEmpty").hide();
@@ -661,6 +3133,7 @@
             }
 
             function showEmptyState(matched, year, monthName) {
+debugger;
                 var title, message;
 
                 if (matched > 0) {
@@ -684,6 +3157,7 @@
             // ============================================================
 
             function loadPreview() {
+debugger;
                 if (isLoading) return;
 
                 var year = $("#salaryYear").val();
@@ -704,6 +3178,7 @@
                     data: { salaryYear: year, salaryMonth: month, companyId: companyId },
 
                     success: function (data) {
+debugger;
                         hideLoading();
                         isLoading = false;
 
@@ -722,6 +3197,7 @@
                         selectedIds = {};
 
                         $.each(data.employees || [], function (i, emp) {
+                            debugger;
                             employeesById[emp.employeeId] = emp;
                             if (rowEligible(emp)) selectedIds[emp.employeeId] = true;
                         });
@@ -731,6 +3207,7 @@
                         $("#statusFilter").val("all");
 
                         if (!data.employees || data.employees.length === 0) {
+                            debugger;
                             var monthName = $("#salaryMonth option:selected").text() || "this period";
                             showEmptyState(data.employeesMatchingFilterCount || 0, year, monthName);
                             renderSummary();
@@ -756,6 +3233,7 @@
             // ============================================================
 
             function showProcessConfirmation() {
+debugger;
                 var ids = $.map(selectedIds, function (isSelected, id) { return isSelected ? id : null; });
 
                 if (ids.length === 0) {
@@ -805,6 +3283,7 @@
             }
 
             function processSalary(employeeIds) {
+debugger;
                 if (isProcessing) return;
 
                 var year = $("#salaryYear").val();
@@ -835,6 +3314,7 @@
                     cache: false,
 
                     success: function (response) {
+debugger;
                         if (!response) {
                             handleProcessError(null, "Server returned an empty response.");
                             return;
@@ -858,6 +3338,7 @@
             }
 
             function handleProcessSuccess(response) {
+debugger;
                 var count = response.processedCount != null ? response.processedCount : "";
                 var message = response.message || ((count !== "" ? count + " employee(s) " : "Salary ") + "processed successfully.");
 
@@ -919,7 +3400,7 @@
             // ============================================================
             // EVENT BINDINGS
             // ============================================================
-
+            debugger;
             $("#loadAttendanceBtn").on("click", loadPreview);
 
             $("#employeeSearch").on("input", requestFilterRender);
@@ -943,5 +3424,5 @@
             $("#processSalaryBtn").on("click", showProcessConfirmation);
 
         });
-    </script>
+    </script> *@
 }

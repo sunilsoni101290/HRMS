@@ -10,97 +10,254 @@
         "Paid" => "bg-success",
         _ => "bg-info"
     };
+
+    var initials = string.IsNullOrWhiteSpace(Model.EmployeeName)
+        ? "?"
+        : string.Concat(Model.EmployeeName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Take(2).Select(p => p[0])).ToUpper();
 }
 
-<div class="panel panel-flat">
-    <div class="panel-heading">
-        <h5 class="panel-title">
-            <i class="icon-cash3 position-left"></i> @Model.EmployeeName — @Model.MonthName @Model.SalaryYear
-            <span class="label @StatusLabel(Model.Status)" style="margin-left:8px;">@Model.Status</span>
-        </h5>
-        <div class="heading-elements">
-            <a asp-action="Payslip" asp-route-id="@Model.Id" target="_blank" class="btn btn-info btn-xs"><i class="icon-printer"></i> Payslip</a>
-            @if (Model.Status != "Paid")
-            {
-                <button type="button" class="btn btn-warning btn-xs" id="recalcBtn" data-toggle="modal" data-target="#recalcModal"><i class="icon-loop2"></i> Recalculate</button>
-            }
-            <a asp-action="Index" class="btn btn-default btn-xs"><i class="icon-arrow-left13"></i> Back</a>
+<!-- Identity + actions header -->
+<div class="payroll-detail-header">
+    <div class="payroll-detail-identity">
+        @if (!string.IsNullOrEmpty(Model.EmployeePhotoUrl))
+        {
+            <img src="@Model.EmployeePhotoUrl" class="payroll-detail-avatar payroll-detail-avatar-img" alt="@Model.EmployeeName" />
+        }
+        else
+        {
+            <span class="payroll-detail-avatar">@initials</span>
+        }
+        <div>
+            <div class="payroll-detail-name">
+                @Model.EmployeeName
+                <span class="label @StatusLabel(Model.Status)">@Model.Status</span>
+            </div>
+            <div class="payroll-detail-meta">
+                <span>Employee Code : @Model.EmployeeCode</span>
+                @if (!string.IsNullOrEmpty(Model.DepartmentName))
+                {
+                    <span>Department : @Model.DepartmentName</span>
+                }
+                @if (!string.IsNullOrEmpty(Model.DesignationName))
+                {
+                    <span>Designation : @Model.DesignationName</span>
+                }
+            </div>
         </div>
     </div>
-    <div class="panel-body">
-        <div class="row">
-            <div class="col-md-3">
-                <div class="content-group text-center">
-                    <h6 class="text-muted no-margin">Gross</h6>
-                    <h4 class="text-success no-margin-top">₹ @Model.GrossSalary.ToString("N2")</h4>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="content-group text-center">
-                    <h6 class="text-muted no-margin">Earnings (Prorated)</h6>
-                    <h4 class="no-margin-top">₹ @Model.TotalEarnings.ToString("N2")</h4>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="content-group text-center">
-                    <h6 class="text-muted no-margin">Deductions</h6>
-                    <h4 class="text-danger no-margin-top">₹ @Model.TotalDeductions.ToString("N2")</h4>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="content-group text-center">
-                    <h6 class="text-muted no-margin">Net Pay</h6>
-                    <h4 class="text-primary no-margin-top">₹ @Model.NetSalary.ToString("N2")</h4>
-                </div>
+
+    <div class="payroll-detail-actions">
+        <a asp-action="Index" class="btn btn-default btn-sm"><i class="icon-arrow-left13 position-left"></i> Back</a>
+        <a asp-action="Payslip" asp-route-id="@Model.Id" target="_blank" class="btn bg-blue btn-sm"><i class="icon-printer position-left"></i> Payslip</a>
+        @if (Model.Status != "Paid")
+        {
+            <button type="button" class="btn bg-orange btn-sm" data-toggle="modal" data-target="#recalcModal"><i class="icon-loop2 position-left"></i> Recalculate</button>
+        }
+        <div class="btn-group">
+            <button type="button" class="btn btn-default btn-icon dropdown-toggle" data-toggle="dropdown" title="More"><i class="icon-menu9"></i></button>
+            <ul class="dropdown-menu dropdown-menu-right">
+                @if (Model.Status == "Draft")
+                {
+                    <li>
+                        <form asp-action="Process" asp-route-id="@Model.Id" method="post">
+                            <button type="submit" class="btn-link" style="border:0;background:none;padding:0;width:100%;text-align:left;"><i class="icon-checkmark3"></i> Mark as Processed</button>
+                        </form>
+                    </li>
+                }
+                @if (Model.Status == "Processed")
+                {
+                    <li>
+                        <form asp-action="MarkPaid" asp-route-id="@Model.Id" method="post">
+                            <button type="submit" class="btn-link" style="border:0;background:none;padding:0;width:100%;text-align:left;"><i class="icon-coin-dollar"></i> Mark as Paid</button>
+                        </form>
+                    </li>
+                }
+                @if (Model.Status != "Paid")
+                {
+                    <li>
+                        <a asp-action="Delete" asp-route-id="@Model.Id" onclick="return confirmSweetDelete(event, this, 'Delete this payroll record?');">
+                            <i class="icon-trash text-danger"></i> Delete
+                        </a>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+
+    <div class="payroll-detail-period">
+        <label>Month &amp; Year</label>
+        <div class="period-box"><i class="icon-calendar3"></i> @Model.MonthName @Model.SalaryYear <i class="icon-chevron-down" style="font-size:10px;opacity:.6;"></i></div>
+    </div>
+</div>
+
+<!-- KPI cards -->
+<div class="row payroll-kpi-row">
+    <div class="col-md-3 col-sm-6">
+        <div class="payroll-kpi-card payroll-kpi-green">
+            <span class="payroll-kpi-icon"><i class="icon-cash3"></i></span>
+            <div>
+                <div class="payroll-kpi-label">Gross Salary</div>
+                <div class="payroll-kpi-value">₹ @Model.GrossSalary.ToString("N2")</div>
             </div>
         </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="payroll-kpi-card payroll-kpi-blue">
+            <span class="payroll-kpi-icon"><i class="icon-coins"></i></span>
+            <div>
+                <div class="payroll-kpi-label">Earnings (Prorated)</div>
+                <div class="payroll-kpi-value">₹ @Model.TotalEarnings.ToString("N2")</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="payroll-kpi-card payroll-kpi-red">
+            <span class="payroll-kpi-icon"><i class="icon-minus-circle2"></i></span>
+            <div>
+                <div class="payroll-kpi-label">Total Deductions</div>
+                <div class="payroll-kpi-value">₹ @Model.TotalDeductions.ToString("N2")</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="payroll-kpi-card payroll-kpi-purple">
+            <span class="payroll-kpi-icon"><i class="icon-wallet"></i></span>
+            <div>
+                <div class="payroll-kpi-label">Net Pay</div>
+                <div class="payroll-kpi-value">₹ @Model.NetSalary.ToString("N2")</div>
+            </div>
+        </div>
+    </div>
+</div>
 
-        <hr />
+<!-- Attendance / proration info strip -->
+<div class="payroll-info-strip">
+    <div class="payroll-info-item">
+        <span class="payroll-info-icon grey"><i class="icon-calendar3"></i></span>
+        <div>
+            <div class="payroll-info-label">Total Days</div>
+            <div class="payroll-info-value">@(Model.TotalWorkingDays?.ToString("0.#") ?? "-")</div>
+        </div>
+    </div>
+    <div class="payroll-info-item">
+        <span class="payroll-info-icon green"><i class="icon-checkmark3"></i></span>
+        <div>
+            <div class="payroll-info-label">Present Days</div>
+            <div class="payroll-info-value">@(Model.PresentDays?.ToString("0.#") ?? "-")</div>
+        </div>
+    </div>
+    <div class="payroll-info-item">
+        <span class="payroll-info-icon blue"><i class="icon-umbrella"></i></span>
+        <div>
+            <div class="payroll-info-label">Paid Leave</div>
+            <div class="payroll-info-value">@(Model.PaidLeaveDays?.ToString("0.#") ?? "-")</div>
+        </div>
+    </div>
+    <div class="payroll-info-item">
+        <span class="payroll-info-icon orange"><i class="icon-blocked"></i></span>
+        <div>
+            <div class="payroll-info-label">Unpaid Leave</div>
+            <div class="payroll-info-value">@(Model.UnpaidLeaveDays?.ToString("0.#") ?? "-")</div>
+        </div>
+    </div>
+    <div class="payroll-info-item">
+        <span class="payroll-info-icon indigo"><i class="icon-watch2"></i></span>
+        <div>
+            <div class="payroll-info-label">Payable Days</div>
+            <div class="payroll-info-value">@(Model.PayableDays?.ToString("0.#") ?? "-")</div>
+        </div>
+    </div>
+    <div class="payroll-info-item">
+        <span class="payroll-info-icon grey"><i class="icon-file-text2"></i></span>
+        <div>
+            <div class="payroll-info-label">Pay Basis</div>
+            <div class="payroll-info-value">@(Model.ProrationBasisUsedName ?? "-")</div>
+        </div>
+    </div>
+</div>
 
-        <p>
-            <strong>Employee Code:</strong> @Model.EmployeeCode &nbsp;|&nbsp;
-            <strong>Basis:</strong> @(Model.ProrationBasisUsedName ?? "-") &nbsp;|&nbsp;
-            <strong>Total Days:</strong> @(Model.TotalWorkingDays?.ToString("0.#") ?? "-") &nbsp;|&nbsp;
-            <strong>Present:</strong> @(Model.PresentDays?.ToString("0.#") ?? "-") &nbsp;|&nbsp;
-            <strong>Paid Leave:</strong> @(Model.PaidLeaveDays?.ToString("0.#") ?? "-") &nbsp;|&nbsp;
-            <strong>Unpaid Leave:</strong> @(Model.UnpaidLeaveDays?.ToString("0.#") ?? "-") &nbsp;|&nbsp;
-            <strong>Payable Days:</strong> @(Model.PayableDays?.ToString("0.#") ?? "-")
-        </p>
+@if (Model.RecalculatedCount > 0)
+{
+    <p class="text-warning">
+        <i class="icon-warning22"></i>
+        Recalculated @Model.RecalculatedCount time(s) - last on @(Model.LastRecalculatedOn?.ToString("dd MMM yyyy HH:mm") ?? "-") by @(Model.LastRecalculatedBy ?? "-").
+    </p>
+}
 
-        @if (Model.RecalculatedCount > 0)
-        {
-            <p class="text-warning">
-                <i class="icon-warning22"></i>
-                Recalculated @Model.RecalculatedCount time(s) - last on @(Model.LastRecalculatedOn?.ToString("dd MMM yyyy HH:mm") ?? "-") by @(Model.LastRecalculatedBy ?? "-").
-            </p>
-        }
-
-        <div class="row">
-            <div class="col-md-6">
-                <table class="table table-striped">
-                    <thead><tr><th>Earnings</th><th class="text-right">Amount (₹)</th></tr></thead>
+<!-- Earnings / Deductions -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="payroll-table-card earn">
+            <div class="payroll-table-head">
+                <span class="payroll-table-head-icon"><i class="icon-plus-circle2"></i></span>
+                Earnings
+            </div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead><tr><th width="36">#</th><th>Earning Component</th><th class="text-right">Amount (₹)</th></tr></thead>
                     <tbody>
+                        @{ int es = 1; }
                         @foreach (var d in Model.Details.Where(x => x.IsEarning))
                         {
-                            <tr><td>@d.SalaryComponentName</td><td class="text-right">@d.Amount.ToString("N2")</td></tr>
+                            <tr><td>@es</td><td>@d.SalaryComponentName</td><td class="text-right">@d.Amount.ToString("N2")</td></tr>
+                            es++;
                         }
                     </tbody>
-                    <tfoot><tr><th>Total Earnings</th><th class="text-right text-success">₹ @Model.TotalEarnings.ToString("N2")</th></tr></tfoot>
-                </table>
-            </div>
-            <div class="col-md-6">
-                <table class="table table-striped">
-                    <thead><tr><th>Deductions</th><th class="text-right">Amount (₹)</th></tr></thead>
-                    <tbody>
-                        @foreach (var d in Model.Details.Where(x => !x.IsEarning))
-                        {
-                            <tr><td>@d.SalaryComponentName</td><td class="text-right">@d.Amount.ToString("N2")</td></tr>
-                        }
-                    </tbody>
-                    <tfoot><tr><th>Total Deductions</th><th class="text-right text-danger">₹ @Model.TotalDeductions.ToString("N2")</th></tr></tfoot>
+                    <tfoot>
+                        <tr class="payroll-table-total">
+                            <td colspan="2">Total Earnings</td>
+                            <td class="text-right">₹ @Model.TotalEarnings.ToString("N2")</td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
         </div>
+    </div>
+    <div class="col-md-6">
+        <div class="payroll-table-card deduct">
+            <div class="payroll-table-head">
+                <span class="payroll-table-head-icon"><i class="icon-minus-circle2"></i></span>
+                Deductions
+            </div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead><tr><th width="36">#</th><th>Deduction Component</th><th class="text-right">Amount (₹)</th></tr></thead>
+                    <tbody>
+                        @{ int ds = 1; }
+                        @foreach (var d in Model.Details.Where(x => !x.IsEarning))
+                        {
+                            <tr><td>@ds</td><td>@d.SalaryComponentName</td><td class="text-right">@d.Amount.ToString("N2")</td></tr>
+                            ds++;
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr class="payroll-table-total">
+                            <td colspan="2">Total Deductions</td>
+                            <td class="text-right">₹ @Model.TotalDeductions.ToString("N2")</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Net payable -->
+<div class="payroll-net-bar">
+    <div class="payroll-net-left">
+        <span class="payroll-net-icon"><i class="icon-wallet"></i></span>
+        <div>
+            <div class="payroll-net-title">Net Payable Amount</div>
+            <div class="payroll-net-sub">(Earnings - Deductions)</div>
+        </div>
+    </div>
+    <div class="payroll-net-right">
+        <div class="payroll-net-amount">₹ @Model.NetSalary.ToString("N2")</div>
+        @if (!string.IsNullOrEmpty(Model.NetPayInWords))
+        {
+            <div class="payroll-net-words">In Words: @Model.NetPayInWords</div>
+        }
     </div>
 </div>
 

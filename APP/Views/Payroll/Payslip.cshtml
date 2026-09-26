@@ -1,297 +1,367 @@
-@model PayrollDto
+@model PayslipDto
+@using System.Globalization
 
 @{
     ViewData["Title"] = "Payslip";
     bool isAdmin = ViewBag.IsAdmin ?? true;
 
-    var earnings = Model.Details.Where(x => x.IsEarning).ToList();
-    var deductions = Model.Details.Where(x => !x.IsEarning).ToList();
-    int rows = Math.Max(earnings.Count, deductions.Count);
+    var inr = new CultureInfo("en-IN");
+    string Money(decimal v) => "₹ " + v.ToString("N2", inr);
+    string Days(decimal? v) => v.HasValue ? v.Value.ToString("0.#", inr) : "-";
+
+    var initials = string.IsNullOrWhiteSpace(Model.Employee.EmployeeName)
+        ? "?"
+        : string.Concat(Model.Employee.EmployeeName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Take(2).Select(p => p[0])).ToUpper();
+
+    bool showYtd = Model.Ytd != null;
+    bool showLeave = Model.LeaveBalances != null && Model.LeaveBalances.Any();
+    bool showYtdLeaveRow = showYtd || showLeave;
 }
 
-<style>
-    .payslip-toolbar {
-        display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-        margin-bottom: 16px;
-    }
+<link rel="stylesheet" href="~/css/payslip.css" asp-append-version="true" />
 
-    .payslip-doc {
-        max-width: 900px;
-        margin: 0 auto;
-        background: #fff;
-        border: 1px solid #d8dce6;
-        border-radius: 6px;
-        padding: 28px 32px;
-        color: #22283a;
-        font-size: 13px;
-    }
-
-    .payslip-letterhead {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        border-bottom: 2px solid #1b2a4a;
-        padding-bottom: 14px;
-        margin-bottom: 18px;
-    }
-
-    .payslip-logo-box {
-        width: 64px;
-        height: 64px;
-        flex-shrink: 0;
-        border: 1px solid #9aa5b8;
-        border-radius: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
-        background: #f7f8fb;
-    }
-
-    .payslip-logo-box img {
-        max-width: 100%;
-        max-height: 100%;
-        object-fit: contain;
-    }
-
-    .payslip-logo-box span {
-        font-size: 10px;
-        letter-spacing: .5px;
-        color: #8b93a6;
-        font-weight: 600;
-    }
-
-    .payslip-company-name {
-        font-size: 20px;
-        font-weight: 700;
-        color: #1b2a4a;
-        margin: 0;
-    }
-
-    .payslip-company-address {
-        font-size: 12px;
-        color: #6b7386;
-        margin: 2px 0 0;
-    }
-
-    .payslip-title {
-        font-size: 15px;
-        font-weight: 700;
-        margin: 0 0 14px;
-    }
-
-    .payslip-info-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 18px;
-    }
-
-    .payslip-info-table td {
-        border: 1px solid #d8dce6;
-        padding: 7px 12px;
-        font-size: 12.5px;
-        vertical-align: top;
-    }
-
-    .payslip-info-table td.label {
-        background: #f4f5f8;
-        font-weight: 600;
-        color: #4b5568;
-        width: 100%;
-    }
-
-    .payslip-info-table td.value {
-        width: 32%;
-    }
-
-    .payslip-earnings-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 16px;
-    }
-
-    .payslip-earnings-table th,
-    .payslip-earnings-table td {
-        border: 1px solid #d8dce6;
-        padding: 7px 12px;
-        font-size: 12.5px;
-    }
-
-    .payslip-earnings-table th {
-        background: #dce7f5;
-        color: #1b2a4a;
-        text-align: left;
-        font-weight: 700;
-    }
-
-    .payslip-earnings-table th.amount,
-    .payslip-earnings-table td.amount {
-        text-align: right;
-        width: 16%;
-    }
-
-    .payslip-earnings-table tr.payslip-total td {
-        background: #eef0dd;
-        font-weight: 700;
-    }
-
-    .payslip-earnings-table tr.payslip-netpay td {
-        background: #e2e6c8;
-        font-weight: 700;
-        font-size: 13.5px;
-    }
-
-    .payslip-words {
-        font-size: 12.5px;
-        margin-bottom: 22px;
-    }
-
-    .payslip-footer-note {
-        font-size: 11.5px;
-        font-style: italic;
-        color: #6b7386;
-        text-align: center;
-    }
-
-    @@media print {
-        .hidden-print, .sidebar, .navbar, .page-header, .breadcrumb-line, .footer {
-            display: none !important;
-        }
-
-        .content-wrapper, .content, .page-content {
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-
-        .payslip-doc {
-            border: none;
-            max-width: 100%;
-            padding: 0;
-        }
-    }
-</style>
-
-<div class="payslip-toolbar hidden-print">
+<div class="pys-toolbar hidden-print">
     <button onclick="window.print()" class="btn bg-primary">
-        <i class="icon-printer"></i> Print
+        <i class="icon-printer position-left"></i> Print
     </button>
 
     <button onclick="window.print()" class="btn btn-default" title="Choose &quot;Save as PDF&quot; in the print dialog to download">
-        <i class="icon-file-download"></i> Download PDF
+        <i class="icon-file-download position-left"></i> Download PDF
+    </button>
+
+    <button type="button" class="btn btn-default" id="btnEmailPayslip" data-toggle="modal" data-target="#emailPayslipModal">
+        <i class="icon-envelop position-left"></i> Email Payslip
     </button>
 
     @if (isAdmin)
     {
-        <a asp-action="Index" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
+        <a asp-action="Details" asp-route-id="@Model.PayrollId" class="btn btn-default"><i class="icon-arrow-left13 position-left"></i> Back</a>
     }
     else
     {
-        <a asp-action="MyPayslips" class="btn btn-default"><i class="icon-arrow-left13"></i> Back</a>
+        <a asp-action="MyPayslips" class="btn btn-default"><i class="icon-arrow-left13 position-left"></i> Back</a>
     }
 </div>
 
-<div class="payslip-doc" id="payslip">
+<div class="pys-page-bg">
+    <div class="pys-sheet" id="payslip">
 
-    <div class="payslip-letterhead">
-
-        <div class="payslip-logo-box">
-            @if (!string.IsNullOrWhiteSpace(Model.CompanyLogoUrl))
-            {
-                <img src="@Model.CompanyLogoUrl" alt="@Model.CompanyName" />
-            }
-            else
-            {
-                <span>LOGO</span>
-            }
+        <!-- Header -->
+        <div class="pys-header">
+            <div class="pys-brand">
+                <div class="pys-logo-box">
+                    @if (!string.IsNullOrWhiteSpace(Model.Company.LogoUrl))
+                    {
+                        <img src="@Model.Company.LogoUrl" alt="@Model.Company.Name" />
+                    }
+                    else
+                    {
+                        <span>LOGO</span>
+                    }
+                </div>
+                <div>
+                    <p class="pys-company-name">@(string.IsNullOrWhiteSpace(Model.Company.Name) ? "Company Name" : Model.Company.Name)</p>
+                    <p class="pys-company-contact">
+                        @if (!string.IsNullOrWhiteSpace(Model.Company.Address)) { <span class="pys-contact-item pys-contact-address"><i class="icon-pin"></i> @Model.Company.Address</span> }
+                        @if (!string.IsNullOrWhiteSpace(Model.Company.Phone)) { <span class="pys-contact-item"><i class="icon-phone2"></i> @Model.Company.Phone</span> }
+                        @if (!string.IsNullOrWhiteSpace(Model.Company.Email)) { <span class="pys-contact-item"><i class="icon-mail5"></i> @Model.Company.Email</span> }
+                        @if (!string.IsNullOrWhiteSpace(Model.Company.Website)) { <span class="pys-contact-item"><i class="icon-earth"></i> @Model.Company.Website</span> }
+                    </p>
+                </div>
+            </div>
+            <div class="pys-title-block">
+                <p class="pys-doc-title">PAYSLIP</p>
+                <p class="pys-doc-period">@Model.MonthName @Model.SalaryYear</p>
+                <p class="pys-doc-sub">Salary for the month of @Model.MonthName @Model.SalaryYear</p>
+            </div>
         </div>
 
-        <div>
-            <p class="payslip-company-name">@(string.IsNullOrWhiteSpace(Model.CompanyName) ? "Company Name" : Model.CompanyName)</p>
-            @if (!string.IsNullOrWhiteSpace(Model.CompanyAddress))
-            {
-                <p class="payslip-company-address">@Model.CompanyAddress</p>
-            }
+        @if (Model.RecalculatedCount > 0)
+        {
+            <p class="pys-recalc-note"><i class="icon-loop2"></i> This payroll has been recalculated @Model.RecalculatedCount time(s) since it was first generated.</p>
+        }
+
+        <!-- Employee / Employment / Bank -->
+        <div class="pys-info-grid">
+
+            <div class="pys-panel">
+                <div class="pys-panel-head"><i class="icon-profile"></i> Employee Information</div>
+                <div class="pys-panel-body">
+                    <div class="pys-employee-photo-row">
+                        @if (!string.IsNullOrWhiteSpace(Model.Employee.PhotoUrl))
+                        {
+                            <img src="@Model.Employee.PhotoUrl" class="pys-employee-photo" alt="@Model.Employee.EmployeeName" />
+                        }
+                        else
+                        {
+                            <span class="pys-employee-initials">@initials</span>
+                        }
+                        <div>
+                            <div class="pys-employee-name">@Model.Employee.EmployeeName</div>
+                            <div class="pys-employee-code">@Model.Employee.EmployeeCode</div>
+                        </div>
+                    </div>
+                    <div class="pys-field-row"><span class="pys-field-label">Designation</span><span class="pys-field-value">@(Model.Employee.DesignationName ?? "-")</span></div>
+                    <div class="pys-field-row"><span class="pys-field-label">Department</span><span class="pys-field-value">@(Model.Employee.DepartmentName ?? "-")</span></div>
+                    <div class="pys-field-row"><span class="pys-field-label">Company</span><span class="pys-field-value">@(Model.Company.Name ?? "-")</span></div>
+                    <div class="pys-field-row"><span class="pys-field-label">Branch</span><span class="pys-field-value">@(Model.Employee.BranchName ?? "-")</span></div>
+                </div>
+            </div>
+
+            <div class="pys-panel">
+                <div class="pys-panel-head"><i class="icon-briefcase"></i> Employment Details</div>
+                <div class="pys-panel-body">
+                    <div class="pys-field-row"><span class="pys-field-label">PAN</span><span class="pys-field-value">@(Model.Employment.PAN ?? "-")</span></div>
+                    <div class="pys-field-row"><span class="pys-field-label">UAN</span><span class="pys-field-value">@(Model.Employment.UAN ?? "-")</span></div>
+                    <div class="pys-field-row"><span class="pys-field-label">PF Number</span><span class="pys-field-value">@(Model.Employment.PFNumber ?? "-")</span></div>
+                    <div class="pys-field-row"><span class="pys-field-label">Date of Joining</span><span class="pys-field-value">@(Model.Employment.DateOfJoining?.ToString("dd MMM yyyy") ?? "-")</span></div>
+                    <div class="pys-field-row"><span class="pys-field-label">Employment Type</span><span class="pys-field-value">@(Model.Employment.EmploymentTypeName ?? "-")</span></div>
+                    <div class="pys-field-row"><span class="pys-field-label">Pay Period</span><span class="pys-field-value">@Model.PayPeriodStart.ToString("dd MMM yyyy") - @Model.PayPeriodEnd.ToString("dd MMM yyyy")</span></div>
+                    <div class="pys-field-row"><span class="pys-field-label">Days in Month</span><span class="pys-field-value">@Model.DaysInMonth</span></div>
+                    <div class="pys-field-row"><span class="pys-field-label">Payable Days</span><span class="pys-field-value">@Days(Model.AttendanceSummary.PayableDays)</span></div>
+                </div>
+            </div>
+
+            <div class="pys-panel">
+                <div class="pys-panel-head"><i class="icon-office"></i> Bank Details</div>
+                <div class="pys-panel-body">
+                    <div class="pys-field-row"><span class="pys-field-label">Bank Name</span><span class="pys-field-value">@(Model.BankDetails?.BankName ?? "-")</span></div>
+                    <div class="pys-field-row"><span class="pys-field-label">Account No.</span><span class="pys-field-value">@(Model.BankDetails?.AccountNumberMasked ?? "-")</span></div>
+                    <div class="pys-field-row"><span class="pys-field-label">IFSC Code</span><span class="pys-field-value">@(Model.BankDetails?.IFSCCode ?? "-")</span></div>
+                    <div class="pys-field-row"><span class="pys-field-label">Account Type</span><span class="pys-field-value">@(Model.BankDetails?.AccountTypeName ?? "-")</span></div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Tax Regime & Other Info -->
+        <div class="pys-tax-strip">
+            <div class="pys-tax-item">
+                <div class="pys-tax-label">Tax Regime</div>
+                <div class="pys-tax-value">@(Model.TaxInfo.TaxRegimeName ?? "-")</div>
+            </div>
+            <div class="pys-tax-item">
+                <div class="pys-tax-label">LOP Days</div>
+                <div class="pys-tax-value">@Days(Model.TaxInfo.LopDays)</div>
+            </div>
+        </div>
+
+        <!-- Earnings / Deductions -->
+        <div class="pys-earn-ded-grid">
+
+            <table class="pys-ed-table earn">
+                <thead>
+                    <tr><th class="pys-sr">#</th><th>Earnings (A)</th><th class="pys-num">Amount (&#8377;)</th></tr>
+                </thead>
+                <tbody>
+                    @{ int esr = 1; }
+                    @foreach (var e in Model.Earnings)
+                    {
+                        <tr>
+                            <td class="pys-sr">@esr</td>
+                            <td>@e.ComponentName</td>
+                            <td class="pys-num">@e.Amount.ToString("N2", inr)</td>
+                        </tr>
+                        esr++;
+                    }
+                    @if (!Model.Earnings.Any())
+                    {
+                        <tr><td class="pys-sr">-</td><td colspan="2" class="text-muted">No earning components.</td></tr>
+                    }
+                    <tr class="pys-ed-total"><td colspan="2">Total Earnings (A)</td><td class="pys-num">@Model.GrossEarnings.ToString("N2", inr)</td></tr>
+                </tbody>
+            </table>
+
+            <table class="pys-ed-table deduct">
+                <thead>
+                    <tr><th class="pys-sr">#</th><th>Deductions (B)</th><th class="pys-num">Amount (&#8377;)</th></tr>
+                </thead>
+                <tbody>
+                    @{ int dsr = 1; }
+                    @foreach (var d in Model.Deductions)
+                    {
+                        <tr>
+                            <td class="pys-sr">@dsr</td>
+                            <td>@d.ComponentName</td>
+                            <td class="pys-num">@d.Amount.ToString("N2", inr)</td>
+                        </tr>
+                        dsr++;
+                    }
+                    @if (!Model.Deductions.Any())
+                    {
+                        <tr><td class="pys-sr">-</td><td colspan="2" class="text-muted">No deduction components.</td></tr>
+                    }
+                    <tr class="pys-ed-total"><td colspan="2">Total Deductions (B)</td><td class="pys-num">@Model.TotalDeductions.ToString("N2", inr)</td></tr>
+                </tbody>
+            </table>
+
+        </div>
+
+        <!-- Net Salary -->
+        <div class="pys-net-bar">
+            <div>
+                <div class="pys-net-label">NET SALARY (A - B)</div>
+                <div class="pys-net-words">(@Model.NetSalaryInWords)</div>
+            </div>
+            <div class="pys-net-amount">@Money(Model.NetSalary)</div>
+        </div>
+
+        <!-- Summary cards -->
+        <div class="pys-summary-grid">
+            <div class="pys-summary-card">
+                <span class="pys-summary-icon"><i class="icon-coins"></i></span>
+                <div><div class="pys-summary-label">Gross Earnings</div><div class="pys-summary-value">@Money(Model.GrossEarnings)</div></div>
+            </div>
+            <div class="pys-summary-card">
+                <span class="pys-summary-icon"><i class="icon-percent"></i></span>
+                <div><div class="pys-summary-label">Total Deductions</div><div class="pys-summary-value">@Money(Model.TotalDeductions)</div></div>
+            </div>
+            <div class="pys-summary-card">
+                <span class="pys-summary-icon"><i class="icon-wallet"></i></span>
+                <div><div class="pys-summary-label">Net Payable</div><div class="pys-summary-value">@Money(Model.NetSalary)</div></div>
+            </div>
+            <div class="pys-summary-card pys-summary-words">
+                <span class="pys-summary-icon"><i class="icon-file-text2"></i></span>
+                <div><div class="pys-summary-label">Take Home (In Words)</div><div class="pys-summary-value">@Model.NetSalaryInWords</div></div>
+            </div>
+        </div>
+
+        <!-- Attendance Summary -->
+        <div class="pys-panel-head" style="border:1px solid var(--pys-border); border-bottom:none; border-radius:4px 4px 0 0;"><i class="icon-calendar3"></i> Attendance Summary</div>
+        <div class="pys-attendance-grid" style="border:1px solid var(--pys-border); border-top:none; border-radius:0 0 4px 4px; padding:8px; margin-top:0;">
+            <div class="pys-attendance-cell"><div class="pys-att-value">@Days(Model.AttendanceSummary.TotalDays)</div><div class="pys-att-label">Total Days</div></div>
+            <div class="pys-attendance-cell"><div class="pys-att-value">@Days(Model.AttendanceSummary.PresentDays)</div><div class="pys-att-label">Present Days</div></div>
+            <div class="pys-attendance-cell"><div class="pys-att-value">@Days(Model.AttendanceSummary.AbsentDays)</div><div class="pys-att-label">Absent Days</div></div>
+            <div class="pys-attendance-cell"><div class="pys-att-value">@Days(Model.AttendanceSummary.PayableDays)</div><div class="pys-att-label">Payable Days</div></div>
+            <div class="pys-attendance-cell"><div class="pys-att-value">@Days(Model.AttendanceSummary.PaidLeaveDays)</div><div class="pys-att-label">Paid Leave</div></div>
+            <div class="pys-attendance-cell"><div class="pys-att-value">@Days(Model.AttendanceSummary.UnpaidLeaveDays)</div><div class="pys-att-label">Unpaid Leave</div></div>
+            <div class="pys-attendance-cell"><div class="pys-att-value">@Days(Model.AttendanceSummary.WeekOffDays)</div><div class="pys-att-label">Week Off</div></div>
+            <div class="pys-attendance-cell"><div class="pys-att-value">@Days(Model.AttendanceSummary.HolidayDays)</div><div class="pys-att-label">Holiday</div></div>
+        </div>
+        <div style="margin-bottom:14px;"></div>
+
+        @if (showYtdLeaveRow)
+        {
+            <div class="pys-ytd-leave-grid @(showYtd && showLeave ? "" : "pys-single-col")">
+
+                @if (showYtd)
+                {
+                    <div class="pys-panel">
+                        <div class="pys-panel-head"><i class="icon-stats-growth"></i> Year To Date Summary (@Model.Ytd!.PeriodLabel)</div>
+                        <div class="pys-panel-body">
+                            <div class="pys-ytd-row"><span class="pys-ytd-label">Total Earnings</span><span class="pys-ytd-value">@Money(Model.Ytd!.TotalEarnings)</span></div>
+                            <div class="pys-ytd-row"><span class="pys-ytd-label">Total Deductions</span><span class="pys-ytd-value">@Money(Model.Ytd!.TotalDeductions)</span></div>
+                            <div class="pys-ytd-row"><span class="pys-ytd-label">Net Salary</span><span class="pys-ytd-value">@Money(Model.Ytd!.NetSalary)</span></div>
+                        </div>
+                    </div>
+                }
+
+                @if (showLeave)
+                {
+                    <div class="pys-panel">
+                        <div class="pys-panel-head"><i class="icon-umbrella"></i> Leave Balance (as on @Model.SalaryDate.ToString("dd MMM yyyy"))</div>
+                        <div class="pys-panel-body" style="padding:0;">
+                            <table class="pys-leave-table">
+                                <thead><tr><th>Leave Type</th><th class="pys-num">Entitled</th><th class="pys-num">Used</th><th class="pys-num">Balance</th></tr></thead>
+                                <tbody>
+                                    @foreach (var lb in Model.LeaveBalances)
+                                    {
+                                        <tr>
+                                            <td>@lb.LeaveTypeName</td>
+                                            <td class="pys-num">@lb.Entitled.ToString("0.#", inr)</td>
+                                            <td class="pys-num">@lb.Used.ToString("0.#", inr)</td>
+                                            <td class="pys-num">@lb.Balance.ToString("0.#", inr)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+
+            </div>
+        }
+
+        <!-- Remarks -->
+        @if (Model.Remarks != null && Model.Remarks.Any())
+        {
+            <div class="pys-remarks">
+                <strong style="color:var(--pys-navy);"><i class="icon-quill2"></i> Remarks</strong>
+                <ul>
+                    @foreach (var r in Model.Remarks)
+                    {
+                        <li>@r</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <!-- Verification + Signatory -->
+        <div class="pys-footer-grid">
+            <div class="pys-verify">
+                @if (!string.IsNullOrEmpty(Model.VerificationQrCodeDataUri))
+                {
+                    <img src="@Model.VerificationQrCodeDataUri" alt="Scan to verify" />
+                }
+                <div>
+                    <div class="pys-verify-title"><i class="icon-shield-check"></i> Scan to Verify Payslip</div>
+                    @if (!string.IsNullOrEmpty(Model.VerificationUrl))
+                    {
+                        <div class="pys-verify-sub">@Model.VerificationUrl</div>
+                    }
+                    else
+                    {
+                        <div class="pys-verify-sub">Verification link unavailable.</div>
+                    }
+                </div>
+            </div>
+            <div class="pys-signatory">
+                @if (!string.IsNullOrEmpty(Model.SignatoryImageUrl))
+                {
+                    <img src="@Model.SignatoryImageUrl" alt="Signature" />
+                }
+                <div class="pys-signatory-line"></div>
+                <div class="pys-signatory-label">Authorised Signatory</div>
+                @if (!string.IsNullOrEmpty(Model.SignatoryCompanyName))
+                {
+                    <div class="pys-signatory-company">@Model.SignatoryCompanyName</div>
+                }
+            </div>
         </div>
 
     </div>
-
-    <p class="payslip-title">Salary Slip - @Model.MonthName @Model.SalaryYear</p>
-
-    <table class="payslip-info-table">
-        <tr>
-            <td class="label">Employee Name</td>
-            <td class="value">@Model.EmployeeName</td>
-            <td class="label">Employee ID</td>
-            <td class="value">@Model.EmployeeCode</td>
-        </tr>
-        <tr>
-            <td class="label">Department</td>
-            <td class="value">@(Model.DepartmentName ?? "-")</td>
-            <td class="label">Designation</td>
-            <td class="value">@(Model.DesignationName ?? "-")</td>
-        </tr>
-        <tr>
-            <td class="label">PAN</td>
-            <td class="value">@(Model.PAN ?? "-")</td>
-            <td class="label">UAN</td>
-            <td class="value">@(Model.UAN ?? "-")</td>
-        </tr>
-        <tr>
-            <td class="label">Bank A/C</td>
-            <td class="value">@(Model.BankAccountMasked ?? "-")</td>
-            <td class="label">Pay Date</td>
-            <td class="value">@Model.SalaryDate.ToString("dd-MMM-yyyy")</td>
-        </tr>
-    </table>
-
-    <table class="payslip-earnings-table">
-
-        <thead>
-            <tr>
-                <th>Earnings</th>
-                <th class="amount">Amount (&#8377;)</th>
-                <th>Deductions</th>
-                <th class="amount">Amount (&#8377;)</th>
-            </tr>
-        </thead>
-
-        <tbody>
-
-            @for (int i = 0; i < rows; i++)
-            {
-                <tr>
-                    <td>@(i < earnings.Count ? earnings[i].SalaryComponentName : "")</td>
-                    <td class="amount">@(i < earnings.Count ? earnings[i].Amount.ToString("N0") : "")</td>
-                    <td>@(i < deductions.Count ? deductions[i].SalaryComponentName : "")</td>
-                    <td class="amount">@(i < deductions.Count ? deductions[i].Amount.ToString("N0") : "")</td>
-                </tr>
-            }
-
-            <tr class="payslip-total">
-                <td>Gross Earnings</td>
-                <td class="amount">@Model.TotalEarnings.ToString("N0")</td>
-                <td>Total Deductions</td>
-                <td class="amount">@Model.TotalDeductions.ToString("N0")</td>
-            </tr>
-
-            <tr class="payslip-netpay">
-                <td colspan="2"></td>
-                <td>Net Pay</td>
-                <td class="amount">@Model.NetSalary.ToString("N0")</td>
-            </tr>
-
-        </tbody>
-
-    </table>
-
-    <p class="payslip-words">
-        <strong>Net Pay (in words):</strong> @Model.NetPayInWords
-    </p>
-
-    <p class="payslip-footer-note">
-        This is a system-generated payslip and does not require a signature.
-    </p>
-
 </div>
+
+<div class="modal fade hidden-print" id="emailPayslipModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <form asp-action="EmailPayslip" method="post">
+            <input type="hidden" name="id" value="@Model.PayrollId" />
+            <input type="hidden" name="verificationUrl" value="@Model.VerificationUrl" />
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h5 class="modal-title">Email Payslip</h5>
+                </div>
+                <div class="modal-body">
+                    <p>This emails a summary of this payslip (Net Pay, amount in words, and the verification link) to <strong>@Model.Employee.EmployeeName</strong>'s email on file.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn bg-primary"><i class="icon-envelop"></i> Send</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @if (TempData["Success"] != null)
+    {
+        <script>$(function(){ swal({ title:"Success", text:"@TempData["Success"]", type:"success" }); });</script>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <script>$(function(){ swal({ title:"Error", text:"@TempData["Error"]", type:"error" }); });</script>
+    }
+}
